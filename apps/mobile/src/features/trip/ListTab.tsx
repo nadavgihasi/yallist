@@ -6,7 +6,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { FilterChip } from '@/components/Chips';
 import { EmptyState, ListGroup, SectionHeader } from '@/components/ListGroup';
 import { he } from '@/i18n/he';
-import { useDispatch } from '@/state/store';
+import { useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 
 import type { TripView } from './derive';
@@ -26,9 +26,9 @@ export function ListTab({
   view: TripView;
   me: string;
 }) {
-  const dispatch = useDispatch();
-  const [filter, setFilter] = useState<ListFilter>('all');
   const tripId = data.trip.id;
+  const act = useTripAction(tripId);
+  const [filter, setFilter] = useState<ListFilter>('all');
   const listItems = view.items.filter((i) => i.list === list);
   const shown = (f: ListFilter) =>
     filterItems(listItems, f, data.claims, data.expenses, view.activeIds, me);
@@ -88,9 +88,7 @@ export function ListTab({
                       params: { tripId, itemId: item.id },
                     })
                   }
-                  onClaim={(quantity) =>
-                    dispatch({ type: 'setClaim', tripId, itemId: item.id, userId: me, quantity })
-                  }
+                  onClaim={(quantity) => act({ type: 'setClaim', itemId: item.id, quantity })}
                 />
               ))}
             </ListGroup>

@@ -1,126 +1,122 @@
+import type { Item } from '@yallist/domain';
 import { describe, expect, it } from 'vitest';
 
-import { buildItem, buildTrip, reducer } from './reducer';
-import type { AppState, TripData } from './types';
+import { applyAction } from './reducer';
+import type { TripData, TripMember } from './types';
 
-const me = { userId: 'me', name: 'נדב' };
-
-function stateWith(trip: TripData): AppState {
-  return { me, trips: { [trip.trip.id]: trip } };
-}
-
-function campTrip() {
-  return buildTrip(
-    { name: 'קמפינג', startsOn: '2026-11-13', endsOn: '2026-11-14', template: 'camp' },
-    me,
-  );
-}
-
-describe('buildTrip', () => {
-  it('makes the creator an active organizer and seeds positions per list', () => {
-    const t = campTrip();
-    expect(t.members).toMatchObject([{ userId: 'me', role: 'organizer', status: 'active' }]);
-    for (const list of ['bring', 'buy'] as const) {
-      const positions = t.items.filter((i) => i.list === list).map((i) => i.position);
-      expect(positions).toEqual(positions.map((_, i) => i));
-    }
-  });
+const member = (userId: string, role: TripMember['role'] = 'member'): TripMember => ({
+  userId,
+  displayName: userId,
+  role,
+  status: 'active',
+  color: '#FFD9C2',
 });
 
+const chairs: Item = {
+  id: 'chairs',
+  list: 'bring',
+  category: 'ישיבה',
+  position: 0,
+  name: 'כיסאות מתקפלים',
+  kind: 'qty',
+  quantityNeeded: 8,
+};
+const meat: Item = {
+  ...chairs,
+  id: 'meat',
+  list: 'buy',
+  name: 'בשר',
+  kind: 'single',
+  quantityNeeded: 1,
+};
+
+function trip(overrides: Partial<TripData> = {}): TripData {
+  return {
+    trip: {
+      id: 't1',
+      name: 'קמפינג',
+      startsOn: '2026-11-13',
+      endsOn: '2026-11-14',
+      placeText: undefined,
+      template: 'camp',
+      status: 'planning',
+      requireApproval: false,
+      createdAt: '2026-10-24T00:00:00.000Z',
+    },
+    inviteToken: 'token',
+    members: [member('me', 'organizer'), member('ron')],
+    items: [chairs, meat],
+    claims: [],
+    expenses: [],
+    payments: [],
+    balances: {},
+    transfers: [],
+    ...overrides,
+  };
+}
+
 describe('setClaim', () => {
-  it('caps a claim at what is still needed', () => {
-    const t = campTrip();
-    const chairs = t.items.find((i) => i.name === 'כיסאות מתקפלים')!;
-    let s = stateWith(t);
-    s = reducer(s, {
-      type: 'setClaim',
-      tripId: t.trip.id,
-      itemId: chairs.id,
-      userId: 'ron',
-      quantity: 6,
-    });
-    s = reducer(s, {
-      type: 'setClaim',
-      tripId: t.trip.id,
-      itemId: chairs.id,
-      userId: 'me',
-      quantity: 5,
-    });
-    const mine = s.trips[t.trip.id]!.claims.find((c) => c.userId === 'me');
-    expect(mine?.quantity).toBe(2);
+  it('caps a claim at what is still needed, as the API will', () => {
+    const t = trip({ claims: [{ itemId: 'chairs', userId: 'ron', quantity: 6 }] });
+    const next = applyAction(t, { type: 'setClaim', itemId: 'chairs', quantity: 5 }, 'me');
+    expect(next.claims.find((c) => c.userId === 'me')?.quantity).toBe(2);
   });
 
   it('removes the claim at zero', () => {
-    const t = campTrip();
-    const grill = t.items.find((i) => i.name === 'מנגל')!;
-    let s = stateWith(t);
-    s = reducer(s, {
-      type: 'setClaim',
-      tripId: t.trip.id,
-      itemId: grill.id,
-      userId: 'me',
-      quantity: 1,
-    });
-    s = reducer(s, {
-      type: 'setClaim',
-      tripId: t.trip.id,
-      itemId: grill.id,
-      userId: 'me',
-      quantity: 0,
-    });
-    expect(s.trips[t.trip.id]!.claims).toEqual([]);
-  });
-});
-
-describe('addItem + claim', () => {
-  it('can be claimed right after being added', () => {
-    const t = campTrip();
-    const item = buildItem(
-      { list: 'buy', name: 'אבטיח', kind: 'single', quantityNeeded: 1, category: 'כללי' },
-      t.items,
+    const t = trip({ claims: [{ itemId: 'meat', userId: 'me', quantity: 1 }] });
+    expect(applyAction(t, { type: 'setClaim', itemId: 'meat', quantity: 0 }, 'me').claims).toEqual(
+      [],
     );
-    let s = reducer(stateWith(t), { type: 'addItem', tripId: t.trip.id, item });
-    s = reducer(s, {
-      type: 'setClaim',
-      tripId: t.trip.id,
-      itemId: item.id,
-      userId: 'me',
-      quantity: 1,
-    });
-    const trip = s.trips[t.trip.id]!;
-    expect(item.position).toBe(t.items.filter((i) => i.list === 'buy').length);
-    expect(trip.claims).toEqual([{ itemId: item.id, userId: 'me', quantity: 1 }]);
   });
 });
 
 describe('deleteItem', () => {
   it('drops claims but keeps the expense, unlinked, so balances do not change', () => {
-    const t = campTrip();
-    const meat = t.items.find((i) => i.name === 'בשר לעל האש')!;
-    let s = stateWith(t);
-    s = reducer(s, {
-      type: 'setClaim',
-      tripId: t.trip.id,
-      itemId: meat.id,
-      userId: 'me',
-      quantity: 1,
+    const t = trip({
+      claims: [{ itemId: 'meat', userId: 'me', quantity: 1 }],
+      expenses: [
+        {
+          id: 'e1',
+          itemId: 'meat',
+          description: 'בשר',
+          amountAgorot: 45000,
+          paidBy: 'me',
+          shares: ['me'],
+        },
+      ],
     });
-    s = reducer(s, {
-      type: 'saveExpense',
-      tripId: t.trip.id,
-      expense: {
-        id: 'e1',
-        itemId: meat.id,
-        description: 'בשר',
-        amountAgorot: 45000,
-        paidBy: 'me',
-        shares: ['me'],
-      },
+    const next = applyAction(t, { type: 'deleteItem', itemId: 'meat' }, 'me');
+    expect(next.items.map((i) => i.id)).toEqual(['chairs']);
+    expect(next.claims).toEqual([]);
+    expect(next.expenses).toEqual([expect.objectContaining({ id: 'e1', itemId: undefined })]);
+  });
+});
+
+describe('members', () => {
+  it('approves a pending member', () => {
+    const t = trip({
+      members: [member('me', 'organizer'), { ...member('dana'), status: 'pending' }],
     });
-    s = reducer(s, { type: 'deleteItem', tripId: t.trip.id, itemId: meat.id });
-    const trip = s.trips[t.trip.id]!;
-    expect(trip.items.some((i) => i.id === meat.id)).toBe(false);
-    expect(trip.claims).toEqual([]);
-    expect(trip.expenses).toEqual([expect.objectContaining({ id: 'e1', itemId: undefined })]);
+    const next = applyAction(t, { type: 'approveMember', userId: 'dana' }, 'me');
+    expect(next.members[1]?.status).toBe('active');
+  });
+
+  it('removes a member and frees what they took', () => {
+    const t = trip({ claims: [{ itemId: 'meat', userId: 'ron', quantity: 1 }] });
+    const next = applyAction(t, { type: 'removeMember', userId: 'ron' }, 'me');
+    expect(next.members[1]?.status).toBe('removed');
+    expect(next.claims).toEqual([]);
+  });
+});
+
+describe('changes that need a server id', () => {
+  it('wait for the API', () => {
+    const t = trip();
+    const action = {
+      type: 'addItem',
+      item: { list: 'buy', name: 'אבטיח', kind: 'single', quantityNeeded: 1, category: 'כללי' },
+      claim: 1,
+    } as const;
+    expect(applyAction(t, action, 'me')).toBe(t);
   });
 });

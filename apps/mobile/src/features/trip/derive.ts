@@ -1,11 +1,9 @@
 import {
   activeMemberIds,
-  balances,
   claimsFor,
   isDone,
   itemStatus,
   splitEqually,
-  suggestTransfers,
   type Item,
   type ListKind,
 } from '@yallist/domain';
@@ -25,6 +23,7 @@ export function toAvatar(member: TripMember, me: string): AvatarPerson {
 /** Everything the trip screens derive from raw trip data, computed once per render. */
 export function deriveTrip(data: TripData, me: string) {
   const activeIds = activeMemberIds(data.members);
+  const active = data.members.filter((m) => m.status === 'active');
   const memberById = new Map(data.members.map((m) => [m.userId, m]));
   const displayNameOf = (id: string) => memberById.get(id)?.displayName ?? he.unknownPerson;
   /** "אני" for the current user (money rows, chips); use displayNameOf inside third-person phrases. */
@@ -42,11 +41,9 @@ export function deriveTrip(data: TripData, me: string) {
     claimsFor(itemId, data.claims).find((c) => c.userId === me)?.quantity ?? 0;
   const mine = items.filter((i) => myQuantity(i.id) > 0);
 
-  const balance = balances(activeIds, data.expenses, data.payments);
-  const transfers = suggestTransfers(balance);
-
   return {
     activeIds,
+    active,
     memberById,
     nameOf,
     displayNameOf,
@@ -59,8 +56,8 @@ export function deriveTrip(data: TripData, me: string) {
     myQuantity,
     mine,
     status: (item: Item) => itemStatus(item, data.claims, data.expenses, activeIds, me),
-    balance,
-    transfers,
+    /** Who pays whom to settle up, worked out by the API. */
+    transfers: data.transfers,
     totalSpent: data.expenses.reduce((sum, e) => sum + e.amountAgorot, 0),
     myShare: data.expenses.reduce(
       (sum, e) => sum + (splitEqually(e.amountAgorot, e.shares).get(me) ?? 0),

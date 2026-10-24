@@ -1,6 +1,6 @@
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Cover } from '@/components/Cover';
@@ -13,7 +13,9 @@ import { PeopleTab } from '@/features/trip/PeopleTab';
 import { StatusCard } from '@/features/trip/StatusCard';
 import { he } from '@/i18n/he';
 import { formatRange } from '@/lib/dates';
-import { useMe, useTrip } from '@/state/store';
+import { statusOf } from '@/lib/api';
+import { useMe } from '@/state/store';
+import { useTripQuery } from '@/state/trips';
 import { colors, fonts } from '@/theme';
 
 const TABS = ['bring', 'buy', 'people', 'money'] as const;
@@ -27,7 +29,8 @@ export default function TripScreen() {
     list?: string;
   }>();
   const { tripId, itemId, list } = params;
-  const data = useTrip(tripId);
+  const query = useTripQuery(tripId);
+  const data = query.data;
   const me = useMe();
   const insets = useSafeAreaInsets();
   // The tab lives in the URL (`?tab=buy`) so reload and Back keep it.
@@ -42,9 +45,19 @@ export default function TripScreen() {
   );
 
   if (!data) {
+    if (query.isPending) {
+      return <ActivityIndicator color={colors.accent} style={styles.missing} />;
+    }
+    // Not a member (or no such trip) is a 4xx; anything else may pass.
+    const gone = (statusOf(query.error) ?? 500) < 500;
     return (
       <View style={styles.missing}>
-        <Text style={styles.missingText}>{he.trip.notFound}</Text>
+        <Text style={styles.missingText}>{gone ? he.trip.notFound : he.errors.loadFailed}</Text>
+        {!gone && (
+          <Pressable onPress={() => query.refetch()}>
+            <Text style={styles.link}>{he.errors.retry}</Text>
+          </Pressable>
+        )}
         <Pressable onPress={() => router.replace('/')}>
           <Text style={styles.link}>{he.trip.back}</Text>
         </Pressable>
@@ -101,7 +114,7 @@ export default function TripScreen() {
             )}
           </View>
         </Cover>
-        <StatusCard view={view} members={data.members} me={me.userId} />
+        <StatusCard view={view} members={view.active} me={me.userId} />
         {(tab === 'bring' || tab === 'buy') && (
           <ListTab key={tab} list={tab} data={data} view={view} me={me.userId} />
         )}

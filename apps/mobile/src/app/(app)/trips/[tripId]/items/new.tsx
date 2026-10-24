@@ -17,8 +17,7 @@ import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { closeSheet } from '@/features/trip/closeSheet';
 import { he } from '@/i18n/he';
-import { buildItem } from '@/state/reducer';
-import { useDispatch, useMe, useTrip } from '@/state/store';
+import { useTrip, useTripAction } from '@/state/trips';
 import { colors, fonts } from '@/theme';
 
 const KINDS: ItemKind[] = ['single', 'qty', 'each'];
@@ -33,8 +32,7 @@ function categoriesFor(list: ListKind, template: TemplateId, existing: string[])
 export default function AddItem() {
   const params = useLocalSearchParams<{ tripId: string; list?: ListKind }>();
   const data = useTrip(params.tripId);
-  const me = useMe().userId;
-  const dispatch = useDispatch();
+  const act = useTripAction(params.tripId);
   const [list, setList] = useState<ListKind>(params.list === 'buy' ? 'buy' : 'bring');
   const [name, setName] = useState('');
   const [kind, setKind] = useState<ItemKind>('single');
@@ -55,26 +53,12 @@ export default function AddItem() {
 
   const add = () => {
     if (!trimmed) return;
-    const item = buildItem(
-      {
-        list,
-        name: trimmed,
-        kind,
-        quantityNeeded: kind === 'qty' ? qty : 1,
-        category: pickedCategory,
-      },
-      data.items,
-    );
-    dispatch({ type: 'addItem', tripId: data.trip.id, item });
-    if (claim) {
-      dispatch({
-        type: 'setClaim',
-        tripId: data.trip.id,
-        itemId: item.id,
-        userId: me,
-        quantity: kind === 'qty' ? qty : 1,
-      });
-    }
+    const quantityNeeded = kind === 'qty' ? qty : 1;
+    act({
+      type: 'addItem',
+      item: { list, name: trimmed, kind, quantityNeeded, category: pickedCategory },
+      claim: claim ? quantityNeeded : 0,
+    });
     close();
   };
 

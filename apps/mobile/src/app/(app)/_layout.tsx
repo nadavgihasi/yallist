@@ -1,10 +1,10 @@
 import { Redirect, Stack } from 'expo-router';
 
-import { useAppState } from '@/state/store';
+import { useSession } from '@/state/store';
 import { colors } from '@/theme';
 
 export default function AppLayout() {
-  const { me } = useAppState();
+  const { me } = useSession();
   if (!me) return <Redirect href="/login" />;
 
   return (

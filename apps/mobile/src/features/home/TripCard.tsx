@@ -5,16 +5,15 @@ import { AvatarStack } from '@/components/Avatar';
 import { Cover } from '@/components/Cover';
 import { glassStyle } from '@/components/GlassTabBar';
 import { Pegs } from '@/components/Pegs';
-import { deriveTrip, toAvatar } from '@/features/trip/derive';
+import { toAvatar } from '@/features/trip/derive';
 import { he, missingItems, openTransfers, participants } from '@/i18n/he';
 import { countdown, formatRange, monthName } from '@/lib/dates';
-import type { TripData } from '@/state/types';
+import type { TripSummary } from '@/state/types';
 import { colors, fonts, radius } from '@/theme';
 
-export function TripCard({ data, me, large }: { data: TripData; me: string; large: boolean }) {
-  const view = deriveTrip(data, me);
-  const { trip } = data;
-  const missing = view.missingCount;
+export function TripCard({ data, me, large }: { data: TripSummary; me: string; large: boolean }) {
+  const { trip, itemCount, doneCount } = data;
+  const missing = itemCount - doneCount;
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
       <Pressable style={styles.card} accessibilityRole="link">
@@ -28,10 +27,10 @@ export function TripCard({ data, me, large }: { data: TripData; me: string; larg
             <Text style={[styles.name, { fontSize: large ? 26 : 22 }]}>{trip.name}</Text>
             <Text style={styles.dates}>{formatRange(trip.startsOn, trip.endsOn)}</Text>
           </View>
-          <Pegs done={view.doneCount} total={view.items.length} height={8} />
+          <Pegs done={doneCount} total={itemCount} height={8} />
           <View style={styles.row}>
             <View style={styles.counts}>
-              {view.items.length === 0 ? (
+              {itemCount === 0 ? (
                 <Text style={[styles.missing, { color: colors.inkSecondary }]}>
                   {he.home.noItems}
                 </Text>
@@ -40,18 +39,16 @@ export function TripCard({ data, me, large }: { data: TripData; me: string; larg
                   {missing === 0 ? he.trip.allCovered : missingItems(missing)}
                 </Text>
               )}
-              {large && view.items.length > 0 && (
-                <Text style={styles.meta}>
-                  {he.trip.coveredOf(view.doneCount, view.items.length)}
-                </Text>
+              {large && itemCount > 0 && (
+                <Text style={styles.meta}>{he.trip.coveredOf(doneCount, itemCount)}</Text>
               )}
             </View>
             <AvatarStack people={data.members.map((m) => toAvatar(m, me))} />
           </View>
-          {large && view.mine.length > 0 && (
+          {large && data.mine.length > 0 && (
             <Text style={styles.mine}>
               {he.home.mine}
-              {view.mine.map((i) => i.name).join(', ')}
+              {data.mine.join(', ')}
             </Text>
           )}
         </View>
@@ -60,10 +57,10 @@ export function TripCard({ data, me, large }: { data: TripData; me: string; larg
   );
 }
 
-export function PastTripRow({ data, me }: { data: TripData; me: string }) {
+export function PastTripRow({ data }: { data: TripSummary }) {
   const { trip } = data;
-  const view = deriveTrip(data, me);
-  const open = view.transfers.filter((t) => t.from === me || t.to === me).length;
+  // Already only the transfers I'm part of.
+  const open = data.transfers.length;
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
       <Pressable style={styles.past} accessibilityRole="link">
@@ -71,7 +68,7 @@ export function PastTripRow({ data, me }: { data: TripData; me: string }) {
         <View style={styles.titles}>
           <Text style={styles.pastName}>{trip.name}</Text>
           <Text style={styles.dates}>
-            {monthName(trip.startsOn)}, {participants(view.activeIds.length)}
+            {monthName(trip.startsOn)}, {participants(data.members.length)}
           </Text>
         </View>
         {open > 0 && (

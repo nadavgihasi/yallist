@@ -1,75 +1,96 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useReducer,
-  useRef,
-  type Dispatch,
-  type ReactNode,
-} from 'react';
+import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
+import { QueryClient } from '@tanstack/react-query';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-import { reducer, type Action } from './reducer';
-import type { AppState, TripData } from './types';
+import { setAuth, statusOf, type AuthResult } from '@/lib/api';
+
+import type { Me } from './types';
 
 /**
- * Local-first store for the MVP: everything lives on this device (localStorage on web).
- * The API replaces this in Phase 1+, keeping the same actions as mutations.
+ * The session (bearer token and user, in AsyncStorage: localStorage on web) and the API data
+ * (TanStack Query, its cache persisted too, so trips still open with weak reception).
  */
-const STORAGE_KEY = 'yallist/v1';
+const SESSION_KEY = 'yallist/session';
+const WEEK = 7 * 24 * 60 * 60 * 1000;
 
-const StateContext = createContext<AppState | null>(null);
-const DispatchContext = createContext<Dispatch<Action> | null>(null);
+interface Session {
+  token: string;
+  me: Me;
+}
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      gcTime: WEEK,
+      staleTime: 10_000,
+      // Network and server errors are worth retrying; a 4xx answer won't change.
+      retry: (count, error) => count < 3 && (statusOf(error) ?? 500) >= 500,
+    },
+  },
+});
+
+// One object: the provider restores the cache again whenever this changes.
+const persistOptions = {
+  persister: createAsyncStoragePersister({ storage: AsyncStorage, key: 'yallist/cache' }),
+  maxAge: WEEK,
+};
+
+interface SessionContext {
+  me?: Me;
+  signIn: (result: AuthResult) => Promise<void>;
+}
+
+const Context = createContext<SessionContext | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, { trips: {} });
-  const hydrated = useRef(false);
-  const [ready, setReady] = useReducer(() => true, false);
+  // undefined while loading; null when signed out.
+  const [session, setSession] = useState<Session | null>();
+
+  const activate = (next: Session | null) => {
+    setAuth(next?.token, () => {
+      // The session expired or was revoked: back to the login screen.
+      AsyncStorage.removeItem(SESSION_KEY).catch(() => {});
+      queryClient.clear();
+      activate(null);
+    });
+    setSession(next);
+  };
 
   useEffect(() => {
-    AsyncStorage.getItem(STORAGE_KEY)
-      .then((raw) => {
-        if (raw) dispatch({ type: 'hydrate', state: JSON.parse(raw) as AppState });
-      })
-      .catch(() => {})
-      .finally(() => {
-        hydrated.current = true;
-        setReady();
-      });
+    AsyncStorage.getItem(SESSION_KEY)
+      .catch(() => null)
+      .then((raw) => activate(raw ? (JSON.parse(raw) as Session) : null));
+    // Once, on launch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (hydrated.current) AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(state)).catch(() => {});
-  }, [state]);
+  const signIn = async ({ token, user }: AuthResult) => {
+    const next = { token, me: { userId: user.id, name: user.name } };
+    await AsyncStorage.setItem(SESSION_KEY, JSON.stringify(next));
+    // Another user's cached trips must never show.
+    queryClient.clear();
+    activate(next);
+  };
 
-  if (!ready) return null;
+  if (session === undefined) return null;
   return (
-    <StateContext.Provider value={state}>
-      <DispatchContext.Provider value={dispatch}>{children}</DispatchContext.Provider>
-    </StateContext.Provider>
+    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+      <Context.Provider value={{ me: session?.me, signIn }}>{children}</Context.Provider>
+    </PersistQueryClientProvider>
   );
 }
 
-export function useAppState(): AppState {
-  const state = useContext(StateContext);
-  if (!state) throw new Error('useAppState outside StoreProvider');
-  return state;
-}
-
-export function useDispatch(): Dispatch<Action> {
-  const dispatch = useContext(DispatchContext);
-  if (!dispatch) throw new Error('useDispatch outside StoreProvider');
-  return dispatch;
+export function useSession(): SessionContext {
+  const session = useContext(Context);
+  if (!session) throw new Error('useSession outside StoreProvider');
+  return session;
 }
 
 /** The signed-in user. Only call under the `(app)` group, which guarantees one. */
-export function useMe() {
-  const me = useAppState().me;
+export function useMe(): Me {
+  const { me } = useSession();
   if (!me) throw new Error('useMe without a signed-in user');
   return me;
-}
-
-export function useTrip(tripId: string | undefined): TripData | undefined {
-  const trips = useAppState().trips;
-  return tripId ? trips[tripId] : undefined;
 }

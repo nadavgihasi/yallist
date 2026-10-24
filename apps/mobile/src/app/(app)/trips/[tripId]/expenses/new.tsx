@@ -12,8 +12,8 @@ import { closeSheet } from '@/features/trip/closeSheet';
 import { deriveTrip } from '@/features/trip/derive';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
-import { newId } from '@/lib/id';
-import { useDispatch, useMe, useTrip } from '@/state/store';
+import { useMe } from '@/state/store';
+import { useTrip, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, fonts } from '@/theme';
 
@@ -26,7 +26,7 @@ export default function AddExpense() {
 
 function AddExpenseBody({ data }: { data: TripData }) {
   const me = useMe().userId;
-  const dispatch = useDispatch();
+  const act = useTripAction(data.trip.id);
   const view = deriveTrip(data, me);
   const [amount, setAmount] = useState('');
   const [what, setWhat] = useState('');
@@ -43,17 +43,9 @@ function AddExpenseBody({ data }: { data: TripData }) {
 
   const save = () => {
     if (!valid) return;
-    dispatch({
-      type: 'saveExpense',
-      tripId: data.trip.id,
-      expense: {
-        id: newId(),
-        itemId,
-        description: what.trim(),
-        amountAgorot: agorot,
-        paidBy: payer,
-        shares,
-      },
+    act({
+      type: 'addExpense',
+      expense: { itemId, description: what.trim(), amountAgorot: agorot, paidBy: payer, shares },
     });
     close();
   };
