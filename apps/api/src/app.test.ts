@@ -16,6 +16,25 @@ describe('GET /health', () => {
   });
 });
 
+describe('CORS', () => {
+  // API Gateway forwards preflights to the app; a 404 here made browsers block every request.
+  it('answers preflights from the web app, allowing the bearer token', async () => {
+    const app = testApp(createDb(postgres('postgres://localhost/unused')));
+    const res = await app.request('/api/auth/sign-in/social', {
+      method: 'OPTIONS',
+      headers: {
+        origin: 'https://example.cloudfront.net',
+        'access-control-request-method': 'POST',
+        'access-control-request-headers': 'authorization,content-type',
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+    expect(res.headers.get('access-control-allow-methods')).toContain('POST');
+    expect(res.headers.get('access-control-allow-headers')).toBe('authorization,content-type');
+  });
+});
+
 describe.skipIf(!DATABASE_URL)('auth', () => {
   let sql: Sql;
   let drop: () => Promise<void>;

@@ -4,8 +4,6 @@
  * Migrates the database first. Google sign-in needs GOOGLE_CLIENT_ID (the dev OAuth client).
  */
 import { serve } from '@hono/node-server';
-import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 
 import { createApp } from './app';
 import { createAuth } from './auth';
@@ -29,11 +27,7 @@ const auth = createAuth(db, {
   },
 });
 
-// API Gateway answers CORS in AWS, for any origin (infra/app/sst.config.ts); locally, this does.
 // No realtime locally: publishing is a no-op.
-const app = new Hono().use(cors()).route(
-  '/',
-  createApp(auth, db, async () => {}),
-);
+const app = createApp(auth, db, async () => {});
 
 serve({ fetch: app.fetch, port }, () => console.log(`API on http://localhost:${port}`));

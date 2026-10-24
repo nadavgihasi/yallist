@@ -48,10 +48,10 @@ export default $config({
     });
 
     // Hono app (apps/api) behind an HTTP API; one Lambda serves every path.
-    // CORS stays at SST's default (any origin): auth is bearer tokens, not cookies, so allowing
-    // every origin exposes nothing. It also avoids a cycle: the web build needs the API URL.
+    // The app answers CORS itself (apps/api/src/app.ts): with API Gateway's CORS on, preflights
+    // still reach the `$default` route, and API Gateway would replace the app's CORS headers.
     // Its route is added after the web app, whose URL Better Auth trusts.
-    const api = new sst.aws.ApiGatewayV2('Api');
+    const api = new sst.aws.ApiGatewayV2('Api', { cors: false });
 
     // Better Auth (apps/api/src/auth.ts). Secret values come from SST_SECRET_<name>, which the
     // deploy workflow sets from GitHub environment secrets (docs/deploy.md#secrets).

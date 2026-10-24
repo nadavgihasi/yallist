@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 
 import { requireUser, type Auth } from './auth';
@@ -15,7 +16,10 @@ export function createApp(auth: Auth, db: Db, publish: Publish) {
   const notify = (tripId: string) =>
     publish(tripId).catch((err: unknown) => console.error('Realtime publish failed', err));
 
+  // CORS for any origin (auth is bearer tokens, not cookies), echoing the requested headers.
+  // Here, not in API Gateway: its `$default` route forwards preflights to this Lambda.
   return new Hono()
+    .use(cors())
     .onError((err, c) => {
       if (err instanceof HTTPException) return c.json({ error: err.message }, err.status);
       // Not `err` itself: Drizzle's message lists the query parameters (invite tokens, names).
