@@ -1,10 +1,9 @@
-import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 
 import { requireUser, type Auth } from './auth';
+import { findProfile } from './dal/profiles';
 import type { Db } from './db/client';
-import { profiles } from './db/schema';
 import type { Publish } from './realtime';
 import { inviteRoutes } from './routes/invites';
 import { itemRoutes } from './routes/items';
@@ -26,7 +25,7 @@ export function createApp(auth: Auth, db: Db, publish: Publish) {
     .get('/health', (c) => c.json({ ok: true }))
     .on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
     .get('/me', requireUser(auth), async (c) => {
-      const [profile] = await db.select().from(profiles).where(eq(profiles.id, c.var.user.id));
+      const profile = await findProfile(db, c.var.user.id);
       return profile ? c.json(profile) : c.notFound();
     })
     .use('/trips/:tripId/*', async (c, next) => {

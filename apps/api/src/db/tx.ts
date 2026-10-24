@@ -1,6 +1,8 @@
 import type { Db } from './client';
 
 export type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
+/** What the data access layer runs queries on: the database, or a transaction. */
+export type Executor = Db | Tx;
 
 /**
  * DSQL's optimistic concurrency: a transaction that conflicts with another one fails at commit

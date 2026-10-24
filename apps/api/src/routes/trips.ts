@@ -1,25 +1,28 @@
 import { randomBytes } from 'node:crypto';
 
 import { activeMemberIds, claimsFor, isDone } from '@yallist/domain';
-import { and, count, eq, inArray } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
-import { displayNameOf, fail, lockTrip, logActivity, requireMember, validate } from '../access';
+import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
-import type { Db } from '../db/client';
+import { logActivity } from '../dal/activity';
+import { deleteMemberClaims } from '../dal/claims';
+import { seedItems } from '../dal/items';
 import {
-  claims,
-  items,
-  ROLES,
-  TEMPLATE_IDS,
-  templateItems,
-  tripMembers,
-  trips,
-  TRIP_STATUSES,
-} from '../db/schema';
+  activeTripIds,
+  countActiveOrganizers,
+  insertMember,
+  lockMember,
+  requireMember,
+  setMember,
+} from '../dal/members';
+import { displayNameOf } from '../dal/profiles';
+import { insertTrip, loadTrips, lockTrip, setTrip } from '../dal/trips';
+import type { Db } from '../db/client';
+import { ROLES, TEMPLATE_IDS, tripMembers, TRIP_STATUSES } from '../db/schema';
 import { transact, type Tx } from '../db/tx';
-import { loadTrips, settleUp, toTrip } from '../trip-data';
+import { settleUp, toTrip } from '../trip-data';
 
 /** 128 bits from a CSPRNG, URL-safe (SPEC §5): the invite link is a bearer capability. */
 export const newInviteToken = () => randomBytes(16).toString('base64url');
@@ -58,37 +61,15 @@ async function organizerAction(tx: Tx, tripId: string, callerId: string, userId:
   // demote or remove each other at once and leave the trip without one.
   await lockTrip(tx, tripId);
   await requireMember(tx, tripId, callerId, { organizer: true, lock: true });
-  const [target] = await tx
-    .select()
-    .from(tripMembers)
-    .where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, userId)))
-    .for('update');
-  if (!target) throw fail(404, 'Member not found');
-  return target;
+  return lockMember(tx, tripId, userId);
 }
 
-async function assertNotLastOrganizer(tx: Tx, member: Member) {
+async function assertNotLastOrganizer(tx: Tx, member: typeof tripMembers.$inferSelect) {
   if (member.role !== 'organizer' || member.status !== 'active') return;
-  const [{ organizers } = { organizers: 0 }] = await tx
-    .select({ organizers: count() })
-    .from(tripMembers)
-    .where(
-      and(
-        eq(tripMembers.tripId, member.tripId),
-        eq(tripMembers.role, 'organizer'),
-        eq(tripMembers.status, 'active'),
-      ),
-    );
-  if (organizers <= 1) throw fail(409, 'A trip needs at least one organizer');
+  if ((await countActiveOrganizers(tx, member.tripId)) <= 1) {
+    throw fail(409, 'A trip needs at least one organizer');
+  }
 }
-
-type Member = typeof tripMembers.$inferSelect;
-
-const setMember = (tx: Tx, member: Member, values: Pick<Partial<Member>, 'role' | 'status'>) =>
-  tx
-    .update(tripMembers)
-    .set(values)
-    .where(and(eq(tripMembers.tripId, member.tripId), eq(tripMembers.userId, member.userId)));
 
 /** Trips, their settings and invite link, and membership management. All need a session. */
 export const tripRoutes = (auth: Auth, db: Db) =>
@@ -100,29 +81,20 @@ export const tripRoutes = (auth: Auth, db: Db) =>
       const { template, ...input } = c.req.valid('json');
       const user = c.var.user;
       const data = await transact(db, async (tx) => {
-        const [trip] = await tx
-          .insert(trips)
-          .values({ ...input, template, inviteToken: newInviteToken(), createdBy: user.id })
-          .returning();
-        const tripId = trip!.id;
-        await tx.insert(tripMembers).values({
+        const { id: tripId } = await insertTrip(tx, {
+          ...input,
+          template,
+          inviteToken: newInviteToken(),
+          createdBy: user.id,
+        });
+        await insertMember(tx, {
           tripId,
           userId: user.id,
           role: 'organizer',
           status: 'active',
           displayName: await displayNameOf(tx, user),
         });
-        const seed = await tx
-          .select()
-          .from(templateItems)
-          .where(eq(templateItems.template, template));
-        if (seed.length > 0) {
-          await tx
-            .insert(items)
-            .values(
-              seed.map(({ template: _, ...item }) => ({ ...item, tripId, createdBy: user.id })),
-            );
-        }
+        await seedItems(tx, tripId, user.id, template);
         await logActivity(tx, tripId, user.id, 'trip_created', { template });
         return (await loadTrips(tx, [tripId]))[0]!;
       });
@@ -132,16 +104,7 @@ export const tripRoutes = (auth: Auth, db: Db) =>
     // My trips, with what the home screen shows for each.
     .get('/', async (c) => {
       const me = c.var.user.id;
-      const all = await transact(db, async (tx) => {
-        const mine = await tx
-          .select({ tripId: tripMembers.tripId })
-          .from(tripMembers)
-          .where(and(eq(tripMembers.userId, me), eq(tripMembers.status, 'active')));
-        return loadTrips(
-          tx,
-          mine.map((m) => m.tripId),
-        );
-      });
+      const all = await transact(db, async (tx) => loadTrips(tx, await activeTripIds(tx, me)));
       const summaries = all
         .sort((a, b) => a.trip.startsOn.localeCompare(b.trip.startsOn))
         .map((d) => {
@@ -178,15 +141,11 @@ export const tripRoutes = (auth: Auth, db: Db) =>
         const current = await lockTrip(tx, tripId);
         await requireMember(tx, tripId, c.var.user.id, { organizer: true, lock: true });
         if (!datesInOrder({ ...current, ...changes })) throw fail(400, datesMessage.message);
-        const [updated] = await tx
-          .update(trips)
-          .set({ ...changes, updatedAt: new Date() })
-          .where(eq(trips.id, tripId))
-          .returning();
+        const updated = await setTrip(tx, tripId, changes);
         await logActivity(tx, tripId, c.var.user.id, 'trip_updated', {
           fields: Object.keys(changes),
         });
-        return updated!;
+        return updated;
       });
       return c.json(toTrip(trip));
     })
@@ -198,10 +157,7 @@ export const tripRoutes = (auth: Auth, db: Db) =>
       await transact(db, async (tx) => {
         await lockTrip(tx, tripId);
         await requireMember(tx, tripId, c.var.user.id, { organizer: true, lock: true });
-        await tx
-          .update(trips)
-          .set({ inviteToken, updatedAt: new Date() })
-          .where(eq(trips.id, tripId));
+        await setTrip(tx, tripId, { inviteToken });
         await logActivity(tx, tripId, c.var.user.id, 'invite_rotated');
       });
       return c.json({ inviteToken });
@@ -237,10 +193,7 @@ export const tripRoutes = (auth: Auth, db: Db) =>
         if (target.status !== 'active') throw fail(409, 'Not an active member');
         await assertNotLastOrganizer(tx, target);
         await setMember(tx, target, { status: 'removed' });
-        const tripItems = tx.select({ id: items.id }).from(items).where(eq(items.tripId, tripId));
-        await tx
-          .delete(claims)
-          .where(and(eq(claims.userId, userId), inArray(claims.itemId, tripItems)));
+        await deleteMemberClaims(tx, tripId, userId);
         await logActivity(tx, tripId, c.var.user.id, 'member_removed', { userId });
       });
       return c.json({ userId, status: 'removed' as const });

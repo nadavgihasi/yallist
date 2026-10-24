@@ -2,24 +2,13 @@ import {
   activeMemberIds,
   balances,
   suggestTransfers,
-  type Claim,
   type Expense,
   type Item,
+  type Member,
   type Payment,
 } from '@yallist/domain';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 
-import {
-  claims,
-  expenseShares,
-  expenses,
-  items,
-  payments,
-  profiles,
-  tripMembers,
-  trips,
-} from './db/schema';
-import type { Tx } from './db/tx';
+import type { expenses, items, trips } from './db/schema';
 
 // The shapes the app already works with (apps/mobile/src/state/types.ts, @yallist/domain).
 // Nullable columns become absent fields rather than nulls.
@@ -66,93 +55,16 @@ export function toExpense(row: typeof expenses.$inferSelect, shares: string[]): 
   };
 }
 
-/** Everything about the given trips that the app's trip screens need, in one snapshot. */
-export async function loadTrips(tx: Tx, tripIds: string[]) {
-  if (tripIds.length === 0) return [];
-  const [tripRows, memberRows, itemRows, claimRows, expenseRows, shareRows, paymentRows] =
-    await Promise.all([
-      tx.select().from(trips).where(inArray(trips.id, tripIds)),
-      tx
-        .select({
-          tripId: tripMembers.tripId,
-          userId: tripMembers.userId,
-          displayName: tripMembers.displayName,
-          role: tripMembers.role,
-          status: tripMembers.status,
-          color: profiles.avatarColor,
-        })
-        .from(tripMembers)
-        .innerJoin(profiles, eq(profiles.id, tripMembers.userId))
-        .where(inArray(tripMembers.tripId, tripIds))
-        .orderBy(asc(tripMembers.joinedAt)),
-      tx
-        .select()
-        .from(items)
-        .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt)))
-        .orderBy(asc(items.list), asc(items.position)),
-      tx
-        .select({ tripId: items.tripId, claim: claims })
-        .from(claims)
-        .innerJoin(items, eq(items.id, claims.itemId))
-        .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt))),
-      tx
-        .select()
-        .from(expenses)
-        .where(inArray(expenses.tripId, tripIds))
-        .orderBy(asc(expenses.createdAt)),
-      tx
-        .select({ expenseId: expenseShares.expenseId, userId: expenseShares.userId })
-        .from(expenseShares)
-        .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
-        .where(inArray(expenses.tripId, tripIds)),
-      tx
-        .select()
-        .from(payments)
-        .where(inArray(payments.tripId, tripIds))
-        .orderBy(asc(payments.markedAt)),
-    ]);
-
-  const liveItems = new Set(itemRows.map((i) => i.id));
-  return tripRows.map((trip) => ({
-    trip: toTrip(trip),
-    inviteToken: trip.inviteToken,
-    members: memberRows
-      .filter((m) => m.tripId === trip.id)
-      .map(({ tripId: _, ...member }) => member),
-    items: itemRows.filter((i) => i.tripId === trip.id).map(toItem),
-    claims: claimRows
-      .filter((c) => c.tripId === trip.id)
-      .map(({ claim }): Claim => ({
-        itemId: claim.itemId,
-        userId: claim.userId,
-        quantity: claim.quantity,
-        arrived: claim.arrivedAt !== null,
-      })),
-    expenses: expenseRows
-      .filter((e) => e.tripId === trip.id)
-      .map((e) =>
-        toExpense(
-          // A purchase of an item that was since deleted no longer marks anything bought.
-          { ...e, itemId: e.itemId && liveItems.has(e.itemId) ? e.itemId : null },
-          shareRows.filter((s) => s.expenseId === e.id).map((s) => s.userId),
-        ),
-      ),
-    payments: paymentRows
-      .filter((p) => p.tripId === trip.id)
-      .map((p): Payment => ({
-        id: p.id,
-        fromUser: p.fromUser,
-        toUser: p.toUser,
-        amountAgorot: p.amountAgorot,
-        status: p.status,
-      })),
-  }));
-}
-
-type TripData = Awaited<ReturnType<typeof loadTrips>>[number];
-
 /** Who owes whom: balances (positive: the group owes them) and the transfers that settle them. */
-export function settleUp({ members, expenses, payments }: TripData) {
+export function settleUp({
+  members,
+  expenses,
+  payments,
+}: {
+  members: Member[];
+  expenses: Expense[];
+  payments: Payment[];
+}) {
   const balance = balances(activeMemberIds(members), expenses, payments);
   return { balances: Object.fromEntries(balance), transfers: suggestTransfers(balance) };
 }

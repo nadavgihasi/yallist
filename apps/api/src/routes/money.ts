@@ -1,12 +1,15 @@
-import { and, eq, isNull } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
-import { fail, logActivity, requireMember, validate } from '../access';
+import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
+import { logActivity } from '../dal/activity';
+import { deleteExpense, findPurchase, insertExpense, lockExpense } from '../dal/expenses';
+import { findItem } from '../dal/items';
+import { activeUserIds, requireMember } from '../dal/members';
+import { confirmPayment, deletePayment, insertPayment, lockPayment } from '../dal/payments';
 import type { Db } from '../db/client';
-import { expenseShares, expenses, items, payments, tripMembers } from '../db/schema';
-import { transact, type Tx } from '../db/tx';
+import { transact } from '../db/tx';
 import { toExpense } from '../trip-data';
 
 /** Agorot, positive; ₪1M is far beyond any trip and well inside a Postgres integer. */
@@ -27,24 +30,6 @@ const tripParam = z.object({ tripId: z.uuid() });
 const expenseParam = z.object({ tripId: z.uuid(), expenseId: z.uuid() });
 const paymentParam = z.object({ tripId: z.uuid(), paymentId: z.uuid() });
 
-async function activeMemberIds(tx: Tx, tripId: string) {
-  const rows = await tx
-    .select({ userId: tripMembers.userId })
-    .from(tripMembers)
-    .where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.status, 'active')));
-  return new Set(rows.map((r) => r.userId));
-}
-
-async function lockPayment(tx: Tx, tripId: string, paymentId: string) {
-  const [payment] = await tx
-    .select()
-    .from(payments)
-    .where(and(eq(payments.id, paymentId), eq(payments.tripId, tripId)))
-    .for('update');
-  if (!payment) throw fail(404, 'Payment not found');
-  return payment;
-}
-
 /** Expenses and settle-up payments. Balances and suggested transfers come with the trip data. */
 export const moneyRoutes = (auth: Auth, db: Db) =>
   new Hono()
@@ -61,39 +46,27 @@ export const moneyRoutes = (auth: Auth, db: Db) =>
         const shares = [...new Set(shareIds)];
         const expense = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
-          const active = await activeMemberIds(tx, tripId);
+          const active = await activeUserIds(tx, tripId);
           if (!active.has(paidBy)) throw fail(400, 'paidBy is not an active member');
           if (!shares.every((id) => active.has(id))) {
             throw fail(400, 'Every share must be an active member');
           }
           if (input.itemId) {
             // Locked, so two purchases of one item can't both go through.
-            const [item] = await tx
-              .select()
-              .from(items)
-              .where(
-                and(eq(items.id, input.itemId), eq(items.tripId, tripId), isNull(items.deletedAt)),
-              )
-              .for('update');
+            const item = await findItem(tx, tripId, input.itemId, { lock: true });
             if (item?.list !== 'buy') throw fail(400, 'itemId is not on the buy list');
-            const [bought] = await tx
-              .select({ id: expenses.id })
-              .from(expenses)
-              .where(eq(expenses.itemId, input.itemId));
-            if (bought) throw fail(409, 'Already bought');
+            if (await findPurchase(tx, input.itemId)) throw fail(409, 'Already bought');
           }
-          const [created] = await tx
-            .insert(expenses)
-            .values({ ...input, tripId, paidBy, createdBy: me })
-            .returning();
-          await tx
-            .insert(expenseShares)
-            .values(shares.map((userId) => ({ expenseId: created!.id, userId })));
+          const created = await insertExpense(
+            tx,
+            { ...input, tripId, paidBy, createdBy: me },
+            shares,
+          );
           await logActivity(tx, tripId, me, 'expense_added', {
-            expenseId: created!.id,
-            amountAgorot: created!.amountAgorot,
+            expenseId: created.id,
+            amountAgorot: created.amountAgorot,
           });
-          return created!;
+          return created;
         });
         return c.json(toExpense(expense, shares), 201);
       },
@@ -105,18 +78,11 @@ export const moneyRoutes = (auth: Auth, db: Db) =>
       const me = c.var.user.id;
       await transact(db, async (tx) => {
         const member = await requireMember(tx, tripId, me, { lock: true });
-        const [expense] = await tx
-          .select()
-          .from(expenses)
-          .where(and(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)))
-          .for('update');
-        if (!expense) throw fail(404, 'Expense not found');
+        const expense = await lockExpense(tx, tripId, expenseId);
         if (expense.createdBy !== me && expense.paidBy !== me && member.role !== 'organizer') {
           throw fail(403, 'Only who added or paid it, or an organizer');
         }
-        // No cascades on DSQL: shares go first, in the same transaction.
-        await tx.delete(expenseShares).where(eq(expenseShares.expenseId, expenseId));
-        await tx.delete(expenses).where(eq(expenses.id, expenseId));
+        await deleteExpense(tx, expenseId);
         await logActivity(tx, tripId, me, 'expense_deleted', {
           expenseId,
           amountAgorot: expense.amountAgorot,
@@ -137,19 +103,16 @@ export const moneyRoutes = (auth: Auth, db: Db) =>
         if (toUser === me) throw fail(400, 'Cannot pay yourself');
         const payment = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
-          if (!(await activeMemberIds(tx, tripId)).has(toUser)) {
+          if (!(await activeUserIds(tx, tripId)).has(toUser)) {
             throw fail(400, 'toUser is not an active member');
           }
-          const [created] = await tx
-            .insert(payments)
-            .values({ tripId, fromUser: me, toUser, amountAgorot })
-            .returning();
+          const created = await insertPayment(tx, { tripId, fromUser: me, toUser, amountAgorot });
           await logActivity(tx, tripId, me, 'payment_marked', {
-            paymentId: created!.id,
+            paymentId: created.id,
             toUser,
             amountAgorot,
           });
-          return created!;
+          return created;
         });
         return c.json(
           { id: payment.id, fromUser: me, toUser, amountAgorot, status: payment.status },
@@ -167,10 +130,7 @@ export const moneyRoutes = (auth: Auth, db: Db) =>
         const payment = await lockPayment(tx, tripId, paymentId);
         if (payment.toUser !== me) throw fail(403, 'Only the receiver confirms');
         if (payment.status === 'confirmed') return;
-        await tx
-          .update(payments)
-          .set({ status: 'confirmed', confirmedAt: new Date() })
-          .where(eq(payments.id, paymentId));
+        await confirmPayment(tx, paymentId);
         await logActivity(tx, tripId, me, 'payment_confirmed', { paymentId });
       });
       return c.json({ id: paymentId, status: 'confirmed' as const });
@@ -185,7 +145,7 @@ export const moneyRoutes = (auth: Auth, db: Db) =>
         const payment = await lockPayment(tx, tripId, paymentId);
         if (payment.fromUser !== me) throw fail(403, 'Only the sender deletes');
         if (payment.status === 'confirmed') throw fail(409, 'Already confirmed');
-        await tx.delete(payments).where(eq(payments.id, paymentId));
+        await deletePayment(tx, paymentId);
         await logActivity(tx, tripId, me, 'payment_deleted', { paymentId });
       });
       return c.body(null, 204);
