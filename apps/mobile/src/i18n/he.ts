@@ -8,6 +8,7 @@ export const he = {
   errors: {
     claimTaken: 'מישהו כבר לקח את זה, הרשימה עודכנה',
     failed: 'השינוי לא נשמר, נסו שוב',
+    itemEditRefused: 'אי אפשר לשנות ככה: כבר לקחו או קנו את הפריט',
     loadFailed: 'לא הצלחנו לטעון. בודקים את החיבור ומנסים שוב.',
     retry: 'לנסות שוב',
     signIn: 'הכניסה לא הצליחה, נסו שוב',
@@ -186,7 +187,12 @@ export const he = {
     note: 'הערה',
     markBought: 'סימון כנקנה',
     unmarkBought: 'ביטול הסימון כנקנה',
+    edit: 'עריכת הפריט',
     delete: 'מחיקת הפריט',
+  },
+  editItem: {
+    title: 'עריכת פריט',
+    save: 'שמירת השינויים',
   },
   addItem: {
     title: 'פריט חדש',

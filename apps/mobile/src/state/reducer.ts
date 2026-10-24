@@ -23,6 +23,7 @@ export type Action =
   | { type: 'setClaim'; itemId: string; quantity: number }
   | { type: 'addItem'; item: NewItemInput; claim: number }
   | { type: 'deleteItem'; itemId: string }
+  | { type: 'editItem'; itemId: string; changes: NewItemInput }
   | { type: 'setNote'; itemId: string; note: string }
   | { type: 'addExpense'; expense: NewExpenseInput }
   | { type: 'deleteExpense'; expenseId: string }
@@ -56,6 +57,11 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
         expenses: data.expenses.map((e) =>
           e.itemId === action.itemId ? { ...e, itemId: undefined } : e,
         ),
+      };
+    case 'editItem':
+      return {
+        ...data,
+        items: data.items.map((i) => (i.id === action.itemId ? { ...i, ...action.changes } : i)),
       };
     case 'setNote':
       return {

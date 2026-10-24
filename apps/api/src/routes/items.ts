@@ -6,7 +6,8 @@ import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
 import { logActivity } from '../dal/activity';
 import { lockClaims, setClaim } from '../dal/claims';
-import { appendItem, deleteItem, lockItem, updateItem } from '../dal/items';
+import { findPurchase } from '../dal/expenses';
+import { appendItem, deleteItem, endOfList, lockItem, updateItem } from '../dal/items';
 import { requireMember } from '../dal/members';
 import type { Db } from '../db/client';
 import { KINDS, LISTS } from '../db/schema';
@@ -25,6 +26,10 @@ const itemFields = {
 };
 
 /** Single and each items need exactly 1; a qty item needs at least 2 (SPEC §3). */
+const validQuantity = (i: { kind: string; quantityNeeded: number }) =>
+  i.kind === 'qty' ? i.quantityNeeded >= 2 : i.quantityNeeded === 1;
+const QUANTITY_RULE = 'quantityNeeded must be 1, or at least 2 for a qty item';
+
 const addItem = z
   .object({
     ...itemFields,
@@ -35,16 +40,24 @@ const addItem = z
     displayQty: itemFields.displayQty.optional(),
     note: itemFields.note.optional(),
   })
-  .refine((i) => (i.kind === 'qty' ? i.quantityNeeded >= 2 : i.quantityNeeded === 1), {
-    message: 'quantityNeeded must be 1, or at least 2 for a qty item',
-    path: ['quantityNeeded'],
-  });
-const editItem = z.object({ ...itemFields, quantityNeeded: z.int().min(2).max(999) }).partial();
+  .refine(validQuantity, { message: QUANTITY_RULE, path: ['quantityNeeded'] });
+const editItem = z
+  .object({
+    ...itemFields,
+    list: z.enum(LISTS),
+    kind: z.enum(KINDS),
+    quantityNeeded: z.int().min(1).max(999),
+  })
+  .partial();
 
 const tripParam = z.object({ tripId: z.uuid() });
 const itemParam = z.object({ tripId: z.uuid(), itemId: z.uuid() });
 
-/** The bring and buy lists. Any active member may change them. */
+/**
+ * The bring and buy lists. Any active member may change them. An edit may change any field, as
+ * long as the item stays valid: the kind only while nobody claimed it, the quantity never below
+ * what's claimed, and a bought item stays on the buy list.
+ */
 export const itemRoutes = (auth: Auth, db: Db) =>
   new Hono()
     .use(requireUser(auth))
@@ -73,16 +86,35 @@ export const itemRoutes = (auth: Auth, db: Db) =>
         const item = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
           const current = await lockItem(tx, tripId, itemId);
-          if (changes.quantityNeeded !== undefined) {
-            if (current.kind !== 'qty') throw fail(400, 'Only a qty item has a quantity');
+          const changed = Object.fromEntries(
+            Object.entries(changes).filter(([k, v]) => v !== current[k as keyof typeof current]),
+          ) as typeof changes;
+          const fields = Object.keys(changed);
+          if (fields.length === 0) return current;
+
+          const next = { ...current, ...changed };
+          if (!validQuantity(next)) throw fail(400, QUANTITY_RULE);
+          if (changed.kind || changed.quantityNeeded) {
             const claimed = claimedQuantity(itemId, await lockClaims(tx, itemId));
-            if (changes.quantityNeeded < claimed) throw fail(409, 'Less than already claimed');
+            // A claim means something else per kind (a share, the whole item, "I have mine"),
+            // so there is no safe conversion: the kind changes only before anyone claims.
+            if (changed.kind && claimed > 0) throw fail(409, 'Already claimed');
+            if (next.quantityNeeded < claimed) throw fail(409, 'Less than already claimed');
           }
-          const updated = await updateItem(tx, itemId, changes);
-          await logActivity(tx, tripId, me, 'item_updated', {
+          // The bring list has no purchases: unmark it as bought first.
+          if (changed.list === 'bring' && (await findPurchase(tx, itemId))) {
+            throw fail(409, 'Already bought');
+          }
+
+          // Moved to the other list: at its end, like a new item.
+          const updated = await updateItem(
+            tx,
             itemId,
-            fields: Object.keys(changes),
-          });
+            changed.list
+              ? { ...changed, position: await endOfList(tx, tripId, changed.list) }
+              : changed,
+          );
+          await logActivity(tx, tripId, me, 'item_updated', { itemId, name: updated.name, fields });
           return updated;
         });
         return c.json(toItem(item));

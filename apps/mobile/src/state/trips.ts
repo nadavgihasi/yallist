@@ -70,6 +70,13 @@ async function send(tripId: string, action: Action): Promise<unknown> {
       return parseResponse(
         trip.items[':itemId'].$delete({ param: { ...param, itemId: action.itemId } }),
       );
+    case 'editItem':
+      return parseResponse(
+        trip.items[':itemId'].$patch({
+          param: { ...param, itemId: action.itemId },
+          json: action.changes,
+        }),
+      );
     case 'setNote':
       return parseResponse(
         trip.items[':itemId'].$patch({
@@ -124,10 +131,13 @@ export function useTripAction(tripId: string) {
     },
     onError: (error, action, context) => {
       if (context?.before) queryClient.setQueryData(key, context.before);
+      const conflict = statusOf(error) === 409;
       showToast(
-        action.type === 'setClaim' && statusOf(error) === 409
+        conflict && action.type === 'setClaim'
           ? he.errors.claimTaken
-          : he.errors.failed,
+          : conflict && action.type === 'editItem'
+            ? he.errors.itemEditRefused
+            : he.errors.failed,
       );
     },
     // Refetch after the last queued change only; an earlier refetch would undo later ones.
