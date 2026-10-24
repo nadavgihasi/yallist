@@ -33,6 +33,7 @@ export function Sheet({
 }: {
   title: string;
   subtitle?: string;
+  /** Called with no arguments (not the press event). */
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
@@ -57,7 +58,7 @@ export function Sheet({
       {/* Pointer-only dismiss; the close button is the accessible way out. */}
       <Pressable
         style={styles.scrim}
-        onPress={onClose}
+        onPress={() => onClose()}
         accessible={false}
         importantForAccessibility="no-hide-descendants"
         {...(Platform.OS === 'web' ? ({ tabIndex: -1, 'aria-hidden': true } as object) : {})}
@@ -92,7 +93,7 @@ export function Sheet({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={he.close}
-              onPress={onClose}
+              onPress={() => onClose()}
               style={styles.close}
             >
               <Icon name="close" />

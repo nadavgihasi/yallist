@@ -9,7 +9,7 @@ import { AmountField, TextField, fieldStyles } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { showToast } from '@/components/Toast';
-import { closeSheet } from '@/features/trip/closeSheet';
+import { useCloseSheet } from '@/features/trip/closeSheet';
 import { deriveTrip } from '@/features/trip/derive';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
@@ -35,7 +35,7 @@ function AddExpenseBody({ data }: { data: TripData }) {
   const [payer, setPayer] = useState(me);
   const [shares, setShares] = useShares(view);
 
-  const close = () => closeSheet(data.trip.id);
+  const close = useCloseSheet(data.trip.id);
   const agorot = parseShekel(amount);
   const unbought = view.items
     .filter((i) => i.list === 'buy' && !linkedExpense(i.id, data.expenses))
@@ -44,13 +44,14 @@ function AddExpenseBody({ data }: { data: TripData }) {
 
   const save = () => {
     if (!valid) return;
-    act({
-      type: 'addExpense',
-      expense: { itemId, description: what.trim(), amountAgorot: agorot, paidBy: payer, shares },
+    close(() => {
+      act({
+        type: 'addExpense',
+        expense: { itemId, description: what.trim(), amountAgorot: agorot, paidBy: payer, shares },
+      });
+      // The list shows it only once the API answers, so say it went through.
+      showToast(he.addExpense.saved(formatShekel(agorot)));
     });
-    // The list shows it only once the API answers, so say it went through.
-    showToast(he.addExpense.saved(formatShekel(agorot)));
-    close();
   };
 
   return (
