@@ -1,0 +1,216 @@
+import { TEMPLATES, type TemplateId } from '@yallist/domain';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Cover, SCENE_TINT } from '@/components/Cover';
+import { DateField } from '@/components/DateField';
+import { TextField, fieldStyles } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
+import { PillButton } from '@/components/PillButton';
+import { he, itemsCount } from '@/i18n/he';
+import { addDays, formatRange, today } from '@/lib/dates';
+import { buildTrip } from '@/state/reducer';
+import { useDispatch, useMe } from '@/state/store';
+import { colors, fonts, radius } from '@/theme';
+
+const KINDS: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
+
+/** First few item names of a template list, for the "what goes in" preview. */
+function preview(template: TemplateId, list: 'bring' | 'buy'): string {
+  const names = TEMPLATES[template].filter((t) => t.list === list).map((t) => t.name);
+  return names.length > 4 ? `${names.slice(0, 4).join(', ')} ועוד` : names.join(', ');
+}
+
+export default function NewTrip() {
+  const me = useMe();
+  const dispatch = useDispatch();
+  const insets = useSafeAreaInsets();
+  const [template, setTemplate] = useState<TemplateId>('camp');
+  const [name, setName] = useState('');
+  const [place, setPlace] = useState('');
+  const [startsOn, setStartsOn] = useState(() => addDays(today(), 14));
+  const [endsOn, setEndsOn] = useState(() => addDays(today(), 15));
+
+  const shownName = name.trim() || he.newTrip.fallbackName;
+
+  const setStart = (iso: string) => {
+    setStartsOn(iso);
+    if (endsOn < iso) setEndsOn(iso);
+  };
+
+  const create = () => {
+    const data = buildTrip(
+      { name: shownName, startsOn, endsOn, placeText: place.trim() || undefined, template },
+      me,
+    );
+    dispatch({ type: 'createTrip', trip: data });
+    router.replace({ pathname: '/trips/[tripId]', params: { tripId: data.trip.id } });
+  };
+
+  return (
+    <View style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={[styles.content, { paddingTop: 12 + insets.top }]}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.topBar}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={he.trip.back}
+            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+            style={styles.back}
+          >
+            <Icon name="back" />
+          </Pressable>
+          <Text style={styles.h1} accessibilityRole="header">
+            {he.newTrip.title}
+          </Text>
+        </View>
+
+        <Cover scene={template} style={styles.cover}>
+          <View style={styles.coverLabel}>
+            <Text style={styles.coverName}>{shownName}</Text>
+            <Text style={styles.coverDates}>{formatRange(startsOn, endsOn)}</Text>
+          </View>
+        </Cover>
+
+        <View style={styles.section}>
+          <View style={styles.sectionHead}>
+            <Text style={styles.h2}>{he.newTrip.kind}</Text>
+            <Text style={styles.hint}>{he.newTrip.kindHint}</Text>
+          </View>
+          <View style={styles.grid}>
+            {KINDS.map((k) => {
+              const selected = k === template;
+              const count = TEMPLATES[k].length;
+              return (
+                <Pressable
+                  key={k}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  onPress={() => setTemplate(k)}
+                  style={[styles.tile, selected && styles.tileOn]}
+                >
+                  <View style={[styles.swatch, { backgroundColor: SCENE_TINT[k] }]} />
+                  <Text style={styles.tileName}>{he.newTrip.templates[k]}</Text>
+                  <Text style={styles.tileMeta}>
+                    {count ? itemsCount(count) : he.newTrip.blankHint}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.card}>
+          <TextField
+            label={he.newTrip.name}
+            value={name}
+            onChangeText={setName}
+            placeholder={he.newTrip.namePlaceholder}
+          />
+          <View style={styles.field}>
+            <Text style={fieldStyles.label}>{he.newTrip.when}</Text>
+            <View style={styles.dates}>
+              <DateField
+                label={he.newTrip.from}
+                value={startsOn}
+                min={today()}
+                onChange={setStart}
+              />
+              <DateField label={he.newTrip.to} value={endsOn} min={startsOn} onChange={setEndsOn} />
+            </View>
+          </View>
+          <TextField
+            label={he.newTrip.where}
+            hint={he.newTrip.optional}
+            value={place}
+            onChangeText={setPlace}
+            placeholder={he.newTrip.wherePlaceholder}
+          />
+        </View>
+
+        <View style={styles.card} accessibilityLiveRegion="polite">
+          <Text style={styles.h3}>{he.newTrip.preview}</Text>
+          {template === 'blank' ? (
+            <Text style={styles.hint}>{he.newTrip.previewBlank}</Text>
+          ) : (
+            <>
+              <Text style={styles.previewLine}>
+                <Text style={styles.strong}>{he.newTrip.previewBring}</Text>
+                {preview(template, 'bring')}
+              </Text>
+              <Text style={styles.previewLine}>
+                <Text style={styles.strong}>{he.newTrip.previewBuy}</Text>
+                {preview(template, 'buy')}
+              </Text>
+            </>
+          )}
+        </View>
+        <View style={{ height: 110 }} />
+      </ScrollView>
+      <View style={[styles.ctaWrap, { bottom: 24 + insets.bottom }]}>
+        <PillButton label={he.newTrip.create} size="xl" wide onPress={create} />
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.ground },
+  content: { paddingHorizontal: 16, gap: 18 },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  back: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  h1: { fontFamily: fonts.displayBold, fontSize: 28, color: colors.ink },
+  cover: { height: 220, borderRadius: radius.card },
+  coverLabel: {
+    position: 'absolute',
+    start: 14,
+    end: 14,
+    bottom: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: 'rgba(14,23,38,0.45)',
+    backdropFilter: 'blur(14px)',
+    gap: 2,
+  },
+  coverName: { fontFamily: fonts.display, fontSize: 26, color: colors.white },
+  coverDates: { fontFamily: fonts.regular, fontSize: 14, color: colors.white, opacity: 0.9 },
+  section: { gap: 10 },
+  sectionHead: { gap: 2, paddingHorizontal: 4 },
+  h2: { fontFamily: fonts.display, fontSize: 22, color: colors.ink },
+  h3: { fontFamily: fonts.display, fontSize: 19, color: colors.ink },
+  hint: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkSecondary },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tile: {
+    flexBasis: '48%',
+    flexGrow: 1,
+    minHeight: 120,
+    padding: 14,
+    borderRadius: 22,
+    borderWidth: 2,
+    borderColor: colors.surface,
+    backgroundColor: colors.surface,
+    gap: 8,
+  },
+  tileOn: { borderColor: colors.accent, boxShadow: '0 6px 18px rgba(14,23,38,0.10)' },
+  swatch: { width: 44, height: 44, borderRadius: 14 },
+  tileName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
+  tileMeta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
+  card: { padding: 16, borderRadius: radius.group, backgroundColor: colors.surface, gap: 16 },
+  field: { gap: 8 },
+  dates: { flexDirection: 'row', gap: 8 },
+  previewLine: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.ink },
+  strong: { fontFamily: fonts.semibold },
+  ctaWrap: { position: 'absolute', start: 16, end: 16 },
+});

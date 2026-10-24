@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { I18nManager, Platform, StyleSheet, View } from 'react-native';
 
+import { StoreProvider } from '@/state/store';
 import { colors } from '@/theme';
 
 if (Platform.OS !== 'web') {
@@ -19,6 +20,9 @@ if (Platform.OS !== 'web') {
 }
 
 SplashScreen.preventAutoHideAsync();
+
+/** react-native-web resolves start/end styles from the nearest `dir`, not from `<html dir>`. */
+const webRtl = Platform.OS === 'web' ? ({ dir: 'rtl' } as object) : {};
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -39,11 +43,13 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="dark" />
-      <View style={styles.frame}>
-        <Stack
-          screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}
-        />
-      </View>
+      <StoreProvider>
+        <View style={styles.frame} {...webRtl}>
+          <Stack
+            screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}
+          />
+        </View>
+      </StoreProvider>
     </>
   );
 }
