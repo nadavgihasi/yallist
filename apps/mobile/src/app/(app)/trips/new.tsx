@@ -1,7 +1,15 @@
 import { TEMPLATES, type TemplateId } from '@yallist/domain';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type ViewStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Cover, SCENE_TINT } from '@/components/Cover';
@@ -17,8 +25,11 @@ import { colors, fonts, radius } from '@/theme';
 
 const KINDS: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
 
-/** Web gets a real blur behind the cover label; native keeps the dark translucent panel. */
-const coverLabelBlur = Platform.OS === 'web' ? { backdropFilter: 'blur(14px)' } : {};
+/**
+ * Web gets a real blur behind the cover label; native keeps the dark translucent panel.
+ * Cast because RN's ViewStyle lacks the web-only `backdropFilter` without the generated expo types (as in CI).
+ */
+const coverLabelBlur = (Platform.OS === 'web' ? { backdropFilter: 'blur(14px)' } : {}) as ViewStyle;
 
 export default function NewTrip() {
   const me = useMe();
