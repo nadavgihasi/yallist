@@ -132,6 +132,13 @@ export default $config({
         // A distribution has no name, only a comment (default "Web site"); put the stage in it.
         cdn: (args) => {
           args.comment = `yallist-${$app.stage}-web`;
+          // CloudFront's managed SecurityHeadersPolicy: HSTS, nosniff, X-Frame-Options SAMEORIGIN
+          // (the page, which holds the session, can't be framed by other sites) and
+          // Referrer-Policy strict-origin-when-cross-origin (invite links' tokens stay on our origin).
+          args.defaultCacheBehavior = $output(args.defaultCacheBehavior).apply((behavior) => ({
+            ...behavior,
+            responseHeadersPolicyId: '67f7725c-6f97-4210-82d7-5512b31e9d03',
+          }));
         },
       },
     });
