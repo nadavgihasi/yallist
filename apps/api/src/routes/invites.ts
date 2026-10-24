@@ -8,6 +8,7 @@ import { requireUser, type Auth } from '../auth';
 import type { Db } from '../db/client';
 import { tripMembers, trips } from '../db/schema';
 import { transact, type Tx } from '../db/tx';
+import type { Publish } from '../realtime';
 import { loadTrips } from '../trip-data';
 
 const tokenParam = z.object({ token: z.string().min(1).max(64) });
@@ -20,7 +21,7 @@ async function tripByToken(tx: Tx, token: string) {
 }
 
 /** The invite link: a bearer capability for joining one trip (SPEC §5). */
-export const inviteRoutes = (auth: Auth, db: Db) =>
+export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
   new Hono()
     // Public, for the join page and link previews: only what a stranger holding the link may see.
     .get('/:token', validate('param', tokenParam), async (c) => {
@@ -76,6 +77,7 @@ export const inviteRoutes = (auth: Auth, db: Db) =>
           );
           return { tripId: trip.id, status };
         });
+        await notify(result.tripId);
         return c.json(result);
       },
     );

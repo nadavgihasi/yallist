@@ -14,7 +14,8 @@ const AVATAR_COLORS = ['#FFD9C2', '#D8F0E0', '#F1DDF7', '#FFF0B3', '#D3F1F4', '#
 export interface AuthConfig {
   /** The API's public URL; Better Auth is served under `/api/auth`. */
   baseURL: string;
-  webURL: string;
+  /** The web app, trusted as an origin. Not needed where sessions are only looked up. */
+  webURL?: string;
   secret: string;
   google: { clientId: string; clientSecret: string };
 }
@@ -29,7 +30,11 @@ export function createAuth(db: Db, config: AuthConfig) {
     baseURL: config.baseURL,
     secret: config.secret,
     // The web app, the Expo dev server, and the native app's deep links (OAuth redirects back).
-    trustedOrigins: [config.webURL, 'http://localhost:8081', 'yallist://'],
+    trustedOrigins: [
+      ...(config.webURL ? [config.webURL] : []),
+      'http://localhost:8081',
+      'yallist://',
+    ],
     database: drizzleAdapter(db, { provider: 'pg', schema, usePlural: true }),
     advanced: { database: { generateId: 'uuid' } },
     socialProviders: { google: config.google },
