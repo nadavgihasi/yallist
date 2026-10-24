@@ -12,10 +12,14 @@ Creates a PKCS12 upload key, stores it and its generated password as the GitHub 
 
 ## Build
 
-Actions → **Android build** → **Run workflow**. The run's artifact contains:
+Actions → **Android build** → **Run workflow** on `main`, pick the stage (`dev` or `production`) whose backend the app should use. Or: `gh workflow run android.yml --ref main -f stage=dev`.
+
+The URLs come from the stage's GitHub environment variables `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_REALTIME_URL` and `EXPO_PUBLIC_GOOGLE_CLIENT_ID` (the same values the web build gets from SST); update them if a stage's API is recreated.
+
+The run's artifact `yallist-android-<stage>-<run>` contains:
 
 - `app-release.aab`: upload to Play Console → Testing → Internal testing.
-- `app-release.apk`: install directly on a phone (allow "install unknown apps").
+- `app-release.apk`: sideload until Play is ready. Download the artifact from the run page and unzip it (or `gh run download <run-id>`), copy the APK to the phone, open it and allow "install unknown apps" for the browser/file manager.
 
 `versionCode` is the workflow run number, so every run can be uploaded to Play. Bump `version` in `apps/mobile/app.json` for user-visible versions.
 

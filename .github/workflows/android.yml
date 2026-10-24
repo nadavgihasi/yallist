@@ -2,6 +2,12 @@ name: Android build
 
 on:
   workflow_dispatch:
+    inputs:
+      stage:
+        description: Backend the app talks to
+        type: choice
+        options: [dev, production]
+        default: dev
   pull_request:
     paths:
       - .github/workflows/android.yml
@@ -12,6 +18,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    # Manual runs take the stage's backend URLs from its environment variables. PR runs are only a
+    # compile check, with no environment (environments accept main only) and so no backend.
+    environment: ${{ inputs.stage }}
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -47,11 +56,15 @@ jobs:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_VERSION_CODE: ${{ github.run_number }}
+          # Inlined into the JS bundle by Metro during the release build.
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_REALTIME_URL: ${{ vars.EXPO_PUBLIC_REALTIME_URL }}
+          EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID }}
         run: ./gradlew bundleRelease assembleRelease --no-daemon
 
       - uses: actions/upload-artifact@v4
         with:
-          name: yallist-android-${{ github.run_number }}
+          name: yallist-android-${{ inputs.stage || 'pr' }}-${{ github.run_number }}
           path: |
             apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
             apps/mobile/android/app/build/outputs/apk/release/app-release.apk
