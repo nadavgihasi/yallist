@@ -297,6 +297,38 @@ export const he = {
     toTrips: 'לטיולים שלי',
     toStart: 'למסך הפתיחה',
   },
+  profile: {
+    title: 'הפרופיל שלי',
+    open: 'החשבון שלי',
+    back: 'חזרה',
+    color: 'צבע',
+    colorOption: (n: number) => `צבע ${n}`,
+    name: 'שם',
+    nameHint: 'כך יראו אותך בטיולים חדשים',
+    payments: 'תשלומים',
+    phone: 'טלפון לקבלת כסף',
+    phoneHint: 'כדי שחברים לטיול יוכלו להעביר לך ב-Bit או ב-PayBox',
+    phonePlaceholder: '050-0000000',
+    phoneInvalid: 'מספר נייד ישראלי, למשל 050-1234567',
+    account: 'חשבון',
+    guest: 'נכנסת כאורח',
+    guestHint: 'הטיולים שמורים רק במכשיר הזה. מחברים חשבון Google כדי לא לאבד אותם.',
+    google: 'חשבון Google',
+    linked: 'החשבון חובר ל-Google',
+    notifications: 'התראות',
+    soon: 'בקרוב',
+    notify: {
+      notifyUpdates: ['עדכונים בטיולים שלי', 'כשמישהו לוקח פריט או מוסיף הוצאה'],
+      notifyDayBefore: ['תזכורת יום לפני טיול', 'מה עוד חסר ומה אצלך'],
+      notifySettle: ['תזכורת להתחשבנות', 'אחרי הטיול, אם נשארו חובות'],
+    },
+    signOut: 'התנתקות',
+    signOutConfirm: 'להתנתק?',
+    signOutGuest:
+      'נכנסת כאורח: אחרי ההתנתקות לא תהיה דרך לחזור לטיולים שלך. כדאי לחבר קודם חשבון Google.',
+    signOutYes: 'כן, להתנתק',
+    cancel: 'ביטול',
+  },
 } as const;
 
 /** `ועוד 5`, after a cut-off list. */

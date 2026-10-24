@@ -12,22 +12,19 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Avatar } from '@/components/Avatar';
 import { Cover } from '@/components/Cover';
 import { FLOATING_CLEARANCE, FloatingAction } from '@/components/FloatingAction';
 import { Card } from '@/components/ListGroup';
 import { VersionLine } from '@/components/VersionLine';
 import { PastTripRow, TripCard } from '@/features/home/TripCard';
-import { initial } from '@/features/trip/derive';
+import { ProfileButton } from '@/features/profile/ProfileButton';
 import { he } from '@/i18n/he';
 import { daysBetween, today } from '@/lib/dates';
-import { useMe } from '@/state/store';
 import { useTrips } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
 export default function Home() {
-  const me = useMe();
   const trips = useTrips();
   const insets = useSafeAreaInsets();
   const bp = useBreakpoint();
@@ -65,9 +62,7 @@ export default function Home() {
           <Text style={styles.h1} accessibilityRole="header">
             {he.home.title}
           </Text>
-          <View accessibilityLabel={me.name}>
-            <Avatar person={{ initial: initial(me.name) }} size={size.avatar} ring={false} />
-          </View>
+          <ProfileButton />
         </View>
 
         {trips.isPending ? (

@@ -1,0 +1,304 @@
+import { AVATAR_COLORS, formatIsraeliMobile, parseIsraeliMobile } from '@yallist/domain';
+import { router } from 'expo-router';
+import { useState, type ReactNode } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
+import { Avatar } from '@/components/Avatar';
+import { Switch } from '@/components/Controls';
+import { TextField } from '@/components/Fields';
+import { Icon } from '@/components/Icon';
+import { Card, ListGroup } from '@/components/ListGroup';
+import { PillButton } from '@/components/PillButton';
+import { showToast } from '@/components/Toast';
+import { VersionLine } from '@/components/VersionLine';
+import { GoogleButton } from '@/features/auth/GoogleButton';
+import { initial } from '@/features/trip/derive';
+import { he } from '@/i18n/he';
+import { signInWithGoogle } from '@/lib/api';
+import { useProfile, useUpdateProfile, type Profile } from '@/state/profile';
+import { useSession } from '@/state/store';
+import { colors, layout, size, space, type } from '@/theme';
+import { useBreakpoint } from '@/theme/breakpoint';
+
+const NOTIFY_PREFS = ['notifyUpdates', 'notifyDayBefore', 'notifySettle'] as const;
+
+/**
+ * The user's profile and settings: cards of rows, one per section. A new setting is a row in
+ * its section's card (`SettingRow`), or a new card.
+ */
+export default function ProfileScreen() {
+  const profile = useProfile();
+  const insets = useSafeAreaInsets();
+  const wide = useBreakpoint() !== 'phone';
+
+  return (
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={[
+        styles.content,
+        { paddingTop: (wide ? 32 : 12) + insets.top, paddingBottom: 32 + insets.bottom },
+      ]}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.topBar}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={he.profile.back}
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+          style={styles.back}
+        >
+          <Icon name="back" strokeWidth={2.5} />
+        </Pressable>
+        <Text style={styles.h1} accessibilityRole="header">
+          {he.profile.title}
+        </Text>
+      </View>
+
+      {profile.data ? (
+        // Keyed: after linking Google it's another user, whose fields start fresh.
+        <Settings key={profile.data.id} profile={profile.data} />
+      ) : profile.isError ? (
+        <Pressable onPress={() => profile.refetch()} style={styles.status}>
+          <Text style={styles.caption}>{he.errors.loadFailed}</Text>
+          <Text style={styles.retry}>{he.errors.retry}</Text>
+        </Pressable>
+      ) : (
+        <ActivityIndicator color={colors.primary} style={styles.status} />
+      )}
+    </ScrollView>
+  );
+}
+
+function Settings({ profile }: { profile: Profile }) {
+  const update = useUpdateProfile();
+  const { signIn } = useSession();
+  const guest = profile.account.type === 'guest';
+  const [name, setName] = useState(profile.displayName);
+  const [phone, setPhone] = useState(
+    profile.paymentPhone ? formatIsraeliMobile(profile.paymentPhone) : '',
+  );
+  const [phoneError, setPhoneError] = useState(false);
+
+  const saveName = () => {
+    const trimmed = name.trim();
+    if (!trimmed) setName(profile.displayName);
+    else if (trimmed !== profile.displayName) update.mutate({ displayName: trimmed });
+  };
+
+  const savePhone = () => {
+    const parsed = phone.trim() ? parseIsraeliMobile(phone) : null;
+    setPhoneError(parsed === undefined);
+    if (parsed === undefined) return;
+    if (parsed) setPhone(formatIsraeliMobile(parsed));
+    if (parsed !== profile.paymentPhone) update.mutate({ paymentPhone: parsed });
+  };
+
+  const linkGoogle = (idToken: string) =>
+    signInWithGoogle(idToken)
+      .then(signIn)
+      .then(() => showToast(he.profile.linked))
+      .catch(() => showToast(he.errors.signIn));
+
+  return (
+    <>
+      <Card>
+        <View style={styles.identity}>
+          <Avatar
+            person={{ initial: initial(profile.displayName) }}
+            color={profile.avatarColor}
+            size={96}
+            ring={false}
+          />
+        </View>
+        <View
+          style={styles.swatches}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={he.profile.color}
+        >
+          {AVATAR_COLORS.map((color, i) => {
+            const selected = color === profile.avatarColor;
+            return (
+              <Pressable
+                key={color}
+                accessibilityRole="radio"
+                accessibilityLabel={he.profile.colorOption(i + 1)}
+                accessibilityState={{ checked: selected }}
+                onPress={() => selected || update.mutate({ avatarColor: color })}
+                style={[styles.swatch, selected && styles.swatchOn]}
+              >
+                <View style={[styles.swatchFill, { backgroundColor: color }]} />
+              </Pressable>
+            );
+          })}
+        </View>
+        <TextField
+          label={he.profile.name}
+          hint={he.profile.nameHint}
+          value={name}
+          onChangeText={setName}
+          onBlur={saveName}
+          onSubmitEditing={saveName}
+          maxLength={50}
+          returnKeyType="done"
+        />
+      </Card>
+
+      <ListGroup title={he.profile.payments}>
+        <TextField
+          label={he.profile.phone}
+          value={phone}
+          onChangeText={(text) => {
+            setPhone(text);
+            setPhoneError(false);
+          }}
+          onBlur={savePhone}
+          onSubmitEditing={savePhone}
+          placeholder={he.profile.phonePlaceholder}
+          inputMode="tel"
+          autoComplete="tel"
+          returnKeyType="done"
+          // Digits read left to right even in a Hebrew screen.
+          style={styles.ltr}
+        />
+        {phoneError ? (
+          <Text style={styles.error} accessibilityLiveRegion="polite">
+            {he.profile.phoneInvalid}
+          </Text>
+        ) : (
+          <Text style={styles.caption}>{he.profile.phoneHint}</Text>
+        )}
+      </ListGroup>
+
+      <ListGroup title={he.profile.account}>
+        {guest ? (
+          <>
+            <SettingRow label={he.profile.guest} hint={he.profile.guestHint} />
+            <GoogleButton onIdToken={linkGoogle} />
+          </>
+        ) : (
+          <SettingRow label={he.profile.google} hint={profile.account.email ?? undefined} />
+        )}
+      </ListGroup>
+
+      <ListGroup title={he.profile.notifications} aside={he.profile.soon}>
+        {NOTIFY_PREFS.map((pref) => {
+          const [label, hint] = he.profile.notify[pref];
+          return (
+            <SettingRow key={pref} label={label} hint={hint}>
+              <Switch
+                label={label}
+                value={profile[pref]}
+                onChange={(value) => update.mutate({ [pref]: value })}
+              />
+            </SettingRow>
+          );
+        })}
+      </ListGroup>
+
+      <SignOut guest={guest} />
+      <VersionLine />
+    </>
+  );
+}
+
+/** A row in a settings card: label and optional hint at the start, a control at the end. */
+function SettingRow({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <View style={styles.row}>
+      <View style={styles.rowTexts}>
+        <Text style={styles.rowLabel}>{label}</Text>
+        {hint && <Text style={styles.caption}>{hint}</Text>}
+      </View>
+      {children}
+    </View>
+  );
+}
+
+/** Asks first; a guest is warned that signing out loses their trips. */
+function SignOut({ guest }: { guest: boolean }) {
+  const { signOut } = useSession();
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  if (!confirming) {
+    return (
+      <PillButton label={he.profile.signOut} variant="danger" onPress={() => setConfirming(true)} />
+    );
+  }
+  return (
+    <Card gap={space[3]}>
+      <Text style={styles.rowLabel} accessibilityRole="alert">
+        {he.profile.signOutConfirm}
+      </Text>
+      {guest && <Text style={styles.caption}>{he.profile.signOutGuest}</Text>}
+      <View style={styles.actions}>
+        <PillButton
+          label={he.profile.signOutYes}
+          variant="soft"
+          disabled={busy}
+          onPress={() => {
+            setBusy(true);
+            // The (app) layout then redirects to the login screen.
+            signOut();
+          }}
+        />
+        <PillButton
+          label={he.profile.cancel}
+          variant="quiet"
+          onPress={() => setConfirming(false)}
+        />
+      </View>
+    </Card>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.ground },
+  content: {
+    width: '100%',
+    maxWidth: layout.contentMax,
+    alignSelf: 'center',
+    paddingHorizontal: space.screen,
+    gap: space[4],
+  },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  back: {
+    width: size.avatar,
+    height: size.avatar,
+    borderRadius: size.avatar / 2,
+    backgroundColor: colors.card,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  h1: { ...type.pageTitle, color: colors.ink, flexShrink: 1 },
+  status: { alignItems: 'center', gap: space[2], paddingVertical: 48 },
+  retry: { ...type.buttonSm, color: colors.primary },
+  identity: { alignItems: 'center' },
+  swatches: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space[2] },
+  swatch: {
+    width: size.avatar,
+    height: size.avatar,
+    borderRadius: size.avatar / 2,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    padding: 3,
+  },
+  swatchOn: { borderColor: colors.primary },
+  swatchFill: { flex: 1, borderRadius: size.avatar / 2 },
+  ltr: { writingDirection: 'ltr', textAlign: 'right' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
+  rowTexts: { flex: 1, gap: space[1] },
+  rowLabel: { ...type.itemTitle, color: colors.ink },
+  caption: { ...type.caption, color: colors.inkMuted },
+  error: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.brandStrong },
+  actions: { flexDirection: 'row', gap: space[2] },
+});

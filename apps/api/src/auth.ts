@@ -1,3 +1,4 @@
+import { AVATAR_COLORS } from '@yallist/domain';
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { anonymous } from 'better-auth/plugins/anonymous';
@@ -9,9 +10,6 @@ import type { Db } from './db/client';
 import * as schema from './db/schema';
 
 export { mergeUser };
-
-/** SPEC §9 avatar palette (also apps/mobile's theme). */
-const AVATAR_COLORS = ['#FFD9C2', '#D8F0E0', '#F1DDF7', '#FFF0B3', '#D3F1F4', '#FFDDE4', '#E3E0FF'];
 
 export interface AuthConfig {
   /** The API's public URL; Better Auth is served under `/api/auth`. */

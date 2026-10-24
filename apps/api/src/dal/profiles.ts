@@ -9,6 +9,20 @@ export async function findProfile(tx: Executor, userId: string) {
   return profile;
 }
 
+/** Changes the given profile fields; returns the updated profile. */
+export async function updateProfile(
+  tx: Executor,
+  userId: string,
+  changes: Partial<Omit<typeof profiles.$inferInsert, 'id' | 'createdAt' | 'updatedAt'>>,
+) {
+  const [profile] = await tx
+    .update(profiles)
+    .set({ ...changes, updatedAt: new Date() })
+    .where(eq(profiles.id, userId))
+    .returning();
+  return profile;
+}
+
 export const insertProfile = (tx: Executor, values: typeof profiles.$inferInsert) =>
   tx.insert(profiles).values(values);
 

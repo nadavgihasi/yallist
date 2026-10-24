@@ -6,17 +6,22 @@ export interface AvatarPerson {
   initial: string;
 }
 
-/** Initial badge: `primary` fill, `onPrimary` letter. `dimmed` for someone left out (share picker). */
+/**
+ * Initial badge: `primary` fill, `onPrimary` letter. `dimmed` for someone left out (share picker).
+ * `color`, one of the pale AVATAR_COLORS, fills it instead with an `ink` letter.
+ */
 export function Avatar({
   person,
   size = 32,
   ring = true,
   dimmed = false,
+  color,
 }: {
   person: AvatarPerson;
   size?: number;
   ring?: boolean;
   dimmed?: boolean;
+  color?: string;
 }) {
   return (
     <View
@@ -25,7 +30,7 @@ export function Avatar({
         {
           width: size,
           height: size,
-          backgroundColor: dimmed ? colors.primaryTint : colors.primary,
+          backgroundColor: color ?? (dimmed ? colors.primaryTint : colors.primary),
           borderWidth: ring ? 2 : 0,
         },
       ]}
@@ -34,7 +39,7 @@ export function Avatar({
         style={[
           styles.initial,
           {
-            color: dimmed ? colors.primaryStrong : colors.onPrimary,
+            color: color ? colors.ink : dimmed ? colors.primaryStrong : colors.onPrimary,
             fontSize: Math.round(size * 0.42),
           },
         ]}

@@ -2,13 +2,13 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { HTTPException } from 'hono/http-exception';
 
-import { requireUser, type Auth } from './auth';
-import { findProfile } from './dal/profiles';
+import type { Auth } from './auth';
 import type { Db } from './db/client';
 import type { Publish } from './realtime';
 import { categoryRoutes } from './routes/categories';
 import { inviteRoutes } from './routes/invites';
 import { itemRoutes } from './routes/items';
+import { meRoutes } from './routes/me';
 import { moneyRoutes } from './routes/money';
 import { tripRoutes } from './routes/trips';
 
@@ -30,10 +30,7 @@ export function createApp(auth: Auth, db: Db, publish: Publish) {
     })
     .get('/health', (c) => c.json({ ok: true }))
     .on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
-    .get('/me', requireUser(auth), async (c) => {
-      const profile = await findProfile(db, c.var.user.id);
-      return profile ? c.json(profile) : c.notFound();
-    })
+    .route('/me', meRoutes(auth, db))
     .use('/trips/:tripId/*', async (c, next) => {
       await next();
       // After every successful write to a trip, so after its transaction committed.
