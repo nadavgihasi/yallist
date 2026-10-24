@@ -10,6 +10,7 @@ import { Logo } from '@/components/Logo';
 import { PillButton } from '@/components/PillButton';
 import { StatusRing } from '@/components/StatusRing';
 import { showToast } from '@/components/Toast';
+import { VersionLine } from '@/components/VersionLine';
 import { GoogleButton } from '@/features/auth/GoogleButton';
 import { he } from '@/i18n/he';
 import { signInAsGuest, signInWithGoogle, type AuthResult } from '@/lib/api';
@@ -96,6 +97,7 @@ export default function Login() {
             </>
           )}
         </View>
+        <VersionLine />
       </ScrollView>
     </KeyboardAvoidingView>
   );

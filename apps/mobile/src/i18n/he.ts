@@ -1,6 +1,7 @@
 /** All user-facing strings. Hebrew only for v1; another locale is a sibling file with the same shape. */
 export const he = {
   appName: 'Yallist',
+  version: (v: string) => `גרסה ${v}`,
   close: 'סגירה',
   unknownPerson: 'לא ידוע',
   invalidAmount: 'סכום לא תקין',

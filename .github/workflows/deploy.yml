@@ -15,6 +15,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Tags main with the next version from commit titles and creates a GitHub release (docs/releases.md).
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: release
+        run: scripts/release.sh
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   global:
     runs-on: ubuntu-latest
     environment: global
@@ -43,21 +59,27 @@ jobs:
         run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api db:migrate
 
   dev:
-    needs: global
+    needs: [global, version]
     runs-on: ubuntu-latest
     environment: dev
     # SST reads a secret's value from SST_SECRET_<name>; the values are this environment's secrets.
     env:
+      APP_VERSION: ${{ needs.version.outputs.version }} # app.config.ts
+      EXPO_PUBLIC_GIT_SHA: ${{ github.sha }} # VersionLine
+      EXPO_PUBLIC_STAGE: dev
       SST_SECRET_BetterAuthSecret: ${{ secrets.BETTER_AUTH_SECRET }}
       SST_SECRET_GoogleClientSecret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps: *deploy
 
   production:
-    needs: dev
+    needs: [dev, version]
     runs-on: ubuntu-latest
     environment: production
     # SST reads a secret's value from SST_SECRET_<name>; the values are this environment's secrets.
     env:
+      APP_VERSION: ${{ needs.version.outputs.version }}
+      EXPO_PUBLIC_GIT_SHA: ${{ github.sha }}
+      EXPO_PUBLIC_STAGE: production
       SST_SECRET_BetterAuthSecret: ${{ secrets.BETTER_AUTH_SECRET }}
       SST_SECRET_GoogleClientSecret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps: *deploy
