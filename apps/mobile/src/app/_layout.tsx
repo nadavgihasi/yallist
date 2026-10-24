@@ -45,7 +45,7 @@ export default function RootLayout() {
     <>
       <StatusBar style="dark" />
       <StoreProvider>
-        <View style={styles.frame} {...webRtl}>
+        <View style={styles.root} {...webRtl}>
           <Stack
             screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}
           />
@@ -56,7 +56,6 @@ export default function RootLayout() {
   );
 }
 
-/** On wide screens (web), keep the app in a phone-width column. */
 const styles = StyleSheet.create({
-  frame: { flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center' },
+  root: { flex: 1 },
 });

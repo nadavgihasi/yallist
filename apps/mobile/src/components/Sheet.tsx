@@ -7,6 +7,7 @@ import { Icon } from './Icon';
 
 import { he } from '@/i18n/he';
 import { colors, fonts, radius } from '@/theme';
+import { useBreakpoint } from '@/theme/breakpoint';
 
 const TITLE_ID = 'sheet-title';
 
@@ -19,6 +20,7 @@ const dialogProps =
 /**
  * Floating glass sheet with a grabber, inset 8 from the screen edges. Rendered by modal routes
  * (`presentation: 'transparentModal'`) over a scrim; `footer` stays pinned at the bottom.
+ * On tablet and desktop it becomes a centered dialog sized to its content.
  */
 export function Sheet({
   title,
@@ -40,6 +42,7 @@ export function Sheet({
   gap?: number;
 }) {
   const insets = useSafeAreaInsets();
+  const dialog = useBreakpoint() !== 'phone';
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
@@ -59,13 +62,23 @@ export function Sheet({
         {...(Platform.OS === 'web' ? ({ tabIndex: -1, 'aria-hidden': true } as object) : {})}
       />
       <View
-        style={[styles.frame, { top: top + insets.top, bottom: 8 + insets.bottom }]}
+        style={[
+          styles.frame,
+          dialog ? styles.dialogFrame : { top: top + insets.top, bottom: 8 + insets.bottom },
+        ]}
         pointerEvents="box-none"
       >
-        <View style={[styles.sheet, glassStyle]} {...dialogProps}>
-          <View style={styles.grabberRow}>
-            <View style={styles.grabber} />
-          </View>
+        <View
+          style={[styles.sheet, glassStyle, dialog ? styles.dialog : styles.fill]}
+          {...dialogProps}
+        >
+          {dialog ? (
+            <View style={styles.dialogTop} />
+          ) : (
+            <View style={styles.grabberRow}>
+              <View style={styles.grabber} />
+            </View>
+          )}
           {/* Pinned: only the body scrolls, so the title and X stay in reach. */}
           <View style={[styles.header, !subtitle && { alignItems: 'center' }]}>
             <View style={styles.titles}>
@@ -106,8 +119,8 @@ const styles = StyleSheet.create({
   scrim: { ...StyleSheet.absoluteFill, backgroundColor: colors.scrim },
   // Centers the sheet on wide (web) screens; absolute insets alone would pin it to one side.
   frame: { position: 'absolute', start: 8, end: 8, alignItems: 'center' },
+  dialogFrame: { top: 32, bottom: 32, start: 24, end: 24, justifyContent: 'center' },
   sheet: {
-    flex: 1,
     width: '100%',
     maxWidth: 560,
     borderRadius: radius.sheet,
@@ -116,6 +129,11 @@ const styles = StyleSheet.create({
     boxShadow: '0 20px 50px rgba(14,23,38,0.25)',
     overflow: 'hidden',
   },
+  // Sized to content, scrolling only past the window height.
+  fill: { flex: 1 },
+  // More opaque than the phone sheet: on wide screens it floats over dense content.
+  dialog: { maxHeight: '100%', backgroundColor: colors.glassFallback },
+  dialogTop: { height: 14 },
   grabberRow: { alignItems: 'center', paddingTop: 10 },
   grabber: { width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(14,23,38,0.18)' },
   body: { paddingHorizontal: 20, paddingBottom: 20 },

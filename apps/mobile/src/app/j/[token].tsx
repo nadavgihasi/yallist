@@ -136,7 +136,15 @@ function Message({ title, text }: { title: string; text?: string }) {
 
 const styles = StyleSheet.create({
   center: { flex: 1 },
-  screen: { padding: space.screen, paddingTop: 64, gap: 16 },
+  // Capped and centered so the text doesn't run across a desktop window.
+  screen: {
+    width: '100%',
+    maxWidth: 640,
+    alignSelf: 'center',
+    padding: space.screen,
+    paddingTop: 64,
+    gap: 16,
+  },
   title: { ...type.screenTitle, color: colors.ink },
   kicker: { fontFamily: fonts.medium, fontSize: 15, color: colors.inkSecondary },
   card: { padding: 20, borderRadius: radius.card, backgroundColor: colors.surface, gap: 8 },

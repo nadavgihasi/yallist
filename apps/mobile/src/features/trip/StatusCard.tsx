@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AvatarStack } from '@/components/Avatar';
 import { Pegs } from '@/components/Pegs';
@@ -13,16 +13,18 @@ export function StatusCard({
   view,
   members,
   me,
+  style,
 }: {
   view: TripView;
   members: TripMember[];
   me: string;
+  style?: StyleProp<ViewStyle>;
 }) {
   const avatars = <AvatarStack people={members.map((m) => toAvatar(m, me))} />;
   // Nothing to cover yet: a neutral line, not a green "0, all covered" (matches TripCard).
   if (view.items.length === 0) {
     return (
-      <View style={[styles.card, styles.top]}>
+      <View style={[styles.card, styles.top, style]}>
         <Text style={styles.empty}>{he.home.noItems}</Text>
         {avatars}
       </View>
@@ -33,7 +35,7 @@ export function StatusCard({
   const label =
     missing === 0 ? he.trip.allCovered : missing === 1 ? he.trip.oneMissing : he.trip.manyMissing;
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, style]}>
       <View style={styles.top}>
         <View style={styles.numberRow}>
           <Text style={[styles.number, { color: missing === 0 ? colors.success : colors.missing }]}>

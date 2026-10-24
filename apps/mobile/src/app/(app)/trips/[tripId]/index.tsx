@@ -1,11 +1,24 @@
+import { formatShekel } from '@yallist/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+  type ViewStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Cover } from '@/components/Cover';
-import { Fab, GlassTabBar, glassStyle } from '@/components/GlassTabBar';
+import { Fab, GlassTabBar, glassStyle, type TabSpec } from '@/components/GlassTabBar';
 import { Icon } from '@/components/Icon';
+import { PillButton } from '@/components/PillButton';
+import { TabRow } from '@/components/TabRow';
 import { deriveTrip } from '@/features/trip/derive';
 import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
@@ -16,10 +29,14 @@ import { formatRange } from '@/lib/dates';
 import { statusOf } from '@/lib/api';
 import { useMe } from '@/state/store';
 import { useTripQuery } from '@/state/trips';
-import { colors, fonts } from '@/theme';
+import { colors, fonts, radius } from '@/theme';
+import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
 const TABS = ['bring', 'buy', 'people', 'money'] as const;
 type Tab = (typeof TABS)[number];
+
+/** Keeps the desktop side panel in view while the list scrolls (web only). */
+const sticky = (Platform.OS === 'web' ? { position: 'sticky', top: 24 } : {}) as ViewStyle;
 
 export default function TripScreen() {
   const params = useLocalSearchParams<{
@@ -33,6 +50,13 @@ export default function TripScreen() {
   const data = query.data;
   const me = useMe();
   const insets = useSafeAreaInsets();
+  const bp = useBreakpoint();
+  // Tablet and desktop: cover as a header band, tabs on top, inline add button instead of the FAB.
+  const wide = bp !== 'phone';
+  const desktop = bp === 'desktop';
+  // The cover spans the window; its contents line up with the centered page column.
+  const { width } = useWindowDimensions();
+  const coverInset = { marginHorizontal: Math.max(0, (width - contentMaxWidth) / 2) };
   // The tab lives in the URL (`?tab=buy`) so reload and Back keep it.
   const tab: Tab = TABS.find((t) => t === params.tab) ?? 'bring';
   const setTab = (next: Tab) => router.setParams({ tab: next });
@@ -73,6 +97,13 @@ export default function TripScreen() {
   // Long names get a smaller size; two lines at most, and long words break inside the cover.
   const titleSize = trip.name.length > 18 ? styles.titleLong : undefined;
 
+  const tabs: TabSpec<Tab>[] = [
+    { value: 'bring', label: he.trip.tabs.bring, icon: 'bring', badge: view.missingIn('bring') },
+    { value: 'buy', label: he.trip.tabs.buy, icon: 'buy', badge: view.missingIn('buy') },
+    { value: 'people', label: he.trip.tabs.people, icon: 'users' },
+    { value: 'money', label: he.trip.tabs.money, icon: 'wallet' },
+  ];
+
   const fab =
     tab === 'people'
       ? null
@@ -84,8 +115,8 @@ export default function TripScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView>
-        <Cover scene={trip.template} style={{ height: 300 + insets.top }}>
-          <View style={[styles.topBar, { top: 12 + insets.top }]}>
+        <Cover scene={trip.template} style={{ height: (wide ? 280 : 300) + insets.top }}>
+          <View style={[styles.topBar, coverInset, { top: (wide ? 20 : 12) + insets.top }]}>
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={he.trip.back}
@@ -95,7 +126,7 @@ export default function TripScreen() {
               <Icon name="back" />
             </Pressable>
           </View>
-          <View style={[styles.titleBlock, onPanel && styles.titlePanel]}>
+          <View style={[styles.titleBlock, coverInset, onPanel && styles.titlePanel]}>
             <View style={styles.dateChip}>
               <Text style={styles.dateText}>{formatRange(trip.startsOn, trip.endsOn)}</Text>
             </View>
@@ -114,30 +145,65 @@ export default function TripScreen() {
             )}
           </View>
         </Cover>
-        <StatusCard view={view} members={view.active} me={me.userId} />
-        {(tab === 'bring' || tab === 'buy') && (
-          <ListTab key={tab} list={tab} data={data} view={view} me={me.userId} />
-        )}
-        {tab === 'people' && <PeopleTab data={data} view={view} me={me.userId} />}
-        {tab === 'money' && <MoneyTab data={data} view={view} me={me.userId} />}
-        <View style={{ height: 120 + insets.bottom }} />
+        <View style={wide && styles.page}>
+          {!desktop && (
+            <StatusCard
+              view={view}
+              members={view.active}
+              me={me.userId}
+              style={wide && styles.statusWide}
+            />
+          )}
+          {wide && (
+            <View style={styles.tabRow}>
+              <TabRow
+                tabs={tabs}
+                value={tab}
+                onChange={setTab}
+                end={
+                  fab && (
+                    <PillButton
+                      label={he.trip.fab[tab as 'bring' | 'buy' | 'money']}
+                      icon={<Icon name="plus" color={colors.white} size={20} />}
+                      onPress={fab}
+                    />
+                  )
+                }
+              />
+            </View>
+          )}
+          <View style={desktop && styles.columns}>
+            <View style={desktop && styles.main}>
+              {(tab === 'bring' || tab === 'buy') && (
+                <ListTab key={tab} list={tab} data={data} view={view} me={me.userId} />
+              )}
+              {tab === 'people' && <PeopleTab data={data} view={view} me={me.userId} />}
+              {tab === 'money' && <MoneyTab data={data} view={view} me={me.userId} />}
+            </View>
+            {desktop && (
+              <View style={[styles.side, sticky]}>
+                <StatusCard
+                  view={view}
+                  members={view.active}
+                  me={me.userId}
+                  style={styles.statusSide}
+                />
+                {view.totalSpent > 0 && tab !== 'money' && (
+                  <View style={styles.sideCard}>
+                    <Text style={styles.sideTitle}>{he.trip.tabs.money}</Text>
+                    <Text style={styles.sideText}>
+                      {he.money.share(formatShekel(view.myShare), formatShekel(view.totalSpent))}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+        </View>
+        <View style={{ height: (wide ? 48 : 120) + insets.bottom }} />
       </ScrollView>
-      <GlassTabBar
-        value={tab}
-        onChange={setTab}
-        tabs={[
-          {
-            value: 'bring',
-            label: he.trip.tabs.bring,
-            icon: 'bring',
-            badge: view.missingIn('bring'),
-          },
-          { value: 'buy', label: he.trip.tabs.buy, icon: 'buy', badge: view.missingIn('buy') },
-          { value: 'people', label: he.trip.tabs.people, icon: 'users' },
-          { value: 'money', label: he.trip.tabs.money, icon: 'wallet' },
-        ]}
-      />
-      {fab && (
+      {!wide && <GlassTabBar value={tab} onChange={setTab} tabs={tabs} />}
+      {!wide && fab && (
         <Fab
           label={he.trip.fab[tab as 'bring' | 'buy' | 'money']}
           icon={<Icon name="plus" color={colors.white} size={28} />}
@@ -153,6 +219,16 @@ const styles = StyleSheet.create({
   missing: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
   missingText: { fontFamily: fonts.display, fontSize: 22, color: colors.ink },
   link: { fontFamily: fonts.semibold, fontSize: 16, color: colors.accent },
+  page: { width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: 16 },
+  statusWide: { marginHorizontal: 16 },
+  tabRow: { paddingHorizontal: 16, paddingTop: 24 },
+  columns: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  main: { flex: 1, minWidth: 0 },
+  side: { width: 380, paddingTop: 20, paddingEnd: 16, gap: 16 },
+  statusSide: { marginTop: 0, marginHorizontal: 0 },
+  sideCard: { padding: 20, borderRadius: radius.card, backgroundColor: colors.surface, gap: 4 },
+  sideTitle: { fontFamily: fonts.display, fontSize: 19, color: colors.ink },
+  sideText: { fontFamily: fonts.regular, fontSize: 15, color: colors.inkSecondary },
   topBar: { position: 'absolute', start: 16, end: 16, flexDirection: 'row' },
   roundButton: {
     width: 44,

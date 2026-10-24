@@ -56,6 +56,7 @@ export function Switch({
       accessibilityLabel={label}
       accessibilityState={{ checked: value }}
       onPress={() => onChange(!value)}
+      hitSlop={6} // 32px track, 44px target
       style={[
         styles.switchTrack,
         {

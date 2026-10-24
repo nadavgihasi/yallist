@@ -12,10 +12,12 @@ import { he } from '@/i18n/he';
 import { signInAsGuest, signInWithGoogle, type AuthResult } from '@/lib/api';
 import { useSession } from '@/state/store';
 import { colors, fonts } from '@/theme';
+import { useBreakpoint } from '@/theme/breakpoint';
 
 export default function Login() {
   const { me, signIn } = useSession();
   const insets = useSafeAreaInsets();
+  const wide = useBreakpoint() !== 'phone';
   const [askName, setAskName] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
@@ -40,11 +42,11 @@ export default function Login() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
+      style={[styles.screen, wide && styles.screenWide]}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <Cover scene="camp" style={StyleSheet.absoluteFill} />
-      <View style={[styles.panel, { paddingBottom: 28 + insets.bottom }]}>
+      <View style={[styles.panel, wide ? styles.panelWide : { paddingBottom: 28 + insets.bottom }]}>
         <Text style={styles.title} accessibilityRole="header">
           {he.login.title}
         </Text>
@@ -97,6 +99,15 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 32,
     backgroundColor: colors.white,
     gap: 14,
+  },
+  // Wide screens: a centered card floating over the full-bleed cover.
+  screenWide: { justifyContent: 'center', alignItems: 'center', padding: 24 },
+  panelWide: {
+    width: '100%',
+    maxWidth: 440,
+    padding: 36,
+    borderRadius: 32,
+    boxShadow: '0 24px 60px rgba(14,23,38,0.25)',
   },
   title: { fontFamily: fonts.displayBold, fontSize: 36, lineHeight: 40, color: colors.ink },
   subtitle: {
