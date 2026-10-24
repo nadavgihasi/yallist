@@ -125,6 +125,8 @@ export default $config({
         EXPO_PUBLIC_REALTIME_URL: realtimeApi.dns.apply((dns) => dns.REALTIME!),
         // Google sign-in on web (Google Identity Services) uses the same OAuth client as the API.
         EXPO_PUBLIC_GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage],
+        // Keys the app's persisted query cache, so a deploy discards caches from older builds.
+        ...(process.env.GITHUB_SHA && { EXPO_PUBLIC_GIT_SHA: process.env.GITHUB_SHA }),
       },
       transform: {
         // A distribution has no name, only a comment (default "Web site"); put the stage in it.

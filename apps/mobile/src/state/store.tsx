@@ -6,6 +6,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 
 import { setAuth, statusOf, type AuthResult } from '@/lib/api';
 
+import { cacheBuster } from './cacheBuster';
 import type { Me } from './types';
 
 /**
@@ -35,6 +36,8 @@ const queryClient = new QueryClient({
 const persistOptions = {
   persister: createAsyncStoragePersister({ storage: AsyncStorage, key: 'yallist/cache' }),
   maxAge: WEEK,
+  // A new build drops the old cache rather than restoring data in a stale shape.
+  buster: cacheBuster(process.env.EXPO_PUBLIC_GIT_SHA),
 };
 
 interface SessionContext {
