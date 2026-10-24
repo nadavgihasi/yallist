@@ -33,11 +33,20 @@ export default $config({
     };
   },
   async run() {
+    // Aurora DSQL, one cluster per stage. Linked functions connect with IAM auth tokens
+    // (apps/api/src/db/client.ts). Migrations run after deploy (.github/workflows/deploy.yml).
+    const database = new sst.aws.Dsql('Database', {
+      transform: {
+        // A cluster has no name, only an identifier; put the stage in its Name tag.
+        cluster: { tags: { Name: `yallist-${$app.stage}-database` } },
+      },
+    });
+
     // Hono app (apps/api) behind an HTTP API; one Lambda serves every path.
     // CORS stays at SST's default (any origin): auth is bearer tokens, not cookies, so allowing
     // every origin exposes nothing. It also avoids a cycle: the web build needs the API URL.
     const api = new sst.aws.ApiGatewayV2('Api');
-    api.route('$default', '../../apps/api/src/lambda.handler');
+    api.route('$default', { handler: '../../apps/api/src/lambda.handler', link: [database] });
 
     // Single-page Expo web export on S3 + CloudFront. Unknown paths fall back to index.html
     // so deep links like /trips/:id load the app.
