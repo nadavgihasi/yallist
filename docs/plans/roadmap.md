@@ -1,0 +1,111 @@
+# Roadmap: what's still missing
+
+Gap analysis against [SPEC.md](../SPEC.md) and the [mockups](../design/README.md), as of 2026-10-24. **Done:** Phase 1 (auth #19, trips/members/invites/items/claims API #21, expenses/payments API #22, AppSync Events realtime #24, the app on the API with TanStack Query #26), editing items (#34) and the [e2e design](e2e-live-environments.md) (#20). **In flight:** release-please (#16).
+
+So the app has login (guest + Google on the API), My trips, New trip, the trip screen with lists, claims, Add item, Item sheet with editing, Add expense and the Money tab, all synced in realtime. Everything below is still missing (**M**) or only exists as a local-only or partial version (**P**).
+
+## Summary
+
+| Phase                   | Goal                                                     | PRs | Size | Blocks                             |
+| ----------------------- | -------------------------------------------------------- | --- | ---- | ---------------------------------- |
+| 2 — Invite and join     | A group can actually form: share, join from WhatsApp     | 6   | L    | Domain decision                    |
+| 3 — Accounts and launch | Google on Android, profile, deletion, legal: Play-ready  | 5   | L    | Privacy policy, deletion decisions |
+| 4 — Faster lists        | Bulk add; personal premade lists applied to any trip     | 3   | M    | D10, D11                           |
+| 5 — Money, finished     | Edit expenses, receipts, settle up with payment phone    | 3   | M    | Bit/PayBox deep link check         |
+| 6 — Activity and push   | Feed, to-dos, notifications, day-before reminder         | 5   | L    | FCM credentials                    |
+| 7 — Offline, trip day   | Works at the campsite; "מה הגיע?" checklist              | 2   | M    | —                                  |
+| 8 — After the trip      | Summary, duplicate, archive                              | 2   | M    | —                                  |
+| 9 — Release and ops     | Play production, observability, e2e, license, OTA        | 6   | L    | Observability and license choices  |
+| Later                   | iOS + Apple sign-in, help choosing a place, more locales | —   | L    | iOS timing                         |
+
+**Start now, in parallel with code:** Play closed testing needs 12+ testers for 14 consecutive days before production access ([android.md](../android.md)). Upload an internal build as soon as Phase 2 lands, so that clock runs during Phases 3–6.
+
+## Phase 2 — Invite and join
+
+| PR                                     | Status | Ref                                   | Scope                                                                                                                                                                                          | Depends  | Size |
+| -------------------------------------- | ------ | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---- |
+| `feat(infra): custom domain`           | M      | SPEC §12, tech open                   | Route 53 zone + ACM; web on `<domain>`, API on `api.<domain>`; update Better Auth `trustedOrigins` and the Google OAuth redirect URIs.                                                         | Name     | S    |
+| `feat(app): invite sheet`              | M      | §7, §8 `InviteV2`                     | `/trips/[tripId]/invite` modal: WhatsApp preview card, editable message, `wa.me` share, copy link, QR (`react-native-qrcode-svg`), approval switch, rotate link. Trip header invite button.    | #21      | M    |
+| `feat(web): join and pending pages`    | P      | §8 `JoinV2`, `JoinPendingV2`          | Replace the `/j/[token]` placeholder: preview, who's in, missing items, name field, guest sign-in + join. `/j/[token]/pending` updates live on approval (per-user realtime channel).           | Realtime | M    |
+| `feat(infra): OG link previews`        | M      | §5 link previews                      | CloudFront behavior for `/j/*` → small Lambda that renders OG tags from the preview endpoint, then boots the SPA. WhatsApp's crawler runs no JS, so the static site can't do this.             | Domain   | M    |
+| `feat(app): participants and settings` | P      | §8 `ParticipantsV2`, `TripSettingsV2` | Participants (approve/decline, make organizer, remove) replaces the local People tab's add-by-name. Settings: edit details, approval, invite link, leave/delete trip. API: leave, delete trip. | #21      | L    |
+| `feat(app): invite links open the app` | M      | §1 "install offered, never required"  | Android App Links (`/.well-known/assetlinks.json` on the domain, intent filter for `/j/*`), and "הדבקה" from the clipboard on the empty home (`FirstHomeV2`) instead of the demo trip.         | Domain   | S    |
+
+## Phase 3 — Accounts and launch readiness
+
+| PR                                     | Status | Ref                         | Scope                                                                                                                                                                                       | Depends      | Size |
+| -------------------------------------- | ------ | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ---- |
+| `feat(app): Google sign-in on Android` | M      | §7, #19 notes               | Native Credential Manager sign-in → ID token → `sign-in/social` with the guest's bearer token (links the guest). Android OAuth client for both the upload key and Play's signing key SHA-1. | #19          | M    |
+| `feat(app): profile screen`            | M      | §3 profiles, §8 `ProfileV2` | `/profile`: name, avatar, stats, payment phone, notification switches (stored now, used in Phase 6), sign out, link Google. API: `PATCH /me`.                                               | #19          | M    |
+| `feat(api,app): account deletion`      | M      | §12, Play policy            | In-app "delete account" plus a public web page for deletion requests (Play requires both). Behavior per decision D4.                                                                        | D4           | M    |
+| `docs(web): terms and privacy pages`   | M      | §8 `LoginV2`, §12           | Static Hebrew pages on the web app, linked from login and the Play listing. Also unblocks Google OAuth consent-screen verification.                                                         | D5, domain   | S    |
+| `feat(app): login per mockup`          | P      | §8 `LoginV2`                | Official Google button assets, "מצטרפים בלי חשבון", terms/privacy links; drop the local-only copy.                                                                                          | Previous two | S    |
+
+## Phase 4 — Faster lists (new; not in SPEC or mockups)
+
+| PR                                          | Status | Ref                       | Scope                                                                                                                                                                                                                                                                     | Depends                  | Size |
+| ------------------------------------------- | ------ | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------ | ---- |
+| `feat(api): bulk add items`                 | M      | New                       | `POST /trips/:id/items/bulk` (`items[]`, capped well under DSQL's 3,000-row limit): one transaction, one `items_added` activity row, skips duplicates by name (D11), returns created and skipped.                                                                         | #21                      | S    |
+| `feat(app): bulk add in the add-item sheet` | M      | New (extends `AddItemV2`) | Multi-line paste / quick-add list (one item per line, optional `×N` for qty) and multi-select of the quick suggestions; one optimistic update.                                                                                                                            | Previous, app on API     | M    |
+| `feat(api,app): my lists`                   | M      | New                       | `user_lists` + `user_list_items` (owned by the user, same item fields as `template_items`); CRUD + `POST /trips/:id/items/from-list/:listId` via bulk add. Seeded from `@yallist/domain` TEMPLATES (D10). Manage under the profile; "מהרשימות שלי" in the add-item sheet. | Previous, profile screen | L    |
+
+## Phase 5 — Money, finished
+
+| PR                                        | Status | Ref                                | Scope                                                                                                                                                     | Depends         | Size |
+| ----------------------------------------- | ------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------- | ---- |
+| `feat(api): edit expense, remind payment` | M      | §5 `remind_payment`, `ItemSheetV2` | `PATCH` expense (amount, shares, payer), so the item sheet's price entry edits in one transaction. Receiver-only reminder, once per 24 h (`reminded_at`). | #22             | S    |
+| `feat(api,app): receipt photos`           | M      | §3 `receipt_path`, `AddExpenseV2`  | Private S3 bucket, presigned upload/download URLs for active members only, path `trips/{tripId}/receipts/{expenseId}`.                                    | #22             | M    |
+| `feat(app): settle up`                    | P      | §1, §7, `TripV2` money tab         | Transfers show the receiver's payment phone, "copy amount", confirm "קיבלתי", reminder; "תשלום ב-Bit" only if D2 finds a working deep link.               | Phase 3 profile | M    |
+
+## Phase 6 — Activity and push
+
+| PR                                       | Status | Ref                       | Scope                                                                                                                                                       | Depends       | Size |
+| ---------------------------------------- | ------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---- |
+| `feat(api): activity feed and to-dos`    | M      | §8 `ActivityV2`           | `GET /trips/:id/activity` (paged, by day) plus "מחכה לך" to-dos (unpriced purchases, money I owe) and a per-member last-seen cursor for the unread dot.     | #21           | M    |
+| `feat(app): activity screen`             | M      | §8 `ActivityV2`, `TripV2` | Timeline with הכול / פריטים / כסף filters, to-dos, header button with unread dot.                                                                           | Previous      | M    |
+| `feat(api): push tokens and sender`      | M      | §3, §6                    | `push_tokens` + `trip_member_prefs` tables; after-commit sender to Expo's push service for claims, expenses, join requests and reminders, respecting prefs. | Profile prefs | M    |
+| `feat(app): push registration and prefs` | M      | §6, `TripSettingsV2`      | `expo-notifications` registration (FCM v1 credentials for Android), tap → deep link, per-trip notification switches in settings.                            | Previous      | S    |
+| `feat(infra): scheduled reminders`       | M      | §6, tech-decisions        | EventBridge Scheduler → Lambda: day-before reminder (what's missing, what's on you) at 18:00 Israel time; settle-up nudges after `ends_on`.                 | Push sender   | M    |
+
+## Phase 7 — Offline and trip day
+
+| PR                                  | Status | Ref                | Scope                                                                                                                                                                           | Depends    | Size |
+| ----------------------------------- | ------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---- |
+| `feat(app): offline mutations`      | P      | §6, `OfflineV2`    | Persisted, paused mutations that resume in order; "אין קליטה" banner with queued count; "ממתין" chips; rollback with a Hebrew message on 409. Persisted cache comes in Phase 1. | App on API | M    |
+| `feat(api,app): arrivals checklist` | M      | §1, §8 `OfflineV2` | `PUT …/items/:id/arrived`; `/trips/[tripId]/arrivals` with "עוד בדרך" / "הגיעו", linked from the trip screen during the trip dates; works offline.                              | Previous   | M    |
+
+## Phase 8 — After the trip
+
+| PR                                     | Status | Ref                            | Scope                                                                                                                                                           | Depends           | Size |
+| -------------------------------------- | ------ | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------- | ---- |
+| `feat(api): trip lifecycle, duplicate` | M      | §3 status, §5 `duplicate_trip` | `ended` derived from `ends_on`, archive; duplicate copies items and re-invites members (no claims, expenses or payments), within DSQL's 3,000-row limit.        | #21, #22          | M    |
+| `feat(app): trip summary`              | P      | §8 `TripSummaryV2`             | `/trips/[tripId]/summary`: settle-up progress, transfers with status and actions, stats, highlights, duplicate with new dates, archive. Past-trip rows open it. | Previous, Phase 5 | M    |
+
+## Phase 9 — Release and operations
+
+| PR                         | Status | Ref                                        | Scope                                                                                                                                 | Depends              | Size |
+| -------------------------- | ------ | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------- | ---- |
+| `ci(android): Play upload` | M      | [android.md](../android.md)                | Upload the AAB to the internal/closed track from `android.yml` (Gradle Play Publisher or Fastlane), versioned by release-please tags. | #16, Play account    | S    |
+| `feat: observability`      | M      | tech-decisions                             | One SDK across app, web and Lambda per D6; no tokens, phones or names in events (SPEC §5).                                            | D6                   | M    |
+| e2e rollout PRs 2–8        | M      | [#20](e2e-live-environments.md#10-rollout) | As designed in the e2e plan.                                                                                                          | App on API, realtime | L    |
+| `chore: license`           | M      | tech-decisions                             | `LICENSE` and a contributor grant in `CONTRIBUTING.md` per D7.                                                                        | D7                   | S    |
+| `feat(app): OTA updates`   | M      | tech-decisions                             | Hot Updater on S3 + CloudFront, so JS fixes skip Play review.                                                                         | Play upload          | M    |
+| `docs: Play listing`       | M      | [android.md](../android.md)                | Data safety form, content rating, store text, screenshots, feature graphic.                                                           | Privacy page         | S    |
+
+**Later:** iOS build + Sign in with Apple (required once iOS ships), help choosing a place (teased in settings), more templates, more languages (the profile's language row stays disabled until then).
+
+## Open decisions
+
+| #   | Decision                                                                    | Recommendation                                                                                                                                                                                                                                            |
+| --- | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1  | **App name and domain** (SPEC §12)                                          | **Yallist**, decided now. The package `app.yallist` is already in the Android build and becomes permanent on the first Play upload. The domain blocks Phase 2 (OG links, App Links, OAuth redirects) and the invite message copy.                         |
+| D2  | **Bit / PayBox deep links** (SPEC §12)                                      | Ship without the button: payment phone + "copy amount" + mark as paid. Test the deep links on a real phone during Phase 5 and add the button only if one opens a prefilled payment.                                                                       |
+| D3  | **Default quantities**: fixed per template, or scaled by members (SPEC §12) | **Fixed** (Appendix A). Organizers edit them anyway, and the count isn't known when the trip is created.                                                                                                                                                  |
+| D4  | **Account deletion**: anonymize or remove shared data (SPEC §12)            | **Anonymize.** Delete name, phone, sessions, push tokens and Google link; keep claims, expenses and payments under "חשבון שנמחק", so other members' balances stay correct.                                                                                |
+| D5  | **Terms and privacy content** (SPEC §12)                                    | A short Hebrew privacy policy and terms now (what's stored, AWS Frankfurt, no ads or selling, deletion). Required for Play and Google OAuth verification; a lawyer review can come before wide launch.                                                    |
+| D6  | **Observability**: New Relic vs Sentry                                      | **Sentry.** First-class Expo config plugin that works without EAS, source maps for Hermes, and the Lambda SDK covers the API. The free tier is enough at this scale. New Relic's RN agent on SDK 58 is still unverified.                                  |
+| D7  | **License**: which source-available license                                 | **All rights reserved** `LICENSE` that allows viewing and contributing, plus a contributor license grant (CLA Assistant). PolyForm Strict if you want to allow personal non-commercial use. Note: GitHub's terms let anyone fork a public repo on GitHub. |
+| D8  | **When to add iOS**                                                         | After Play production access. Apple adds $99/year, a Mac build path and Sign in with Apple; iPhone users get the web app until then.                                                                                                                      |
+| D9  | **When e2e runs** ([#20 Q1](e2e-live-environments.md#11-open-questions))    | `main` before `production` first; add a PR label after narrowing the deploy role's trust.                                                                                                                                                                 |
+| D10 | **My lists defaults**: copy per user, or shared read-only templates         | **Copy on first open** of "my lists": the user owns and edits them freely, and later template changes don't touch their copies. No seed rows for users who never open it.                                                                                 |
+| D11 | **Applying a list to a trip that already has items**                        | **Skip duplicates** by name in the same list (bring/buy), ignoring case and whitespace; tell the user how many were skipped. No merging of quantities.                                                                                                    |
