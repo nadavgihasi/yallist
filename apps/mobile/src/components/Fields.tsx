@@ -1,11 +1,22 @@
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { colors, fonts } from '@/theme';
+
+/**
+ * Text input for Hebrew text. react-native-web sets `dir="auto"`, which makes an empty input LTR
+ * (placeholder and caret on the left), so on web it's pinned to RTL. Native follows I18nManager.
+ */
+export function Input(props: TextInputProps) {
+  return <TextInput placeholderTextColor={colors.inkTertiary} {...webRtl} {...props} />;
+}
+
+const webRtl = Platform.OS === 'web' ? ({ dir: 'rtl' } as object) : {};
 
 /** Labelled text input on a soft gray field. */
 export function TextField({
   label,
   hint,
+  style,
   ...input
 }: TextInputProps & { label: string; hint?: string }) {
   return (
@@ -14,41 +25,57 @@ export function TextField({
         {label}
         {hint && <Text style={styles.hint}> {hint}</Text>}
       </Text>
-      <TextInput
-        placeholderTextColor={colors.inkTertiary}
-        style={styles.input}
-        accessibilityLabel={label}
-        {...input}
-      />
+      <Input accessibilityLabel={label} {...input} style={[styles.input, style]} />
     </View>
   );
 }
+
+/** Box height, input, ₪ sign and radius: md = ItemSheetV2 price, lg = AddExpenseV2 amount. */
+const AMOUNT_SIZES = {
+  md: { box: 76, input: 38, sign: 30, radius: 22 },
+  lg: { box: 84, input: 44, sign: 32, radius: 24 },
+} as const;
 
 /** Big "₪ 120" amount input. */
 export function AmountField({
   label,
   value,
   onChangeText,
+  size = 'md',
+  onSubmitEditing,
+  error,
 }: {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
+  size?: keyof typeof AMOUNT_SIZES;
+  onSubmitEditing?: () => void;
+  /** Shown under the field, e.g. when the text isn't a valid amount. */
+  error?: string;
 }) {
+  const sz = AMOUNT_SIZES[size];
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>{label}</Text>
-      <View style={styles.amountBox}>
-        <Text style={styles.currency}>₪</Text>
+      <View style={[styles.amountBox, { minHeight: sz.box, borderRadius: sz.radius }]}>
+        <Text style={[styles.currency, { fontSize: sz.sign }]}>₪</Text>
         <TextInput
           value={value}
           onChangeText={onChangeText}
+          onSubmitEditing={onSubmitEditing}
           inputMode="decimal"
+          returnKeyType="done"
           placeholder="0"
           placeholderTextColor={colors.inkTertiary}
           accessibilityLabel={label}
-          style={styles.amountInput}
+          style={[styles.amountInput, { fontSize: sz.input }]}
         />
       </View>
+      {error && (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
@@ -79,6 +106,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  error: { fontFamily: fonts.medium, fontSize: 13, color: colors.missing },
   currency: { fontFamily: fonts.display, fontSize: 30, color: colors.inkSecondary },
   amountInput: {
     flex: 1,

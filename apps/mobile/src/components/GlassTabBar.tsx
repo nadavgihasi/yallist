@@ -40,6 +40,7 @@ export function GlassTabBar<T extends string>({
           <Pressable
             key={t.value}
             accessibilityRole="tab"
+            accessibilityLabel={t.label}
             accessibilityState={{ selected }}
             onPress={() => onChange(t.value)}
             style={[styles.tab, selected && { backgroundColor: colors.accentTint }]}
@@ -104,7 +105,7 @@ const styles = StyleSheet.create({
     end: -10,
     minWidth: 18,
     height: 18,
-    paddingHorizontal: 4,
+    paddingHorizontal: 5,
     borderRadius: 9,
     borderWidth: 2,
     borderColor: colors.white,

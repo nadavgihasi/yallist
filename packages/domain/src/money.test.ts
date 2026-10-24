@@ -66,6 +66,16 @@ describe('balances', () => {
     expect(Object.fromEntries(b)).toEqual({ a: 300, b: -300, c: 0 });
   });
 
+  it('handles a payer who is not among the shares', () => {
+    const b = balances(['a', 'b', 'c'], [expense('a', 600, ['b', 'c'])], []);
+    expect(Object.fromEntries(b)).toEqual({ a: 600, b: -300, c: -300 });
+  });
+
+  it('ignores an expense with no shares', () => {
+    const b = balances(['a', 'b'], [expense('a', 600, [])], []);
+    expect(Object.fromEntries(b)).toEqual({ a: 0, b: 0 });
+  });
+
   it('always sums to zero', () => {
     const b = balances(
       ['a', 'b', 'c'],

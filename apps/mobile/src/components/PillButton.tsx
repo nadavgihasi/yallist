@@ -11,16 +11,25 @@ import {
 
 import { colors, fonts } from '@/theme';
 
-type Variant = 'solid' | 'soft' | 'quiet' | 'outline' | 'success' | 'danger';
+type Variant = 'solid' | 'soft' | 'quiet' | 'neutral' | 'outline' | 'success' | 'danger';
 
 const VARIANTS: Record<Variant, { bg: string; fg: string; border?: string }> = {
   solid: { bg: colors.accent, fg: colors.white },
   soft: { bg: colors.accentTint, fg: colors.accent },
   quiet: { bg: colors.ground, fg: colors.inkSecondary },
+  neutral: { bg: 'rgba(14,23,38,0.06)', fg: colors.ink },
   outline: { bg: colors.white, fg: colors.ink, border: colors.borderPill },
   success: { bg: colors.successTint, fg: colors.success },
   danger: { bg: 'transparent', fg: colors.missing },
 };
+
+/** Heights and type from the mockups: sm = row release chip, lg = wide card buttons, xl = sheet CTAs. */
+const SIZES = {
+  sm: { height: 44, padding: 14, fontSize: 14 },
+  md: { height: 44, padding: 16, fontSize: 15 },
+  lg: { height: 52, padding: 24, fontSize: 16 },
+  xl: { height: 58, padding: 24, fontSize: 17 },
+} as const;
 
 export function PillButton({
   label,
@@ -34,13 +43,13 @@ export function PillButton({
 }: Omit<PressableProps, 'style' | 'children'> & {
   label: string;
   variant?: Variant;
-  size?: 'md' | 'lg' | 'xl';
+  size?: keyof typeof SIZES;
   icon?: ReactNode;
   wide?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const v = VARIANTS[variant];
-  const height = { md: 44, lg: 52, xl: 58 }[size];
+  const { height, padding, fontSize } = SIZES[size];
   return (
     <Pressable
       accessibilityRole="button"
@@ -54,16 +63,16 @@ export function PillButton({
           borderWidth: v.border ? 1.5 : 0,
           borderColor: v.border,
           opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
-          paddingHorizontal: size === 'md' ? 16 : 24,
+          paddingHorizontal: padding,
         },
         wide && styles.wide,
-        variant === 'solid' && size !== 'md' && styles.shadow,
+        variant === 'solid' && height > 44 && styles.shadow,
         style,
       ]}
       {...rest}
     >
       {icon && <View>{icon}</View>}
-      <Text style={[styles.label, { color: v.fg, fontSize: size === 'md' ? 15 : 17 }]}>
+      <Text style={[styles.label, { color: v.fg, fontSize }, size === 'sm' && styles.labelSm]}>
         {label}
       </Text>
     </Pressable>
@@ -74,6 +83,7 @@ const styles = StyleSheet.create({
   pill: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   wide: { alignSelf: 'stretch' },
   label: { fontFamily: fonts.semibold },
+  labelSm: { fontFamily: fonts.medium },
   shadow: {
     boxShadow: '0 10px 24px rgba(14,23,38,0.22)',
   },

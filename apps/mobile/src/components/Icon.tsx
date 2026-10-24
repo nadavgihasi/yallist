@@ -38,6 +38,17 @@ const ICONS = {
     'M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1',
     'M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4',
   ],
+  // Template tiles (NewTripV2).
+  tent: ['M3 20h18', 'M12 4L4 20', 'M12 4l8 16', 'M12 13l-3 7', 'M12 13l3 7'],
+  flame: [
+    'M12 3c.5 3 4 5 4 9.5a4 4 0 0 1-8 0c0-2 1-3.5 2-4.5 0 2 .8 3 2 3.5 0-3-1-5 0-8.5z',
+    'M5 21h14',
+  ],
+  house: ['M4 11l8-7 8 7', 'M6 10v10h12V10', 'M10 20v-5h4v5'],
+  beach: [
+    'M3 16c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0',
+    'M3 20.5c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0',
+  ],
   trash: [
     'M3 6h18',
     'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6',
@@ -48,6 +59,7 @@ const ICONS = {
 const CIRCLES: Partial<Record<IconName, { cx: number; cy: number; r: number }[]>> = {
   userPlus: [{ cx: 9, cy: 7, r: 4 }],
   users: [{ cx: 9, cy: 7, r: 4 }],
+  beach: [{ cx: 12, cy: 8, r: 3.5 }],
   buy: [
     { cx: 8, cy: 21, r: 1 },
     { cx: 19, cy: 21, r: 1 },

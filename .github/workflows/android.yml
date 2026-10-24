@@ -1,0 +1,58 @@
+name: Android build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - .github/workflows/android.yml
+      - apps/mobile/plugins/**
+      - apps/mobile/app.json
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate native project
+        working-directory: apps/mobile
+        run: CI=1 npx expo prebuild -p android --no-install
+
+      - name: Decode upload key
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.p12"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.p12" >> "$GITHUB_ENV"
+          else
+            echo "::warning::No upload key secret; release builds are debug-signed and can't go to Play."
+          fi
+
+      - name: Build release AAB and APK
+        working-directory: apps/mobile/android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: ./gradlew bundleRelease assembleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: yallist-android-${{ github.run_number }}
+          path: |
+            apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
+            apps/mobile/android/app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error

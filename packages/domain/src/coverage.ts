@@ -74,7 +74,10 @@ export function itemStatus(
   return { kind: item.list === 'buy' ? 'inProgress' : 'covered', holderIds };
 }
 
-/** "Done" for progress and missing counts: bought for buy items, covered otherwise. */
+/**
+ * "Done" for progress and missing counts: someone took it (covered) or it was bought.
+ * A claimed-but-unbought buy item (`בטיפול`) is not missing, matching the TripV2 mockup.
+ */
 export function isDone(
   item: Item,
   claims: readonly Claim[],
