@@ -12,7 +12,7 @@ import { signInAsGuest, signInWithGoogle, statusOf, type AuthResult } from '@/li
 import { formatRange } from '@/lib/dates';
 import { useSession } from '@/state/store';
 import { joinTrip, tripsKey, useInvite } from '@/state/trips';
-import { colors, fonts, radius, space, type } from '@/theme';
+import { colors, layout, radius, space, type } from '@/theme';
 
 /** Invite links land here (JoinV2): a preview anyone can see, then sign in and join. */
 export default function Join() {
@@ -100,14 +100,16 @@ export default function Join() {
         <PillButton label={he.join.join} size="lg" wide disabled={busy} onPress={() => join()} />
       ) : (
         <>
-          <TextField
-            label={he.join.nameLabel}
-            value={name}
-            onChangeText={setName}
-            onSubmitEditing={() => name.trim() && join(signInAsGuest(name.trim()))}
-            placeholder={he.login.namePlaceholder}
-            returnKeyType="go"
-          />
+          <View style={styles.card}>
+            <TextField
+              label={he.join.nameLabel}
+              value={name}
+              onChangeText={setName}
+              onSubmitEditing={() => name.trim() && join(signInAsGuest(name.trim()))}
+              placeholder={he.login.namePlaceholder}
+              returnKeyType="go"
+            />
+          </View>
           <PillButton
             label={he.join.join}
             size="lg"
@@ -136,21 +138,26 @@ function Message({ title, text }: { title: string; text?: string }) {
 
 const styles = StyleSheet.create({
   center: { flex: 1 },
-  // Capped and centered so the text doesn't run across a desktop window.
+  // One column, centered on wide screens.
   screen: {
     width: '100%',
-    maxWidth: 640,
+    maxWidth: layout.contentMax,
     alignSelf: 'center',
     padding: space.screen,
     paddingTop: 64,
-    gap: 16,
+    gap: space[4],
   },
-  title: { ...type.pageTitle, color: colors.ink },
-  kicker: { fontFamily: fonts.bold, fontSize: 15, color: colors.inkMuted },
-  card: { padding: 20, borderRadius: radius.card, backgroundColor: colors.card, gap: 8 },
-  name: { fontFamily: fonts.extraBold, fontSize: 32, lineHeight: 38, color: colors.ink },
-  meta: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.inkMuted },
-  missing: { gap: 4, marginTop: 8 },
-  missingTitle: { fontFamily: fonts.bold, fontSize: 16, color: colors.brandStrong },
-  strong: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
+  title: { ...type.sectionTitle, color: colors.ink },
+  kicker: { ...type.buttonSm, color: colors.inkMuted },
+  card: {
+    padding: space[5],
+    borderRadius: radius.card,
+    backgroundColor: colors.card,
+    gap: space[2],
+  },
+  name: { ...type.pageTitle, color: colors.ink },
+  meta: { ...type.caption, color: colors.inkMuted },
+  missing: { gap: space[1], marginTop: space[2] },
+  missingTitle: { ...type.itemTitle, color: colors.ink },
+  strong: { ...type.itemTitle, color: colors.ink },
 });

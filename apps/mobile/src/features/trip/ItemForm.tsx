@@ -102,6 +102,7 @@ export function ItemForm({
         ]}
         value={list}
         onChange={setList}
+        style={{ backgroundColor: colors.ground }}
       />
 
       <View style={styles.field}>

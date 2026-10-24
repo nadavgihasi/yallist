@@ -7,12 +7,15 @@ import { FilterChip, PersonChip, SuggestionChip } from '@/components/Chips';
 import { SegmentedControl, Switch } from '@/components/Controls';
 import { Cover, type Scene } from '@/components/Cover';
 import { AmountField, TextField } from '@/components/Fields';
-import { Fab, GlassTabBar } from '@/components/GlassTabBar';
+import { FloatingAction } from '@/components/FloatingAction';
 import { Icon } from '@/components/Icon';
-import { EmptyState, ListGroup, SectionHeader } from '@/components/ListGroup';
-import { Progress } from '@/components/Progress';
+import { Card, EmptyState, ListGroup } from '@/components/ListGroup';
+import { Logo } from '@/components/Logo';
 import { PillButton } from '@/components/PillButton';
-import { colors, fonts } from '@/theme';
+import { Progress } from '@/components/Progress';
+import { StatusRing } from '@/components/StatusRing';
+import { TripTile } from '@/components/TripTile';
+import { colors, space, type } from '@/theme';
 
 const PEOPLE: AvatarPerson[] = ['ד', 'מ', 'ר', 'ש', 'א', 'י'].map((initial) => ({ initial }));
 const SCENES: Scene[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
@@ -22,7 +25,6 @@ export default function ComponentsPreview() {
   const [filter, setFilter] = useState('all');
   const [list, setList] = useState<'bring' | 'buy'>('bring');
   const [on, setOn] = useState(true);
-  const [tab, setTab] = useState<'bring' | 'buy' | 'people' | 'money'>('bring');
   const [amount, setAmount] = useState('120');
 
   if (!__DEV__) return <Redirect href="/" />;
@@ -30,18 +32,26 @@ export default function ComponentsPreview() {
   return (
     <View style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
+        <Logo />
         <Text style={styles.h1}>רכיבים</Text>
 
-        <SectionHeader title="כיסויים" />
-        {SCENES.map((s) => (
-          <Cover key={s} scene={s} style={styles.cover} />
-        ))}
+        <View style={styles.row}>
+          {SCENES.map((s) => (
+            <TripTile key={s} template={s} />
+          ))}
+        </View>
+        <Cover scene="camp" style={styles.cover} />
 
-        <SectionHeader title="התקדמות ואווטרים" aside="חסרים 3" asideColor={colors.brandStrong} />
-        <Progress done={9} total={20} />
-        <AvatarStack people={PEOPLE} />
+        <Card>
+          <Progress done={9} total={20} />
+          <AvatarStack people={PEOPLE} />
+          <View style={styles.row}>
+            <StatusRing state="open" />
+            <StatusRing state="held" />
+            <StatusRing state="done" label="נקנה" />
+          </View>
+        </Card>
 
-        <SectionHeader title="כפתורים" />
         <View style={styles.row}>
           <PillButton label="אני אביא" variant="soft" />
           <PillButton label="ביטול" variant="quiet" icon={<Icon name="close" size={16} />} />
@@ -53,7 +63,6 @@ export default function ComponentsPreview() {
         <PillButton label="יצירת הטיול" size="lg" wide />
         <PillButton label="מחיקת הפריט" variant="danger" />
 
-        <SectionHeader title="צ׳יפים ובקרות" />
         <View style={styles.row}>
           {[
             ['all', 'הכול', 20],
@@ -69,51 +78,35 @@ export default function ComponentsPreview() {
             />
           ))}
         </View>
-        <View style={styles.row}>
-          <PersonChip person={PEOPLE[0]!} name="דנה" selected={on} onPress={() => setOn(!on)} />
-          <SuggestionChip label="מלקחיים" onPress={() => {}} />
-        </View>
         <SegmentedControl
           options={[
-            { value: 'bring', label: 'להביא' },
-            { value: 'buy', label: 'לקנות' },
+            { value: 'bring', label: 'להביא · 20' },
+            { value: 'buy', label: 'לקנות · 7' },
           ]}
           value={list}
           onChange={setList}
         />
-        <View style={styles.row}>
-          <Text style={styles.body}>אני אביא את זה</Text>
-          <Switch value={on} onChange={setOn} label="אני אביא את זה" />
-        </View>
+        <Card>
+          <View style={styles.row}>
+            <PersonChip person={PEOPLE[0]!} name="דנה" selected={on} onPress={() => setOn(!on)} />
+            <SuggestionChip label="מלקחיים" onPress={() => {}} />
+          </View>
+          <View style={styles.row}>
+            <Text style={styles.body}>אני אביא את זה</Text>
+            <Switch value={on} onChange={setOn} label="אני אביא את זה" />
+          </View>
+          <TextField label="שם הטיול" placeholder="למשל: קמפינג בכנרת" />
+          <AmountField label="כמה?" value={amount} onChangeText={setAmount} />
+        </Card>
 
-        <SectionHeader title="שדות" />
-        <TextField label="שם הטיול" placeholder="למשל: קמפינג בכנרת" />
-        <AmountField label="כמה?" value={amount} onChangeText={setAmount} />
-
-        <SectionHeader title="רשימה" />
-        <ListGroup>
-          <Text style={styles.rowText}>מנגל</Text>
-          <Text style={styles.rowText}>פחמים</Text>
-          <Text style={styles.rowText}>צידניות</Text>
+        <ListGroup title="ציוד" aside="חסר 1">
+          <Text style={styles.body}>מנגל</Text>
+          <Text style={styles.body}>פחמים</Text>
         </ListGroup>
         <EmptyState title="אין כאן מה שחסר" text="כל הפריטים ברשימה הזו מכוסים." />
         <View style={styles.spacer} />
       </ScrollView>
-      <GlassTabBar
-        value={tab}
-        onChange={setTab}
-        tabs={[
-          { value: 'bring', label: 'להביא', icon: 'bring', badge: 6 },
-          { value: 'buy', label: 'לקנות', icon: 'buy', badge: 5 },
-          { value: 'people', label: 'אנשים', icon: 'users' },
-          { value: 'money', label: 'כסף', icon: 'wallet' },
-        ]}
-      />
-      <Fab
-        label="הוספה"
-        icon={<Icon name="plus" color={colors.onPrimary} size={28} />}
-        onPress={() => {}}
-      />
+      <FloatingAction label="פריט חדש" onPress={() => {}} />
     </View>
   );
 }
@@ -121,17 +114,16 @@ export default function ComponentsPreview() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.ground },
   content: {
-    padding: 16,
+    padding: space.screen,
     paddingTop: 48,
-    gap: 16,
+    gap: space[4],
     maxWidth: 560,
     width: '100%',
     alignSelf: 'center',
   },
-  h1: { fontFamily: fonts.extraBold, fontSize: 36, color: colors.ink },
-  cover: { height: 160, borderRadius: 28 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
-  body: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink, flex: 1 },
-  rowText: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink, padding: 16 },
+  h1: { ...type.pageTitle, color: colors.ink },
+  cover: { height: 160, borderRadius: 24 },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2], alignItems: 'center' },
+  body: { ...type.body, color: colors.ink, flex: 1 },
   spacer: { height: 120 },
 });

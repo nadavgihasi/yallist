@@ -12,25 +12,20 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Cover, SCENE_TINT } from '@/components/Cover';
+import { Cover } from '@/components/Cover';
 import { DateField } from '@/components/DateField';
 import { TextField, fieldStyles } from '@/components/Fields';
-import { Icon, type IconName } from '@/components/Icon';
+import { Icon } from '@/components/Icon';
+import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
+import { TripTile } from '@/components/TripTile';
 import { he, itemsCount } from '@/i18n/he';
 import { addDays, formatRange, today } from '@/lib/dates';
 import { useCreateTrip } from '@/state/trips';
-import { colors, fonts, radius } from '@/theme';
+import { colors, radius, size, space, type } from '@/theme';
 import { useBreakpoint } from '@/theme/breakpoint';
 
 const KINDS: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
-const TEMPLATE_ICON: Record<TemplateId, IconName> = {
-  camp: 'tent',
-  grill: 'flame',
-  zimmer: 'house',
-  beach: 'beach',
-  blank: 'plus',
-};
 
 /**
  * Web gets a real blur behind the cover label; native keeps the dark translucent panel.
@@ -97,7 +92,7 @@ export default function NewTrip() {
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
             style={styles.back}
           >
-            <Icon name="back" />
+            <Icon name="back" strokeWidth={2.5} />
           </Pressable>
           <Text style={styles.h1} accessibilityRole="header">
             {he.newTrip.title}
@@ -139,9 +134,7 @@ export default function NewTrip() {
                       onPress={() => setTemplate(k)}
                       style={[styles.tile, selected && styles.tileOn]}
                     >
-                      <View style={[styles.swatch, { backgroundColor: SCENE_TINT[k] }]}>
-                        <Icon name={TEMPLATE_ICON[k]} size={24} strokeWidth={1.9} />
-                      </View>
+                      <TripTile template={k} size={44} />
                       <Text style={styles.tileName}>{he.newTrip.templates[k]}</Text>
                       <Text style={styles.tileMeta}>
                         {count ? itemsCount(count) : he.newTrip.blankHint}
@@ -152,7 +145,7 @@ export default function NewTrip() {
               </View>
             </View>
 
-            <View style={styles.card}>
+            <Card>
               <TextField
                 label={he.newTrip.name}
                 value={name}
@@ -183,7 +176,7 @@ export default function NewTrip() {
                 onChangeText={setPlace}
                 placeholder={he.newTrip.wherePlaceholder}
               />
-            </View>
+            </Card>
 
             <View style={styles.card} accessibilityLiveRegion="polite">
               <Text style={styles.h3}>{he.newTrip.preview}</Text>
@@ -207,7 +200,6 @@ export default function NewTrip() {
                 label={he.newTrip.create}
                 size="lg"
                 wide
-                style={styles.cta}
                 disabled={createTrip.isPending}
                 onPress={create}
               />
@@ -222,7 +214,7 @@ export default function NewTrip() {
             label={he.newTrip.create}
             size="lg"
             wide
-            style={styles.cta}
+            float
             disabled={createTrip.isPending}
             onPress={create}
           />
@@ -234,71 +226,66 @@ export default function NewTrip() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.ground },
-  content: { paddingHorizontal: 16, gap: 18 },
-  contentWide: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 24 },
-  contentDesktop: { maxWidth: 1040, gap: 24 },
-  body: { gap: 18 },
+  content: { paddingHorizontal: space.screen, gap: space[4] },
+  contentWide: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: space[6] },
+  contentDesktop: { maxWidth: 1040, gap: space[6] },
+  body: { gap: space[4] },
   columns: { flexDirection: 'row', alignItems: 'flex-start', gap: 32 },
   coverCol: { flex: 1 },
   formCol: { flex: 1.2 },
   coverDesktop: { height: 320 },
-  topBar: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  topBar: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   back: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: size.avatar,
+    height: size.avatar,
+    borderRadius: size.avatar / 2,
     backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  h1: { fontFamily: fonts.extraBold, fontSize: 28, color: colors.ink },
+  h1: { ...type.pageTitle, color: colors.ink },
   cover: { height: 220, borderRadius: radius.card },
   coverLabel: {
     position: 'absolute',
     start: 14,
     end: 14,
     bottom: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: space[3],
+    paddingHorizontal: space[4],
     borderRadius: 20,
-    backgroundColor: 'rgba(14,23,38,0.45)',
+    backgroundColor: 'rgba(16,23,37,0.45)',
     gap: 2,
   },
   coverLabelPlain: { backgroundColor: 'transparent' },
-  coverName: { fontFamily: fonts.extraBold, fontSize: 26, color: colors.onPrimary },
-  coverDates: { fontFamily: fonts.regular, fontSize: 14, color: colors.onPrimary, opacity: 0.9 },
-  section: { gap: 10 },
-  sectionHead: { gap: 2, paddingHorizontal: 4 },
-  h2: { fontFamily: fonts.extraBold, fontSize: 22, color: colors.ink },
-  h3: { fontFamily: fonts.extraBold, fontSize: 19, color: colors.ink },
-  hint: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  coverName: { ...type.sectionTitle, color: colors.onPrimary },
+  coverDates: { ...type.caption, color: colors.onPrimary, opacity: 0.9 },
+  section: { gap: space[3] },
+  sectionHead: { gap: space[1] },
+  h2: { ...type.itemTitle, color: colors.ink },
+  h3: { ...type.itemTitle, color: colors.ink },
+  hint: { ...type.caption, color: colors.inkMuted },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   // Strict two columns, so a lone last tile stays half width (NewTripV2 grid).
   tile: {
     width: '48.8%',
     minHeight: 120,
-    padding: 14,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: colors.card,
+    padding: space[4],
+    borderRadius: radius.card,
     backgroundColor: colors.card,
-    gap: 8,
+    gap: space[2],
   },
-  tileOn: { borderColor: colors.primary, boxShadow: '0 6px 18px rgba(14,23,38,0.10)' },
-  swatch: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
+  tileOn: { backgroundColor: colors.primaryTint },
+  tileName: { ...type.itemTitle, color: colors.ink },
+  tileMeta: { ...type.caption, color: colors.inkMuted },
+  card: {
+    padding: space[5],
+    borderRadius: radius.card,
+    backgroundColor: colors.card,
+    gap: space[3],
   },
-  tileName: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
-  tileMeta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
-  card: { padding: 16, borderRadius: radius.card, backgroundColor: colors.card, gap: 16 },
-  field: { gap: 8 },
-  dates: { flexDirection: 'row', gap: 8 },
-  previewLine: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.ink },
-  strong: { fontFamily: fonts.bold },
-  ctaWrap: { position: 'absolute', start: 16, end: 16 },
-  cta: { minHeight: 60, borderRadius: 30 },
+  field: { gap: space[2] },
+  dates: { flexDirection: 'row', gap: space[2] },
+  previewLine: { ...type.body, color: colors.ink },
+  strong: { fontFamily: type.itemTitle.fontFamily },
+  ctaWrap: { position: 'absolute', start: space.screen, end: space.screen },
 });

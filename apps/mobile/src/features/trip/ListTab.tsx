@@ -5,16 +5,17 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FilterChip } from '@/components/Chips';
 import { Icon } from '@/components/Icon';
-import { EmptyState, ListGroup, SectionHeader } from '@/components/ListGroup';
+import { Card, EmptyState } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { he } from '@/i18n/he';
 import { useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
-import { colors, fonts } from '@/theme';
+import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
 import { ItemRow } from './ItemRow';
 import { groupSummary } from './labels';
+import { ProgressCard } from './ProgressCard';
 
 const FILTERS: ListFilter[] = ['all', 'missing', 'mine'];
 
@@ -67,6 +68,7 @@ export function ListTab({
 
   return (
     <View style={styles.wrap}>
+      <ProgressCard done={listItems.filter(view.done).length} total={listItems.length} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -84,102 +86,102 @@ export function ListTab({
         ))}
       </ScrollView>
       {groups.length === 0 && (
-        <View style={styles.group}>
-          <EmptyState title={he.trip.empty[filter].title} text={he.trip.empty[filter].text} />
-        </View>
+        <EmptyState title={he.trip.empty[filter].title} text={he.trip.empty[filter].text} />
       )}
-      {groups.map(({ category, total, missing, items }) => {
-        const summary = groupSummary(missing);
-        const title = category?.name ?? he.trip.uncategorized;
-        return (
-          <View key={category?.id ?? 'none'} style={styles.group}>
-            <View style={styles.header}>
-              <View style={styles.headerTitle}>
-                <SectionHeader
-                  title={title}
-                  aside={total > 0 ? summary.text : undefined}
-                  asideColor={summary.color}
-                />
-              </View>
-              {category && (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={he.trip.editCategory(category.name)}
-                  onPress={() => editCategory(category.id)}
-                  style={styles.headerButton}
-                >
-                  <Icon name="pencil" size={18} color={colors.inkMuted} />
-                </Pressable>
-              )}
-            </View>
-            <ListGroup>
-              {items.map((item) => (
-                <ItemRow
-                  key={item.id}
-                  item={item}
-                  claims={data.claims}
-                  view={view}
-                  me={me}
-                  onOpen={() =>
-                    router.push({
-                      pathname: '/trips/[tripId]/items/[itemId]',
-                      params: { tripId, itemId: item.id },
-                    })
-                  }
-                  onClaim={(quantity) => act({ type: 'setClaim', itemId: item.id, quantity })}
-                />
-              ))}
-              {category && filter === 'all' && (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => addItem(category.id)}
-                  style={styles.addRow}
-                >
-                  <Icon name="plus" size={18} color={colors.primary} />
-                  <Text style={styles.addText}>{he.trip.addToCategory}</Text>
-                </Pressable>
-              )}
-            </ListGroup>
+      {groups.map(({ category, total, missing, items }) => (
+        <Card key={category?.id ?? 'none'} gap={space[3]}>
+          {/* The card's small muted title (trip.html "ציוד"), with ✎ for the category sheet. */}
+          <View style={styles.header}>
+            <Text style={styles.title} accessibilityRole="header">
+              {category?.name ?? he.trip.uncategorized}
+            </Text>
+            {total > 0 && <Text style={styles.aside}>{groupSummary(missing)}</Text>}
+            {category && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={he.trip.editCategory(category.name)}
+                onPress={() => editCategory(category.id)}
+                hitSlop={4} // 36px circle, 44px target
+                style={styles.edit}
+              >
+                <Icon name="pencil" size={18} color={colors.primaryStrong} />
+              </Pressable>
+            )}
           </View>
-        );
-      })}
+          {items.map((item) => (
+            <ItemRow
+              key={item.id}
+              item={item}
+              claims={data.claims}
+              view={view}
+              me={me}
+              onOpen={() =>
+                router.push({
+                  pathname: '/trips/[tripId]/items/[itemId]',
+                  params: { tripId, itemId: item.id },
+                })
+              }
+              onClaim={(quantity) => act({ type: 'setClaim', itemId: item.id, quantity })}
+            />
+          ))}
+          {category && filter === 'all' && (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => addItem(category.id)}
+              style={styles.addRow}
+            >
+              <View style={styles.addRing}>
+                <Icon name="plus" size={16} color={colors.primaryStrong} strokeWidth={2.5} />
+              </View>
+              <Text style={styles.addText}>{he.trip.addToCategory}</Text>
+            </Pressable>
+          )}
+        </Card>
+      ))}
       {filter === 'all' && (
-        <View style={styles.group}>
-          <PillButton
-            label={he.trip.addCategory}
-            variant="card"
-            icon={<Icon name="plus" size={18} />}
-            onPress={() =>
-              router.push({ pathname: '/trips/[tripId]/categories/new', params: { tripId, list } })
-            }
-            style={styles.addCategory}
-          />
-        </View>
+        <PillButton
+          label={he.trip.addCategory}
+          variant="card"
+          icon={<Icon name="plus" size={18} color={colors.ink} />}
+          onPress={() =>
+            router.push({ pathname: '/trips/[tripId]/categories/new', params: { tripId, list } })
+          }
+          style={styles.addCategory}
+        />
       )}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingTop: 20, gap: 24 },
-  filters: { gap: 8, paddingHorizontal: 16 },
-  group: { gap: 10, paddingHorizontal: 16 },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  headerTitle: { flex: 1 },
-  headerButton: {
+  wrap: { gap: space[4] },
+  filters: { gap: space[2] },
+  header: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 36 },
+  title: {
+    ...type.caption,
+    fontFamily: type.itemTitle.fontFamily,
+    color: colors.inkMuted,
+    flex: 1,
+  },
+  aside: { ...type.caption, color: colors.inkMuted },
+  edit: {
     width: 36,
     height: 36,
     borderRadius: 18,
+    backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  addRow: {
-    minHeight: 52,
-    paddingHorizontal: 16,
-    flexDirection: 'row',
+  // Lines up with the item rings above it.
+  addRow: { minHeight: space.touch, flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  addRing: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: colors.primaryTint,
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'center',
   },
-  addText: { fontFamily: fonts.bold, fontSize: 15, color: colors.primary },
+  addText: { ...type.buttonSm, color: colors.primaryStrong },
   addCategory: { alignSelf: 'flex-start' },
 });

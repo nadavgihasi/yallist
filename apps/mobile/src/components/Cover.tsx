@@ -125,15 +125,6 @@ const SCENES: Record<Scene, ReactNode> = {
   ),
 };
 
-/** Tile background color per scene (template picker). */
-export const SCENE_TINT: Record<Scene, string> = {
-  camp: illo.sky,
-  grill: '#BDE5CF',
-  zimmer: '#FFCDB2',
-  beach: '#A8DBF7',
-  blank: '#DDE3F8',
-};
-
 export function Cover({
   scene,
   style,

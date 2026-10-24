@@ -2,77 +2,78 @@ import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarStack } from '@/components/Avatar';
-import { Cover } from '@/components/Cover';
-import { glassStyle } from '@/components/GlassTabBar';
 import { Progress } from '@/components/Progress';
+import { StatusRing } from '@/components/StatusRing';
+import { TripTile } from '@/components/TripTile';
 import { toAvatar } from '@/features/trip/derive';
 import { he, missingItems, openTransfers, participants } from '@/i18n/he';
 import { countdown, formatRange, monthName } from '@/lib/dates';
 import type { TripSummary } from '@/state/types';
-import { colors, fonts, radius } from '@/theme';
+import { colors, radius, space, type } from '@/theme';
 
-export function TripCard({ data, me, large }: { data: TripSummary; me: string; large: boolean }) {
+/** An upcoming trip (trips.html): tile and name, progress, who's in. */
+export function TripCard({ data }: { data: TripSummary }) {
   const { trip, itemCount, doneCount } = data;
   const missing = itemCount - doneCount;
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
       <Pressable style={styles.card} accessibilityRole="link">
-        <Cover scene={trip.template} style={{ height: large ? 172 : 120 }}>
-          <View style={[styles.countdown, glassStyle]}>
-            <Text style={styles.countdownText}>{countdown(trip.startsOn, trip.endsOn)}</Text>
-          </View>
-        </Cover>
-        <View style={[styles.body, { gap: large ? 14 : 12 }, !large && { paddingTop: 16 }]}>
-          <View style={styles.titles}>
-            <Text style={[styles.name, { fontSize: large ? 26 : 22 }]}>{trip.name}</Text>
-            <Text style={styles.dates}>{formatRange(trip.startsOn, trip.endsOn)}</Text>
-          </View>
-          <Progress done={doneCount} total={itemCount} />
-          <View style={styles.row}>
-            <View style={styles.counts}>
-              {itemCount === 0 ? (
-                <Text style={[styles.missing, { color: colors.inkMuted }]}>{he.home.noItems}</Text>
-              ) : (
-                <Text style={[styles.missing, missing === 0 && { color: colors.inkMuted }]}>
-                  {missing === 0 ? he.trip.allCovered : missingItems(missing)}
-                </Text>
-              )}
-              {large && itemCount > 0 && (
-                <Text style={styles.meta}>{he.trip.coveredOf(doneCount, itemCount)}</Text>
-              )}
-            </View>
-            <AvatarStack people={data.members.map((m) => toAvatar(m))} />
-          </View>
-          {large && data.mine.length > 0 && (
-            <Text style={styles.mine}>
-              {he.home.mine}
-              {data.mine.join(', ')}
+        <View style={styles.head}>
+          <TripTile template={trip.template} />
+          <View style={styles.texts}>
+            <Text style={styles.name}>{trip.name}</Text>
+            <Text style={styles.caption}>
+              {formatRange(trip.startsOn, trip.endsOn)} · {participants(data.members.length)}
             </Text>
-          )}
+          </View>
+        </View>
+        {itemCount === 0 ? (
+          <Text style={styles.progressText}>{he.home.noItems}</Text>
+        ) : (
+          <View style={styles.progress}>
+            <View style={styles.progressRow}>
+              <Text style={styles.progressText}>{he.trip.coveredOf(doneCount, itemCount)}</Text>
+              <Text style={styles.caption}>
+                {missing === 0 ? he.trip.allCovered : missingItems(missing)}
+              </Text>
+            </View>
+            <Progress done={doneCount} total={itemCount} />
+          </View>
+        )}
+        {data.mine.length > 0 && (
+          <Text style={styles.mine}>
+            {he.home.mine}
+            {data.mine.join(', ')}
+          </Text>
+        )}
+        <View style={styles.progressRow}>
+          <AvatarStack people={data.members.map(toAvatar)} />
+          <Text style={styles.caption}>{countdown(trip.startsOn, trip.endsOn)}</Text>
         </View>
       </Pressable>
     </Link>
   );
 }
 
+/** A past trip as one row; the check means everyone's settled up. */
 export function PastTripRow({ data }: { data: TripSummary }) {
   const { trip } = data;
   // Already only the transfers I'm part of.
   const open = data.transfers.length;
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
-      <Pressable style={styles.past} accessibilityRole="link">
-        <Cover scene={trip.template} style={styles.thumb} />
-        <View style={styles.titles}>
-          <Text style={styles.pastName}>{trip.name}</Text>
-          <Text style={styles.dates}>
-            {monthName(trip.startsOn)}, {participants(data.members.length)}
+      <Pressable style={[styles.card, styles.past]} accessibilityRole="link">
+        <TripTile template={trip.template} />
+        <View style={styles.texts}>
+          <Text style={styles.progressText}>{trip.name}</Text>
+          <Text style={styles.caption}>
+            {monthName(trip.startsOn)} · {participants(data.members.length)}
           </Text>
         </View>
-        {open > 0 && (
-          <View style={styles.openBadge}>
-            <Text style={styles.openText}>{openTransfers(open)}</Text>
-          </View>
+        {open > 0 ? (
+          <Text style={styles.mine}>{openTransfers(open)}</Text>
+        ) : (
+          <StatusRing state="done" label={he.money.settled} />
         )}
       </Pressable>
     </Link>
@@ -80,51 +81,24 @@ export function PastTripRow({ data }: { data: TripSummary }) {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
-  countdown: {
-    position: 'absolute',
-    top: 12,
-    start: 12,
-    height: 30,
-    paddingHorizontal: 12,
-    borderRadius: 15,
-    justifyContent: 'center',
-  },
-  countdownText: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
-  body: { padding: 18 },
-  titles: { gap: 4, flex: 1 },
-  name: { fontFamily: fonts.extraBold, color: colors.ink },
-  dates: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
-  counts: { gap: 2 },
-  missing: { fontFamily: fonts.bold, fontSize: 15, color: colors.brandStrong },
-  meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
-  mine: {
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 14,
-    backgroundColor: colors.primaryTint,
-    color: colors.primary,
-    fontFamily: fonts.bold,
-    fontSize: 14,
-  },
-  past: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 12,
+  card: {
+    padding: space[5],
     borderRadius: radius.card,
     backgroundColor: colors.card,
+    gap: space[4],
   },
-  thumb: { width: 64, height: 64, borderRadius: 18 },
-  openBadge: {
-    height: 30,
-    paddingHorizontal: 10,
-    borderRadius: 15,
-    backgroundColor: colors.ground,
-    justifyContent: 'center',
+  head: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  texts: { flex: 1, gap: space[1] },
+  name: { ...type.sectionTitle, fontSize: 24, lineHeight: 30, color: colors.ink },
+  caption: { ...type.caption, color: colors.inkMuted },
+  progress: { gap: space[2] },
+  progressRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[3],
   },
-  openText: { fontFamily: fonts.bold, fontSize: 13, color: colors.brandStrong },
-  pastName: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
+  progressText: { ...type.itemTitle, color: colors.ink },
+  mine: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.brandStrong },
+  past: { flexDirection: 'row', alignItems: 'center' },
 });

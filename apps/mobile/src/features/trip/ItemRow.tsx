@@ -1,15 +1,30 @@
-import type { Claim, Item } from '@yallist/domain';
+import type { Claim, Item, ItemStatus } from '@yallist/domain';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarStack } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
+import { StatusRing, type RingState } from '@/components/StatusRing';
 import { he } from '@/i18n/he';
-import { colors, fonts } from '@/theme';
+import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
 import { ClaimStepper } from './ClaimStepper';
 import { TONE_COLOR, quantityText, statusLine } from './labels';
+
+/** Dashed while something is still missing, a ring once someone has it, a brand check once bought. */
+function ringOf(status: ItemStatus): RingState {
+  switch (status.kind) {
+    case 'missing':
+    case 'partial':
+    case 'each':
+      return 'open';
+    case 'bought':
+      return 'done';
+    default:
+      return 'held';
+  }
+}
 
 export function ItemRow({
   item,
@@ -73,20 +88,27 @@ export function ItemRow({
     );
   } else {
     const holders = claims.filter((c) => c.itemId === item.id).map((c) => view.avatarOf(c.userId));
-    if (holders.length > 0) action = <AvatarStack people={holders} max={3} size={36} />;
+    if (holders.length > 0) action = <AvatarStack people={holders} size={32} />;
   }
 
   return (
     <View style={styles.row}>
+      <StatusRing state={ringOf(status)} label={line.label} />
       <Pressable style={styles.main} onPress={onOpen} accessibilityRole="button">
-        <View style={styles.nameLine}>
-          <Text style={styles.name}>{item.name}</Text>
-          {!!qty && <Text style={styles.qty}>{qty}</Text>}
-        </View>
-        <View style={styles.statusLine}>
-          <Text style={[styles.status, { color: TONE_COLOR[line.tone] }]}>{line.label}</Text>
-          {!!line.detail && <Text style={styles.detail}>{line.detail}</Text>}
-        </View>
+        <Text style={styles.name}>
+          {item.name}
+          {!!qty && <Text style={styles.qty}> {qty}</Text>}
+        </Text>
+        <Text
+          style={[
+            styles.status,
+            { color: TONE_COLOR[line.tone] },
+            line.tone === 'mine' && styles.mine,
+          ]}
+        >
+          {line.label}
+          {!!line.detail && <Text style={styles.detail}> · {line.detail}</Text>}
+        </Text>
       </Pressable>
       {action}
     </View>
@@ -94,19 +116,11 @@ export function ItemRow({
 }
 
 const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    minHeight: 76,
-  },
-  main: { flex: 1, minWidth: 0, gap: 4 },
-  nameLine: { flexDirection: 'row', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' },
-  name: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
-  qty: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
-  statusLine: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  status: { fontFamily: fonts.bold, fontSize: 13 },
-  detail: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
+  main: { flex: 1, minWidth: 0, gap: space[1], justifyContent: 'center', minHeight: space.touch },
+  name: { ...type.itemTitle, color: colors.ink },
+  qty: { ...type.caption, color: colors.inkMuted },
+  status: { ...type.caption },
+  mine: { fontFamily: type.itemTitle.fontFamily },
+  detail: { fontFamily: type.caption.fontFamily, color: colors.inkMuted },
 });

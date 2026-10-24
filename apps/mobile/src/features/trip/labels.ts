@@ -13,9 +13,10 @@ import type { TripView } from './derive';
 
 export type Tone = 'missing' | 'mine' | 'ok' | 'success';
 
+/** Only "yours" stands out (HANDOFF.md item states); the ring and the action carry the rest. */
 export const TONE_COLOR: Record<Tone, string> = {
-  missing: colors.brandStrong,
-  mine: colors.primary,
+  missing: colors.inkMuted,
+  mine: colors.brandStrong,
   ok: colors.inkMuted,
   success: colors.inkMuted,
 };
@@ -87,7 +88,6 @@ export function quantityText(item: Item, claims: readonly Claim[]): string {
   return item.displayQty ?? '';
 }
 
-export function groupSummary(missing: number): { text: string; color: string } {
-  if (missing === 0) return { text: he.trip.allCovered, color: colors.inkMuted };
-  return { text: groupMissing(missing), color: colors.brandStrong };
+export function groupSummary(missing: number): string {
+  return missing === 0 ? he.trip.allCovered : groupMissing(missing);
 }

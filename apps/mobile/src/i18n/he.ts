@@ -15,8 +15,22 @@ export const he = {
     signIn: 'הכניסה לא הצליחה, נסו שוב',
   },
   login: {
-    title: 'כל הטיול ברשימה אחת',
-    subtitle: 'מי מביא מה, מה עוד חסר ומי חייב למי. בלי לגלול אחורה בקבוצה.',
+    title: 'מי מביא מה?',
+    subtitle: 'רשימה אחת לכל הטיול. פותחים, שולחים בוואטסאפ, וכולם רואים מה עוד חסר.',
+    /** The sample list card (login.html). */
+    sample: {
+      label: 'דוגמה לרשימת ציוד',
+      trip: 'קמפינג בכנרת',
+      meta: '8 חברים · 14 מתוך 20 מסודרים',
+      members: ['א', 'נ', 'מ', 'ש', 'ד', 'י', 'ר', 'ע'],
+      done: 'ארוז',
+      items: [
+        ['אוהל ל־4', 'איתי מביא · ארוז'],
+        ['חומוס ×3', 'נועה מביאה · ארוז'],
+      ],
+      open: ['מצננת', 'עוד אין מי שמביא'],
+      claim: 'עליי',
+    },
     withName: 'מתחילים עם שם',
     nameLabel: 'איך קוראים לך?',
     namePlaceholder: 'איך קוראים לך?',
@@ -109,8 +123,6 @@ export const he = {
     tabs: { bring: 'להביא', buy: 'לקנות', people: 'אנשים', money: 'כסף' },
     filters: { all: 'הכול', missing: 'חסר', mine: 'אצלי' },
     allCovered: 'הכול מכוסה',
-    oneMissing: 'פריט עוד חסר',
-    manyMissing: 'פריטים עוד חסרים',
     coveredOf: (done: number, total: number) => `${done} מתוך ${total} כבר מכוסים`,
     claimBring: 'אני אביא',
     claimBuy: 'אני אקנה',
@@ -133,6 +145,10 @@ export const he = {
       buy: 'הוספת פריט לקנייה',
       money: 'הוספת הוצאה',
     },
+    /** Visible floating-button labels; `fab` stays the accessible name. */
+    fabShort: { bring: 'פריט חדש', buy: 'פריט חדש', money: 'הוצאה חדשה' },
+    invite: 'הזמנת חברים',
+    tabCount: (label: string, n: number) => `${label} · ${n}`,
   },
   status: {
     missing: 'חסר',
@@ -284,11 +300,6 @@ export function participants(n: number): string {
 /** `העברה אחת פתוחה` / `2 העברות פתוחות` */
 export function openTransfers(n: number): string {
   return n === 1 ? 'העברה אחת פתוחה' : `${n} העברות פתוחות`;
-}
-
-/** `טיול אחד בקרוב` / `2 טיולים בקרוב` */
-export function upcomingCount(n: number): string {
-  return n === 1 ? 'טיול אחד בקרוב' : `${n} טיולים בקרוב`;
 }
 
 /** `דנה` / `דנה ורון` / `דנה, רון ושירה` */
