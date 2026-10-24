@@ -1,6 +1,8 @@
 import { Platform, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
-import { colors, fonts } from '@/theme';
+import { Icon } from '@/components/Icon';
+import { formatShort } from '@/lib/dates';
+import { colors, fonts, radius } from '@/theme';
 
 /**
  * Text input for Hebrew text. react-native-web sets `dir="auto"`, which makes an empty input LTR
@@ -80,6 +82,55 @@ export function AmountField({
   );
 }
 
+/**
+ * What a DateField shows: its label over the date, a calendar on the end. The whole tile is the
+ * tap target; `active` is the hover/pressed look, `focused` the keyboard focus ring.
+ */
+export function DateTile({
+  label,
+  value,
+  active,
+  focused,
+}: {
+  label: string;
+  value: string;
+  active?: boolean;
+  focused?: boolean;
+}) {
+  return (
+    <>
+      <View style={styles.dateTexts}>
+        <Text style={styles.dateLabel}>{label}</Text>
+        <Text style={styles.dateValue}>{formatShort(value)}</Text>
+      </View>
+      <Icon
+        name="calendar"
+        size={20}
+        color={active || focused ? colors.primary : colors.inkMuted}
+      />
+    </>
+  );
+}
+
+/** The DateField box; `dateTileStyles.active`/`focused` go on top. */
+export const dateTileStyles = StyleSheet.create({
+  tile: {
+    flex: 1,
+    minHeight: 64,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: radius.input,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    backgroundColor: colors.ground,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  active: { backgroundColor: colors.primaryTint },
+  focused: { borderColor: colors.primary },
+});
+
 export const fieldStyles = StyleSheet.create({
   label: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
 });
@@ -106,6 +157,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  dateTexts: { flex: 1, gap: 2 },
+  dateLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
+  dateValue: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
   error: { fontFamily: fonts.bold, fontSize: 13, color: colors.brandStrong },
   currency: { fontFamily: fonts.extraBold, fontSize: 30, color: colors.inkMuted },
   amountInput: {

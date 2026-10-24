@@ -68,7 +68,11 @@ export default function Home() {
         {trips.isPending ? (
           <ActivityIndicator color={colors.primary} style={styles.status} />
         ) : trips.isError && !trips.data ? (
-          <Pressable onPress={() => trips.refetch()} style={styles.status}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => trips.refetch()}
+            style={styles.status}
+          >
             <Text style={styles.caption}>{he.errors.loadFailed}</Text>
             <Text style={styles.retry}>{he.errors.retry}</Text>
           </Pressable>
@@ -157,7 +161,8 @@ const styles = StyleSheet.create({
   status: { alignItems: 'center', gap: space[2], paddingVertical: 48 },
   retry: { ...type.buttonSm, color: colors.primary },
   illustrated: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
-  illustration: { height: 180 },
+  // Tall enough that the `slice` crop keeps the tent in view at any card width.
+  illustration: { aspectRatio: 390 / 240 },
   illustratedBody: { padding: space[5], gap: space[3] },
   cardTitle: { ...type.sectionTitle, color: colors.ink },
   step: { flexDirection: 'row', alignItems: 'center', gap: 14 },
