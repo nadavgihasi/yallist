@@ -23,7 +23,12 @@
       "lang": "he"
     },
     "plugins": [
-      ["expo-router", { "asyncRoutes": false }],
+      [
+        "expo-router",
+        {
+          "asyncRoutes": false
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -32,7 +37,14 @@
           "imageWidth": 76
         }
       ],
-      ["expo-localization", { "supportsRTL": true, "forcesRTL": true }]
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "forcesRTL": true
+        }
+      ],
+      "./plugins/withReleaseSigning"
     ],
     "experiments": {
       "typedRoutes": true,
