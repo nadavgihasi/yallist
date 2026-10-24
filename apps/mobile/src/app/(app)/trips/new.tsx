@@ -19,8 +19,7 @@ import { Icon, type IconName } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { he, itemsCount } from '@/i18n/he';
 import { addDays, formatRange, today } from '@/lib/dates';
-import { buildTrip } from '@/state/reducer';
-import { useDispatch, useMe } from '@/state/store';
+import { useCreateTrip } from '@/state/trips';
 import { colors, fonts, radius } from '@/theme';
 
 const KINDS: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
@@ -39,8 +38,7 @@ const TEMPLATE_ICON: Record<TemplateId, IconName> = {
 const coverLabelBlur = (Platform.OS === 'web' ? { backdropFilter: 'blur(14px)' } : {}) as ViewStyle;
 
 export default function NewTrip() {
-  const me = useMe();
-  const dispatch = useDispatch();
+  const createTrip = useCreateTrip();
   const insets = useSafeAreaInsets();
   const [template, setTemplate] = useState<TemplateId>('camp');
   const [name, setName] = useState('');
@@ -58,8 +56,8 @@ export default function NewTrip() {
     if (endsOn < iso) setEndsOn(iso);
   };
 
-  const create = () => {
-    const data = buildTrip(
+  const create = () =>
+    createTrip.mutate(
       {
         name: shownName,
         startsOn,
@@ -67,11 +65,11 @@ export default function NewTrip() {
         placeText: place.trim() || undefined,
         template,
       },
-      me,
+      {
+        onSuccess: ({ trip }) =>
+          router.replace({ pathname: '/trips/[tripId]', params: { tripId: trip.id } }),
+      },
     );
-    dispatch({ type: 'createTrip', trip: data });
-    router.replace({ pathname: '/trips/[tripId]', params: { tripId: data.trip.id } });
-  };
 
   return (
     <View style={styles.screen}>
@@ -185,7 +183,14 @@ export default function NewTrip() {
         <View style={{ height: 110 }} />
       </ScrollView>
       <View style={[styles.ctaWrap, { bottom: 24 + insets.bottom }]}>
-        <PillButton label={he.newTrip.create} size="xl" wide style={styles.cta} onPress={create} />
+        <PillButton
+          label={he.newTrip.create}
+          size="xl"
+          wide
+          style={styles.cta}
+          disabled={createTrip.isPending}
+          onPress={create}
+        />
       </View>
     </View>
   );

@@ -13,8 +13,8 @@ import { deriveTrip } from '@/features/trip/derive';
 import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
-import { newId } from '@/lib/id';
-import { useDispatch, useMe, useTrip } from '@/state/store';
+import { useMe } from '@/state/store';
+import { useTrip, useTripAction } from '@/state/trips';
 import { colors, fonts } from '@/theme';
 
 export default function ItemSheet() {
@@ -49,7 +49,7 @@ function ItemSheetBody({
   const data = useTrip(tripId)!;
   const item = data.items.find((i) => i.id === itemId)!;
   const me = useMe().userId;
-  const dispatch = useDispatch();
+  const act = useTripAction(tripId);
   const view = deriveTrip(data, me);
   const expense = linkedExpense(item.id, data.expenses);
   const status = view.status(item);
@@ -77,7 +77,7 @@ function ItemSheetBody({
       : undefined;
 
   // Save edits however the sheet goes away (X, scrim, Escape, browser or Android back): keep the
-  // latest valid ones in a ref and dispatch them on unmount.
+  // latest valid ones in a ref and send them on unmount.
   const edits = useRef<{ note?: string; expense?: Expense }>({});
   useEffect(() => {
     edits.current = { note, expense: expenseEdit };
@@ -86,29 +86,30 @@ function ItemSheetBody({
     const original = item.note ?? '';
     return () => {
       const { note: latest, expense: edited } = edits.current;
-      if (latest !== undefined && latest !== original) {
-        dispatch({ type: 'setNote', tripId, itemId, note: latest });
+      if (latest !== undefined && latest !== original)
+        act({ type: 'setNote', itemId, note: latest });
+      if (edited) {
+        // Expenses aren't edited in place: the new one replaces the old.
+        const { id, ...expense } = edited;
+        act({ type: 'deleteExpense', expenseId: id });
+        act({ type: 'addExpense', expense });
       }
-      if (edited) dispatch({ type: 'saveExpense', tripId, expense: edited });
     };
     // Only on unmount: compare against the note as it was when the sheet opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const claim = (quantity: number) =>
-    dispatch({ type: 'setClaim', tripId, itemId: item.id, userId: me, quantity });
+  const claim = (quantity: number) => act({ type: 'setClaim', itemId: item.id, quantity });
 
   const saveBought = () => {
     if (!amount || shares.length === 0) return;
-    dispatch({
-      type: 'saveExpense',
-      tripId,
+    act({
+      type: 'addExpense',
       expense: {
-        id: expense?.id ?? newId(),
         itemId: item.id,
-        description: expense?.description ?? item.name,
+        description: item.name,
         amountAgorot: amount,
-        paidBy: expense?.paidBy ?? me,
+        paidBy: me,
         shares,
       },
     });
@@ -118,7 +119,7 @@ function ItemSheetBody({
   // The parent closes the sheet once the item is gone; don't save edits to it on the way out.
   const remove = () => {
     edits.current = {};
-    dispatch({ type: 'deleteItem', tripId, itemId: item.id });
+    act({ type: 'deleteItem', itemId: item.id });
   };
 
   return (
@@ -146,7 +147,7 @@ function ItemSheetBody({
               variant="neutral"
               size="xl"
               wide
-              onPress={() => dispatch({ type: 'deleteExpense', tripId, expenseId: expense.id })}
+              onPress={() => act({ type: 'deleteExpense', expenseId: expense.id })}
             />
           )}
           <PillButton

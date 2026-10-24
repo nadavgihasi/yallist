@@ -1,34 +1,33 @@
+import * as Linking from 'expo-linking';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Share, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
-import { Input } from '@/components/Fields';
 import { ListGroup, SectionHeader } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
+import { showToast } from '@/components/Toast';
 import { he, participants } from '@/i18n/he';
-import { newId } from '@/lib/id';
-import { useDispatch } from '@/state/store';
-import type { TripData } from '@/state/types';
+import { useTripAction } from '@/state/trips';
+import type { TripData, TripMember } from '@/state/types';
 import { colors, fonts, radius } from '@/theme';
 
 import { toAvatar, type TripView } from './derive';
 
+/** Shares the invite link; where the browser can't share, copies it. */
+async function shareLink(url: string) {
+  try {
+    await Share.share({ message: url, url });
+  } catch {
+    await navigator.clipboard?.writeText(url);
+    showToast(he.people.copied);
+  }
+}
+
 export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
-  const dispatch = useDispatch();
-  const [name, setName] = useState('');
-
-  const trimmed = name.trim();
-  const duplicate =
-    !!trimmed &&
-    data.members.some(
-      (m) => m.status === 'active' && m.displayName.trim().toLowerCase() === trimmed.toLowerCase(),
-    );
-
-  const add = () => {
-    if (!trimmed || duplicate) return;
-    dispatch({ type: 'addMember', tripId: data.trip.id, userId: newId(), name: trimmed });
-    setName('');
-  };
+  const act = useTripAction(data.trip.id);
+  const [confirmRemove, setConfirmRemove] = useState<string>();
+  const organizer = view.memberById.get(me)?.role === 'organizer';
+  const pending = data.members.filter((m) => m.status === 'pending');
 
   const counts = (userId: string) => {
     const ids = new Set(data.claims.filter((c) => c.userId === userId).map((c) => c.itemId));
@@ -39,44 +38,64 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
     };
   };
 
+  const name = (m: TripMember) => (
+    <View style={styles.nameRow}>
+      <Text style={styles.name}>{view.nameOf(m.userId)}</Text>
+      {m.role === 'organizer' && <Text style={styles.badge}>{he.people.organizer}</Text>}
+    </View>
+  );
+
   return (
     <View style={styles.wrap}>
       <View style={styles.card}>
         <View style={styles.texts}>
-          <Text style={styles.title}>{he.people.addTitle}</Text>
-          <Text style={styles.text}>{he.people.addText}</Text>
+          <Text style={styles.title}>{he.people.inviteTitle}</Text>
+          <Text style={styles.text}>{he.people.inviteText}</Text>
         </View>
-        <View style={styles.addRow}>
-          <Input
-            value={name}
-            onChangeText={setName}
-            onSubmitEditing={add}
-            placeholder={he.people.addPlaceholder}
-            accessibilityLabel={he.people.addPlaceholder}
-            style={styles.input}
-          />
-          <PillButton label={he.people.add} disabled={!trimmed || duplicate} onPress={add} />
-        </View>
-        {duplicate && (
-          <Text style={styles.error} accessibilityLiveRegion="polite">
-            {he.people.duplicate}
-          </Text>
-        )}
+        <PillButton
+          label={he.people.share}
+          variant="soft"
+          size="lg"
+          wide
+          onPress={() => shareLink(Linking.createURL(`/j/${data.inviteToken}`))}
+        />
       </View>
+
+      {organizer && pending.length > 0 && (
+        <>
+          <SectionHeader title={he.people.pending} />
+          <ListGroup inset={72}>
+            {pending.map((m) => (
+              <View key={m.userId} style={styles.person}>
+                <Avatar person={toAvatar(m, me)} size={44} />
+                <View style={styles.personBody}>{name(m)}</View>
+                <PillButton
+                  label={he.people.approve}
+                  size="sm"
+                  onPress={() => act({ type: 'approveMember', userId: m.userId })}
+                />
+                <PillButton
+                  label={he.people.decline}
+                  variant="quiet"
+                  size="sm"
+                  onPress={() => act({ type: 'declineMember', userId: m.userId })}
+                />
+              </View>
+            ))}
+          </ListGroup>
+        </>
+      )}
+
       <SectionHeader title={participants(view.activeIds.length)} />
       <ListGroup inset={72}>
-        {data.members.map((m) => {
+        {view.active.map((m) => {
           const c = counts(m.userId);
+          const confirming = confirmRemove === m.userId;
           return (
             <View key={m.userId} style={styles.person}>
               <Avatar person={toAvatar(m, me)} size={44} />
               <View style={styles.personBody}>
-                <View style={styles.nameRow}>
-                  <Text style={styles.name}>{view.nameOf(m.userId)}</Text>
-                  {m.role === 'organizer' && (
-                    <Text style={styles.badge}>{he.people.organizer}</Text>
-                  )}
-                </View>
+                {name(m)}
                 <View style={styles.chips}>
                   <View style={[styles.pill, styles.chip]}>
                     <Text style={styles.chipText}>{he.people.bring(c.bring)}</Text>
@@ -86,6 +105,18 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
                   </View>
                 </View>
               </View>
+              {organizer && m.userId !== me && (
+                <PillButton
+                  label={confirming ? he.people.confirmRemove : he.people.remove}
+                  variant={confirming ? 'danger' : 'quiet'}
+                  size="sm"
+                  onPress={() => {
+                    if (!confirming) return setConfirmRemove(m.userId);
+                    act({ type: 'removeMember', userId: m.userId });
+                    setConfirmRemove(undefined);
+                  }}
+                />
+              )}
             </View>
           );
         })}
@@ -100,18 +131,6 @@ const styles = StyleSheet.create({
   texts: { gap: 4 },
   title: { fontFamily: fonts.display, fontSize: 21, color: colors.ink },
   text: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.inkSecondary },
-  error: { fontFamily: fonts.medium, fontSize: 13, color: colors.missing },
-  addRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
-  input: {
-    flex: 1,
-    minHeight: 48,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    backgroundColor: colors.ground,
-    fontFamily: fonts.regular,
-    fontSize: 16,
-    color: colors.ink,
-  },
   person: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -124,7 +143,6 @@ const styles = StyleSheet.create({
   name: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
   pill: { backgroundColor: colors.ground, justifyContent: 'center' },
   badge: { height: 22, paddingHorizontal: 8, borderRadius: 11 },
-  badgeText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.inkSecondary },
   chips: { flexDirection: 'row', gap: 6 },
   chip: { height: 24, paddingHorizontal: 10, borderRadius: 12 },
   chipText: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },

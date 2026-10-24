@@ -6,25 +6,36 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Cover } from '@/components/Cover';
 import { Input } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
+import { showToast } from '@/components/Toast';
+import { GoogleButton } from '@/features/auth/GoogleButton';
 import { he } from '@/i18n/he';
-import { newId } from '@/lib/id';
-import { useAppState, useDispatch } from '@/state/store';
+import { signInAsGuest, signInWithGoogle, type AuthResult } from '@/lib/api';
+import { useSession } from '@/state/store';
 import { colors, fonts } from '@/theme';
 
 export default function Login() {
-  const { me } = useAppState();
-  const dispatch = useDispatch();
+  const { me, signIn } = useSession();
   const insets = useSafeAreaInsets();
   const [askName, setAskName] = useState(false);
   const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
 
   if (me) return <Redirect href="/" />;
 
+  const enter = (request: Promise<AuthResult>) => {
+    setBusy(true);
+    request
+      .then(signIn)
+      .then(() => router.replace('/'))
+      .catch(() => {
+        setBusy(false);
+        showToast(he.errors.signIn);
+      });
+  };
+
   const start = () => {
     const trimmed = name.trim();
-    if (!trimmed) return;
-    dispatch({ type: 'signIn', me: { userId: newId(), name: trimmed } });
-    router.replace('/');
+    if (trimmed && !busy) enter(signInAsGuest(trimmed));
   };
 
   return (
@@ -56,7 +67,7 @@ export default function Login() {
               size="lg"
               wide
               style={styles.button}
-              disabled={!name.trim()}
+              disabled={!name.trim() || busy}
               onPress={start}
             />
           </>
@@ -69,18 +80,9 @@ export default function Login() {
               style={styles.button}
               onPress={() => setAskName(true)}
             />
-            <PillButton
-              label={he.login.google}
-              variant="outline"
-              size="lg"
-              wide
-              style={styles.button}
-              disabled
-            />
-            <Text style={styles.note}>{he.login.googleSoon}</Text>
+            <GoogleButton onIdToken={(idToken) => enter(signInWithGoogle(idToken))} />
           </>
         )}
-        <Text style={styles.legal}>{he.login.localOnly}</Text>
       </View>
     </KeyboardAvoidingView>
   );
@@ -114,17 +116,4 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   button: { minHeight: 56, borderRadius: 28 },
-  note: {
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    color: colors.inkSecondary,
-    textAlign: 'center',
-  },
-  legal: {
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    lineHeight: 20,
-    color: colors.inkSecondary,
-    textAlign: 'center',
-  },
 });

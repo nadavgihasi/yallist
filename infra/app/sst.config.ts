@@ -112,6 +112,8 @@ export default $config({
       environment: {
         EXPO_PUBLIC_API_URL: api.url,
         EXPO_PUBLIC_REALTIME_URL: realtimeApi.dns.apply((dns) => dns.REALTIME!),
+        // Google sign-in on web (Google Identity Services) uses the same OAuth client as the API.
+        EXPO_PUBLIC_GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage],
       },
       transform: {
         // A distribution has no name, only a comment (default "Web site"); put the stage in it.

@@ -11,6 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { I18nManager, Platform, StyleSheet, View } from 'react-native';
 
+import { Toast } from '@/components/Toast';
 import { StoreProvider } from '@/state/store';
 import { colors } from '@/theme';
 
@@ -48,6 +49,7 @@ export default function RootLayout() {
           <Stack
             screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}
           />
+          <Toast />
         </View>
       </StoreProvider>
     </>

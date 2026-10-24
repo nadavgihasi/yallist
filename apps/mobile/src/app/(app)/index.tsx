@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
@@ -10,29 +10,23 @@ import { PastTripRow, TripCard } from '@/features/home/TripCard';
 import { initial } from '@/features/trip/derive';
 import { he, upcomingCount } from '@/i18n/he';
 import { daysBetween, today } from '@/lib/dates';
-import { buildDemoTrip } from '@/state/demo';
-import { useAppState, useDispatch, useMe } from '@/state/store';
+import { useMe } from '@/state/store';
+import { useTrips } from '@/state/trips';
 import { colors, fonts, radius } from '@/theme';
 
 export default function Home() {
   const me = useMe();
-  const { trips } = useAppState();
-  const dispatch = useDispatch();
+  const trips = useTrips();
   const insets = useSafeAreaInsets();
 
-  const all = Object.values(trips).sort((a, b) => a.trip.startsOn.localeCompare(b.trip.startsOn));
+  // The API sorts them by start date.
+  const all = trips.data?.trips ?? [];
   const now = today();
   const upcoming = all.filter((t) => daysBetween(now, t.trip.endsOn) >= 0);
   // Trips already under way stay in the list but aren't "בקרוב".
   const soon = upcoming.filter((t) => t.trip.startsOn > now).length;
   const past = all.filter((t) => daysBetween(now, t.trip.endsOn) < 0).reverse();
-  const empty = all.length === 0;
-
-  const openDemo = () => {
-    const demo = buildDemoTrip(me);
-    dispatch({ type: 'createTrip', trip: demo });
-    router.push({ pathname: '/trips/[tripId]', params: { tripId: demo.trip.id } });
-  };
+  const empty = trips.isSuccess && all.length === 0;
 
   return (
     <View style={styles.screen}>
@@ -53,8 +47,15 @@ export default function Home() {
           </View>
         </View>
 
-        {empty ? (
-          <FirstHome onDemo={openDemo} />
+        {trips.isPending ? (
+          <ActivityIndicator color={colors.accent} style={styles.status} />
+        ) : trips.isError && !trips.data ? (
+          <Pressable onPress={() => trips.refetch()} style={styles.status}>
+            <Text style={styles.subtitle}>{he.errors.loadFailed}</Text>
+            <Text style={styles.retry}>{he.errors.retry}</Text>
+          </Pressable>
+        ) : empty ? (
+          <FirstHome />
         ) : (
           <>
             {upcoming.map((t, i) => (
@@ -62,7 +63,7 @@ export default function Home() {
             ))}
             {past.length > 0 && <Text style={styles.h2}>{he.home.past}</Text>}
             {past.map((t) => (
-              <PastTripRow key={t.trip.id} data={t} me={me.userId} />
+              <PastTripRow key={t.trip.id} data={t} />
             ))}
           </>
         )}
@@ -81,7 +82,7 @@ export default function Home() {
   );
 }
 
-function FirstHome({ onDemo }: { onDemo: () => void }) {
+function FirstHome() {
   return (
     <>
       <View style={styles.card}>
@@ -104,13 +105,6 @@ function FirstHome({ onDemo }: { onDemo: () => void }) {
           </View>
         ))}
       </View>
-      <View style={styles.demo}>
-        <View style={styles.titles}>
-          <Text style={styles.stepTitle}>{he.firstHome.demoTitle}</Text>
-          <Text style={styles.stepText}>{he.firstHome.demoText}</Text>
-        </View>
-        <PillButton label={he.firstHome.demo} variant="soft" onPress={onDemo} />
-      </View>
     </>
   );
 }
@@ -131,6 +125,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   spacer: { height: 120 },
+  status: { alignItems: 'center', gap: 8, paddingVertical: 48 },
+  retry: { fontFamily: fonts.semibold, fontSize: 16, color: colors.accent },
   ctaWrap: { position: 'absolute', start: 0, end: 0, alignItems: 'center' },
   cta: { height: 60, borderRadius: 30, paddingHorizontal: 28 },
   card: { borderRadius: radius.card, backgroundColor: colors.surface, overflow: 'hidden' },
@@ -156,12 +152,4 @@ const styles = StyleSheet.create({
   stepNumText: { fontFamily: fonts.display, fontSize: 19, color: colors.accent },
   stepTitle: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
   stepText: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkSecondary },
-  demo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    padding: 18,
-    borderRadius: radius.group,
-    backgroundColor: colors.surface,
-  },
 });

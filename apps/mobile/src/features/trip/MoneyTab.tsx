@@ -1,3 +1,4 @@
+import { useIsMutating } from '@tanstack/react-query';
 import { formatShekel } from '@yallist/domain';
 import { StyleSheet, Text, View } from 'react-native';
 
@@ -6,16 +7,16 @@ import { Icon } from '@/components/Icon';
 import { EmptyState, ListGroup, SectionHeader } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { he, joinNames } from '@/i18n/he';
-import { newId } from '@/lib/id';
-import { useDispatch } from '@/state/store';
+import { tripKey, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, fonts, radius } from '@/theme';
 
 import type { TripView } from './derive';
 
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
-  const dispatch = useDispatch();
-  const tripId = data.trip.id;
+  const act = useTripAction(data.trip.id);
+  // Transfers come from the API: until it answers, a second tap would pay twice.
+  const saving = useIsMutating({ mutationKey: tripKey(data.trip.id) }) > 0;
   const sum = (xs: { amountAgorot: number }[]) => xs.reduce((n, x) => n + x.amountAgorot, 0);
   const names = (ids: string[]) => joinNames([...new Set(ids)].map(view.displayNameOf));
 
@@ -38,18 +39,12 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
   }
 
   const markPaid = () =>
-    myOpen.forEach((t) =>
-      dispatch({
-        type: 'markPayment',
-        tripId,
-        id: newId(),
-        from: me,
-        to: t.to,
-        amount: t.amountAgorot,
-      }),
-    );
+    myOpen.forEach((t) => act({ type: 'markPayment', toUser: t.to, amountAgorot: t.amountAgorot }));
+  // A payment the receiver already confirmed stays.
   const unmarkPaid = () =>
-    myPaid.forEach((p) => dispatch({ type: 'deletePayment', tripId, paymentId: p.id }));
+    myPaid
+      .filter((p) => p.status === 'marked')
+      .forEach((p) => act({ type: 'deletePayment', paymentId: p.id }));
 
   return (
     <View style={styles.wrap}>
@@ -68,6 +63,7 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
             size="lg"
             wide
             style={styles.heroButton}
+            disabled={saving}
             onPress={markPaid}
           />
         ) : (
@@ -80,6 +76,7 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
               icon={<Icon name="check" size={18} color={colors.success} />}
               accessibilityState={{ checked: true }}
               style={styles.heroButton}
+              disabled={saving}
               onPress={unmarkPaid}
             />
           )
