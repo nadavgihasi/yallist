@@ -6,6 +6,7 @@ import { requireUser, type Auth } from './auth';
 import { findProfile } from './dal/profiles';
 import type { Db } from './db/client';
 import type { Publish } from './realtime';
+import { categoryRoutes } from './routes/categories';
 import { inviteRoutes } from './routes/invites';
 import { itemRoutes } from './routes/items';
 import { moneyRoutes } from './routes/money';
@@ -39,6 +40,7 @@ export function createApp(auth: Auth, db: Db, publish: Publish) {
       if (c.req.method !== 'GET' && c.res.ok) await notify(c.req.param('tripId'));
     })
     .route('/trips', tripRoutes(auth, db))
+    .route('/trips', categoryRoutes(auth, db))
     .route('/trips', itemRoutes(auth, db))
     .route('/trips', moneyRoutes(auth, db))
     .route('/invites', inviteRoutes(auth, db, notify));

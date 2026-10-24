@@ -1,10 +1,14 @@
-import { and, eq, isNull, max } from 'drizzle-orm';
+import { and, asc, eq, isNull, max } from 'drizzle-orm';
 
 import { fail } from '../access';
 import { items, templateItems, type TEMPLATE_IDS } from '../db/schema';
 import type { Executor, Tx } from '../db/tx';
+import { insertCategories } from './categories';
 
-type NewItem = Omit<typeof items.$inferInsert, 'id' | 'tripId' | 'position' | 'createdBy'>;
+type NewItem = Omit<
+  typeof items.$inferInsert,
+  'id' | 'tripId' | 'position' | 'createdBy' | 'legacyCategory'
+>;
 type ItemChanges = Partial<NewItem & { position: number }>;
 
 /** A live (not deleted) item of the trip. Writes pass `lock`: claims and edits run one at a time. */
@@ -42,23 +46,38 @@ export async function appendItem(tx: Executor, tripId: string, createdBy: string
   const position = await endOfList(tx, tripId, item.list);
   const [created] = await tx
     .insert(items)
-    .values({ ...item, tripId, position, createdBy })
+    .values({ ...item, tripId, position, createdBy, legacyCategory: '' })
     .returning();
   return created!;
 }
 
-/** Copies the template's items into the trip. */
+/** Copies the template's categories and items into the trip. */
 export async function seedItems(
   tx: Executor,
   tripId: string,
   createdBy: string,
   template: (typeof TEMPLATE_IDS)[number],
 ) {
-  const seed = await tx.select().from(templateItems).where(eq(templateItems.template, template));
+  const seed = await tx
+    .select()
+    .from(templateItems)
+    .where(eq(templateItems.template, template))
+    .orderBy(asc(templateItems.list), asc(templateItems.position));
   if (seed.length === 0) return;
-  await tx
-    .insert(items)
-    .values(seed.map(({ template: _, ...item }) => ({ ...item, tripId, createdBy })));
+  // In order of first appearance, one per list and name.
+  const categories = new Map(
+    seed.map((i) => [`${i.list}/${i.category}`, { list: i.list, name: i.category }]),
+  );
+  const categoryIds = await insertCategories(tx, tripId, [...categories.values()]);
+  await tx.insert(items).values(
+    seed.map(({ template: _, category, ...item }) => ({
+      ...item,
+      tripId,
+      createdBy,
+      categoryId: categoryIds.get(`${item.list}/${category}`),
+      legacyCategory: '',
+    })),
+  );
 }
 
 export async function updateItem(tx: Executor, itemId: string, changes: ItemChanges) {

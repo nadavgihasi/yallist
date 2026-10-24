@@ -11,10 +11,19 @@ export interface Member {
   status: MemberStatus;
 }
 
+/** A named group of items within one list of a trip. */
+export interface Category {
+  id: string;
+  list: ListKind;
+  name: string;
+  position: number;
+}
+
 export interface Item {
   id: string;
   list: ListKind;
-  category: string;
+  /** Absent: uncategorized. */
+  categoryId?: string;
   position: number;
   name: string;
   kind: ItemKind;
