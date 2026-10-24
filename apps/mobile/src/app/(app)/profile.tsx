@@ -28,7 +28,7 @@ import { he } from '@/i18n/he';
 import { signInWithGoogle } from '@/lib/api';
 import { useProfile, useUpdateProfile, type Profile } from '@/state/profile';
 import { useSession } from '@/state/store';
-import { colors, layout, size, space, type } from '@/theme';
+import { colors, layout, radius, size, space, type } from '@/theme';
 import { useBreakpoint, type Breakpoint } from '@/theme/breakpoint';
 
 const NOTIFY_PREFS = ['notifyUpdates', 'notifyDayBefore', 'notifySettle'] as const;
@@ -231,6 +231,22 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
         })}
       </ListGroup>
 
+      <ListGroup title={he.profile.feedback}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/feedback')}
+          style={(state: WebState) => [
+            styles.linkRow,
+            (state.hovered || state.pressed) && styles.hover,
+            state.focused && styles.focus,
+          ]}
+        >
+          <SettingRow label={he.profile.suggest} hint={he.profile.suggestHint}>
+            <Icon name="chevronEnd" size={20} color={colors.inkMuted} />
+          </SettingRow>
+        </Pressable>
+      </ListGroup>
+
       <SignOut guest={guest} />
       <VersionLine />
     </>
@@ -354,6 +370,7 @@ const styles = StyleSheet.create({
   swatchFill: { flex: 1, borderRadius: size.avatar / 2 },
   ltr: { writingDirection: 'ltr', textAlign: 'right' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
+  linkRow: { borderRadius: radius.input },
   rowTexts: { flex: 1, gap: space[1] },
   rowLabel: { ...type.itemTitle, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },

@@ -28,6 +28,7 @@ const auth = createAuth(db, {
 });
 
 // No realtime locally: publishing is a no-op.
-const app = createApp(auth, db, async () => {});
+// No GitHub token locally: feedback is only saved.
+const app = createApp(auth, db, async () => {}, { stage: 'local' });
 
 serve({ fetch: app.fetch, port }, () => console.log(`API on http://localhost:${port}`));

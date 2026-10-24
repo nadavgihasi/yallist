@@ -6,6 +6,7 @@ import { createApp } from './app';
 import { createAuth } from './auth';
 import type { Db } from './db/client';
 import type { Publish } from './realtime';
+import type { FeedbackConfig } from './routes/feedback';
 
 /** Postgres server for DB tests; CI provides one. Tests that need it skip without it. */
 export const DATABASE_URL = process.env.DATABASE_URL;
@@ -37,9 +38,12 @@ export const testAuth = (db: Db) =>
     google: { clientId: 'test', clientSecret: 'test' },
   });
 
-/** The app with test auth config; realtime events go to `publish`. */
-export const testApp = (db: Db, publish: Publish = async () => {}) =>
-  createApp(testAuth(db), db, publish);
+/** The app with test auth config; realtime events go to `publish`, feedback isn't sent to GitHub. */
+export const testApp = (
+  db: Db,
+  publish: Publish = async () => {},
+  feedback: FeedbackConfig = { stage: 'test' },
+) => createApp(testAuth(db), db, publish, feedback);
 
 /** A new guest user, with the headers that authenticate as them. */
 export async function signInAsGuest(app: ReturnType<typeof testApp>, name: string) {

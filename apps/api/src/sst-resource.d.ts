@@ -5,8 +5,10 @@ import 'sst';
 declare module 'sst' {
   export interface Resource {
     Api: { url: string };
+    App: { name: string; stage: string };
     BetterAuthSecret: { value: string };
     Database: { endpoint: string; region: string };
+    GithubFeedbackToken: { value: string };
     GoogleClientSecret: { value: string };
     Realtime: { http: string };
     Web: { url: string };

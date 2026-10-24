@@ -108,6 +108,27 @@ gh secret set GOOGLE_CLIENT_SECRET --env dev   # paste the client secret from Go
 
 For a local emergency deploy, export the same variables first, e.g. `SST_SECRET_BetterAuthSecret=… SST_SECRET_GoogleClientSecret=… pnpm deploy:dev`.
 
+#### Feature requests to GitHub (optional)
+
+`POST /feedback` ([feedback.ts](../apps/api/src/routes/feedback.ts)) saves every feature request or bug report from the app in the `feedback` table and, when the stage has a token, also opens an issue in [nadavgihasi/yallist](https://github.com/nadavgihasi/yallist/issues) labelled `feature-request` or `bug`, and `untrusted`. The issue has the user's text, defanged (inside a code block, @mentions broken, under an "untrusted content" warning), the app version, platform and stage, and an anonymous reporter id; never a name, email or phone. Each user can send 5 requests an hour; past 50 issues a day across all users, requests are only saved.
+
+| SST secret            | GitHub environment secret |
+| --------------------- | ------------------------- |
+| `GithubFeedbackToken` | `FEEDBACK_GITHUB_TOKEN`   |
+
+The secret is optional. Without it, deploy.yml passes an empty value and the API only saves requests (the SST secret's placeholder, `unset`, is treated the same). GitHub doesn't allow secret names starting with `GITHUB_`, hence `FEEDBACK_GITHUB_TOKEN`.
+
+1. Create a fine-grained personal access token at [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new): resource owner `nadavgihasi`, **Only select repositories** → `nadavgihasi/yallist`, repository permissions **Issues: Read and write** and nothing else (Metadata: read-only is added automatically). Pick an expiry and note it; when it expires, issues stop being opened, requests are still saved.
+2. Create the labels once (`bug` already exists): `gh label create feature-request -R nadavgihasi/yallist --description "Requested from the app"` and `gh label create untrusted -R nadavgihasi/yallist --description "User-submitted content from the app"`.
+3. Store the token on both environments; the next deploy picks it up:
+
+```sh
+gh secret set FEEDBACK_GITHUB_TOKEN --env dev          # paste the token
+gh secret set FEEDBACK_GITHUB_TOKEN --env production
+```
+
+Requests saved before the token existed have `github_issue_number` null; they aren't sent retroactively.
+
 ## Realtime
 
 An [AppSync Events](https://docs.aws.amazon.com/appsync/latest/eventapi/event-api-welcome.html) API per stage, `yallist-<stage>-realtime` ([realtime.ts](../apps/api/src/realtime.ts)), with one channel per trip: `/trips/<tripId>` in the `trips` namespace.
