@@ -9,6 +9,7 @@ import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { ClaimStepper } from '@/features/trip/ClaimStepper';
 import { closeSheet } from '@/features/trip/closeSheet';
+import { ItemForm } from '@/features/trip/ItemForm';
 import { deriveTrip } from '@/features/trip/derive';
 import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
@@ -21,6 +22,8 @@ export default function ItemSheet() {
   const { tripId, itemId } = useLocalSearchParams<{ tripId: string; itemId: string }>();
   const data = useTrip(tripId);
   const item = data?.items.find((i) => i.id === itemId);
+  const act = useTripAction(tripId);
+  const [editing, setEditing] = useState(false);
   const missing = !data || !item;
   // Close exactly once. A modal that's fading out still re-renders; a second back() would also
   // pop the trip screen (e.g. right after deleting this item).
@@ -34,17 +37,41 @@ export default function ItemSheet() {
     if (missing) close();
   }, [missing, close]);
   if (missing) return null;
-  return <ItemSheetBody key={item.id} tripId={tripId} itemId={itemId} onClose={close} />;
+  // Editing swaps the sheet for the item form; closing the form comes back here.
+  if (editing) {
+    return (
+      <ItemForm
+        tripId={tripId}
+        item={item}
+        onSubmit={(changes) => {
+          act({ type: 'editItem', itemId, changes });
+          setEditing(false);
+        }}
+        onClose={() => setEditing(false)}
+      />
+    );
+  }
+  return (
+    <ItemSheetBody
+      key={item.id}
+      tripId={tripId}
+      itemId={itemId}
+      onClose={close}
+      onEdit={() => setEditing(true)}
+    />
+  );
 }
 
 function ItemSheetBody({
   tripId,
   itemId,
   onClose,
+  onEdit,
 }: {
   tripId: string;
   itemId: string;
   onClose: () => void;
+  onEdit: () => void;
 }) {
   const data = useTrip(tripId)!;
   const item = data.items.find((i) => i.id === itemId)!;
@@ -150,6 +177,12 @@ function ItemSheetBody({
               onPress={() => act({ type: 'deleteExpense', expenseId: expense.id })}
             />
           )}
+          <PillButton
+            label={he.item.edit}
+            variant="quiet"
+            icon={<Icon name="pencil" size={18} color={colors.inkSecondary} />}
+            onPress={onEdit}
+          />
           <PillButton
             label={he.item.delete}
             variant="danger"

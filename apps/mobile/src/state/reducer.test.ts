@@ -92,6 +92,20 @@ describe('deleteItem', () => {
   });
 });
 
+describe('editItem', () => {
+  it('shows the edited fields at once', () => {
+    const changes = {
+      list: 'bring',
+      name: 'צידנית',
+      kind: 'qty',
+      quantityNeeded: 2,
+      category: 'אוכל',
+    } as const;
+    const next = applyAction(trip(), { type: 'editItem', itemId: 'meat', changes }, 'me');
+    expect(next.items).toEqual([chairs, { ...meat, ...changes }]);
+  });
+});
+
 describe('members', () => {
   it('approves a pending member', () => {
     const t = trip({

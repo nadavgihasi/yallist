@@ -5,7 +5,7 @@ import { items, templateItems, type TEMPLATE_IDS } from '../db/schema';
 import type { Executor, Tx } from '../db/tx';
 
 type NewItem = Omit<typeof items.$inferInsert, 'id' | 'tripId' | 'position' | 'createdBy'>;
-type ItemChanges = Partial<Omit<NewItem, 'list' | 'kind'>>;
+type ItemChanges = Partial<NewItem & { position: number }>;
 
 /** A live (not deleted) item of the trip. Writes pass `lock`: claims and edits run one at a time. */
 export async function findItem(
@@ -28,15 +28,21 @@ export async function lockItem(tx: Tx, tripId: string, itemId: string) {
   return item;
 }
 
-/** Adds the item at the end of its list. */
-export async function appendItem(tx: Executor, tripId: string, createdBy: string, item: NewItem) {
+/** The position after the last item of the list. */
+export async function endOfList(tx: Executor, tripId: string, list: NewItem['list']) {
   const [last] = await tx
     .select({ position: max(items.position) })
     .from(items)
-    .where(and(eq(items.tripId, tripId), eq(items.list, item.list)));
+    .where(and(eq(items.tripId, tripId), eq(items.list, list)));
+  return (last?.position ?? -1) + 1;
+}
+
+/** Adds the item at the end of its list. */
+export async function appendItem(tx: Executor, tripId: string, createdBy: string, item: NewItem) {
+  const position = await endOfList(tx, tripId, item.list);
   const [created] = await tx
     .insert(items)
-    .values({ ...item, tripId, position: (last?.position ?? -1) + 1, createdBy })
+    .values({ ...item, tripId, position, createdBy })
     .returning();
   return created!;
 }

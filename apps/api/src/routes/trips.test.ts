@@ -327,4 +327,107 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       ]);
     });
   });
+
+  describe('editing items', () => {
+    const items = () => client.trips[':tripId'].items;
+    type Changes = Parameters<ReturnType<typeof items>[':itemId']['$patch']>[0]['json'];
+    const edit = (user: Guest, tripId: string, itemId: string, json: Changes) =>
+      items()[':itemId'].$patch({ param: { tripId, itemId }, json }, as(user));
+
+    it('changes any field and logs which ones changed', async () => {
+      const { member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const item = data.items.find((i) => i.list === 'bring' && i.kind === 'single')!;
+      const res = await edit(member, tripId, item.id, {
+        name: 'כיסאות',
+        category: item.category,
+        list: 'buy',
+        kind: 'qty',
+        quantityNeeded: 6,
+        unit: 'יח׳',
+        displayQty: '6',
+        note: 'מתקפלים',
+      });
+      expect(res.status).toBe(200);
+      const buyCount = data.items.filter((i) => i.list === 'buy').length;
+      expect(await res.json()).toEqual({
+        id: item.id,
+        list: 'buy',
+        category: item.category,
+        position: buyCount,
+        name: 'כיסאות',
+        kind: 'qty',
+        quantityNeeded: 6,
+        unit: 'יח׳',
+        displayQty: '6',
+        note: 'מתקפלים',
+      });
+      const [logged] = await sql<{ payload: { fields: string[] } }[]>`
+        select payload from activity where trip_id = ${tripId} and type = 'item_updated'`;
+      expect(logged!.payload.fields.sort()).toEqual(
+        ['displayQty', 'kind', 'list', 'name', 'note', 'quantityNeeded', 'unit'].sort(),
+      );
+    });
+
+    it('keeps the quantity at or above what is claimed', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const qty = data.items.find((i) => i.kind === 'qty')!;
+      expect((await edit(member, tripId, qty.id, { quantityNeeded: 6 })).status).toBe(200);
+      expect((await claim(organizer, tripId, qty.id, 3)).status).toBe(200);
+      expect((await claim(member, tripId, qty.id, 2)).status).toBe(200);
+      const low = await edit(member, tripId, qty.id, { quantityNeeded: 4 });
+      expect(low.status).toBe(409);
+      expect(await low.json()).toEqual({ error: 'Less than already claimed' });
+      expect((await edit(member, tripId, qty.id, { quantityNeeded: 5 })).status).toBe(200);
+      expect((await edit(member, tripId, qty.id, { quantityNeeded: 1 })).status).toBe(400);
+    });
+
+    it('changes the kind only while nobody claimed the item', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const [free, taken] = data.items.filter((i) => i.kind === 'single');
+      expect((await edit(member, tripId, free!.id, { kind: 'qty' })).status).toBe(400);
+      const toQty = await edit(member, tripId, free!.id, { kind: 'qty', quantityNeeded: 3 });
+      expect(await toQty.json()).toMatchObject({ kind: 'qty', quantityNeeded: 3 });
+      expect(
+        (await edit(member, tripId, free!.id, { kind: 'each', quantityNeeded: 1 })).status,
+      ).toBe(200);
+
+      await claim(organizer, tripId, taken!.id, 1);
+      const res = await edit(member, tripId, taken!.id, { kind: 'each' });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ error: 'Already claimed' });
+    });
+
+    it('keeps a bought item on the buy list', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const [bought, open] = data.items.filter((i) => i.list === 'buy' && i.kind !== 'each');
+      const expense = await client.trips[':tripId'].expenses.$post(
+        {
+          param: { tripId },
+          json: {
+            description: 'x',
+            amountAgorot: 1000,
+            shares: [organizer.id],
+            itemId: bought!.id,
+          },
+        },
+        as(organizer),
+      );
+      expect(expense.status).toBe(201);
+      const res = await edit(member, tripId, bought!.id, { list: 'bring' });
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ error: 'Already bought' });
+      expect((await edit(member, tripId, open!.id, { list: 'bring' })).status).toBe(200);
+    });
+
+    it('hides items from non-members', async () => {
+      const { data } = await tripWithMember();
+      const stranger = await guest('stranger');
+      const res = await edit(stranger, data.trip.id, data.items[0]!.id, { name: 'x' });
+      expect(res.status).toBe(404);
+    });
+  });
 });
