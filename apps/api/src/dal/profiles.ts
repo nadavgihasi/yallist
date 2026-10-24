@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm';
 
 import type { Db } from '../db/client';
 import { profiles } from '../db/schema';
-import type { Executor } from '../db/tx';
+import { transact, type Executor } from '../db/tx';
 
 export async function findProfile(tx: Executor, userId: string) {
   const [profile] = await tx.select().from(profiles).where(eq(profiles.id, userId));
@@ -54,17 +54,28 @@ const USER_COLUMNS = [
 /** Moves everything of user `from` to user `to` and deletes `from`'s profile. */
 export async function mergeUser(db: Db, from: string, to: string) {
   const id = sql.identifier;
-  await db.transaction(async (tx) => {
+  await transact(db, async (tx) => {
     // Where both are in a trip, the account keeps the stronger membership, so a trip never
-    // loses its organizer: organizer beats member, and active beats pending beats removed.
+    // loses its organizer: an active organizer beats member, and active beats pending beats
+    // removed. A removed organizer's role doesn't carry over.
     await tx.execute(sql`
       update trip_members b set
-        role = case when a.role = 'organizer' then a.role else b.role end,
+        role = case
+          when (a.role = 'organizer' and a.status = 'active')
+            or (b.role = 'organizer' and b.status = 'active') then 'organizer'
+          else 'member' end,
         status = case
           when a.status = 'active' or (a.status = 'pending' and b.status = 'removed') then a.status
           else b.status end
       from trip_members a
       where a.trip_id = b.trip_id and a.user_id = ${from} and b.user_id = ${to}`);
+    // Where both took part of a qty item, the account takes both parts, so nothing goes missing.
+    // Every claim fit under the item's quantity at once, so their sum does too.
+    await tx.execute(sql`
+      update claims b set quantity = b.quantity + a.quantity
+      from claims a, items i
+      where a.item_id = b.item_id and i.id = b.item_id and i.kind = 'qty'
+        and a.user_id = ${from} and b.user_id = ${to}`);
     for (const [table, key] of USER_KEYED) {
       await tx.execute(sql`
         delete from ${id(table)} a where a.user_id = ${from} and exists (
