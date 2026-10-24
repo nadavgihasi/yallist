@@ -1,0 +1,108 @@
+import { describe, expect, it } from 'vitest';
+
+import { claimCap, filterItems, isDone, itemStatus } from './coverage';
+import type { Claim, Expense, Item } from './types';
+
+const item = (over: Partial<Item> & Pick<Item, 'id'>): Item => ({
+  list: 'bring',
+  category: 'כללי',
+  position: 0,
+  name: over.id,
+  kind: 'single',
+  quantityNeeded: 1,
+  ...over,
+});
+const claim = (itemId: string, userId: string, quantity = 1): Claim => ({
+  itemId,
+  userId,
+  quantity,
+});
+const active = ['me', 'ron', 'dana'];
+
+describe('itemStatus', () => {
+  it('missing when nobody claimed', () => {
+    expect(itemStatus(item({ id: 'grill' }), [], [], active, 'me')).toEqual({ kind: 'missing' });
+  });
+
+  it('mine when I took a single item', () => {
+    expect(itemStatus(item({ id: 'grill' }), [claim('grill', 'me')], [], active, 'me')).toEqual({
+      kind: 'mine',
+    });
+  });
+
+  it('covered by others on the bring list, in progress on the buy list', () => {
+    const claims = [claim('x', 'ron')];
+    expect(itemStatus(item({ id: 'x' }), claims, [], active, 'me')).toEqual({
+      kind: 'covered',
+      holderIds: ['ron'],
+    });
+    expect(itemStatus(item({ id: 'x', list: 'buy' }), claims, [], active, 'me')).toEqual({
+      kind: 'inProgress',
+      holderIds: ['ron'],
+    });
+  });
+
+  it('partial for qty items', () => {
+    const chairs = item({ id: 'chairs', kind: 'qty', quantityNeeded: 8 });
+    expect(
+      itemStatus(chairs, [claim('chairs', 'me', 3), claim('chairs', 'ron', 2)], [], active, 'me'),
+    ).toEqual({
+      kind: 'partial',
+      missing: 3,
+    });
+  });
+
+  it('counts each items against active members', () => {
+    const bag = item({ id: 'bag', kind: 'each' });
+    expect(itemStatus(bag, [claim('bag', 'ron')], [], active, 'me')).toEqual({
+      kind: 'each',
+      have: 1,
+      total: 3,
+      missingIds: ['me', 'dana'],
+    });
+    const all = active.map((u) => claim('bag', u));
+    expect(itemStatus(bag, all, [], active, 'me').kind).toBe('covered');
+  });
+
+  it('bought when an expense links to a buy item', () => {
+    const exp: Expense = {
+      id: 'e',
+      itemId: 'meat',
+      description: '',
+      amountAgorot: 45000,
+      paidBy: 'dana',
+      shares: active,
+    };
+    expect(itemStatus(item({ id: 'meat', list: 'buy' }), [], [exp], active, 'me')).toEqual({
+      kind: 'bought',
+      expense: exp,
+    });
+  });
+});
+
+describe('isDone / filterItems', () => {
+  const items = [item({ id: 'a' }), item({ id: 'b' }), item({ id: 'c', list: 'buy' })];
+  const claims = [claim('a', 'me'), claim('c', 'ron')];
+
+  it('buy items are done only once bought', () => {
+    expect(isDone(items[2]!, claims, [], active)).toBe(true);
+    expect(isDone(items[1]!, claims, [], active)).toBe(false);
+  });
+
+  it('filters', () => {
+    const ids = (f: 'all' | 'missing' | 'mine') =>
+      filterItems(items, f, claims, [], active, 'me').map((i) => i.id);
+    expect(ids('all')).toEqual(['a', 'b', 'c']);
+    expect(ids('missing')).toEqual(['b']);
+    expect(ids('mine')).toEqual(['a']);
+  });
+});
+
+describe('claimCap', () => {
+  it('leaves room only for the unclaimed part', () => {
+    const chairs = item({ id: 'chairs', kind: 'qty', quantityNeeded: 8 });
+    const claims = [claim('chairs', 'me', 3), claim('chairs', 'ron', 2)];
+    expect(claimCap(chairs, claims, 'me')).toBe(6);
+    expect(claimCap(chairs, claims, 'dana')).toBe(3);
+  });
+});
