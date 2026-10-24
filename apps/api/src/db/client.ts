@@ -1,6 +1,9 @@
 import { DsqlSigner } from '@aws-sdk/dsql-signer';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import postgres, { type Sql } from 'postgres';
 import { Resource } from 'sst';
+
+import * as schema from './schema';
 
 /** True when connecting to the linked Aurora DSQL cluster rather than plain Postgres. */
 export const isDsql = !process.env.DATABASE_URL;
@@ -21,3 +24,6 @@ export function connect() {
     ssl: 'require',
   });
 }
+
+export const createDb = (sql: Sql) => drizzle(sql, { schema });
+export type Db = ReturnType<typeof createDb>;

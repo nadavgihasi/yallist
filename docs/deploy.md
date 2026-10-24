@@ -80,6 +80,27 @@ export DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres
 pnpm test
 ```
 
+## Auth
+
+[Better Auth](https://better-auth.com) ([auth.ts](../apps/api/src/auth.ts)) is served by the API under `/api/auth/*`, with its tables (`users`, `sessions`, `accounts`, `verifications`) in the same database.
+
+- **Sign-in:** as a guest (`POST /api/auth/sign-in/anonymous` with `{ "name": "…" }`) or with Google. A guest who later signs in with Google keeps their trips: they move to the Google user, and the guest user is deleted.
+- **Tokens:** clients send the session token as `Authorization: Bearer <token>`, not as a cookie. The API and the web app are on different domains, and Android has no cookie jar. Sign-in responses return the token.
+- **Profiles:** every new user gets a `profiles` row, named after their Google name or the name given for guest sign-in. `GET /me` returns it.
+- **Google OAuth clients:** one per stage, in Google Cloud Console. The client IDs are public and set in [infra/app/sst.config.ts](../infra/app/sst.config.ts). Each client needs the redirect URI `<api>/api/auth/callback/google`, where `<api>` is that stage's `api` output.
+
+### Secrets
+
+Each stage needs two SST secrets. A deploy fails until both are set:
+
+```sh
+pnpm sst secret set BetterAuthSecret "$(openssl rand -base64 32)" --stage dev
+pnpm sst secret set GoogleClientSecret <client secret from Google Cloud> --stage dev
+# and the same with --stage production
+```
+
+`BetterAuthSecret` signs sessions. Changing it signs everyone out. `pnpm sst secret list --stage <stage>` shows what is set.
+
 ## Naming and tags
 
 Every resource has the stage in its name or identifier, so dev and production never collide and are easy to tell apart in the console:

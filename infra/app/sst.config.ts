@@ -8,6 +8,11 @@
  */
 const STAGES = ['dev', 'production'];
 
+const GOOGLE_CLIENT_IDS: Record<string, string> = {
+  dev: '320057100250-1lskqsmic04ek446i2rqlcdb82q315hd.apps.googleusercontent.com',
+  production: '320057100250-skj1935jdjo5ttlf6khunvrcvktqj0il.apps.googleusercontent.com',
+};
+
 export default $config({
   app(input) {
     const stage = input?.stage;
@@ -45,8 +50,8 @@ export default $config({
     // Hono app (apps/api) behind an HTTP API; one Lambda serves every path.
     // CORS stays at SST's default (any origin): auth is bearer tokens, not cookies, so allowing
     // every origin exposes nothing. It also avoids a cycle: the web build needs the API URL.
+    // Its route is added after the web app, whose URL Better Auth trusts.
     const api = new sst.aws.ApiGatewayV2('Api');
-    api.route('$default', { handler: '../../apps/api/src/lambda.handler', link: [database] });
 
     // Single-page Expo web export on S3 + CloudFront. Unknown paths fall back to index.html
     // so deep links like /trips/:id load the app.
@@ -61,6 +66,19 @@ export default $config({
         },
       },
     });
+
+    // Better Auth (apps/api/src/auth.ts). Set both secrets per stage before deploying:
+    //   pnpm sst secret set BetterAuthSecret "$(openssl rand -base64 32)" --stage <stage>
+    //   pnpm sst secret set GoogleClientSecret <secret> --stage <stage>
+    const authSecret = new sst.Secret('BetterAuthSecret');
+    const googleClientSecret = new sst.Secret('GoogleClientSecret');
+    api.route('$default', {
+      handler: '../../apps/api/src/lambda.handler',
+      link: [database, api, web, authSecret, googleClientSecret],
+      // OAuth client IDs are public; one Google Cloud OAuth client per stage.
+      environment: { GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage] },
+    });
+
     return { url: web.url, api: api.url };
   },
 });

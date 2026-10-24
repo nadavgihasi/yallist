@@ -1,7 +1,8 @@
 import { TEMPLATES } from '@yallist/domain';
-import postgres, { type Sql } from 'postgres';
+import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { createTestDatabase, DATABASE_URL } from '../test-db';
 import { migrate, toDsql } from './migrate';
 
 describe('toDsql', () => {
@@ -27,27 +28,15 @@ describe('toDsql', () => {
   });
 });
 
-// Needs Postgres (CI provides one). Each run migrates a fresh, throwaway database.
-const url = process.env.DATABASE_URL;
-
-describe.skipIf(!url)('migrate', () => {
-  const name = `yallist_test_${process.pid}`;
-  let admin: Sql;
+describe.skipIf(!DATABASE_URL)('migrate', () => {
   let sql: Sql;
+  let drop: () => Promise<void>;
 
   beforeAll(async () => {
-    admin = postgres(url!, { onnotice: () => {} });
-    await admin.unsafe(`create database ${name}`);
-    const testUrl = new URL(url!);
-    testUrl.pathname = `/${name}`;
-    sql = postgres(testUrl.href, { onnotice: () => {} });
+    ({ sql, drop } = await createTestDatabase());
   });
 
-  afterAll(async () => {
-    await sql.end();
-    await admin.unsafe(`drop database ${name}`);
-    await admin.end();
-  });
+  afterAll(() => drop());
 
   it('creates the schema and seeds templates, and can run again', async () => {
     await migrate(sql, { dsql: false });
@@ -57,6 +46,7 @@ describe.skipIf(!url)('migrate', () => {
       select table_name as name from information_schema.tables where table_schema = 'public'`;
     expect(tables.map((t) => t.name).sort()).toEqual([
       '__migrations',
+      'accounts',
       'activity',
       'claims',
       'expense_shares',
@@ -64,9 +54,12 @@ describe.skipIf(!url)('migrate', () => {
       'items',
       'payments',
       'profiles',
+      'sessions',
       'template_items',
       'trip_members',
       'trips',
+      'users',
+      'verifications',
     ]);
 
     const [seeded] = await sql<{ count: number }[]>`

@@ -38,11 +38,89 @@ function oneOf(name: string, column: AnyPgColumn, values: readonly string[]) {
 const positive = (name: string, column: AnyPgColumn) => check(name, sql`${column} > 0`);
 
 const createdAt = () => timestamp('created_at', { withTimezone: true }).notNull().defaultNow();
+const updatedAt = () =>
+  timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date());
 const userRef = (name: string) => uuid(name).references(() => profiles.id);
 
+// Better Auth's tables (src/auth.ts), as its Drizzle schema generator writes them for
+// `generateId: 'uuid'` and `usePlural`, with timestamptz. Its sessions and accounts cascade
+// on user delete; a user has a handful of each, far below DSQL's row limit.
+
+export const users = pgTable('users', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  email: text('email').notNull().unique(),
+  emailVerified: boolean('email_verified').notNull().default(false),
+  image: text('image'),
+  /** Set by the anonymous plugin for guests. */
+  isAnonymous: boolean('is_anonymous').default(false),
+  createdAt: createdAt(),
+  updatedAt: updatedAt(),
+});
+
+export const sessions = pgTable(
+  'sessions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** The bearer token. */
+    token: text('token').notNull().unique(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('sessions_user_idx').on(t.userId)],
+);
+
+export const accounts = pgTable(
+  'accounts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    /** The provider's user id, e.g. the Google `sub`. */
+    accountId: text('account_id').notNull(),
+    providerId: text('provider_id').notNull(),
+    accessToken: text('access_token'),
+    refreshToken: text('refresh_token'),
+    idToken: text('id_token'),
+    accessTokenExpiresAt: timestamp('access_token_expires_at', { withTimezone: true }),
+    refreshTokenExpiresAt: timestamp('refresh_token_expires_at', { withTimezone: true }),
+    scope: text('scope'),
+    password: text('password'),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('accounts_user_idx').on(t.userId)],
+);
+
+/** Short-lived values such as OAuth state. */
+export const verifications = pgTable(
+  'verifications',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    identifier: text('identifier').notNull(),
+    value: text('value').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: createdAt(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [index('verifications_identifier_idx').on(t.identifier)],
+);
+
+/** One per user, created on first sign-in (src/auth.ts). */
 export const profiles = pgTable('profiles', {
-  /** The auth user id. */
-  id: uuid('id').primaryKey(),
+  id: uuid('id')
+    .primaryKey()
+    .references(() => users.id),
   displayName: text('display_name').notNull(),
   avatarColor: text('avatar_color').notNull(),
   /** Shown to trip-mates so they can pay via Bit/PayBox. */
