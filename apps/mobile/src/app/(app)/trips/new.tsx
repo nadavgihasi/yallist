@@ -181,7 +181,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 20,
     backgroundColor: 'rgba(14,23,38,0.45)',
-    backdropFilter: 'blur(14px)',
     gap: 2,
   },
   coverName: { fontFamily: fonts.display, fontSize: 26, color: colors.white },

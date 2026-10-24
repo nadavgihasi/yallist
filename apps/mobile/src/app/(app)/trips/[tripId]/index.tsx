@@ -133,7 +133,6 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 20,
     backgroundColor: 'rgba(14,23,38,0.45)',
-    backdropFilter: 'blur(14px)',
   },
   dateChip: {
     height: 28,
