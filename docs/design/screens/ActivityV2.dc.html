@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>מה חדש – קמפינג בכנרת</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+<div style="position: absolute; inset: 0; overflow-y: auto; padding: 0 16px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+
+<div style="padding-top: 12px; display: flex; align-items: center; gap: 12px">
+<a href="TripV2.dc.html" aria-label="חזרה לטיול" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; color: #0E1726; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; flex: 0 0 auto">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+<div style="display: flex; flex-direction: column">
+<h1 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 28px; line-height: 1.1; font-weight: 700">מה חדש</h1>
+<span style="font-size: 14px; color: #4B5565">קמפינג בכנרת</span>
+</div>
+</div>
+
+<section style="border-radius: 24px; background: #FFFFFF; overflow: hidden">
+<div style="padding: 16px 18px 6px">
+<h2 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 20px; font-weight: 600">מחכה לך</h2>
+</div>
+<a href="ItemSheetV2.dc.html" style="min-height: 64px; padding: 10px 18px; box-sizing: border-box; color: #0E1726; display: flex; align-items: center; gap: 12px; text-decoration: none">
+<span aria-hidden="true" style="{{todoIconStyle}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8h12l-1 12H7L6 8z"></path><path d="M9 8a3 3 0 0 1 6 0"></path></svg></span>
+<div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">לרשום כמה עלו הביצים</span><span style="font-size: 13px; color: #4B5565">כדי שזה ייכנס להתחשבנות</span></div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA3B2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+</a>
+<div style="height: 1px; background: #EEF0F4; margin-inline-start: 70px"></div>
+<a href="TripV2.dc.html" style="min-height: 64px; padding: 10px 18px; box-sizing: border-box; color: #0E1726; display: flex; align-items: center; gap: 12px; text-decoration: none">
+<span aria-hidden="true" style="{{todoIconStyle}}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="3"></rect><path d="M3 10h18"></path><path d="M15.5 14.5h2"></path></svg></span>
+<div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">להעביר ₪90 לדנה</span><span style="font-size: 13px; color: #4B5565">החלק שלך בבשר, בסלטים ובשתייה</span></div>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA3B2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+</a>
+</section>
+
+<div style="display: flex; gap: 8px">
+<sc-for list="{{filters}}" as="f" hint-placeholder-count="3">
+<button onClick="{{f.pick}}" aria-pressed="{{f.on}}" style="{{f.style}}">{{f.label}}</button>
+</sc-for>
+</div>
+
+<sc-for list="{{days}}" as="d" hint-placeholder-count="3">
+<section style="display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; padding: 0 4px; font-size: 14px; font-weight: 600; color: #4B5565">{{d.label}}</h2>
+<div style="border-radius: 24px; background: #FFFFFF; overflow: hidden">
+<sc-for list="{{d.events}}" as="ev" hint-placeholder-count="3">
+<sc-if value="{{ev.notFirst}}" hint-placeholder-val="{{true}}"><div style="height: 1px; background: #EEF0F4; margin-inline-start: 70px"></div></sc-if>
+<div style="min-height: 64px; padding: 12px 18px; box-sizing: border-box; display: flex; align-items: center; gap: 12px">
+<sc-if value="{{ev.isSystem}}" hint-placeholder-val="{{false}}"><span aria-hidden="true" style="width: 40px; height: 40px; flex: 0 0 auto; border-radius: 50%; background: #FFE9DE; color: #C2410C; display: inline-flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16v-5a6 6 0 0 1 12 0v5l1.5 2h-15z"></path><path d="M10 20.5a2 2 0 0 0 4 0"></path></svg></span></sc-if>
+<sc-if value="{{ev.isPerson}}" hint-placeholder-val="{{true}}"><span aria-hidden="true" style="{{ev.avatarStyle}}">{{ev.initial}}</span></sc-if>
+<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 500">{{ev.title}}</span>
+<sc-if value="{{ev.hasDetail}}" hint-placeholder-val="{{true}}"><span style="font-size: 13px; color: #4B5565">{{ev.detail}}</span></sc-if>
+</div>
+<span style="font-size: 13px; color: #9AA3B2; direction: ltr; flex: 0 0 auto">{{ev.time}}</span>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-for>
+
+<sc-if value="{{empty}}" hint-placeholder-val="{{false}}">
+<div style="padding: 28px 20px; border-radius: 24px; background: #FFFFFF; text-align: center; font-size: 15px; color: #4B5565">אין עדכונים מהסוג הזה</div>
+</sc-if>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const filter = s.filter || 'all';
+    const P = {
+      me: ['י', accent], dana: ['ד', '#FFD9C2'], michal: ['מ', '#F1DDF7'], ron: ['ר', '#D3F1F4'], shira: ['ש', '#FFDDE4'], alon: ['א', '#E3E0FF']
+    };
+    const DAYS = [
+      { label: 'היום', events: [
+        { kind: 'system', title: 'עוד 11 פריטים חסרים', detail: 'תזכורת שנשלחה לכולם', time: '12:00' },
+        { kind: 'item', who: 'alon', title: 'רמקול אצל אלון', time: '10:42' },
+        { kind: 'money', who: 'shira', title: 'נקנה: בירות ושתייה קלה', detail: '₪180, שירה', time: '09:15' },
+        { kind: 'item', who: 'michal', title: 'כיסאות מתקפלים: 3 אצל מיכל', time: '08:30' }
+      ] },
+      { label: 'אתמול', events: [
+        { kind: 'money', who: 'dana', title: 'נקנה: בשר לעל האש', detail: '₪450, דנה', time: '21:04' },
+        { kind: 'people', who: 'alon', title: 'אלון בפנים', detail: 'הצטרפות מהקישור', time: '19:47' },
+        { kind: 'item', who: 'ron', title: 'מנגל אצל רון', time: '18:20' }
+      ] },
+      { label: 'יום ראשון, 18.10', events: [
+        { kind: 'item', who: 'me', title: 'שקיות זבל וביצים אצלך', time: '20:10' },
+        { kind: 'people', who: 'me', title: 'פתחת את הטיול', detail: 'מהתבנית קמפינג', time: '20:02' }
+      ] }
+    ];
+    const keep = function (e) { return filter === 'all' || e.kind === filter; };
+    const days = DAYS.map(function (d) {
+      return {
+        label: d.label,
+        events: d.events.filter(keep).map(function (e, i) {
+          const p = e.who ? P[e.who] : null;
+          return {
+            title: e.title,
+            detail: e.detail || '',
+            hasDetail: !!e.detail,
+            time: e.time,
+            notFirst: i > 0,
+            isSystem: !p,
+            isPerson: !!p,
+            initial: p ? p[0] : '',
+            avatarStyle: p ? 'width: 40px; height: 40px; flex: 0 0 auto; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; background: ' + p[1] + '; color: ' + (e.who === 'me' ? '#FFFFFF' : '#0E1726') : ''
+          };
+        })
+      };
+    }).filter(function (d) { return d.events.length > 0; });
+    return {
+      todoIconStyle: 'width: 40px; height: 40px; flex: 0 0 auto; border-radius: 50%; background: ' + accent + '1F; color: ' + accent + '; display: inline-flex; align-items: center; justify-content: center',
+      filters: [{ id: 'all', label: 'הכול' }, { id: 'item', label: 'פריטים' }, { id: 'money', label: 'כסף' }].map(function (f) {
+        const on = f.id === filter;
+        return {
+          label: f.label,
+          on: on,
+          pick: function () { self.setState({ filter: f.id }); },
+          style: 'min-height: 44px; padding: 0 18px; border-radius: 22px; font-size: 15px; font-weight: 500; cursor: pointer; ' + (on ? 'border: 1px solid #0E1726; background: #0E1726; color: #FFFFFF' : 'border: 1px solid #E4E7EE; background: #FFFFFF; color: #0E1726')
+        };
+      }),
+      days: days,
+      empty: days.length === 0
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>טיול חדש</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+
+<div style="position: absolute; inset: 0; overflow-y: auto; padding: 0 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 18px">
+
+<div style="padding-top: 12px; display: flex; align-items: center; gap: 12px">
+<a href="HomeV2.dc.html" aria-label="חזרה לטיולים שלי" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; color: #0E1726; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; flex: 0 0 auto">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+<h1 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 28px; font-weight: 700">טיול חדש</h1>
+</div>
+
+<div style="position: relative; height: 220px; border-radius: 28px; overflow: hidden; flex: 0 0 auto">
+<sc-if value="{{isCamp}}" hint-placeholder-val="{{true}}"><svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#FFB774"></rect><circle cx="268" cy="118" r="48" fill="#FFE39B"></circle><path d="M0 168 C70 138 128 152 190 136 C250 121 310 146 390 128 L390 300 L0 300 Z" fill="#B07CC6"></path><path d="M0 196 C80 170 150 188 220 172 C290 157 340 182 390 170 L390 300 L0 300 Z" fill="#7A55B5"></path><rect y="206" width="390" height="94" fill="#2F4FD8"></rect><path d="M232 222 h72 M246 236 h44 M256 250 h24" stroke="#FFE39B" stroke-width="4" stroke-linecap="round" opacity="0.7"></path><path d="M0 262 C90 248 170 272 260 256 C320 246 360 258 390 252 L390 300 L0 300 Z" fill="#1F1752"></path><path d="M44 264 L84 214 L124 264 Z" fill="#FFCF3F"></path><path d="M84 264 L84 232 L100 264 Z" fill="#E8590C"></path></svg></sc-if>
+<sc-if value="{{isGrill}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#BDE5CF"></rect><circle cx="110" cy="96" r="38" fill="#FFF1B8"></circle><path d="M0 190 C80 160 160 180 240 160 C300 146 350 168 390 158 L390 300 L0 300 Z" fill="#5FAF84"></path><path d="M40 232 L70 150 L100 232 Z M250 226 L285 132 L320 226 Z M312 234 L340 166 L368 234 Z" fill="#1F6B4A"></path><path d="M0 236 C100 220 200 244 300 228 C340 222 370 230 390 226 L390 300 L0 300 Z" fill="#123F2C"></path><path d="M168 212 h60 l-8 16 h-44 z" fill="#0E1726"></path><path d="M184 228 l-6 18 M212 228 l6 18" stroke="#0E1726" stroke-width="4" stroke-linecap="round"></path><path d="M188 200 c-8 -12 8 -18 0 -30 M208 196 c-8 -12 8 -18 0 -30" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.85"></path></svg></sc-if>
+<sc-if value="{{isZimmer}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#FFCDB2"></rect><circle cx="300" cy="90" r="34" fill="#FFF0C2"></circle><path d="M0 170 C90 140 170 160 250 140 C320 124 360 140 390 134 L390 300 L0 300 Z" fill="#D9936A"></path><path d="M0 214 C100 190 190 210 280 192 C330 182 370 192 390 188 L390 300 L0 300 Z" fill="#A8613F"></path><path d="M150 216 L150 178 L185 152 L220 178 L220 216 Z" fill="#FFF6EC"></path><path d="M140 182 L185 146 L230 182 L222 186 L185 157 L148 186 Z" fill="#E8590C"></path><rect x="176" y="192" width="18" height="24" fill="#7A3E12"></rect><path d="M100 218 C96 198 98 178 104 164 C110 178 112 198 108 218 Z M262 212 C258 192 260 174 266 160 C272 174 274 192 270 212 Z" fill="#3F5E3A"></path><path d="M0 246 C120 232 230 254 390 236 L390 300 L0 300 Z" fill="#5E3423"></path></svg></sc-if>
+<sc-if value="{{isBeach}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#A8DBF7"></rect><circle cx="90" cy="88" r="40" fill="#FFE39B"></circle><rect y="160" width="390" height="70" fill="#1E88D6"></rect><path d="M20 180 q15 -8 30 0 t30 0 M220 194 q15 -8 30 0 t30 0 M120 210 q15 -8 30 0 t30 0" stroke="#FFFFFF" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.85"></path><path d="M0 222 C100 210 220 232 390 214 L390 300 L0 300 Z" fill="#F2C879"></path><path d="M270 262 L282 194" stroke="#0E1726" stroke-width="4" stroke-linecap="round"></path><path d="M232 196 C246 158 318 158 332 196 Z" fill="#E8590C"></path><path d="M266 196 C270 166 294 166 298 196 Z" fill="#FFF6EC"></path></svg></sc-if>
+<sc-if value="{{isBlank}}" hint-placeholder-val="{{false}}"><svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#DDE3F8"></rect><rect x="110" y="70" width="170" height="26" rx="13" fill="#FFFFFF"></rect><rect x="110" y="110" width="130" height="26" rx="13" fill="#FFFFFF"></rect><rect x="110" y="150" width="150" height="26" rx="13" fill="#FFFFFF" opacity="0.6"></rect></svg></sc-if>
+<div style="position: absolute; right: 14px; left: 14px; bottom: 14px; padding: 12px 16px; border-radius: 20px; background: rgba(14,23,38,0.45); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); color: #FFFFFF; display: flex; flex-direction: column; gap: 2px">
+<span style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 26px; line-height: 1.1; font-weight: 600">{{nameShown}}</span>
+<span style="font-size: 14px; opacity: 0.9">חמישי–שבת, 13–14 בנובמבר</span>
+</div>
+</div>
+
+<section style="display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; flex-direction: column; gap: 2px; padding: 0 4px">
+<h2 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 22px; font-weight: 600">איזה סוג טיול?</h2>
+<span style="font-size: 14px; color: #4B5565">מתחילים מרשימה מוכנה ועורכים אחר כך</span>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<button onClick="{{tCamp.pick}}" aria-pressed="{{tCamp.on}}" style="{{tCamp.style}}">
+<span style="width: 44px; height: 44px; border-radius: 14px; background: #FFB774; display: inline-flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E1726" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"></path><path d="M12 4L4 20"></path><path d="M12 4l8 16"></path><path d="M12 13l-3 7"></path><path d="M12 13l3 7"></path></svg></span>
+<span style="font-size: 16px; font-weight: 600">קמפינג</span>
+<span style="font-size: 13px; color: #4B5565">24 פריטים</span>
+</button>
+<button onClick="{{tGrill.pick}}" aria-pressed="{{tGrill.on}}" style="{{tGrill.style}}">
+<span style="width: 44px; height: 44px; border-radius: 14px; background: #BDE5CF; display: inline-flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E1726" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3c.5 3 4 5 4 9.5a4 4 0 0 1-8 0c0-2 1-3.5 2-4.5 0 2 .8 3 2 3.5 0-3-1-5 0-8.5z"></path><path d="M5 21h14"></path></svg></span>
+<span style="font-size: 16px; font-weight: 600">על האש</span>
+<span style="font-size: 13px; color: #4B5565">18 פריטים</span>
+</button>
+<button onClick="{{tZimmer.pick}}" aria-pressed="{{tZimmer.on}}" style="{{tZimmer.style}}">
+<span style="width: 44px; height: 44px; border-radius: 14px; background: #FFCDB2; display: inline-flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E1726" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 11l8-7 8 7"></path><path d="M6 10v10h12V10"></path><path d="M10 20v-5h4v5"></path></svg></span>
+<span style="font-size: 16px; font-weight: 600">צימר</span>
+<span style="font-size: 13px; color: #4B5565">14 פריטים</span>
+</button>
+<button onClick="{{tBeach.pick}}" aria-pressed="{{tBeach.on}}" style="{{tBeach.style}}">
+<span style="width: 44px; height: 44px; border-radius: 14px; background: #A8DBF7; display: inline-flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E1726" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.5"></circle><path d="M3 16c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0"></path><path d="M3 20.5c2-1.5 4-1.5 6 0s4 1.5 6 0 4-1.5 6 0"></path></svg></span>
+<span style="font-size: 16px; font-weight: 600">יום בחוף</span>
+<span style="font-size: 13px; color: #4B5565">16 פריטים</span>
+</button>
+<button onClick="{{tBlank.pick}}" aria-pressed="{{tBlank.on}}" style="{{tBlank.style}}">
+<span style="width: 44px; height: 44px; border-radius: 14px; background: #DDE3F8; display: inline-flex; align-items: center; justify-content: center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#0E1726" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6v12"></path><path d="M6 12h12"></path></svg></span>
+<span style="font-size: 16px; font-weight: 600">רשימה ריקה</span>
+<span style="font-size: 13px; color: #4B5565">מוסיפים לבד</span>
+</button>
+</div>
+</section>
+
+<section style="padding: 16px; border-radius: 24px; background: #FFFFFF; display: flex; flex-direction: column; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="v2-trip-name" style="font-size: 15px; font-weight: 600">שם הטיול</label>
+<input id="v2-trip-name" value="{{tripName}}" onChange="{{onName}}" placeholder="למשל: קמפינג בכנרת" style="width: 100%; box-sizing: border-box; min-height: 54px; padding: 0 16px; border-radius: 16px; border: none; background: #F4F5F8; font-size: 17px; color: #0E1726">
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 15px; font-weight: 600">מתי</span>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<button aria-label="יוצאים: חמישי, 13 בנובמבר" style="min-height: 60px; padding: 8px 16px; border-radius: 16px; border: none; background: #F4F5F8; color: #0E1726; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; cursor: pointer">
+<span style="font-size: 13px; color: #4B5565">יוצאים</span>
+<span style="font-size: 16px; font-weight: 600">חמישי, 13.11</span>
+</button>
+<button aria-label="חוזרים: שבת, 14 בנובמבר" style="min-height: 60px; padding: 8px 16px; border-radius: 16px; border: none; background: #F4F5F8; color: #0E1726; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px; cursor: pointer">
+<span style="font-size: 13px; color: #4B5565">חוזרים</span>
+<span style="font-size: 16px; font-weight: 600">שבת, 14.11</span>
+</button>
+</div>
+</div>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="v2-trip-place" style="font-size: 15px; font-weight: 600">איפה <span style="font-weight: 400; color: #4B5565">(לא חובה)</span></label>
+<input id="v2-trip-place" value="{{tripPlace}}" onChange="{{onPlace}}" placeholder="אפשר להחליט ביחד אחר כך" style="width: 100%; box-sizing: border-box; min-height: 54px; padding: 0 16px; border-radius: 16px; border: none; background: #F4F5F8; font-size: 17px; color: #0E1726">
+</div>
+</section>
+
+<section aria-live="polite" style="padding: 16px; border-radius: 24px; background: #FFFFFF; display: flex; flex-direction: column; gap: 10px">
+<h2 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 19px; font-weight: 600">מה נכנס לרשימות</h2>
+<sc-if value="{{hasPreview}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 8px; font-size: 15px; line-height: 1.5">
+<p style="margin: 0"><strong style="font-weight: 600">להביא: </strong>{{previewBring}}</p>
+<p style="margin: 0"><strong style="font-weight: 600">לקנות: </strong>{{previewBuy}}</p>
+</div>
+</sc-if>
+<sc-if value="{{noPreview}}" hint-placeholder-val="{{false}}">
+<p style="margin: 0; font-size: 15px; color: #4B5565">מתחילים מאפס ומוסיפים פריטים אחרי היצירה.</p>
+</sc-if>
+</section>
+
+<div style="height: 110px; flex: 0 0 auto"></div>
+</div>
+
+<a href="TripV2.dc.html" style="{{ctaStyle}}">יצירת הטיול</a>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const picked = s.template || 'camp';
+    const TEMPLATES = {
+      camp: { bring: 'אוהלים, שקי שינה, גזייה, פנסי ראש ועוד', buy: 'בשר, ביצים, מים, קפה ועוד' },
+      grill: { bring: 'מנגל, פחמים, צידנית, כיסאות מתקפלים ועוד', buy: 'בשר, פיתות, סלטים, שתייה ועוד' },
+      zimmer: { bring: 'משחקי קופסה, רמקול, מגבות ועוד', buy: 'ארוחת בוקר, יין, נשנושים ועוד' },
+      beach: { bring: 'צילייה, מחצלות, צידנית, מטקות ועוד', buy: 'אבטיח, קרח, מים, כריכים ועוד' },
+      blank: null
+    };
+    const option = function (id) {
+      const on = id === picked;
+      return {
+        on: on,
+        pick: function () { self.setState({ template: id }); },
+        style: 'min-height: 120px; padding: 14px; border-radius: 22px; border: 2px solid ' + (on ? accent : '#FFFFFF') + '; background: #FFFFFF; color: #0E1726; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 8px; cursor: pointer; text-align: start' + (on ? '; box-shadow: 0 6px 18px rgba(14,23,38,0.10)' : '')
+      };
+    };
+    const t = TEMPLATES[picked];
+    const name = s.name ?? 'קמפינג בכנרת';
+    return {
+      isCamp: picked === 'camp',
+      isGrill: picked === 'grill',
+      isZimmer: picked === 'zimmer',
+      isBeach: picked === 'beach',
+      isBlank: picked === 'blank',
+      nameShown: name.trim() ? name : 'הטיול שלנו',
+      tripName: name,
+      tripPlace: s.place ?? '',
+      onName: function (e) { self.setState({ name: e.target.value }); },
+      onPlace: function (e) { self.setState({ place: e.target.value }); },
+      tCamp: option('camp'),
+      tGrill: option('grill'),
+      tZimmer: option('zimmer'),
+      tBeach: option('beach'),
+      tBlank: option('blank'),
+      hasPreview: !!t,
+      noPreview: !t,
+      previewBring: t ? t.bring : '',
+      previewBuy: t ? t.buy : '',
+      ctaStyle: 'position: absolute; bottom: 24px; right: 16px; left: 16px; height: 60px; border-radius: 30px; background: ' + accent + '; color: #FFFFFF; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 12px 28px rgba(14,23,38,0.28)'
+    };
+  }
+}
+</script>
+</body>
+</html>

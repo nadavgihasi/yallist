@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>מחכים לאישור – קמפינג בכנרת</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow-y: auto; direction: rtl; background: #FFFFFF; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+
+<header style="position: relative; height: 260px; overflow: hidden">
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="390" height="260" aria-hidden="true" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#FFB774"></rect><circle cx="268" cy="118" r="48" fill="#FFE39B"></circle><path d="M0 168 C70 138 128 152 190 136 C250 121 310 146 390 128 L390 300 L0 300 Z" fill="#B07CC6"></path><path d="M0 196 C80 170 150 188 220 172 C290 157 340 182 390 170 L390 300 L0 300 Z" fill="#7A55B5"></path><rect y="206" width="390" height="94" fill="#2F4FD8"></rect><path d="M0 262 C90 248 170 272 260 256 C320 246 360 258 390 252 L390 300 L0 300 Z" fill="#1F1752"></path><path d="M44 264 L84 214 L124 264 Z" fill="#FFCF3F"></path><path d="M84 264 L84 232 L100 264 Z" fill="#E8590C"></path></svg>
+<div style="position: absolute; right: 20px; left: 20px; bottom: 52px; color: #FFFFFF; display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 40px; line-height: 1.02; font-weight: 700">קמפינג בכנרת</h1>
+<span style="font-size: 15px; font-weight: 500">חמישי–שבת, 13–14 בנובמבר</span>
+</div>
+</header>
+
+<main style="position: relative; margin-top: -32px; padding: 26px 20px 32px; border-radius: 32px 32px 0 0; background: #FFFFFF; display: flex; flex-direction: column; gap: 22px">
+
+<div aria-live="polite" style="display: flex; flex-direction: column; gap: 8px">
+<span style="{{statusChip}}">{{statusChipLabel}}</span>
+<h2 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 30px; line-height: 1.1; font-weight: 600">{{headline}}</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.5; color: #4B5565">{{body}}</p>
+</div>
+
+<ol style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column">
+<sc-for list="{{steps}}" as="st" hint-placeholder-count="3">
+<li style="display: flex; align-items: stretch; gap: 14px">
+<div style="display: flex; flex-direction: column; align-items: center; flex: 0 0 auto">
+<span aria-hidden="true" style="{{st.dotStyle}}">
+<sc-if value="{{st.done}}" hint-placeholder-val="{{true}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></sc-if>
+</span>
+<sc-if value="{{st.hasLine}}" hint-placeholder-val="{{true}}"><span style="{{st.lineStyle}}"></span></sc-if>
+</div>
+<div style="padding: 4px 0 18px; display: flex; flex-direction: column; gap: 2px">
+<span style="{{st.labelStyle}}">{{st.label}}</span>
+<span style="font-size: 13px; color: #4B5565">{{st.hint}}</span>
+</div>
+</li>
+</sc-for>
+</ol>
+
+<section style="padding: 16px; border-radius: 22px; background: #F4F5F8; display: flex; flex-direction: column; gap: 10px">
+<h3 style="margin: 0; font-size: 15px; font-weight: 600">בינתיים, זה מה שעוד חסר</h3>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px">
+<li style="height: 34px; padding: 0 12px; border-radius: 17px; background: #FFE9DE; color: #C2410C; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center">פחמים</li>
+<li style="height: 34px; padding: 0 12px; border-radius: 17px; background: #FFE9DE; color: #C2410C; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center">צילייה</li>
+<li style="height: 34px; padding: 0 12px; border-radius: 17px; background: #FFE9DE; color: #C2410C; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center">ערכת עזרה ראשונה</li>
+<li style="height: 34px; padding: 0 12px; border-radius: 17px; background: #FFE9DE; color: #C2410C; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center">נקניקיות</li>
+<li style="height: 34px; padding: 0 6px; color: #4B5565; font-size: 14px; display: inline-flex; align-items: center">ועוד 7</li>
+</ul>
+</section>
+
+<sc-if value="{{waiting}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 10px">
+<button style="{{primaryStyle}}">הורדת האפליקציה לקבלת התראה</button>
+<button onClick="{{check}}" style="min-height: 48px; border: none; border-radius: 24px; background: transparent; color: #4B5565; font-size: 15px; font-weight: 500; cursor: pointer">הדף מתעדכן לבד. בדיקה עכשיו</button>
+</div>
+</sc-if>
+<sc-if value="{{approved}}" hint-placeholder-val="{{false}}">
+<a href="TripV2.dc.html" style="{{enterStyle}}">כניסה לטיול</a>
+</sc-if>
+
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"approved":{"editor":"boolean","default":false},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const approved = s.approved ?? this.props.approved ?? false;
+    const STEPS = [
+      { label: 'הבקשה נשלחה', hint: 'בשם גל, לפני 2 דקות' },
+      { label: 'המארגנים מאשרים', hint: approved ? 'אושר עכשיו' : 'בדרך כלל זה לוקח כמה דקות' },
+      { label: 'בוחרים מה להביא', hint: 'לוקחים פריטים מהרשימה' }
+    ];
+    const current = approved ? 2 : 1;
+    const big = 'display: inline-flex; align-items: center; justify-content: center; ';
+    return {
+      approved: approved,
+      waiting: !approved,
+      statusChipLabel: approved ? 'אושר' : 'מחכה לאישור',
+      statusChip: 'align-self: flex-start; height: 30px; padding: 0 12px; border-radius: 15px; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; ' + (approved ? 'background: #E3F4EA; color: #1E7A4C' : 'background: #FFE9DE; color: #C2410C'),
+      headline: approved ? 'אפשר להיכנס!' : 'עוד רגע בפנים',
+      body: approved ? 'הרשימה פתוחה. בוחרים מה להביא, ורואים מה עוד חסר.' : 'המארגנים של הטיול מאשרים כל מצטרף חדש. ברגע שמאשרים אותך, הרשימה נפתחת.',
+      steps: STEPS.map(function (st, i) {
+        const done = i < current;
+        const active = i === current;
+        return {
+          label: st.label,
+          hint: st.hint,
+          done: done,
+          hasLine: i < STEPS.length - 1,
+          dotStyle: big + 'width: 32px; height: 32px; box-sizing: border-box; border-radius: 50%; ' + (done ? 'background: ' + accent : (active ? 'border: 3px solid ' + accent + '; background: #FFFFFF' : 'border: 2px solid #D9DDE6; background: #FFFFFF')),
+          lineStyle: 'width: 2px; flex: 1 1 auto; min-height: 18px; background: ' + (done ? accent : '#E4E7EE'),
+          labelStyle: 'font-size: 16px; font-weight: ' + (active ? '600' : '500') + '; color: ' + (i > current ? '#4B5565' : '#0E1726')
+        };
+      }),
+      primaryStyle: 'min-height: 58px; border: none; border-radius: 29px; background: ' + accent + '; color: #FFFFFF; font-size: 17px; font-weight: 600; cursor: pointer; box-shadow: 0 10px 24px rgba(14,23,38,0.2)',
+      check: function () { self.setState({ approved: true }); },
+      enterStyle: 'min-height: 58px; border-radius: 29px; background: ' + accent + '; color: #FFFFFF; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 10px 24px rgba(14,23,38,0.2)'
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>פריט – ביצים</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+
+<div aria-hidden="true" style="position: absolute; inset: 0">
+<div style="position: relative; height: 300px; overflow: hidden">
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="390" height="300" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#FFB774"></rect><circle cx="268" cy="118" r="48" fill="#FFE39B"></circle><path d="M0 168 C70 138 128 152 190 136 C250 121 310 146 390 128 L390 300 L0 300 Z" fill="#B07CC6"></path><path d="M0 196 C80 170 150 188 220 172 C290 157 340 182 390 170 L390 300 L0 300 Z" fill="#7A55B5"></path><rect y="206" width="390" height="94" fill="#2F4FD8"></rect><path d="M0 262 C90 248 170 272 260 256 C320 246 360 258 390 252 L390 300 L0 300 Z" fill="#1F1752"></path><path d="M44 264 L84 214 L124 264 Z" fill="#FFCF3F"></path></svg>
+</div>
+<div style="margin: -28px 12px 0; height: 120px; border-radius: 28px; background: #FFFFFF; position: relative"></div>
+<div style="margin: 24px 16px 0; height: 300px; border-radius: 24px; background: #FFFFFF"></div>
+<div style="position: absolute; inset: 0; background: rgba(14,23,38,0.38)"></div>
+</div>
+
+<section role="dialog" aria-modal="true" aria-labelledby="v2-item-title" style="position: absolute; top: 92px; right: 8px; bottom: 8px; left: 8px; border-radius: 34px; background: rgba(255,255,255,0.9); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 20px 50px rgba(14,23,38,0.25); display: flex; flex-direction: column; overflow: hidden">
+<div aria-hidden="true" style="display: flex; justify-content: center; padding-top: 10px"><span style="width: 40px; height: 5px; border-radius: 3px; background: rgba(14,23,38,0.18)"></span></div>
+
+<div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 20px 20px; display: flex; flex-direction: column; gap: 22px">
+
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 id="v2-item-title" style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 34px; line-height: 1.05; font-weight: 700">ביצים</h1>
+<span style="font-size: 15px; color: #4B5565">30, ברשימת הקניות</span>
+</div>
+<a href="TripV2.dc.html" aria-label="סגירה" style="width: 44px; height: 44px; flex: 0 0 auto; border-radius: 22px; background: rgba(14,23,38,0.06); color: #0E1726; display: inline-flex; align-items: center; justify-content: center; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+</a>
+</div>
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<span style="{{statusStyle}}">
+<sc-if value="{{isBought}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></sc-if>
+<span>{{statusLabel}}</span>
+</span>
+<sc-if value="{{canRelease}}" hint-placeholder-val="{{true}}">
+<button onClick="{{release}}" style="min-height: 44px; padding: 0 16px; border-radius: 22px; border: none; background: rgba(14,23,38,0.06); color: #4B5565; font-size: 15px; font-weight: 500; cursor: pointer">לא אני, לשחרר</button>
+</sc-if>
+<sc-if value="{{isReleased}}" hint-placeholder-val="{{false}}">
+<button onClick="{{claim}}" style="{{claimStyle}}">אני אקנה</button>
+</sc-if>
+</div>
+
+<sc-if value="{{isHeld}}" hint-placeholder-val="{{true}}">
+<div style="display: flex; flex-direction: column; gap: 22px">
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="v2-item-price" style="font-size: 15px; font-weight: 600">כמה זה עלה?</label>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 76px; padding: 0 20px; border-radius: 22px; background: rgba(14,23,38,0.05)">
+<span aria-hidden="true" style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 30px; font-weight: 600; color: #4B5565">₪</span>
+<input id="v2-item-price" inputmode="decimal" value="{{price}}" onChange="{{onPrice}}" style="flex: 1 1 auto; min-width: 0; border: none; outline-offset: 4px; background: transparent; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 38px; font-weight: 600; color: #0E1726">
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+<span style="font-size: 15px; font-weight: 600">מתחלק בין</span>
+<span aria-live="polite" style="{{perStyle}}">{{perPerson}}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{people}}" as="p" hint-placeholder-count="8">
+<button onClick="{{p.toggle}}" aria-pressed="{{p.on}}" style="{{p.style}}">
+<span aria-hidden="true" style="{{p.avatarStyle}}">{{p.initial}}</span>
+<span>{{p.name}}</span>
+</button>
+</sc-for>
+</div>
+<span style="font-size: 13px; color: #4B5565">{{splitHint}}</span>
+</div>
+</div>
+</sc-if>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="v2-item-note" style="font-size: 15px; font-weight: 600">הערה</label>
+<textarea id="v2-item-note" rows="2" value="{{note}}" onChange="{{onNote}}" style="width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: 18px; border: none; background: rgba(14,23,38,0.05); font-size: 16px; line-height: 1.45; color: #0E1726; resize: none"></textarea>
+</div>
+
+</div>
+
+<div style="padding: 12px 20px 20px; display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto">
+<sc-if value="{{isHeld}}" hint-placeholder-val="{{true}}">
+<button onClick="{{toggleBought}}" style="{{boughtStyle}}">{{boughtLabel}}</button>
+</sc-if>
+<button style="min-height: 44px; border: none; background: transparent; color: #C2410C; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; gap: 6px; cursor: pointer">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M6 7l1 13h10l1-13"></path><path d="M9 7V4h6v3"></path></svg>
+<span>מחיקת הפריט</span>
+</button>
+</div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const tint = accent + '1F';
+    const status = s.status || 'mine';
+    const PEOPLE = [
+      { id: 'me', name: 'אני', initial: 'י', bg: accent },
+      { id: 'dana', name: 'דנה', initial: 'ד', bg: '#FFD9C2' },
+      { id: 'yoav', name: 'יואב', initial: 'י', bg: '#D8F0E0' },
+      { id: 'michal', name: 'מיכל', initial: 'מ', bg: '#F1DDF7' },
+      { id: 'ori', name: 'אורי', initial: 'א', bg: '#FFF0B3' },
+      { id: 'ron', name: 'רון', initial: 'ר', bg: '#D3F1F4' },
+      { id: 'shira', name: 'שירה', initial: 'ש', bg: '#FFDDE4' },
+      { id: 'alon', name: 'אלון', initial: 'א', bg: '#E3E0FF' }
+    ];
+    const out = s.out || {};
+    const priceText = s.price ?? '36';
+    const price = parseFloat(priceText);
+    const inCount = PEOPLE.filter(function (p) { return !out[p.id]; }).length;
+
+    let perPerson = '';
+    if (inCount > 0 && price > 0) perPerson = '₪' + (Math.round(price / inCount * 10) / 10) + ' לכל אחד';
+    const splitHint = inCount === 0 ? 'בוחרים לפחות משתתף אחד' : (price > 0 ? inCount + ' מתוך ' + PEOPLE.length + ' משתתפים. מורידים מי שלא אוכל ביצים.' : 'רושמים סכום ורואים כמה יוצא לכל אחד');
+
+    const people = PEOPLE.map(function (p) {
+      const on = !out[p.id];
+      return {
+        name: p.name,
+        initial: p.initial,
+        on: on,
+        toggle: function () {
+          const next = Object.assign({}, out);
+          if (on) next[p.id] = true; else delete next[p.id];
+          self.setState({ out: next });
+        },
+        style: 'min-height: 44px; padding: 0 14px 0 6px; border-radius: 22px; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; ' +
+          (on ? 'border: 1.5px solid ' + accent + '; background: ' + tint + '; color: #0E1726' : 'border: 1.5px solid #D9DDE6; background: transparent; color: #4B5565'),
+        avatarStyle: 'width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; ' +
+          (on ? 'background: ' + p.bg + '; color: ' + (p.id === 'me' ? '#FFFFFF' : '#0E1726') : 'background: #E9ECF2; color: #4B5565')
+      };
+    });
+
+    const chip = 'display: inline-flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 18px; font-size: 15px; font-weight: 600';
+    const STATUS = {
+      mine: { label: 'אצלך', style: chip + '; background: ' + accent + '; color: #FFFFFF' },
+      bought: { label: 'נקנה', style: chip + '; background: #E3F4EA; color: #1E7A4C' },
+      released: { label: 'חסר', style: chip + '; background: #FFE9DE; color: #C2410C' }
+    };
+    const isBought = status === 'bought';
+    const wide = 'width: 100%; min-height: 58px; border-radius: 29px; font-size: 17px; font-weight: 600; cursor: pointer';
+
+    return {
+      statusLabel: STATUS[status].label,
+      statusStyle: STATUS[status].style,
+      isBought: isBought,
+      canRelease: status === 'mine',
+      isReleased: status === 'released',
+      isHeld: status !== 'released',
+      release: function () { self.setState({ status: 'released' }); },
+      claim: function () { self.setState({ status: 'mine' }); },
+      claimStyle: 'min-height: 44px; padding: 0 18px; border-radius: 22px; border: none; background: ' + accent + '; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer',
+      price: priceText,
+      onPrice: function (e) { self.setState({ price: e.target.value }); },
+      perPerson: perPerson,
+      perStyle: "font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 22px; font-weight: 600; color: " + accent,
+      people: people,
+      splitHint: splitHint,
+      note: s.note ?? 'עדיף ביצי חופש, מידה L',
+      onNote: function (e) { self.setState({ note: e.target.value }); },
+      toggleBought: function () { self.setState({ status: isBought ? 'mine' : 'bought' }); },
+      boughtLabel: isBought ? 'ביטול הסימון כנקנה' : 'סימון כנקנה',
+      boughtStyle: isBought ? wide + '; border: none; background: rgba(14,23,38,0.06); color: #0E1726' : wide + '; border: none; background: ' + accent + '; color: #FFFFFF; box-shadow: 0 10px 24px rgba(14,23,38,0.2)'
+    };
+  }
+}
+</script>
+</body>
+</html>

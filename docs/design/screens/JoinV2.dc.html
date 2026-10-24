@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>הזמנה לטיול – קמפינג בכנרת</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow-y: auto; direction: rtl; background: #FFFFFF; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+
+<header style="position: relative; height: 380px; overflow: hidden">
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="390" height="380" aria-hidden="true" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#FFB774"></rect><circle cx="268" cy="112" r="44" fill="#FFE39B"></circle><path d="M0 160 C70 132 128 146 190 130 C250 116 310 140 390 122 L390 300 L0 300 Z" fill="#B07CC6"></path><path d="M0 188 C80 164 150 182 220 166 C290 152 340 176 390 164 L390 300 L0 300 Z" fill="#7A55B5"></path><rect y="198" width="390" height="102" fill="#2F4FD8"></rect><path d="M232 214 h72 M246 228 h44 M256 242 h24" stroke="#FFE39B" stroke-width="4" stroke-linecap="round" opacity="0.7"></path><path d="M0 256 C90 242 170 266 260 250 C320 240 360 252 390 246 L390 300 L0 300 Z" fill="#1F1752"></path><path d="M44 258 L84 208 L124 258 Z" fill="#FFCF3F"></path><path d="M84 258 L84 226 L100 258 Z" fill="#E8590C"></path></svg>
+<span style="position: absolute; top: 24px; right: 20px; height: 32px; padding: 0 14px; border-radius: 16px; background: rgba(255,255,255,0.75); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center">הוזמנת לטיול</span>
+<div style="position: absolute; right: 20px; left: 20px; bottom: 60px; color: #FFFFFF; display: flex; flex-direction: column; gap: 8px">
+<h1 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 48px; line-height: 1; font-weight: 700">קמפינג בכנרת</h1>
+<span style="font-size: 16px; font-weight: 500">חמישי–שבת, 13–14 בנובמבר</span>
+</div>
+</header>
+
+<main style="position: relative; margin-top: -32px; padding: 24px 20px 32px; border-radius: 32px 32px 0 0; background: #FFFFFF; display: flex; flex-direction: column; gap: 24px">
+
+<div style="display: flex; align-items: center; gap: 12px">
+<div aria-hidden="true" style="display: flex; align-items: center; flex: 0 0 auto">
+<sc-for list="{{crew}}" as="c" hint-placeholder-count="4"><span style="{{c.style}}">{{c.initial}}</span></sc-for>
+<span style="width: 38px; height: 38px; box-sizing: border-box; border-radius: 50%; border: 2px solid #FFFFFF; margin-inline-start: -10px; background: #F4F5F8; color: #4B5565; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center">+4</span>
+</div>
+<span style="font-size: 15px; line-height: 1.4">דנה, יואב, מיכל ועוד 5 כבר בפנים</span>
+</div>
+
+<section style="display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 21px; font-weight: 600">עוד חסר לטיול</h2>
+<ul style="margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 8px">
+<li style="height: 36px; padding: 0 14px; border-radius: 18px; background: #FFE9DE; color: #C2410C; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center">פחמים</li>
+<li style="height: 36px; padding: 0 14px; border-radius: 18px; background: #FFE9DE; color: #C2410C; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center">צילייה</li>
+<li style="height: 36px; padding: 0 14px; border-radius: 18px; background: #FFE9DE; color: #C2410C; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center">ערכת עזרה ראשונה</li>
+<li style="height: 36px; padding: 0 14px; border-radius: 18px; background: #FFE9DE; color: #C2410C; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center">כיסאות</li>
+<li style="height: 36px; padding: 0 14px; border-radius: 18px; background: #FFE9DE; color: #C2410C; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center">נקניקיות</li>
+<li style="height: 36px; padding: 0 14px; border-radius: 18px; background: #FFE9DE; color: #C2410C; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center">מים</li>
+<li style="height: 36px; padding: 0 6px; color: #4B5565; font-size: 15px; display: inline-flex; align-items: center">ועוד 5</li>
+</ul>
+</section>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<label for="v2-join-name" style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 21px; font-weight: 600">איך קוראים לך?</label>
+<input id="v2-join-name" value="{{name}}" onChange="{{onName}}" placeholder="השם שהחברים יראו" autocomplete="given-name" style="width: 100%; box-sizing: border-box; min-height: 60px; padding: 0 18px; border-radius: 20px; border: none; background: #F4F5F8; font-size: 18px; color: #0E1726">
+<a href="TripV2.dc.html" style="{{joinStyle}}">הצטרפות לטיול</a>
+<p style="margin: 4px 0 0; font-size: 14px; line-height: 1.5; color: #4B5565; text-align: center">בלי הורדה ובלי סיסמה. אפשר להתקין את האפליקציה אחר כך.</p>
+</div>
+
+</main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const CREW = [['ד', '#FFD9C2'], ['י', '#D8F0E0'], ['מ', '#F1DDF7'], ['ר', '#D3F1F4']];
+    return {
+      crew: CREW.map(function (c, i) {
+        return {
+          initial: c[0],
+          style: 'width: 38px; height: 38px; box-sizing: border-box; border-radius: 50%; border: 2px solid #FFFFFF; background: ' + c[1] + '; color: #0E1726; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center' + (i > 0 ? '; margin-inline-start: -10px' : '')
+        };
+      }),
+      name: s.name ?? '',
+      onName: function (e) { self.setState({ name: e.target.value }); },
+      joinStyle: 'width: 100%; min-height: 60px; box-sizing: border-box; border-radius: 30px; background: ' + accent + '; color: #FFFFFF; font-size: 18px; font-weight: 600; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 12px 28px rgba(14,23,38,0.22)'
+    };
+  }
+}
+</script>
+</body>
+</html>

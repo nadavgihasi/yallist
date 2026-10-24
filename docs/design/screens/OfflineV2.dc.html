@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>היום בטיול – בלי קליטה</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+<div style="position: absolute; inset: 0; overflow-y: auto">
+
+<div style="position: relative; height: 190px; overflow: hidden">
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMax slice" width="390" height="190" aria-hidden="true" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#FFB774"></rect><circle cx="268" cy="118" r="48" fill="#FFE39B"></circle><path d="M0 168 C70 138 128 152 190 136 C250 121 310 146 390 128 L390 300 L0 300 Z" fill="#B07CC6"></path><path d="M0 196 C80 170 150 188 220 172 C290 157 340 182 390 170 L390 300 L0 300 Z" fill="#7A55B5"></path><rect y="206" width="390" height="94" fill="#2F4FD8"></rect><path d="M0 262 C90 248 170 272 260 256 C320 246 360 258 390 252 L390 300 L0 300 Z" fill="#1F1752"></path><path d="M44 264 L84 214 L124 264 Z" fill="#FFCF3F"></path><path d="M84 264 L84 232 L100 264 Z" fill="#E8590C"></path></svg>
+<div style="position: absolute; top: 12px; right: 16px; left: 16px; display: flex; align-items: center; justify-content: space-between">
+<a href="HomeV2.dc.html" aria-label="חזרה לכל הטיולים" style="width: 44px; height: 44px; border-radius: 22px; background: rgba(255,255,255,0.72); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); color: #0E1726; display: inline-flex; align-items: center; justify-content: center; text-decoration: none">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+<span style="height: 32px; padding: 0 14px; border-radius: 16px; background: rgba(255,255,255,0.72); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center">היום בטיול</span>
+</div>
+<h1 style="position: absolute; right: 20px; left: 20px; bottom: 40px; margin: 0; color: #FFFFFF; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 34px; line-height: 1.05; font-weight: 700">קמפינג בכנרת</h1>
+</div>
+
+<section aria-live="polite" style="position: relative; margin: -24px 12px 0; padding: 16px 18px; border-radius: 24px; background: #0E1726; color: #FFFFFF; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: flex-start; gap: 12px">
+<span aria-hidden="true" style="width: 40px; height: 40px; flex: 0 0 auto; border-radius: 50%; background: rgba(255,255,255,0.12); display: inline-flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a15 15 0 0 1 6-3.4"></path><path d="M22 9a15 15 0 0 0-9.5-3.9"></path><path d="M5.5 12.5a10 10 0 0 1 4-2.2"></path><path d="M18.5 12.5a10 10 0 0 0-2-1.4"></path><path d="M9 16a5 5 0 0 1 6 0"></path><circle cx="12" cy="19.5" r="1"></circle><path d="M3 3l18 18"></path></svg></span>
+<div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 4px">
+<span style="font-size: 17px; font-weight: 600">אין קליטה</span>
+<span style="font-size: 14px; line-height: 1.45; color: rgba(255,255,255,0.8)">{{offlineText}}</span>
+</div>
+</div>
+<button onClick="{{retry}}" style="min-height: 44px; border: none; border-radius: 22px; background: rgba(255,255,255,0.14); color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer">{{retryLabel}}</button>
+</section>
+
+<div style="padding: 24px 16px 0; display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+<h2 style="margin: 0; padding: 0 4px; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 24px; font-weight: 600">מה הגיע?</h2>
+<span style="font-size: 14px; font-weight: 600; color: #4B5565">{{arrivedText}}</span>
+</div>
+
+<sc-for list="{{sections}}" as="sec" hint-placeholder-count="2">
+<section style="padding: 14px 16px 0; display: flex; flex-direction: column; gap: 8px">
+<h3 style="{{sec.titleStyle}}">{{sec.title}}</h3>
+<div style="border-radius: 24px; background: #FFFFFF; overflow: hidden">
+<sc-for list="{{sec.items}}" as="it" hint-placeholder-count="4">
+<sc-if value="{{it.notFirst}}" hint-placeholder-val="{{true}}"><div style="height: 1px; background: #EEF0F4; margin-inline-start: 72px"></div></sc-if>
+<div style="min-height: 68px; padding: 10px 16px; box-sizing: border-box; display: flex; align-items: center; gap: 12px">
+<button onClick="{{it.toggle}}" aria-pressed="{{it.arrived}}" aria-label="{{it.label}}" style="{{it.checkStyle}}">
+<sc-if value="{{it.arrived}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></sc-if>
+</button>
+<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="{{it.nameStyle}}">{{it.name}}</span>
+<span style="font-size: 13px; color: #4B5565">{{it.who}}</span>
+</div>
+<sc-if value="{{it.pending}}" hint-placeholder-val="{{false}}">
+<span style="flex: 0 0 auto; height: 26px; padding: 0 10px; border-radius: 13px; background: #F4F5F8; color: #4B5565; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"></circle><path d="M12 8v4l2.5 2"></path></svg>
+<span>ממתין</span>
+</span>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-for>
+
+<div style="height: 40px"></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const local = s.local || { firstaid: true, trash: true };
+    const retrying = !!s.retrying;
+    const ITEMS = [
+      { id: 'grill', name: 'מנגל', who: 'אצל רון', server: true },
+      { id: 'coals', name: 'פחמים', who: 'אצל אורי', server: false },
+      { id: 'stove', name: 'גזייה ובלון גז', who: 'אצל אורי', server: false },
+      { id: 'cooler', name: 'צידניות', who: 'אצל דנה ומיכל', server: true },
+      { id: 'tents', name: 'אוהלים', who: 'אצל יואב ואורי', server: true },
+      { id: 'chairs', name: 'כיסאות מתקפלים', who: 'אצל מיכל ושירה', server: true },
+      { id: 'shade', name: 'צילייה', who: 'אצל שירה', server: true },
+      { id: 'speaker', name: 'רמקול', who: 'אצל אלון', server: false },
+      { id: 'firstaid', name: 'ערכת עזרה ראשונה', who: 'אצלך', server: false },
+      { id: 'trash', name: 'שקיות זבל', who: 'אצלך', server: false }
+    ];
+    const rows = ITEMS.map(function (it) {
+      const arrived = Object.prototype.hasOwnProperty.call(local, it.id) ? !!local[it.id] : it.server;
+      return { it: it, arrived: arrived, pending: arrived !== it.server };
+    });
+    const pendingCount = rows.filter(function (r) { return r.pending; }).length;
+    const arrivedCount = rows.filter(function (r) { return r.arrived; }).length;
+    const view = function (r, i) {
+      return {
+        name: r.it.name,
+        who: r.it.who,
+        arrived: r.arrived,
+        pending: r.pending,
+        notFirst: i > 0,
+        label: (r.arrived ? 'ביטול: ' : 'סימון שהגיע: ') + r.it.name,
+        toggle: function () {
+          const next = Object.assign({}, local);
+          next[r.it.id] = !r.arrived;
+          self.setState({ local: next });
+        },
+        checkStyle: 'width: 44px; height: 44px; flex: 0 0 auto; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; ' + (r.arrived ? 'border: none; background: ' + accent : 'border: 2px solid #C5CCD8; background: #FFFFFF'),
+        nameStyle: 'font-size: 17px; font-weight: 500; color: ' + (r.arrived ? '#4B5565' : '#0E1726')
+      };
+    };
+    const onTheWay = rows.filter(function (r) { return !r.arrived; });
+    const here = rows.filter(function (r) { return r.arrived; });
+    const sections = [];
+    if (onTheWay.length) sections.push({ title: 'עוד בדרך', titleStyle: 'margin: 0; padding: 0 4px; font-size: 14px; font-weight: 600; color: #C2410C', items: onTheWay.map(view) });
+    if (here.length) sections.push({ title: 'הגיעו', titleStyle: 'margin: 0; padding: 0 4px; font-size: 14px; font-weight: 600; color: #4B5565', items: here.map(view) });
+    return {
+      offlineText: pendingCount === 0 ? 'הכול מסונכרן. אפשר להמשיך לסמן, והשינויים יישלחו כשתחזור הקליטה.' : 'אפשר להמשיך לסמן. ' + (pendingCount === 1 ? 'שינוי אחד יישלח' : pendingCount + ' שינויים יישלחו') + ' כשתחזור הקליטה.',
+      retry: function () { self.setState({ retrying: !retrying }); },
+      retryLabel: retrying ? 'עדיין אין קליטה, ננסה שוב לבד' : 'ניסיון חוזר',
+      arrivedText: arrivedCount + ' מתוך ' + ITEMS.length + ' הגיעו',
+      sections: sections
+    };
+  }
+}
+</script>
+</body>
+</html>

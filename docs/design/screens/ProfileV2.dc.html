@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>הפרופיל שלי</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+<div style="position: absolute; inset: 0; overflow-y: auto; padding: 0 16px 32px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+
+<div style="padding-top: 12px; display: flex; align-items: center; gap: 12px">
+<a href="HomeV2.dc.html" aria-label="חזרה לטיולים שלי" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; color: #0E1726; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; flex: 0 0 auto">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+<h1 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 28px; font-weight: 700">הפרופיל שלי</h1>
+</div>
+
+<section style="padding: 24px 20px; border-radius: 28px; background: #FFFFFF; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center">
+<span aria-hidden="true" style="{{avatarStyle}}">י</span>
+<span style="margin-top: 8px; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 26px; font-weight: 600">יונתן לוי</span>
+<span style="font-size: 15px; color: #4B5565">yonatan@example.com</span>
+<span style="margin-top: 6px; height: 28px; padding: 0 12px; border-radius: 14px; background: #F4F5F8; color: #4B5565; font-size: 13px; font-weight: 500; display: inline-flex; align-items: center">חשבון Google</span>
+<div style="margin-top: 14px; width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<div style="padding: 12px 6px; border-radius: 18px; background: #F4F5F8; display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 26px; font-weight: 600">3</span><span style="font-size: 13px; color: #4B5565">טיולים</span></div>
+<div style="padding: 12px 6px; border-radius: 18px; background: #F4F5F8; display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 26px; font-weight: 600">14</span><span style="font-size: 13px; color: #4B5565">פריטים שהבאת</span></div>
+<div style="padding: 12px 6px; border-radius: 18px; background: #F4F5F8; display: flex; flex-direction: column; gap: 2px"><span style="{{oweNumberStyle}}">₪90</span><span style="font-size: 13px; color: #4B5565">להעביר</span></div>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; padding: 4px 4px 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 20px; font-weight: 600">תשלומים</h2>
+<div style="border-radius: 24px; background: #FFFFFF; overflow: hidden">
+<button style="width: 100%; min-height: 64px; padding: 12px 18px; border: none; background: transparent; color: #0E1726; display: flex; align-items: center; gap: 12px; text-align: start; cursor: pointer">
+<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 500">טלפון לקבלת כסף</span>
+<span style="font-size: 13px; color: #4B5565">כדי שחברים יוכלו להעביר לך ב-Bit או ב-PayBox</span>
+</div>
+<span style="font-size: 15px; color: #4B5565; direction: ltr">050-0000000</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA3B2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+</button>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; padding: 4px 4px 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 20px; font-weight: 600">התראות</h2>
+<div style="border-radius: 24px; background: #FFFFFF; overflow: hidden">
+<sc-for list="{{toggles}}" as="t" hint-placeholder-count="3">
+<sc-if value="{{t.notFirst}}" hint-placeholder-val="{{true}}"><div style="height: 1px; background: #EEF0F4; margin-inline-start: 18px"></div></sc-if>
+<div style="min-height: 64px; padding: 12px 18px; box-sizing: border-box; display: flex; align-items: center; gap: 12px">
+<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span id="{{t.labelId}}" style="font-size: 16px; font-weight: 500">{{t.label}}</span>
+<span style="font-size: 13px; color: #4B5565">{{t.hint}}</span>
+</div>
+<button role="switch" aria-checked="{{t.on}}" aria-labelledby="{{t.labelId}}" onClick="{{t.toggle}}" style="{{t.trackStyle}}"><span style="width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(14,23,38,0.25)"></span></button>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; padding: 4px 4px 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 20px; font-weight: 600">כללי</h2>
+<div style="border-radius: 24px; background: #FFFFFF; overflow: hidden">
+<button style="width: 100%; min-height: 56px; padding: 0 18px; border: none; background: transparent; color: #0E1726; display: flex; align-items: center; gap: 12px; text-align: start; font-size: 16px; cursor: pointer">
+<span style="flex: 1 1 auto">שפה</span><span style="font-size: 15px; color: #4B5565">עברית</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA3B2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+</button>
+<div style="height: 1px; background: #EEF0F4; margin-inline-start: 18px"></div>
+<button style="width: 100%; min-height: 56px; padding: 0 18px; border: none; background: transparent; color: #0E1726; display: flex; align-items: center; gap: 12px; text-align: start; font-size: 16px; cursor: pointer">
+<span style="flex: 1 1 auto">עזרה ומשוב</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA3B2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+</button>
+<div style="height: 1px; background: #EEF0F4; margin-inline-start: 18px"></div>
+<button style="width: 100%; min-height: 56px; padding: 0 18px; border: none; background: transparent; color: #0E1726; display: flex; align-items: center; gap: 12px; text-align: start; font-size: 16px; cursor: pointer">
+<span style="flex: 1 1 auto">תנאי שימוש ופרטיות</span>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA3B2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"></path></svg>
+</button>
+</div>
+</section>
+
+<div style="border-radius: 24px; background: #FFFFFF; overflow: hidden">
+<a href="LoginV2.dc.html" style="min-height: 56px; padding: 0 18px; color: #0E1726; display: flex; align-items: center; font-size: 16px; font-weight: 500; text-decoration: none">התנתקות</a>
+<div style="height: 1px; background: #EEF0F4; margin-inline-start: 18px"></div>
+<button style="width: 100%; min-height: 56px; padding: 0 18px; border: none; background: transparent; color: #C2410C; display: flex; align-items: center; text-align: start; font-size: 16px; font-weight: 500; cursor: pointer">מחיקת החשבון</button>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const on = Object.assign({ updates: true, dayBefore: true, settle: true }, s.on || {});
+    const ITEMS = [
+      { id: 'updates', label: 'עדכונים בטיולים שלי', hint: 'כשמישהו לוקח פריט או מוסיף הוצאה' },
+      { id: 'dayBefore', label: 'תזכורת יום לפני טיול', hint: 'מה עוד חסר ומה אצלך' },
+      { id: 'settle', label: 'תזכורת להתחשבנות', hint: 'אחרי הטיול, אם נשארו חובות' }
+    ];
+    return {
+      avatarStyle: "width: 96px; height: 96px; border-radius: 50%; background: " + accent + "; color: #FFFFFF; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 42px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center",
+      oweNumberStyle: "font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 26px; font-weight: 600; color: " + accent,
+      toggles: ITEMS.map(function (t, i) {
+        const isOn = !!on[t.id];
+        return {
+          label: t.label,
+          hint: t.hint,
+          labelId: 'pref-' + t.id,
+          on: isOn,
+          notFirst: i > 0,
+          toggle: function () {
+            const next = Object.assign({}, on);
+            next[t.id] = !isOn;
+            self.setState({ on: next });
+          },
+          trackStyle: 'width: 52px; height: 32px; flex: 0 0 auto; box-sizing: border-box; padding: 3px; border: none; border-radius: 16px; display: flex; align-items: center; cursor: pointer; justify-content: ' + (isOn ? 'flex-end' : 'flex-start') + '; background: ' + (isOn ? accent : '#D9DDE6')
+        };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>כניסה</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #FFFFFF; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMax slice" width="390" height="500" aria-hidden="true" style="position: absolute; top: 0; right: 0; left: 0; display: block"><rect width="390" height="300" fill="#FFB774"></rect><circle cx="268" cy="118" r="48" fill="#FFE39B"></circle><path d="M0 168 C70 138 128 152 190 136 C250 121 310 146 390 128 L390 300 L0 300 Z" fill="#B07CC6"></path><path d="M0 196 C80 170 150 188 220 172 C290 157 340 182 390 170 L390 300 L0 300 Z" fill="#7A55B5"></path><rect y="206" width="390" height="94" fill="#2F4FD8"></rect><path d="M232 222 h72 M246 236 h44 M256 250 h24" stroke="#FFE39B" stroke-width="4" stroke-linecap="round" opacity="0.7"></path><path d="M0 262 C90 248 170 272 260 256 C320 246 360 258 390 252 L390 300 L0 300 Z" fill="#1F1752"></path><path d="M44 264 L84 214 L124 264 Z" fill="#FFCF3F"></path><path d="M84 264 L84 232 L100 264 Z" fill="#E8590C"></path><path d="M290 262 L318 226 L346 262 Z" fill="#FFF6EC"></path><path d="M318 262 L318 240 L329 262 Z" fill="#7A55B5"></path></svg>
+
+<main style="position: absolute; right: 0; bottom: 0; left: 0; padding: 30px 20px 28px; border-radius: 32px 32px 0 0; background: #FFFFFF; display: flex; flex-direction: column; gap: 14px">
+<h1 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 36px; line-height: 1.08; font-weight: 700">כל הטיול ברשימה אחת</h1>
+<p style="margin: 0 0 10px; font-size: 16px; line-height: 1.5; color: #4B5565">מי מביא מה, מה עוד חסר ומי חייב למי. בלי לגלול אחורה בקבוצה.</p>
+
+<a href="FirstHomeV2.dc.html" style="min-height: 56px; border-radius: 28px; border: 1.5px solid #D9DDE6; background: #FFFFFF; color: #0E1726; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 16px; font-weight: 600; text-decoration: none">
+<span aria-hidden="true" style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 6px; border: 1.5px dashed #9AA3B2"></span>
+<span>המשך עם Google</span>
+</a>
+<a href="FirstHomeV2.dc.html" style="min-height: 56px; border-radius: 28px; background: #000000; color: #FFFFFF; display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 16px; font-weight: 600; text-decoration: none">
+<span aria-hidden="true" style="width: 22px; height: 22px; box-sizing: border-box; border-radius: 6px; border: 1.5px dashed rgba(255,255,255,0.6)"></span>
+<span>המשך עם Apple</span>
+</a>
+
+<p style="margin: 6px 0 0; font-size: 15px; line-height: 1.5; text-align: center">קיבלת קישור לטיול? <a href="JoinV2.dc.html" style="{{joinLinkStyle}}">מצטרפים בלי חשבון</a></p>
+<p style="margin: 0; font-size: 13px; line-height: 1.5; color: #4B5565; text-align: center">ההמשך מהווה הסכמה ל<a href="#terms" style="color: #4B5565">תנאי השימוש</a> ול<a href="#privacy" style="color: #4B5565">מדיניות הפרטיות</a></p>
+</main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const accent = this.props.accent ?? '#3B5BFD';
+    return { joinLinkStyle: 'color: ' + accent + '; font-weight: 600' };
+  }
+}
+</script>
+</body>
+</html>

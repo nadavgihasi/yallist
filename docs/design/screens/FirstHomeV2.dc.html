@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>הטיולים שלי – עוד אין טיולים</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+
+<div style="position: absolute; inset: 0; overflow-y: auto; padding: 0 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+
+<header style="padding-top: 24px; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<h1 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 36px; line-height: 1.05; font-weight: 700">הטיולים שלי</h1>
+<a href="ProfileV2.dc.html" aria-label="הפרופיל שלי" style="{{meStyle}}">י</a>
+</header>
+
+<section style="border-radius: 28px; background: #FFFFFF; overflow: hidden; display: flex; flex-direction: column">
+<div style="position: relative; height: 180px; overflow: hidden">
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="100%" height="100%" aria-hidden="true" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#A8DBF7"></rect><circle cx="90" cy="88" r="40" fill="#FFE39B"></circle><rect y="160" width="390" height="70" fill="#1E88D6"></rect><path d="M20 180 q15 -8 30 0 t30 0 M220 194 q15 -8 30 0 t30 0 M120 210 q15 -8 30 0 t30 0" stroke="#FFFFFF" stroke-width="4" fill="none" stroke-linecap="round" opacity="0.85"></path><path d="M0 222 C100 210 220 232 390 214 L390 300 L0 300 Z" fill="#F2C879"></path><path d="M270 262 L282 194" stroke="#0E1726" stroke-width="4" stroke-linecap="round"></path><path d="M232 196 C246 158 318 158 332 196 Z" fill="#E8590C"></path><path d="M266 196 C270 166 294 166 298 196 Z" fill="#FFF6EC"></path></svg>
+</div>
+<div style="padding: 20px 20px 22px; display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 26px; line-height: 1.1; font-weight: 600">עוד אין טיולים</h2>
+<p style="margin: 0; font-size: 16px; line-height: 1.5; color: #4B5565">פותחים טיול, שולחים קישור לחברים, וכל אחד בוחר מה הוא מביא.</p>
+</div>
+</section>
+
+<ol style="margin: 0; padding: 6px 0; list-style: none; border-radius: 24px; background: #FFFFFF; display: flex; flex-direction: column">
+<li style="display: flex; align-items: center; gap: 14px; padding: 12px 18px">
+<span aria-hidden="true" style="{{stepStyle}}">1</span>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 600">פותחים טיול</span><span style="font-size: 14px; color: #4B5565">בוחרים סוג, והרשימות מוכנות</span></div>
+</li>
+<li style="display: flex; align-items: center; gap: 14px; padding: 12px 18px">
+<span aria-hidden="true" style="{{stepStyle}}">2</span>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 600">שולחים קישור בוואטסאפ</span><span style="font-size: 14px; color: #4B5565">החברים מצטרפים מהדפדפן</span></div>
+</li>
+<li style="display: flex; align-items: center; gap: 14px; padding: 12px 18px">
+<span aria-hidden="true" style="{{stepStyle}}">3</span>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 600">כל אחד לוקח פריטים</span><span style="font-size: 14px; color: #4B5565">ורואים בזמן אמת מה עוד חסר</span></div>
+</li>
+</ol>
+
+<section style="padding: 18px; border-radius: 24px; background: #FFFFFF; display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+<span style="font-size: 16px; font-weight: 600">קיבלת קישור לטיול?</span>
+<span style="font-size: 14px; color: #4B5565">מדביקים אותו ונכנסים</span>
+</div>
+<button onClick="{{paste}}" style="{{pasteStyle}}">{{pasteLabel}}</button>
+</section>
+
+<div style="height: 120px; flex: 0 0 auto"></div>
+</div>
+
+<a href="NewTripV2.dc.html" style="{{ctaStyle}}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+<span>פתיחת טיול ראשון</span>
+</a>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const pasted = !!s.pasted;
+    return {
+      meStyle: 'width: 44px; height: 44px; border-radius: 50%; background: ' + accent + '; color: #FFFFFF; font-size: 18px; font-weight: 600; flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; text-decoration: none',
+      stepStyle: "width: 40px; height: 40px; flex: 0 0 auto; border-radius: 50%; background: " + accent + "1F; color: " + accent + "; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 19px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center",
+      paste: function () { self.setState({ pasted: !pasted }); },
+      pasteLabel: pasted ? 'אין קישור בהעתקה' : 'הדבקה',
+      pasteStyle: 'min-height: 44px; padding: 0 16px; border-radius: 22px; border: none; flex: 0 0 auto; font-size: 15px; font-weight: 600; cursor: pointer; ' + (pasted ? 'background: #FFE9DE; color: #C2410C' : 'background: ' + accent + '1F; color: ' + accent),
+      ctaStyle: 'position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); height: 60px; padding: 0 28px; border-radius: 30px; background: ' + accent + '; color: #FFFFFF; font-size: 17px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; text-decoration: none; box-shadow: 0 12px 28px rgba(14,23,38,0.28)'
+    };
+  }
+}
+</script>
+</body>
+</html>

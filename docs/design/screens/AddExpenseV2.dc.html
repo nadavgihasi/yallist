@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>הוצאה חדשה</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+
+<div aria-hidden="true" style="position: absolute; inset: 0">
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="390" height="300" style="display: block"><rect width="390" height="300" fill="#FFB774"></rect><circle cx="268" cy="118" r="48" fill="#FFE39B"></circle><path d="M0 168 C70 138 128 152 190 136 C250 121 310 146 390 128 L390 300 L0 300 Z" fill="#B07CC6"></path><path d="M0 196 C80 170 150 188 220 172 C290 157 340 182 390 170 L390 300 L0 300 Z" fill="#7A55B5"></path><rect y="206" width="390" height="94" fill="#2F4FD8"></rect><path d="M0 262 C90 248 170 272 260 256 C320 246 360 258 390 252 L390 300 L0 300 Z" fill="#1F1752"></path></svg>
+<div style="position: absolute; inset: 0; background: rgba(14,23,38,0.38)"></div>
+</div>
+
+<section role="dialog" aria-modal="true" aria-labelledby="add-exp-title" style="position: absolute; top: 64px; right: 8px; bottom: 8px; left: 8px; border-radius: 34px; background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 20px 50px rgba(14,23,38,0.25); display: flex; flex-direction: column; overflow: hidden">
+<div aria-hidden="true" style="display: flex; justify-content: center; padding-top: 10px"><span style="width: 40px; height: 5px; border-radius: 3px; background: rgba(14,23,38,0.18)"></span></div>
+
+<div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 20px 20px; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<h1 id="add-exp-title" style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 30px; font-weight: 700">הוצאה חדשה</h1>
+<a href="TripV2.dc.html" aria-label="סגירה" style="width: 44px; height: 44px; flex: 0 0 auto; border-radius: 22px; background: rgba(14,23,38,0.06); color: #0E1726; display: inline-flex; align-items: center; justify-content: center; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+</a>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="add-exp-amount" style="font-size: 15px; font-weight: 600">כמה?</label>
+<div style="display: flex; align-items: center; gap: 10px; min-height: 84px; padding: 0 20px; border-radius: 24px; background: rgba(14,23,38,0.05)">
+<span aria-hidden="true" style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 32px; font-weight: 600; color: #4B5565">₪</span>
+<input id="add-exp-amount" inputmode="decimal" value="{{amount}}" onChange="{{onAmount}}" style="flex: 1 1 auto; min-width: 0; border: none; outline-offset: 4px; background: transparent; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 44px; font-weight: 600; color: #0E1726">
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<label for="add-exp-what" style="font-size: 15px; font-weight: 600">על מה?</label>
+<input id="add-exp-what" value="{{what}}" onChange="{{onWhat}}" placeholder="למשל: קרח ופחמים" style="width: 100%; box-sizing: border-box; min-height: 56px; padding: 0 18px; border-radius: 20px; border: none; background: rgba(14,23,38,0.05); font-size: 17px; color: #0E1726">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px">
+<span style="font-size: 13px; color: #4B5565">מרשימת הקניות:</span>
+<sc-for list="{{fromList}}" as="fl" hint-placeholder-count="3">
+<button onClick="{{fl.pick}}" style="min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1.5px solid #D9DDE6; background: transparent; color: #0E1726; font-size: 14px; font-weight: 500; cursor: pointer">{{fl.label}}</button>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 15px; font-weight: 600">מי שילם?</span>
+<div role="radiogroup" aria-label="מי שילם" style="display: flex; gap: 10px; overflow-x: auto; padding: 2px 2px 6px">
+<sc-for list="{{payers}}" as="p" hint-placeholder-count="8">
+<button role="radio" aria-checked="{{p.on}}" onClick="{{p.pick}}" style="min-width: 56px; padding: 0; border: none; background: transparent; display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; color: #0E1726">
+<span aria-hidden="true" style="{{p.avatarStyle}}">{{p.initial}}</span>
+<span style="{{p.nameStyle}}">{{p.name}}</span>
+</button>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+<span style="font-size: 15px; font-weight: 600">מתחלק בין</span>
+<span aria-live="polite" style="{{perStyle}}">{{perPerson}}</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{sharers}}" as="sh" hint-placeholder-count="8">
+<button onClick="{{sh.toggle}}" aria-pressed="{{sh.on}}" style="{{sh.style}}">
+<span aria-hidden="true" style="{{sh.avatarStyle}}">{{sh.initial}}</span>
+<span>{{sh.name}}</span>
+</button>
+</sc-for>
+</div>
+</div>
+
+<button style="min-height: 56px; border-radius: 20px; border: 1.5px dashed #B9C0CC; background: transparent; color: #0E1726; font-size: 16px; font-weight: 500; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+<span>צילום קבלה</span>
+</button>
+
+</div>
+
+<div style="padding: 12px 20px 20px; flex: 0 0 auto">
+<a href="TripV2.dc.html" style="{{ctaStyle}}">שמירת ההוצאה</a>
+</div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const tint = accent + '1F';
+    const PEOPLE = [
+      { id: 'me', name: 'אני', initial: 'י', bg: accent },
+      { id: 'dana', name: 'דנה', initial: 'ד', bg: '#FFD9C2' },
+      { id: 'yoav', name: 'יואב', initial: 'י', bg: '#D8F0E0' },
+      { id: 'michal', name: 'מיכל', initial: 'מ', bg: '#F1DDF7' },
+      { id: 'ori', name: 'אורי', initial: 'א', bg: '#FFF0B3' },
+      { id: 'ron', name: 'רון', initial: 'ר', bg: '#D3F1F4' },
+      { id: 'shira', name: 'שירה', initial: 'ש', bg: '#FFDDE4' },
+      { id: 'alon', name: 'אלון', initial: 'א', bg: '#E3E0FF' }
+    ];
+    const amountText = s.amount ?? '120';
+    const amount = parseFloat(amountText);
+    const payer = s.payer || 'me';
+    const out = s.out || {};
+    const inCount = PEOPLE.filter(function (p) { return !out[p.id]; }).length;
+    const avatarBase = 'border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; ';
+    const textOn = function (p) { return p.id === 'me' ? '#FFFFFF' : '#0E1726'; };
+    return {
+      amount: amountText,
+      onAmount: function (e) { self.setState({ amount: e.target.value }); },
+      what: s.what ?? '',
+      onWhat: function (e) { self.setState({ what: e.target.value }); },
+      fromList: ['נקניקיות', 'מים', 'קפה וחלב'].map(function (label) {
+        return { label: label, pick: function () { self.setState({ what: label }); } };
+      }),
+      payers: PEOPLE.map(function (p) {
+        const on = p.id === payer;
+        return {
+          name: p.name,
+          initial: p.initial,
+          on: on,
+          pick: function () { self.setState({ payer: p.id }); },
+          avatarStyle: avatarBase + 'width: 52px; height: 52px; box-sizing: border-box; font-size: 20px; background: ' + p.bg + '; color: ' + textOn(p) + '; ' + (on ? 'box-shadow: 0 0 0 3px #FFFFFF, 0 0 0 5px ' + accent : 'opacity: 0.55'),
+          nameStyle: 'font-size: 13px; font-weight: ' + (on ? '600' : '400') + '; color: ' + (on ? '#0E1726' : '#4B5565')
+        };
+      }),
+      perPerson: inCount > 0 && amount > 0 ? '₪' + (Math.round(amount / inCount * 10) / 10) + ' לכל אחד' : '',
+      perStyle: "font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 22px; font-weight: 600; color: " + accent,
+      sharers: PEOPLE.map(function (p) {
+        const on = !out[p.id];
+        return {
+          name: p.name,
+          initial: p.initial,
+          on: on,
+          toggle: function () {
+            const next = Object.assign({}, out);
+            if (on) next[p.id] = true; else delete next[p.id];
+            self.setState({ out: next });
+          },
+          style: 'min-height: 44px; padding: 0 14px 0 6px; border-radius: 22px; font-size: 15px; font-weight: 500; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; ' +
+            (on ? 'border: 1.5px solid ' + accent + '; background: ' + tint + '; color: #0E1726' : 'border: 1.5px solid #D9DDE6; background: transparent; color: #4B5565'),
+          avatarStyle: avatarBase + 'width: 32px; height: 32px; font-size: 13px; ' + (on ? 'background: ' + p.bg + '; color: ' + textOn(p) : 'background: #E9ECF2; color: #4B5565')
+        };
+      }),
+      ctaStyle: 'width: 100%; min-height: 58px; box-sizing: border-box; border-radius: 29px; background: ' + accent + '; color: #FFFFFF; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; text-decoration: none; box-shadow: 0 10px 24px rgba(14,23,38,0.2)'
+    };
+  }
+}
+</script>
+</body>
+</html>
