@@ -1,21 +1,10 @@
 import postgres, { type Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createApp } from './app';
-import { createAuth, mergeUser } from './auth';
+import { mergeUser } from './auth';
 import { createDb, type Db } from './db/client';
 import { migrate } from './db/migrate';
-import { createTestDatabase, DATABASE_URL } from './test-db';
-
-function testApp(db: Db) {
-  const auth = createAuth(db, {
-    baseURL: 'http://localhost:3000',
-    webURL: 'http://localhost:8081',
-    secret: 'test-secret-at-least-32-characters-long',
-    google: { clientId: 'test', clientSecret: 'test' },
-  });
-  return createApp(auth, db);
-}
+import { createTestDatabase, DATABASE_URL, signInAsGuest as signIn, testApp } from './test-db';
 
 describe('GET /health', () => {
   it('returns ok', async () => {
@@ -42,16 +31,7 @@ describe.skipIf(!DATABASE_URL)('auth', () => {
 
   afterAll(() => drop());
 
-  async function signInAsGuest(name: string) {
-    const res = await app.request('/api/auth/sign-in/anonymous', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ name }),
-    });
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { token: string; user: { id: string } };
-    return { token: body.token, id: body.user.id };
-  }
+  const signInAsGuest = (name: string) => signIn(app, name);
 
   const me = (token?: string) =>
     app.request('/me', { headers: token ? { authorization: `Bearer ${token}` } : {} });

@@ -22,12 +22,18 @@ import {
  * counts towards DSQL's 3,000-rows-per-transaction limit, so deletes are done in code.
  */
 
-const TEMPLATE_IDS = ['camp', 'grill', 'zimmer', 'beach', 'blank'] as const satisfies TemplateId[];
-const LISTS = ['bring', 'buy'] as const satisfies ListKind[];
-const KINDS = ['single', 'qty', 'each'] as const satisfies ItemKind[];
-const ROLES = ['organizer', 'member'] as const satisfies MemberRole[];
+export const TEMPLATE_IDS = [
+  'camp',
+  'grill',
+  'zimmer',
+  'beach',
+  'blank',
+] as const satisfies TemplateId[];
+export const LISTS = ['bring', 'buy'] as const satisfies ListKind[];
+export const KINDS = ['single', 'qty', 'each'] as const satisfies ItemKind[];
+export const ROLES = ['organizer', 'member'] as const satisfies MemberRole[];
 const MEMBER_STATUSES = ['pending', 'active', 'removed'] as const satisfies MemberStatus[];
-const TRIP_STATUSES = ['planning', 'ended', 'archived'] as const;
+export const TRIP_STATUSES = ['planning', 'ended', 'archived'] as const;
 const PAYMENT_STATUSES = ['marked', 'confirmed'] as const;
 
 function oneOf(name: string, column: AnyPgColumn, values: readonly string[]) {
