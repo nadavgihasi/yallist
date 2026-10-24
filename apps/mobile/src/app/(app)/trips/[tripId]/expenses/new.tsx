@@ -1,4 +1,4 @@
-import { linkedExpense, parseShekel } from '@yallist/domain';
+import { formatShekel, linkedExpense, parseShekel } from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -8,6 +8,7 @@ import { SuggestionChip } from '@/components/Chips';
 import { AmountField, TextField, fieldStyles } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
+import { showToast } from '@/components/Toast';
 import { closeSheet } from '@/features/trip/closeSheet';
 import { deriveTrip } from '@/features/trip/derive';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
@@ -47,6 +48,8 @@ function AddExpenseBody({ data }: { data: TripData }) {
       type: 'addExpense',
       expense: { itemId, description: what.trim(), amountAgorot: agorot, paidBy: payer, shares },
     });
+    // The list shows it only once the API answers, so say it went through.
+    showToast(he.addExpense.saved(formatShekel(agorot)));
     close();
   };
 
