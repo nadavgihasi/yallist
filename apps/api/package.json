@@ -11,12 +11,14 @@
   },
   "dependencies": {
     "@aws-sdk/dsql-signer": "^3.1156.0",
+    "@hono/zod-validator": "^0.9.1",
     "@yallist/domain": "workspace:*",
     "better-auth": "^1.7.12",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.13",
     "postgres": "^3.4.9",
-    "sst": "4.17.2"
+    "sst": "4.17.2",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
