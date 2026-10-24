@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Cover, SCENE_TINT } from '@/components/Cover';
 import { DateField } from '@/components/DateField';
 import { TextField, fieldStyles } from '@/components/Fields';
-import { Icon } from '@/components/Icon';
+import { Icon, type IconName } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { he, itemsCount } from '@/i18n/he';
 import { addDays, formatRange, today } from '@/lib/dates';
@@ -24,6 +24,13 @@ import { useDispatch, useMe } from '@/state/store';
 import { colors, fonts, radius } from '@/theme';
 
 const KINDS: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
+const TEMPLATE_ICON: Record<TemplateId, IconName> = {
+  camp: 'tent',
+  grill: 'flame',
+  zimmer: 'house',
+  beach: 'beach',
+  blank: 'plus',
+};
 
 /**
  * Web gets a real blur behind the cover label; native keeps the dark translucent panel.
@@ -42,6 +49,9 @@ export default function NewTrip() {
   const [endsOn, setEndsOn] = useState(() => addDays(today(), 15));
 
   const shownName = name.trim() || he.newTrip.fallbackName;
+  // The blank cover is pale all over: ink text without the dark panel (as on the trip screen).
+  const blank = template === 'blank';
+  const inkText = blank && { color: colors.ink };
 
   const setStart = (iso: string) => {
     setStartsOn(iso);
@@ -84,9 +94,11 @@ export default function NewTrip() {
         </View>
 
         <Cover scene={template} style={styles.cover}>
-          <View style={[styles.coverLabel, coverLabelBlur]}>
-            <Text style={styles.coverName}>{shownName}</Text>
-            <Text style={styles.coverDates}>{formatRange(startsOn, endsOn)}</Text>
+          <View style={[styles.coverLabel, blank ? styles.coverLabelPlain : coverLabelBlur]}>
+            <Text style={[styles.coverName, inkText]} numberOfLines={2}>
+              {shownName}
+            </Text>
+            <Text style={[styles.coverDates, inkText]}>{formatRange(startsOn, endsOn)}</Text>
           </View>
         </Cover>
 
@@ -107,11 +119,14 @@ export default function NewTrip() {
                 <Pressable
                   key={k}
                   accessibilityRole="radio"
+                  accessibilityLabel={he.newTrip.templates[k]}
                   accessibilityState={{ checked: selected }}
                   onPress={() => setTemplate(k)}
                   style={[styles.tile, selected && styles.tileOn]}
                 >
-                  <View style={[styles.swatch, { backgroundColor: SCENE_TINT[k] }]} />
+                  <View style={[styles.swatch, { backgroundColor: SCENE_TINT[k] }]}>
+                    <Icon name={TEMPLATE_ICON[k]} size={24} strokeWidth={1.9} />
+                  </View>
                   <Text style={styles.tileName}>{he.newTrip.templates[k]}</Text>
                   <Text style={styles.tileMeta}>
                     {count ? itemsCount(count) : he.newTrip.blankHint}
@@ -201,6 +216,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(14,23,38,0.45)',
     gap: 2,
   },
+  coverLabelPlain: { backgroundColor: 'transparent' },
   coverName: { fontFamily: fonts.display, fontSize: 26, color: colors.white },
   coverDates: { fontFamily: fonts.regular, fontSize: 14, color: colors.white, opacity: 0.9 },
   section: { gap: 10 },
@@ -221,7 +237,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tileOn: { borderColor: colors.accent, boxShadow: '0 6px 18px rgba(14,23,38,0.10)' },
-  swatch: { width: 44, height: 44, borderRadius: 14 },
+  swatch: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   tileName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
   tileMeta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
   card: { padding: 16, borderRadius: radius.group, backgroundColor: colors.surface, gap: 16 },
