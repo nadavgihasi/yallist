@@ -1,9 +1,10 @@
 import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Cover } from '@/components/Cover';
+import { Input } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { he } from '@/i18n/he';
 import { newId } from '@/lib/id';
@@ -40,12 +41,11 @@ export default function Login() {
 
         {askName ? (
           <>
-            <TextInput
+            <Input
               value={name}
               onChangeText={setName}
               onSubmitEditing={start}
               placeholder={he.login.namePlaceholder}
-              placeholderTextColor={colors.inkTertiary}
               accessibilityLabel={he.login.nameLabel}
               autoFocus
               returnKeyType="go"

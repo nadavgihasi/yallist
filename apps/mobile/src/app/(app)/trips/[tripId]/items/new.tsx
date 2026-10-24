@@ -1,11 +1,11 @@
 import { QUICK_SUGGESTIONS, TEMPLATES, type ItemKind, type ListKind } from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ChipGroup, FilterChip, SuggestionChip } from '@/components/Chips';
 import { SegmentedControl, Switch } from '@/components/Controls';
-import { fieldStyles } from '@/components/Fields';
+import { Input, fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
@@ -102,13 +102,12 @@ export default function AddItem() {
 
       <View style={styles.field}>
         <Text style={fieldStyles.label}>{he.addItem.what}</Text>
-        <TextInput
+        <Input
           value={name}
           onChangeText={setName}
           onSubmitEditing={add}
           returnKeyType="done"
           placeholder={he.addItem.placeholder[list]}
-          placeholderTextColor={colors.inkTertiary}
           accessibilityLabel={he.addItem.what}
           autoFocus
           style={styles.input}

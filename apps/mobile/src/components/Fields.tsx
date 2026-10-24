@@ -1,6 +1,16 @@
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { colors, fonts } from '@/theme';
+
+/**
+ * Text input for Hebrew text. react-native-web sets `dir="auto"`, which makes an empty input LTR
+ * (placeholder and caret on the left), so on web it's pinned to RTL. Native follows I18nManager.
+ */
+export function Input(props: TextInputProps) {
+  return <TextInput placeholderTextColor={colors.inkTertiary} {...webRtl} {...props} />;
+}
+
+const webRtl = Platform.OS === 'web' ? ({ dir: 'rtl' } as object) : {};
 
 /** Labelled text input on a soft gray field. */
 export function TextField({
@@ -15,12 +25,7 @@ export function TextField({
         {label}
         {hint && <Text style={styles.hint}> {hint}</Text>}
       </Text>
-      <TextInput
-        placeholderTextColor={colors.inkTertiary}
-        accessibilityLabel={label}
-        {...input}
-        style={[styles.input, style]}
-      />
+      <Input accessibilityLabel={label} {...input} style={[styles.input, style]} />
     </View>
   );
 }

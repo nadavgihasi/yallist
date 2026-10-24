@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { Input } from '@/components/Fields';
 import { ListGroup, SectionHeader } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { he, participants } from '@/i18n/he';
@@ -40,12 +41,11 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
           <Text style={styles.text}>{he.people.addText}</Text>
         </View>
         <View style={styles.addRow}>
-          <TextInput
+          <Input
             value={name}
             onChangeText={setName}
             onSubmitEditing={add}
             placeholder={he.people.addPlaceholder}
-            placeholderTextColor={colors.inkTertiary}
             accessibilityLabel={he.people.addPlaceholder}
             style={styles.input}
           />

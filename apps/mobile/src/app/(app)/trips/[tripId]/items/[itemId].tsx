@@ -1,9 +1,9 @@
 import { claimCap, linkedExpense, parseShekel, type Expense } from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { AmountField, fieldStyles } from '@/components/Fields';
+import { AmountField, Input, fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
@@ -204,7 +204,7 @@ function ItemSheetBody({
 
       <View style={styles.field}>
         <Text style={fieldStyles.label}>{he.item.note}</Text>
-        <TextInput
+        <Input
           value={note}
           onChangeText={setNote}
           multiline
