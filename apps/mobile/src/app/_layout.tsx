@@ -9,7 +9,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
-import { I18nManager, Platform } from 'react-native';
+import { I18nManager, Platform, StyleSheet, View } from 'react-native';
 
 import { colors } from '@/theme';
 
@@ -39,9 +39,16 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="dark" />
-      <Stack
-        screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}
-      />
+      <View style={styles.frame}>
+        <Stack
+          screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}
+        />
+      </View>
     </>
   );
 }
+
+/** On wide screens (web), keep the app in a phone-width column. */
+const styles = StyleSheet.create({
+  frame: { flex: 1, width: '100%', maxWidth: 480, alignSelf: 'center' },
+});
