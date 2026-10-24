@@ -33,11 +33,18 @@ export default $config({
     };
   },
   async run() {
+    // Hono app (apps/api) behind an HTTP API; one Lambda serves every path.
+    // CORS stays at SST's default (any origin): auth is bearer tokens, not cookies, so allowing
+    // every origin exposes nothing. It also avoids a cycle: the web build needs the API URL.
+    const api = new sst.aws.ApiGatewayV2('Api');
+    api.route('$default', '../../apps/api/src/lambda.handler');
+
     // Single-page Expo web export on S3 + CloudFront. Unknown paths fall back to index.html
     // so deep links like /trips/:id load the app.
     const web = new sst.aws.StaticSite('Web', {
       path: '../../apps/mobile',
       build: { command: 'pnpm export:web', output: 'dist' },
+      environment: { EXPO_PUBLIC_API_URL: api.url },
       transform: {
         // A distribution has no name, only a comment (default "Web site"); put the stage in it.
         cdn: (args) => {
@@ -45,6 +52,6 @@ export default $config({
         },
       },
     });
-    return { url: web.url };
+    return { url: web.url, api: api.url };
   },
 });

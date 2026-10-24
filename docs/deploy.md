@@ -1,8 +1,8 @@
-# Deploying the web app
+# Deploying
 
 Infrastructure is [SST](https://sst.dev), in two SST apps. Both live in the `@yallist/infra` workspace package under [infra/](../infra), which owns the `sst` dependency and the deploy scripts; the root `pnpm deploy:*` and `pnpm sst` scripts delegate to it.
 
-- **App** ([infra/app/sst.config.ts](../infra/app/sst.config.ts)): today one static site, the Expo web export on S3 + CloudFront. Stages `dev` and `production`.
+- **App** ([infra/app/sst.config.ts](../infra/app/sst.config.ts)): the API and the Expo web export. Stages `dev` and `production`.
 - **Global** ([infra/global/sst.config.ts](../infra/global/sst.config.ts)): account-wide resources in `eu-central-1`. These are the $10/month budget, which emails `BUDGET_EMAIL` at 80% actual and 100% forecasted spend, and the IAM role GitHub Actions deploys with. One stage, `global`, protected.
 
 ## Deploys come from `main`
@@ -54,7 +54,15 @@ pnpm deploy:dev    # dev
 pnpm deploy:prod   # production
 ```
 
-This builds `apps/mobile` with `expo export -p web` and uploads `dist/`. The command prints the CloudFront URL.
+This bundles the API Lambda, builds `apps/mobile` with `expo export -p web` and uploads `dist/`. The command prints the CloudFront URL (`url`) and the API URL (`api`).
+
+## API
+
+[apps/api](../apps/api) is a [Hono](https://hono.dev) app. One Lambda serves every path behind an API Gateway HTTP API (`$default` route).
+
+- **URL:** the `api` output of `sst deploy`. The web build gets it as `EXPO_PUBLIC_API_URL` ([src/lib/api.ts](../apps/mobile/src/lib/api.ts)).
+- **Health check:** `curl $API/health` returns `{"ok":true}`.
+- **CORS:** any origin. Auth uses bearer tokens, not cookies, so there is nothing for another origin to ride on.
 
 ## Naming and tags
 
