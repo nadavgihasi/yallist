@@ -20,7 +20,7 @@ import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { TripTile } from '@/components/TripTile';
 import { he, itemsCount } from '@/i18n/he';
-import { addDays, formatRange, today } from '@/lib/dates';
+import { addDays, endAfterMovingStart, formatRange, today } from '@/lib/dates';
 import { useCreateTrip } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { useBreakpoint } from '@/theme/breakpoint';
@@ -56,8 +56,9 @@ export default function NewTrip() {
 
   const setStart = (iso: string) => {
     setStartsOn(iso);
-    if (endsOn < iso) setEndsOn(iso);
+    setEndsOn(endAfterMovingStart(startsOn, endsOn, iso));
   };
+  const createLabel = createTrip.isPending ? he.newTrip.creating : he.newTrip.create;
 
   const create = () =>
     createTrip.mutate(
@@ -132,7 +133,11 @@ export default function NewTrip() {
                       accessibilityLabel={he.newTrip.templates[k]}
                       accessibilityState={{ checked: selected }}
                       onPress={() => setTemplate(k)}
-                      style={[styles.tile, selected && styles.tileOn]}
+                      style={({ pressed }) => [
+                        styles.tile,
+                        selected && styles.tileOn,
+                        pressed && styles.tilePressed,
+                      ]}
                     >
                       <TripTile template={k} size={44} />
                       <Text style={styles.tileName}>{he.newTrip.templates[k]}</Text>
@@ -197,7 +202,7 @@ export default function NewTrip() {
             </View>
             {wide && (
               <PillButton
-                label={he.newTrip.create}
+                label={createLabel}
                 size="lg"
                 wide
                 disabled={createTrip.isPending}
@@ -211,7 +216,7 @@ export default function NewTrip() {
       {!wide && (
         <View style={[styles.ctaWrap, { bottom: 24 + insets.bottom }]}>
           <PillButton
-            label={he.newTrip.create}
+            label={createLabel}
             size="lg"
             wide
             float
@@ -275,6 +280,7 @@ const styles = StyleSheet.create({
     gap: space[2],
   },
   tileOn: { backgroundColor: colors.primaryTint },
+  tilePressed: { opacity: 0.75 },
   tileName: { ...type.itemTitle, color: colors.ink },
   tileMeta: { ...type.caption, color: colors.inkMuted },
   card: {

@@ -43,8 +43,8 @@ export const he = {
     googleSoon: 'כניסה עם Google בקרוב',
   },
   dates: {
-    dayEarlier: 'יום אחד קודם',
-    dayLater: 'יום אחד אחרי',
+    /** Screen-reader hint on a date field. */
+    pickHint: 'פותח לוח שנה',
     weekdays: ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'],
     /** With the ב- prefix, as used after a day number. */
     months: [
@@ -112,6 +112,7 @@ export const he = {
       beach: ['צילייה, מחצלות, צידנית, מטקות ועוד', 'אבטיח, קרח, מים, כריכים ועוד'],
     },
     create: 'יצירת הטיול',
+    creating: 'יוצרים את הטיול…',
     templates: {
       camp: 'קמפינג',
       grill: 'על האש',

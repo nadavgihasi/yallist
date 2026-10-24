@@ -42,7 +42,8 @@
           "forcesRTL": true
         }
       ],
-      "./plugins/withReleaseSigning"
+      "./plugins/withReleaseSigning",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

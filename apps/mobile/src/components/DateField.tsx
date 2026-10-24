@@ -1,13 +1,11 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { Pressable } from 'react-native';
 
+import { DateTile, dateTileStyles } from '@/components/Fields';
 import { he } from '@/i18n/he';
-import { addDays, formatShort } from '@/lib/dates';
-import { colors, fonts } from '@/theme';
+import { formatRange, parseDate, toISODate } from '@/lib/dates';
 
-/**
- * Native fallback until a date-picker module is added: step a day back or forward.
- * The web build uses DateField.web.tsx with the browser's picker.
- */
+/** Android: the whole tile opens the system calendar. The web build uses DateField.web.tsx. */
 export function DateField({
   label,
   value,
@@ -19,50 +17,24 @@ export function DateField({
   min?: string;
   onChange: (iso: string) => void;
 }) {
-  const earlier = addDays(value, -1);
-  const canGoEarlier = !min || earlier >= min;
+  const open = () =>
+    DateTimePickerAndroid.open({
+      mode: 'date',
+      value: parseDate(value),
+      minimumDate: min ? parseDate(min) : undefined,
+      onChange: (event, date) => {
+        if (event.type === 'set' && date) onChange(toISODate(date));
+      },
+    });
   return (
-    <View style={styles.tile}>
-      <Text style={styles.label}>{label}</Text>
-      <View style={styles.row}>
-        {/* RTL: the first child sits on the right, so "earlier" points right. */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${label}: ${he.dates.dayEarlier}`}
-          disabled={!canGoEarlier}
-          onPress={() => onChange(earlier)}
-          style={[styles.stepButton, !canGoEarlier && { opacity: 0.3 }]}
-        >
-          <Text style={styles.step}>›</Text>
-        </Pressable>
-        <Text style={styles.value}>{formatShort(value)}</Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={`${label}: ${he.dates.dayLater}`}
-          onPress={() => onChange(addDays(value, 1))}
-          style={styles.stepButton}
-        >
-          <Text style={styles.step}>‹</Text>
-        </Pressable>
-      </View>
-    </View>
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${formatRange(value, value)}`}
+      accessibilityHint={he.dates.pickHint}
+      onPress={open}
+      style={({ pressed }) => [dateTileStyles.tile, pressed && dateTileStyles.active]}
+    >
+      {({ pressed }) => <DateTile label={label} value={value} active={pressed} />}
+    </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  tile: {
-    flex: 1,
-    minHeight: 60,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 16,
-    backgroundColor: colors.ground,
-    justifyContent: 'center',
-    gap: 2,
-  },
-  row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  label: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
-  value: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
-  stepButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  step: { fontFamily: fonts.bold, fontSize: 22, color: colors.primary },
-});

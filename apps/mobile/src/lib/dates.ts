@@ -75,3 +75,9 @@ export function countdown(startsOn: string, endsOn: string, now = today()): stri
   if (days === 2) return c.twoDays;
   return c.days(days);
 }
+
+/** The end date after the start moves to `nextStart`: kept, unless the start passed it; then the trip keeps its length. */
+export function endAfterMovingStart(startsOn: string, endsOn: string, nextStart: string): string {
+  if (endsOn >= nextStart) return endsOn;
+  return addDays(nextStart, Math.max(0, daysBetween(startsOn, endsOn)));
+}
