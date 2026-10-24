@@ -1,35 +1,35 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, fonts } from '@/theme';
+import { colors, type } from '@/theme';
 
+/** Pill segments on a white track (trip.html tabs); pass a `ground` track when it sits on a card. */
 export function SegmentedControl<T extends string>({
   options,
   value,
   onChange,
+  style,
 }: {
-  options: { value: T; label: string }[];
+  options: { value: T; label: string; accessibilityLabel?: string }[];
   value: T;
   onChange: (value: T) => void;
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <View style={styles.track} accessibilityRole="tablist">
+    <View style={[styles.track, style]} accessibilityRole="tablist">
       {options.map((o) => {
         const selected = o.value === value;
         return (
           <Pressable
             key={o.value}
             accessibilityRole="tab"
+            accessibilityLabel={o.accessibilityLabel}
             accessibilityState={{ selected }}
             onPress={() => onChange(o.value)}
             style={[styles.segment, selected && styles.selected]}
           >
             <Text
-              style={[
-                styles.label,
-                selected
-                  ? { color: colors.ink, fontFamily: fonts.bold }
-                  : { color: colors.inkMuted },
-              ]}
+              style={[type.buttonSm, { color: selected ? colors.onPrimary : colors.inkMuted }]}
+              numberOfLines={1}
             >
               {o.label}
             </Text>
@@ -75,18 +75,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 4,
     padding: 4,
-    borderRadius: 24,
-    backgroundColor: colors.ground,
+    borderRadius: 999,
+    backgroundColor: colors.card,
   },
   segment: {
     flex: 1,
     minHeight: 44,
-    borderRadius: 20,
+    paddingHorizontal: 8,
+    borderRadius: 999,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  selected: { backgroundColor: colors.card, boxShadow: '0 1px 4px rgba(14,23,38,0.14)' },
-  label: { fontFamily: fonts.bold, fontSize: 16 },
+  selected: { backgroundColor: colors.primary },
   switchTrack: {
     width: 52,
     height: 32,
@@ -95,11 +95,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
-  knob: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: colors.card,
-    boxShadow: '0 1px 3px rgba(14,23,38,0.25)',
-  },
+  knob: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.card },
 });

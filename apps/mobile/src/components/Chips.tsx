@@ -3,9 +3,9 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar, type AvatarPerson } from './Avatar';
 
-import { colors, fonts } from '@/theme';
+import { colors, type } from '@/theme';
 
-/** Filter chip with a count (`הכול 20`). Dark when selected. */
+/** Filter / choice chip with an optional count (`הכול 20`): solid primary when selected, tonal otherwise. */
 export function FilterChip({
   label,
   count,
@@ -17,23 +17,16 @@ export function FilterChip({
   selected: boolean;
   onPress: () => void;
 }) {
+  const color = selected ? colors.onPrimary : colors.primaryStrong;
   return (
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
       onPress={onPress}
-      style={[styles.chip, selected ? styles.dark : styles.light]}
+      style={[styles.chip, { backgroundColor: selected ? colors.primary : colors.primaryTint }]}
     >
-      <Text style={[styles.label, { color: selected ? colors.onPrimary : colors.ink }]}>
-        {label}
-      </Text>
-      {count !== undefined && (
-        <Text
-          style={[styles.count, { color: selected ? 'rgba(255,255,255,0.75)' : colors.inkMuted }]}
-        >
-          {count}
-        </Text>
-      )}
+      <Text style={[type.buttonSm, { color }]}>{label}</Text>
+      {count !== undefined && <Text style={[styles.count, { color }]}>{count}</Text>}
     </Pressable>
   );
 }
@@ -56,19 +49,20 @@ export function PersonChip({
       accessibilityState={{ checked: selected }}
       onPress={onPress}
       style={[
+        styles.chip,
         styles.person,
-        selected
-          ? { borderColor: colors.primary, backgroundColor: colors.primaryTint }
-          : { borderColor: colors.line, backgroundColor: 'transparent' },
+        { backgroundColor: selected ? colors.primaryTint : colors.ground },
       ]}
     >
       <Avatar person={person} ring={false} dimmed={!selected} />
-      <Text style={[styles.label, { color: selected ? colors.ink : colors.inkMuted }]}>{name}</Text>
+      <Text style={[type.buttonSm, { color: selected ? colors.primaryStrong : colors.inkMuted }]}>
+        {name}
+      </Text>
     </Pressable>
   );
 }
 
-/** Outlined suggestion chip, with a leading "+" unless `plus={false}`. */
+/** Quick-fill chip, with a leading "+" unless `plus={false}`. Sits on a card. */
 export function SuggestionChip({
   label,
   onPress,
@@ -79,9 +73,13 @@ export function SuggestionChip({
   plus?: boolean;
 }) {
   return (
-    <Pressable accessibilityRole="button" onPress={onPress} style={styles.suggestion}>
-      {plus && <Text style={styles.plus}>+</Text>}
-      <Text style={styles.suggestionLabel} numberOfLines={1}>
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={[styles.chip, styles.suggestion]}
+    >
+      {plus && <Text style={[type.buttonSm, styles.plus]}>+</Text>}
+      <Text style={[type.buttonSm, styles.suggestionLabel]} numberOfLines={1}>
         {label}
       </Text>
     </Pressable>
@@ -102,37 +100,14 @@ const styles = StyleSheet.create({
   chip: {
     minHeight: 44,
     paddingHorizontal: 16,
-    borderRadius: 22,
-    borderWidth: 1,
+    borderRadius: 999,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
-  dark: { backgroundColor: colors.ink, borderColor: colors.ink },
-  light: { backgroundColor: colors.card, borderColor: colors.line },
-  label: { fontFamily: fonts.bold, fontSize: 15 },
-  count: { fontFamily: fonts.bold, fontSize: 13 },
-  person: {
-    minHeight: 44,
-    paddingStart: 6,
-    paddingEnd: 14,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  suggestion: {
-    maxWidth: 220,
-    minHeight: 40,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: colors.line,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  plus: { fontFamily: fonts.bold, fontSize: 16, color: colors.inkMuted },
-  suggestionLabel: { flexShrink: 1, fontFamily: fonts.bold, fontSize: 14, color: colors.ink },
+  count: { ...type.caption, opacity: 0.8 },
+  person: { paddingStart: 6 },
+  suggestion: { maxWidth: 220, backgroundColor: colors.ground },
+  plus: { color: colors.inkMuted },
+  suggestionLabel: { flexShrink: 1, color: colors.ink },
 });

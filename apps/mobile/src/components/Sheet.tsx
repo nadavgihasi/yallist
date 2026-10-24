@@ -2,11 +2,10 @@ import { useEffect, type ReactNode } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { glassStyle } from './GlassTabBar';
 import { Icon } from './Icon';
 
 import { he } from '@/i18n/he';
-import { colors, fonts, radius } from '@/theme';
+import { colors, radius, type } from '@/theme';
 import { useBreakpoint } from '@/theme/breakpoint';
 
 const TITLE_ID = 'sheet-title';
@@ -18,7 +17,7 @@ const dialogProps =
     : { accessibilityViewIsModal: true };
 
 /**
- * Floating glass sheet with a grabber, inset 8 from the screen edges. Rendered by modal routes
+ * Floating white sheet with a grabber, inset 8 from the screen edges. Rendered by modal routes
  * (`presentation: 'transparentModal'`) over a scrim; `footer` stays pinned at the bottom.
  * On tablet and desktop it becomes a centered dialog sized to its content.
  */
@@ -29,7 +28,7 @@ export function Sheet({
   children,
   footer,
   top = 64,
-  titleSize = 30,
+  titleSize = type.sectionTitle.fontSize,
   gap = 20,
 }: {
   title: string;
@@ -68,10 +67,7 @@ export function Sheet({
         ]}
         pointerEvents="box-none"
       >
-        <View
-          style={[styles.sheet, glassStyle, dialog ? styles.dialog : styles.fill]}
-          {...dialogProps}
-        >
+        <View style={[styles.sheet, dialog ? styles.dialog : styles.fill]} {...dialogProps}>
           {dialog ? (
             <View style={styles.dialogTop} />
           ) : (
@@ -124,18 +120,15 @@ const styles = StyleSheet.create({
     width: '100%',
     maxWidth: 560,
     borderRadius: radius.card,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.9)',
-    boxShadow: '0 20px 50px rgba(14,23,38,0.25)',
+    backgroundColor: colors.card,
     overflow: 'hidden',
   },
   // Sized to content, scrolling only past the window height.
   fill: { flex: 1 },
-  // More opaque than the phone sheet: on wide screens it floats over dense content.
-  dialog: { maxHeight: '100%', backgroundColor: colors.card },
+  dialog: { maxHeight: '100%' },
   dialogTop: { height: 14 },
   grabberRow: { alignItems: 'center', paddingTop: 10 },
-  grabber: { width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(14,23,38,0.18)' },
+  grabber: { width: 40, height: 5, borderRadius: 3, backgroundColor: colors.line },
   body: { paddingHorizontal: 20, paddingBottom: 20 },
   header: {
     paddingHorizontal: 20,
@@ -146,8 +139,8 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   titles: { flex: 1, gap: 4 },
-  title: { fontFamily: fonts.extraBold, color: colors.ink },
-  subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.inkMuted },
+  title: { fontFamily: type.sectionTitle.fontFamily, color: colors.ink },
+  subtitle: { ...type.caption, color: colors.inkMuted },
   close: {
     width: 44,
     height: 44,

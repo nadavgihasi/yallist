@@ -77,9 +77,6 @@ export function PillButton({
   );
 }
 
-/** Label color per variant, for icons passed to `PillButton`. */
-export const pillColor = (variant: Variant) => VARIANTS[variant].fg;
-
 const styles = StyleSheet.create({
   pill: {
     flexDirection: 'row',

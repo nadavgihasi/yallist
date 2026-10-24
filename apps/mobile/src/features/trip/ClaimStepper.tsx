@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
 import { he } from '@/i18n/he';
-import { colors, fonts } from '@/theme';
+import { colors, type } from '@/theme';
 
 /** "+ 2 −" stepper for my share of a qty item. */
 export function ClaimStepper({
@@ -22,7 +22,7 @@ export function ClaimStepper({
         disabled={!canAdd}
         onPress={() => onChange(mine + 1)}
       />
-      <Text style={[styles.count, mine > 0 && { color: colors.primary }]}>{mine}</Text>
+      <Text style={styles.count}>{mine}</Text>
       <StepButton
         icon="minus"
         label={he.trip.minusOne}
@@ -52,7 +52,7 @@ function StepButton({
       onPress={onPress}
       style={[styles.step, disabled && { opacity: 0.3 }]}
     >
-      <Icon name={icon} size={20} />
+      <Icon name={icon} size={20} color={colors.primaryStrong} />
     </Pressable>
   );
 }
@@ -63,14 +63,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.ground,
+    backgroundColor: colors.primaryTint,
   },
   step: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   count: {
     minWidth: 20,
     textAlign: 'center',
-    fontFamily: fonts.bold,
-    fontSize: 16,
-    color: colors.inkMuted,
+    ...type.buttonSm,
+    color: colors.primaryStrong,
   },
 });

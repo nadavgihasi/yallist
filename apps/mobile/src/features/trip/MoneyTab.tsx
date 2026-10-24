@@ -4,12 +4,12 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
-import { EmptyState, ListGroup, SectionHeader } from '@/components/ListGroup';
+import { Card, EmptyState, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { he, joinNames } from '@/i18n/he';
 import { tripKey, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
-import { colors, fonts, radius } from '@/theme';
+import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
 
@@ -48,7 +48,7 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.hero}>
+      <Card gap={space[1]}>
         <Text style={styles.heroTitle}>{title}</Text>
         <Text style={styles.heroAmount}>{formatShekel(amount)}</Text>
         {view.totalSpent > 0 && (
@@ -81,13 +81,12 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
             />
           )
         )}
-      </View>
+      </Card>
 
-      <SectionHeader title={he.money.transfers} />
       {view.transfers.length === 0 ? (
         <EmptyState title={he.money.settled} text={he.money.settledText} />
       ) : (
-        <ListGroup>
+        <ListGroup title={he.money.transfers}>
           {view.transfers.map((t) => (
             <View key={`${t.from}-${t.to}`} style={styles.transfer}>
               <View style={styles.transferWho}>
@@ -97,7 +96,7 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
                 <Avatar person={view.avatarOf(t.to)} ring={false} />
                 <Text style={styles.transferName}>{view.nameOf(t.to)}</Text>
               </View>
-              <Text style={[styles.amount, t.from === me && { color: colors.primary }]}>
+              <Text style={[styles.amount, t.from === me && { color: colors.brandStrong }]}>
                 {formatShekel(t.amountAgorot)}
               </Text>
             </View>
@@ -105,14 +104,10 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
         </ListGroup>
       )}
 
-      <SectionHeader
-        title={he.money.expenses}
-        aside={he.money.total(formatShekel(view.totalSpent))}
-      />
       {data.expenses.length === 0 ? (
         <EmptyState title={he.money.noExpenses} text={he.money.noExpensesText} />
       ) : (
-        <ListGroup inset={68}>
+        <ListGroup title={he.money.expenses} aside={he.money.total(formatShekel(view.totalSpent))}>
           {data.expenses.map((e) => (
             <View key={e.id} style={styles.expense}>
               <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
@@ -134,38 +129,17 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingTop: 20, paddingHorizontal: 16, gap: 16 },
-  hero: {
-    paddingTop: 22,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
-    gap: 6,
-  },
-  heroTitle: { fontFamily: fonts.bold, fontSize: 15, color: colors.inkMuted },
-  heroAmount: { fontFamily: fonts.extraBold, fontSize: 60, lineHeight: 64, color: colors.ink },
-  heroText: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
-  heroButton: { marginTop: 12 },
-  transfer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    minHeight: 64,
-  },
-  transferWho: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  transferName: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
-  amount: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
-  expense: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
-  expenseBody: { flex: 1, gap: 2 },
-  expenseWhat: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
-  expenseWho: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
+  wrap: { gap: space[4] },
+  heroTitle: { ...type.caption, color: colors.inkMuted },
+  heroAmount: { ...type.bigNumber, color: colors.ink },
+  heroText: { ...type.caption, color: colors.inkMuted },
+  heroButton: { marginTop: space[3] },
+  transfer: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: space.touch },
+  transferWho: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  transferName: { ...type.itemTitle, color: colors.ink },
+  amount: { ...type.itemTitle, color: colors.ink },
+  expense: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
+  expenseBody: { flex: 1, gap: space[1] },
+  expenseWhat: { ...type.itemTitle, color: colors.ink },
+  expenseWho: { ...type.caption, color: colors.inkMuted },
 });

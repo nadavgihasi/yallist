@@ -3,13 +3,14 @@ import { useState } from 'react';
 import { Share, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
-import { ListGroup, SectionHeader } from '@/components/ListGroup';
+import { Icon } from '@/components/Icon';
+import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, participants } from '@/i18n/he';
 import { useTripAction } from '@/state/trips';
 import type { TripData, TripMember } from '@/state/types';
-import { colors, fonts, radius } from '@/theme';
+import { colors, space, type } from '@/theme';
 
 import { toAvatar, type TripView } from './derive';
 
@@ -47,7 +48,7 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.card}>
+      <Card>
         <View style={styles.texts}>
           <Text style={styles.title}>{he.people.inviteTitle}</Text>
           <Text style={styles.text}>{he.people.inviteText}</Text>
@@ -55,39 +56,35 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
         <PillButton
           label={he.people.share}
           variant="soft"
-          size="md"
           wide
+          icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
           onPress={() => shareLink(Linking.createURL(`/j/${data.inviteToken}`))}
         />
-      </View>
+      </Card>
 
       {organizer && pending.length > 0 && (
-        <>
-          <SectionHeader title={he.people.pending} />
-          <ListGroup inset={72}>
-            {pending.map((m) => (
-              <View key={m.userId} style={styles.person}>
-                <Avatar person={toAvatar(m)} size={44} />
-                <View style={styles.personBody}>{name(m)}</View>
-                <PillButton
-                  label={he.people.approve}
-                  size="sm"
-                  onPress={() => act({ type: 'approveMember', userId: m.userId })}
-                />
-                <PillButton
-                  label={he.people.decline}
-                  variant="quiet"
-                  size="sm"
-                  onPress={() => act({ type: 'declineMember', userId: m.userId })}
-                />
-              </View>
-            ))}
-          </ListGroup>
-        </>
+        <ListGroup title={he.people.pending}>
+          {pending.map((m) => (
+            <View key={m.userId} style={styles.person}>
+              <Avatar person={toAvatar(m)} size={44} />
+              <View style={styles.personBody}>{name(m)}</View>
+              <PillButton
+                label={he.people.approve}
+                size="sm"
+                onPress={() => act({ type: 'approveMember', userId: m.userId })}
+              />
+              <PillButton
+                label={he.people.decline}
+                variant="quiet"
+                size="sm"
+                onPress={() => act({ type: 'declineMember', userId: m.userId })}
+              />
+            </View>
+          ))}
+        </ListGroup>
       )}
 
-      <SectionHeader title={participants(view.activeIds.length)} />
-      <ListGroup inset={72}>
+      <ListGroup title={participants(view.activeIds.length)}>
         {view.active.map((m) => {
           const c = counts(m.userId);
           const confirming = confirmRemove === m.userId;
@@ -96,14 +93,9 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
               <Avatar person={toAvatar(m)} size={44} />
               <View style={styles.personBody}>
                 {name(m)}
-                <View style={styles.chips}>
-                  <View style={[styles.pill, styles.chip]}>
-                    <Text style={styles.chipText}>{he.people.bring(c.bring)}</Text>
-                  </View>
-                  <View style={[styles.pill, styles.chip]}>
-                    <Text style={styles.chipText}>{he.people.buy(c.buy)}</Text>
-                  </View>
-                </View>
+                <Text style={styles.chipText}>
+                  {he.people.bring(c.bring)} · {he.people.buy(c.buy)}
+                </Text>
               </View>
               {organizer && m.userId !== me && (
                 <PillButton
@@ -126,24 +118,21 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
 }
 
 const styles = StyleSheet.create({
-  wrap: { paddingTop: 20, paddingHorizontal: 16, gap: 16 },
-  card: { padding: 20, borderRadius: radius.card, backgroundColor: colors.card, gap: 14 },
-  texts: { gap: 4 },
-  title: { fontFamily: fonts.extraBold, fontSize: 21, color: colors.ink },
-  text: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.inkMuted },
-  person: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+  wrap: { gap: space[4] },
+  texts: { gap: space[1] },
+  title: { ...type.itemTitle, color: colors.ink },
+  text: { ...type.caption, color: colors.inkMuted },
+  person: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
+  personBody: { flex: 1, gap: space[1] },
+  nameRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  name: { ...type.itemTitle, color: colors.ink },
+  badge: {
+    ...type.caption,
+    paddingHorizontal: space[2],
+    borderRadius: 999,
+    backgroundColor: colors.ground,
+    color: colors.inkMuted,
+    overflow: 'hidden',
   },
-  personBody: { flex: 1, gap: 6 },
-  nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
-  pill: { backgroundColor: colors.ground, justifyContent: 'center' },
-  badge: { height: 22, paddingHorizontal: 8, borderRadius: 11 },
-  chips: { flexDirection: 'row', gap: 6 },
-  chip: { height: 24, paddingHorizontal: 10, borderRadius: 12 },
-  chipText: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
+  chipText: { ...type.caption, color: colors.inkMuted },
 });

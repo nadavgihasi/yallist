@@ -1,82 +1,74 @@
-import { Children, Fragment, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, fonts, radius } from '@/theme';
+import { colors, radius, space, type } from '@/theme';
 
-/** White rounded card with inset dividers between children. */
-export function ListGroup({
+/** The white card: the only container. No border, no shadow, never nested. */
+export function Card({
   children,
-  inset = 16,
+  gap = space[4],
   style,
+  accessibilityLabel,
 }: {
   children: ReactNode;
-  inset?: number;
+  gap?: number;
   style?: StyleProp<ViewStyle>;
+  accessibilityLabel?: string;
 }) {
-  const rows = Children.toArray(children);
   return (
-    <View style={[styles.group, style]}>
-      {rows.map((row, i) => (
-        <Fragment key={i}>
-          {i > 0 && <View style={[styles.divider, { marginStart: inset }]} />}
-          {row}
-        </Fragment>
-      ))}
+    <View style={[styles.card, { gap }, style]} accessibilityLabel={accessibilityLabel}>
+      {children}
     </View>
   );
 }
 
-export function SectionHeader({
+/** A card of rows under a small muted title (trip.html "ציוד"); rows are spaced, not divided. */
+export function ListGroup({
   title,
   aside,
-  asideColor = colors.inkMuted,
+  children,
+  style,
 }: {
-  title: string;
+  title?: string;
   aside?: string;
-  asideColor?: string;
+  children: ReactNode;
+  style?: StyleProp<ViewStyle>;
 }) {
   return (
-    <View style={styles.header}>
-      <Text style={styles.title}>{title}</Text>
-      {aside && <Text style={[styles.aside, { color: asideColor }]}>{aside}</Text>}
-    </View>
+    <Card gap={space[3]} style={style}>
+      {title && (
+        <View style={styles.header}>
+          <Text style={styles.title} accessibilityRole="header">
+            {title}
+          </Text>
+          {aside && <Text style={styles.aside}>{aside}</Text>}
+        </View>
+      )}
+      {children}
+    </Card>
   );
 }
 
+/** Text card: a title, then one line of explanation. */
 export function EmptyState({ title, text }: { title: string; text: string }) {
   return (
-    <View style={styles.empty}>
+    <Card gap={space[1]}>
       <Text style={styles.emptyTitle}>{title}</Text>
       <Text style={styles.emptyText}>{text}</Text>
-    </View>
+    </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  group: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
-  divider: { height: 1, backgroundColor: colors.ground },
+  card: { padding: space[5], borderRadius: radius.card, backgroundColor: colors.card },
   header: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
-    gap: 12,
-    paddingHorizontal: 4,
+    gap: space[3],
   },
-  title: { fontFamily: fonts.extraBold, fontSize: 22, color: colors.ink },
-  aside: { fontFamily: fonts.bold, fontSize: 13 },
-  empty: {
-    paddingVertical: 32,
-    paddingHorizontal: 20,
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
-    alignItems: 'center',
-    gap: 8,
-  },
-  emptyTitle: { fontFamily: fonts.extraBold, fontSize: 22, color: colors.ink, textAlign: 'center' },
-  emptyText: {
-    fontFamily: fonts.regular,
-    fontSize: 15,
-    color: colors.inkMuted,
-    textAlign: 'center',
-  },
+  title: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.inkMuted },
+  aside: { ...type.caption, color: colors.inkMuted },
+  emptyTitle: { ...type.itemTitle, color: colors.ink },
+  emptyText: { ...type.caption, color: colors.inkMuted },
 });

@@ -78,6 +78,11 @@ export const space = {
   touch: 44,
 } as const;
 
+export const layout = {
+  /** The single content column on web and tablets. */
+  contentMax: 448,
+} as const;
+
 export const radius = {
   card: 24,
   input: 16,
