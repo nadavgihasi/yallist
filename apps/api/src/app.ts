@@ -7,6 +7,7 @@ import type { Db } from './db/client';
 import { profiles } from './db/schema';
 import { inviteRoutes } from './routes/invites';
 import { itemRoutes } from './routes/items';
+import { moneyRoutes } from './routes/money';
 import { tripRoutes } from './routes/trips';
 
 export function createApp(auth: Auth, db: Db) {
@@ -25,6 +26,7 @@ export function createApp(auth: Auth, db: Db) {
     })
     .route('/trips', tripRoutes(auth, db))
     .route('/trips', itemRoutes(auth, db))
+    .route('/trips', moneyRoutes(auth, db))
     .route('/invites', inviteRoutes(auth, db));
 }
 
