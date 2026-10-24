@@ -36,7 +36,7 @@ export default $config({
     // Single-page Expo web export on S3 + CloudFront. Unknown paths fall back to index.html
     // so deep links like /trips/:id load the app.
     const web = new sst.aws.StaticSite('Web', {
-      path: 'apps/mobile',
+      path: '../../apps/mobile',
       build: { command: 'pnpm export:web', output: 'dist' },
       transform: {
         // A distribution has no name, only a comment (default "Web site"); put the stage in it.
