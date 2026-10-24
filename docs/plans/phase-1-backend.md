@@ -1,5 +1,7 @@
 # Phase 1: Backend and backend infrastructure
 
+**Built (#14–#26), with these changes since:** secrets come from GitHub environment secrets through `SST_SECRET_<name>` in the deploy workflow, not `sst secret set`; the Google client IDs are public config in `infra/app/sst.config.ts`, not secrets; CORS allows any origin, since auth uses bearer tokens. [deploy.md](../deploy.md) describes the current setup.
+
 ## Context
 
 The MVP is local-only. The backend replaces the on-device store with a real API so trips sync between people and devices.
