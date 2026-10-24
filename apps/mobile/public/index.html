@@ -19,6 +19,30 @@
         height: 100%;
         flex: 1;
       }
+      /* Pointer and keyboard affordances for pressables (react-native-web renders them with ARIA roles). */
+      [role='button'],
+      [role='link'],
+      [role='tab'],
+      [role='radio'],
+      [role='checkbox'],
+      [role='switch'] {
+        cursor: pointer;
+        transition: filter 0.15s;
+      }
+      [aria-disabled='true'] {
+        cursor: default;
+      }
+      @media (hover: hover) {
+        :is([role='button'], [role='link'], [role='tab'], [role='radio'], [role='checkbox']):not(
+            [aria-disabled='true']
+          ):hover {
+          filter: brightness(0.96);
+        }
+      }
+      :focus-visible {
+        outline: 3px solid rgba(59, 91, 253, 0.55) !important;
+        outline-offset: 2px;
+      }
     </style>
   </head>
   <body>

@@ -21,6 +21,7 @@ import { he, itemsCount } from '@/i18n/he';
 import { addDays, formatRange, today } from '@/lib/dates';
 import { useCreateTrip } from '@/state/trips';
 import { colors, fonts, radius } from '@/theme';
+import { useBreakpoint } from '@/theme/breakpoint';
 
 const KINDS: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
 const TEMPLATE_ICON: Record<TemplateId, IconName> = {
@@ -37,9 +38,16 @@ const TEMPLATE_ICON: Record<TemplateId, IconName> = {
  */
 const coverLabelBlur = (Platform.OS === 'web' ? { backdropFilter: 'blur(14px)' } : {}) as ViewStyle;
 
+/** Keeps the desktop cover preview in view while the form scrolls (web only). */
+const sticky = (Platform.OS === 'web' ? { position: 'sticky', top: 24 } : {}) as ViewStyle;
+
 export default function NewTrip() {
   const createTrip = useCreateTrip();
   const insets = useSafeAreaInsets();
+  const bp = useBreakpoint();
+  // Tablet: a centered column with an inline button. Desktop: cover preview beside the form.
+  const wide = bp !== 'phone';
+  const desktop = bp === 'desktop';
   const [template, setTemplate] = useState<TemplateId>('camp');
   const [name, setName] = useState('');
   const [place, setPlace] = useState('');
@@ -74,7 +82,12 @@ export default function NewTrip() {
   return (
     <View style={styles.screen}>
       <ScrollView
-        contentContainerStyle={[styles.content, { paddingTop: 12 + insets.top }]}
+        contentContainerStyle={[
+          styles.content,
+          wide && styles.contentWide,
+          desktop && styles.contentDesktop,
+          { paddingTop: (wide ? 32 : 12) + insets.top },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.topBar}>
@@ -91,107 +104,130 @@ export default function NewTrip() {
           </Text>
         </View>
 
-        <Cover scene={template} style={styles.cover}>
-          <View style={[styles.coverLabel, blank ? styles.coverLabelPlain : coverLabelBlur]}>
-            <Text style={[styles.coverName, inkText]} numberOfLines={2}>
-              {shownName}
-            </Text>
-            <Text style={[styles.coverDates, inkText]}>{formatRange(startsOn, endsOn)}</Text>
+        <View style={[styles.body, desktop && styles.columns]}>
+          <View style={desktop && [styles.coverCol, sticky]}>
+            <Cover scene={template} style={[styles.cover, desktop && styles.coverDesktop]}>
+              <View style={[styles.coverLabel, blank ? styles.coverLabelPlain : coverLabelBlur]}>
+                <Text style={[styles.coverName, inkText]} numberOfLines={2}>
+                  {shownName}
+                </Text>
+                <Text style={[styles.coverDates, inkText]}>{formatRange(startsOn, endsOn)}</Text>
+              </View>
+            </Cover>
           </View>
-        </Cover>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHead}>
-            <Text style={styles.h2}>{he.newTrip.kind}</Text>
-            <Text style={styles.hint}>{he.newTrip.kindHint}</Text>
-          </View>
-          <View
-            style={styles.grid}
-            accessibilityRole="radiogroup"
-            accessibilityLabel={he.newTrip.kind}
-          >
-            {KINDS.map((k) => {
-              const selected = k === template;
-              const count = TEMPLATES[k].length;
-              return (
-                <Pressable
-                  key={k}
-                  accessibilityRole="radio"
-                  accessibilityLabel={he.newTrip.templates[k]}
-                  accessibilityState={{ checked: selected }}
-                  onPress={() => setTemplate(k)}
-                  style={[styles.tile, selected && styles.tileOn]}
-                >
-                  <View style={[styles.swatch, { backgroundColor: SCENE_TINT[k] }]}>
-                    <Icon name={TEMPLATE_ICON[k]} size={24} strokeWidth={1.9} />
-                  </View>
-                  <Text style={styles.tileName}>{he.newTrip.templates[k]}</Text>
-                  <Text style={styles.tileMeta}>
-                    {count ? itemsCount(count) : he.newTrip.blankHint}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={styles.card}>
-          <TextField
-            label={he.newTrip.name}
-            value={name}
-            onChangeText={setName}
-            placeholder={he.newTrip.namePlaceholder}
-          />
-          <View style={styles.field}>
-            <Text style={fieldStyles.label}>{he.newTrip.when}</Text>
-            <View style={styles.dates}>
-              <DateField
-                label={he.newTrip.from}
-                value={startsOn}
-                min={today()}
-                onChange={setStart}
-              />
-              <DateField label={he.newTrip.to} value={endsOn} min={startsOn} onChange={setEndsOn} />
+          <View style={[styles.body, desktop && styles.formCol]}>
+            <View style={styles.section}>
+              <View style={styles.sectionHead}>
+                <Text style={styles.h2}>{he.newTrip.kind}</Text>
+                <Text style={styles.hint}>{he.newTrip.kindHint}</Text>
+              </View>
+              <View
+                style={styles.grid}
+                accessibilityRole="radiogroup"
+                accessibilityLabel={he.newTrip.kind}
+              >
+                {KINDS.map((k) => {
+                  const selected = k === template;
+                  const count = TEMPLATES[k].length;
+                  return (
+                    <Pressable
+                      key={k}
+                      accessibilityRole="radio"
+                      accessibilityLabel={he.newTrip.templates[k]}
+                      accessibilityState={{ checked: selected }}
+                      onPress={() => setTemplate(k)}
+                      style={[styles.tile, selected && styles.tileOn]}
+                    >
+                      <View style={[styles.swatch, { backgroundColor: SCENE_TINT[k] }]}>
+                        <Icon name={TEMPLATE_ICON[k]} size={24} strokeWidth={1.9} />
+                      </View>
+                      <Text style={styles.tileName}>{he.newTrip.templates[k]}</Text>
+                      <Text style={styles.tileMeta}>
+                        {count ? itemsCount(count) : he.newTrip.blankHint}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
             </View>
+
+            <View style={styles.card}>
+              <TextField
+                label={he.newTrip.name}
+                value={name}
+                onChangeText={setName}
+                placeholder={he.newTrip.namePlaceholder}
+              />
+              <View style={styles.field}>
+                <Text style={fieldStyles.label}>{he.newTrip.when}</Text>
+                <View style={styles.dates}>
+                  <DateField
+                    label={he.newTrip.from}
+                    value={startsOn}
+                    min={today()}
+                    onChange={setStart}
+                  />
+                  <DateField
+                    label={he.newTrip.to}
+                    value={endsOn}
+                    min={startsOn}
+                    onChange={setEndsOn}
+                  />
+                </View>
+              </View>
+              <TextField
+                label={he.newTrip.where}
+                hint={he.newTrip.optional}
+                value={place}
+                onChangeText={setPlace}
+                placeholder={he.newTrip.wherePlaceholder}
+              />
+            </View>
+
+            <View style={styles.card} accessibilityLiveRegion="polite">
+              <Text style={styles.h3}>{he.newTrip.preview}</Text>
+              {template === 'blank' ? (
+                <Text style={styles.hint}>{he.newTrip.previewBlank}</Text>
+              ) : (
+                <>
+                  <Text style={styles.previewLine}>
+                    <Text style={styles.strong}>{he.newTrip.previewBring}</Text>
+                    {he.newTrip.previews[template][0]}
+                  </Text>
+                  <Text style={styles.previewLine}>
+                    <Text style={styles.strong}>{he.newTrip.previewBuy}</Text>
+                    {he.newTrip.previews[template][1]}
+                  </Text>
+                </>
+              )}
+            </View>
+            {wide && (
+              <PillButton
+                label={he.newTrip.create}
+                size="xl"
+                wide
+                style={styles.cta}
+                disabled={createTrip.isPending}
+                onPress={create}
+              />
+            )}
           </View>
-          <TextField
-            label={he.newTrip.where}
-            hint={he.newTrip.optional}
-            value={place}
-            onChangeText={setPlace}
-            placeholder={he.newTrip.wherePlaceholder}
+        </View>
+        <View style={{ height: wide ? 40 : 110 }} />
+      </ScrollView>
+      {!wide && (
+        <View style={[styles.ctaWrap, { bottom: 24 + insets.bottom }]}>
+          <PillButton
+            label={he.newTrip.create}
+            size="xl"
+            wide
+            style={styles.cta}
+            disabled={createTrip.isPending}
+            onPress={create}
           />
         </View>
-
-        <View style={styles.card} accessibilityLiveRegion="polite">
-          <Text style={styles.h3}>{he.newTrip.preview}</Text>
-          {template === 'blank' ? (
-            <Text style={styles.hint}>{he.newTrip.previewBlank}</Text>
-          ) : (
-            <>
-              <Text style={styles.previewLine}>
-                <Text style={styles.strong}>{he.newTrip.previewBring}</Text>
-                {he.newTrip.previews[template][0]}
-              </Text>
-              <Text style={styles.previewLine}>
-                <Text style={styles.strong}>{he.newTrip.previewBuy}</Text>
-                {he.newTrip.previews[template][1]}
-              </Text>
-            </>
-          )}
-        </View>
-        <View style={{ height: 110 }} />
-      </ScrollView>
-      <View style={[styles.ctaWrap, { bottom: 24 + insets.bottom }]}>
-        <PillButton
-          label={he.newTrip.create}
-          size="xl"
-          wide
-          style={styles.cta}
-          disabled={createTrip.isPending}
-          onPress={create}
-        />
-      </View>
+      )}
     </View>
   );
 }
@@ -199,6 +235,13 @@ export default function NewTrip() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.ground },
   content: { paddingHorizontal: 16, gap: 18 },
+  contentWide: { width: '100%', maxWidth: 640, alignSelf: 'center', paddingHorizontal: 24 },
+  contentDesktop: { maxWidth: 1040, gap: 24 },
+  body: { gap: 18 },
+  columns: { flexDirection: 'row', alignItems: 'flex-start', gap: 32 },
+  coverCol: { flex: 1 },
+  formCol: { flex: 1.2 },
+  coverDesktop: { height: 320 },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   back: {
     width: 44,
