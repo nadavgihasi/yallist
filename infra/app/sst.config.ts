@@ -75,6 +75,7 @@ export default $config({
     // authorizer; only the API publishes, signed with its IAM role.
     const realtimeAuthorizer = new sst.aws.Function('RealtimeAuthorizer', {
       handler: '../../apps/api/src/realtime-authorizer.handler',
+      runtime: 'nodejs24.x',
       link: [database, api, authSecret, googleClientSecret],
       environment: authEnvironment,
     });
@@ -135,6 +136,7 @@ export default $config({
 
     api.route('$default', {
       handler: '../../apps/api/src/lambda.handler',
+      runtime: 'nodejs24.x',
       link: [database, api, web, authSecret, googleClientSecret, realtime],
       environment: authEnvironment,
     });
