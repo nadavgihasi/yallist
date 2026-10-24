@@ -6,7 +6,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 
 import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
-import { setAuth, statusOf, type AuthResult } from '@/lib/api';
+import { setAuth, signOut as endSession, statusOf, type AuthResult } from '@/lib/api';
 
 import { cacheBuster } from './cacheBuster';
 import type { Me } from './types';
@@ -45,6 +45,8 @@ const persistOptions = {
 interface SessionContext {
   me?: Me;
   signIn: (result: AuthResult) => Promise<void>;
+  /** Ends the session here even when the server can't be reached. */
+  signOut: () => Promise<void>;
 }
 
 const Context = createContext<SessionContext | null>(null);
@@ -53,13 +55,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // undefined while loading; null when signed out.
   const [session, setSession] = useState<Session | null>();
 
+  const forget = () => {
+    AsyncStorage.removeItem(SESSION_KEY).catch(() => {});
+    queryClient.clear();
+    activate(null);
+  };
+
   const activate = (next: Session | null) => {
     setAuth(next?.token, () => {
       // The session expired or was revoked: back to the login screen, saying why.
-      AsyncStorage.removeItem(SESSION_KEY).catch(() => {});
       showToast(he.errors.sessionExpired);
-      queryClient.clear();
-      activate(null);
+      forget();
     });
     setSession(next);
   };
@@ -80,10 +86,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     activate(next);
   };
 
+  const signOut = async () => {
+    await endSession().catch(() => {});
+    forget();
+  };
+
   if (session === undefined) return null;
   return (
     <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
-      <Context.Provider value={{ me: session?.me, signIn }}>{children}</Context.Provider>
+      <Context.Provider value={{ me: session?.me, signIn, signOut }}>{children}</Context.Provider>
     </PersistQueryClientProvider>
   );
 }

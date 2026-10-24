@@ -32,15 +32,22 @@ export interface AuthResult {
   user: { id: string; name: string };
 }
 
-/** Better Auth's endpoints (`/api/auth/*`), which the typed client doesn't cover. */
-async function auth(path: string, body: object): Promise<AuthResult> {
+/**
+ * Better Auth's endpoints (`/api/auth/*`), which the typed client doesn't cover. Sent with the
+ * current session, if any: a guest who signs in with Google this way links the account (the
+ * API moves the guest's trips to it).
+ */
+async function auth<T = AuthResult>(path: string, body: object): Promise<T> {
   const res = await fetch(`${API_URL}/api/auth${path}`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: {
+      'content-type': 'application/json',
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+    },
     body: JSON.stringify(body),
   });
   if (!res.ok) throw new DetailedError(`${res.status}`, { statusCode: res.status });
-  return (await res.json()) as AuthResult;
+  return (await res.json()) as T;
 }
 
 export const signInAsGuest = (name: string) => auth('/sign-in/anonymous', { name });
@@ -48,3 +55,6 @@ export const signInAsGuest = (name: string) => auth('/sign-in/anonymous', { name
 /** Exchanges a Google ID token (from Google Identity Services on web) for a session. */
 export const signInWithGoogle = (idToken: string) =>
   auth('/sign-in/social', { provider: 'google', idToken: { token: idToken } });
+
+/** Ends the session on the server. */
+export const signOut = () => auth<unknown>('/sign-out', {});
