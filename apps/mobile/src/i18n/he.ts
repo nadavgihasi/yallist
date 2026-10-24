@@ -144,6 +144,7 @@ export const he = {
     addText: 'בקרוב: שולחים קישור בוואטסאפ ומצטרפים מהדפדפן. בינתיים אפשר להוסיף חברים לפי שם.',
     addPlaceholder: 'שם',
     add: 'הוספה',
+    duplicate: 'כבר יש משתתף בשם הזה',
     organizer: 'מארגן/ת',
     bring: (n: number) => `${n} להבאה`,
     buy: (n: number) => `${n} לקנייה`,
@@ -192,6 +193,7 @@ export const he = {
     },
     total: 'כמה בסך הכול',
     category: 'קטגוריה',
+    generalCategory: 'כללי',
     claimBring: 'אני אביא את זה',
     claimBuy: 'אני אקנה את זה',
     claimEach: 'יש לי כבר',
@@ -211,6 +213,8 @@ export const he = {
   },
   join: {
     title: 'הצטרפות לטיול',
+    soon: 'הצטרפות בקישור תגיע בקרוב',
+    toTrips: 'לטיולים שלי',
   },
 } as const;
 

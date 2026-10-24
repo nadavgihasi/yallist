@@ -17,9 +17,15 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
   const dispatch = useDispatch();
   const [name, setName] = useState('');
 
+  const trimmed = name.trim();
+  const duplicate =
+    !!trimmed &&
+    data.members.some(
+      (m) => m.status === 'active' && m.displayName.trim().toLowerCase() === trimmed.toLowerCase(),
+    );
+
   const add = () => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
+    if (!trimmed || duplicate) return;
     dispatch({ type: 'addMember', tripId: data.trip.id, userId: newId(), name: trimmed });
     setName('');
   };
@@ -49,8 +55,13 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
             accessibilityLabel={he.people.addPlaceholder}
             style={styles.input}
           />
-          <PillButton label={he.people.add} disabled={!name.trim()} onPress={add} />
+          <PillButton label={he.people.add} disabled={!trimmed || duplicate} onPress={add} />
         </View>
+        {duplicate && (
+          <Text style={styles.error} accessibilityLiveRegion="polite">
+            {he.people.duplicate}
+          </Text>
+        )}
       </View>
       <SectionHeader title={participants(view.activeIds.length)} />
       <ListGroup inset={72}>
@@ -89,6 +100,7 @@ const styles = StyleSheet.create({
   texts: { gap: 4 },
   title: { fontFamily: fonts.display, fontSize: 21, color: colors.ink },
   text: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.inkSecondary },
+  error: { fontFamily: fonts.medium, fontSize: 13, color: colors.missing },
   addRow: { flexDirection: 'row', gap: 8, alignItems: 'center' },
   input: {
     flex: 1,

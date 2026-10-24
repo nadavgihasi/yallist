@@ -18,6 +18,17 @@ export function StatusCard({
   members: TripMember[];
   me: string;
 }) {
+  const avatars = <AvatarStack people={members.map((m) => toAvatar(m, me))} />;
+  // Nothing to cover yet: a neutral line, not a green "0, all covered" (matches TripCard).
+  if (view.items.length === 0) {
+    return (
+      <View style={[styles.card, styles.top]}>
+        <Text style={styles.empty}>{he.home.noItems}</Text>
+        {avatars}
+      </View>
+    );
+  }
+
   const missing = view.missingCount;
   const label =
     missing === 0 ? he.trip.allCovered : missing === 1 ? he.trip.oneMissing : he.trip.manyMissing;
@@ -35,7 +46,7 @@ export function StatusCard({
             </Text>
           </View>
         </View>
-        <AvatarStack people={members.map((m) => toAvatar(m, me))} />
+        {avatars}
       </View>
       <Pegs done={view.doneCount} total={view.items.length} />
     </View>
@@ -56,5 +67,6 @@ const styles = StyleSheet.create({
   number: { fontFamily: fonts.displayBold, fontSize: 56, lineHeight: 56 },
   texts: { gap: 2, flexShrink: 1 },
   label: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
+  empty: { fontFamily: fonts.semibold, fontSize: 16, color: colors.inkSecondary, flexShrink: 1 },
   covered: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
 });

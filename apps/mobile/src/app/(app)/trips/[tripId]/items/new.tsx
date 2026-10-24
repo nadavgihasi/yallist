@@ -1,4 +1,10 @@
-import { QUICK_SUGGESTIONS, TEMPLATES, type ItemKind, type ListKind } from '@yallist/domain';
+import {
+  QUICK_SUGGESTIONS,
+  TEMPLATES,
+  type ItemKind,
+  type ListKind,
+  type TemplateId,
+} from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -17,10 +23,11 @@ import { colors, fonts } from '@/theme';
 
 const KINDS: ItemKind[] = ['single', 'qty', 'each'];
 
-/** Categories already in this list, plus the template defaults, so there's always something to pick. */
-function categoriesFor(list: ListKind, existing: string[]): string[] {
-  const defaults = TEMPLATES.camp.filter((t) => t.list === list).map((t) => t.category);
-  return [...new Set([...existing, ...defaults])];
+/** Categories already in this list, then the trip template's own, with "כללי" if there are none. */
+function categoriesFor(list: ListKind, template: TemplateId, existing: string[]): string[] {
+  const defaults = TEMPLATES[template].filter((t) => t.list === list).map((t) => t.category);
+  const all = [...new Set([...existing, ...defaults])];
+  return all.length > 0 ? all : [he.addItem.generalCategory];
 }
 
 export default function AddItem() {
@@ -40,6 +47,7 @@ export default function AddItem() {
 
   const categories = categoriesFor(
     list,
+    data.trip.template,
     data.items.filter((i) => i.list === list).map((i) => i.category),
   );
   const pickedCategory = category && categories.includes(category) ? category : categories[0]!;

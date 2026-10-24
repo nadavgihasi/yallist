@@ -84,7 +84,9 @@ export function SuggestionChip({
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.suggestion}>
       {plus && <Text style={styles.plus}>+</Text>}
-      <Text style={styles.suggestionLabel}>{label}</Text>
+      <Text style={styles.suggestionLabel} numberOfLines={1}>
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -124,6 +126,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   suggestion: {
+    maxWidth: 220,
     minHeight: 40,
     paddingHorizontal: 14,
     borderRadius: 20,
@@ -134,5 +137,5 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   plus: { fontFamily: fonts.medium, fontSize: 16, color: colors.inkSecondary },
-  suggestionLabel: { fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
+  suggestionLabel: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
 });
