@@ -8,3 +8,4 @@ One file per phase from the [SPEC build plan](../SPEC.md#11-build-plan), adapted
 | Phase          | Plan                                           | Status  |
 | -------------- | ---------------------------------------------- | ------- |
 | 0 — Foundation | [phase-0-foundation.md](phase-0-foundation.md) | Planned |
+| 1 — Backend    | [phase-1-backend.md](phase-1-backend.md)       | Planned |

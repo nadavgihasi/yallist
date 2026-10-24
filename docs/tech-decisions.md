@@ -74,11 +74,14 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 - 10K users: about $2–3/month typical, $15–20/month in a heavy month.
 - Using Lambda Function URLs behind CloudFront instead of API Gateway lowers this further.
 
+## Decided 2026-10-24 (Phase 1)
+
+- **Realtime transport:** AppSync Events. The API publishes a "trip changed" event to a per-trip channel after each write; clients invalidate the matching queries.
+- **Auth library:** Better Auth, with the anonymous plugin and Google. Users live in our own database. It uses bearer tokens, because the API and the web app are on different domains.
+- **API entry point:** API Gateway HTTP API in front of the Hono Lambda.
+
 ## Open decisions
 
-- **Realtime transport** (needed in Phase 4). Recommendation: AppSync Events — serverless WebSocket pub/sub, pay per message, $0 when idle. The API publishes a "trip changed" event after each write; clients invalidate the matching queries. Alternative: API Gateway WebSocket.
-- **Auth library:** Better Auth (anonymous plugin + Google, users in our own database) suggested; not confirmed.
-- **API entry point:** API Gateway HTTP API vs Lambda Function URLs behind CloudFront.
 - **Observability platform:** New Relic vs Sentry.
 - **License:** which source-available license.
 - **App name and domain**, and when to add iOS.
