@@ -5,7 +5,6 @@ import type { Claim, Expense, Item } from './types';
 
 const item = (over: Partial<Item> & Pick<Item, 'id'>): Item => ({
   list: 'bring',
-  category: 'כללי',
   position: 0,
   name: over.id,
   kind: 'single',

@@ -78,6 +78,18 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         expect.objectContaining({ userId: dana.id, role: 'organizer', status: 'active' }),
       ]);
       expect(data.items).toHaveLength(TEMPLATES.camp.length);
+      // The template's categories, in order, each holding its items.
+      const names = (list: string) =>
+        data.categories.filter((cat) => cat.list === list).map((cat) => cat.name);
+      const templateNames = (list: string) => [
+        ...new Set(TEMPLATES.camp.filter((t) => t.list === list).map((t) => t.category)),
+      ];
+      expect(names('bring')).toEqual(templateNames('bring'));
+      expect(names('buy')).toEqual(templateNames('buy'));
+      const first = data.categories[0]!;
+      expect(data.items.filter((i) => i.categoryId === first.id).map((i) => i.name)).toEqual(
+        TEMPLATES.camp.filter((t) => t.category === first.name).map((t) => t.name),
+      );
       expect(await activityTypes(data.trip.id)).toEqual(['trip_created']);
     });
 
@@ -283,14 +295,14 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       const items = client.trips[':tripId'].items;
 
       const bad = await items.$post(
-        { param: { tripId }, json: { list: 'buy', category: 'שתייה', name: 'מים', kind: 'qty' } },
+        { param: { tripId }, json: { list: 'buy', name: 'מים', kind: 'qty' } },
         as(member),
       );
       expect(bad.status).toBe(400);
       const added = await items.$post(
         {
           param: { tripId },
-          json: { list: 'buy', category: 'שתייה', name: 'מים', kind: 'qty', quantityNeeded: 6 },
+          json: { list: 'buy', name: 'מים', kind: 'qty', quantityNeeded: 6 },
         },
         as(member),
       );
@@ -335,12 +347,12 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       items()[':itemId'].$patch({ param: { tripId, itemId }, json }, as(user));
 
     it('changes any field and logs which ones changed', async () => {
+      // Moving to the other list leaves the item's category behind.
       const { member, data } = await tripWithMember();
       const tripId = data.trip.id;
       const item = data.items.find((i) => i.list === 'bring' && i.kind === 'single')!;
       const res = await edit(member, tripId, item.id, {
         name: 'כיסאות',
-        category: item.category,
         list: 'buy',
         kind: 'qty',
         quantityNeeded: 6,
@@ -353,7 +365,6 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       expect(await res.json()).toEqual({
         id: item.id,
         list: 'buy',
-        category: item.category,
         position: buyCount,
         name: 'כיסאות',
         kind: 'qty',
@@ -365,7 +376,16 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       const [logged] = await sql<{ payload: { fields: string[] } }[]>`
         select payload from activity where trip_id = ${tripId} and type = 'item_updated'`;
       expect(logged!.payload.fields.sort()).toEqual(
-        ['displayQty', 'kind', 'list', 'name', 'note', 'quantityNeeded', 'unit'].sort(),
+        [
+          'categoryId',
+          'displayQty',
+          'kind',
+          'list',
+          'name',
+          'note',
+          'quantityNeeded',
+          'unit',
+        ].sort(),
       );
     });
 
@@ -428,6 +448,154 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       const stranger = await guest('stranger');
       const res = await edit(stranger, data.trip.id, data.items[0]!.id, { name: 'x' });
       expect(res.status).toBe(404);
+    });
+  });
+
+  describe('categories', () => {
+    const categories = () => client.trips[':tripId'].categories;
+    const add = (user: Guest, tripId: string, list: 'bring' | 'buy', name: string) =>
+      categories().$post({ param: { tripId }, json: { list, name } }, as(user));
+    const rename = (user: Guest, tripId: string, categoryId: string, name: string) =>
+      categories()[':categoryId'].$patch(
+        { param: { tripId, categoryId }, json: { name } },
+        as(user),
+      );
+    const reorder = (user: Guest, tripId: string, list: 'bring' | 'buy', categoryIds: string[]) =>
+      categories().order.$put({ param: { tripId }, json: { list, categoryIds } }, as(user));
+    const remove = (user: Guest, tripId: string, categoryId: string) =>
+      categories()[':categoryId'].$delete({ param: { tripId, categoryId } }, as(user));
+    const listOf = async (user: Guest, tripId: string, list: 'bring' | 'buy') =>
+      (await (await categories().$get({ param: { tripId } }, as(user))).json()).categories
+        .filter((cat) => cat.list === list)
+        .map((cat) => cat.name);
+    const items = () => client.trips[':tripId'].items;
+
+    it('adds, renames, reorders and deletes categories, and logs each', async () => {
+      const { member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const before = await listOf(member, tripId, 'buy');
+
+      const res = await add(member, tripId, 'buy', ' פירות ');
+      expect(res.status).toBe(201);
+      const fruit = await res.json();
+      expect(fruit).toMatchObject({ list: 'buy', name: 'פירות', position: before.length });
+      // Names are unique per list, ignoring case; the other list may reuse one.
+      expect((await add(member, tripId, 'buy', 'פירות')).status).toBe(409);
+      expect((await add(member, tripId, 'bring', 'פירות')).status).toBe(201);
+      const fruitEn = await (await add(member, tripId, 'buy', 'Fruit')).json();
+      expect((await add(member, tripId, 'buy', 'FRUIT')).status).toBe(409);
+      expect((await rename(member, tripId, fruitEn.id, 'פירות')).status).toBe(409);
+      expect((await rename(member, tripId, fruitEn.id, 'fruit')).status).toBe(200);
+
+      expect(await (await rename(member, tripId, fruit.id, 'פירות וירקות')).json()).toMatchObject({
+        id: fruit.id,
+        name: 'פירות וירקות',
+      });
+
+      const ids = data.categories.filter((cat) => cat.list === 'buy').map((cat) => cat.id);
+      const order = [fruit.id, ...ids.reverse(), fruitEn.id];
+      const reordered = await reorder(member, tripId, 'buy', order);
+      expect(reordered.status).toBe(200);
+      expect((await reordered.json()).categories.map((cat) => cat.id)).toEqual(order);
+      expect(await listOf(member, tripId, 'buy')).toEqual([
+        'פירות וירקות',
+        ...[...before].reverse(),
+        'fruit',
+      ]);
+      // A stale order (missing, extra or repeated categories) is refused.
+      expect((await reorder(member, tripId, 'buy', order.slice(1))).status).toBe(409);
+      expect((await reorder(member, tripId, 'buy', [...order, order[0]!])).status).toBe(409);
+      expect((await reorder(member, tripId, 'bring', order)).status).toBe(409);
+
+      expect((await remove(member, tripId, fruitEn.id)).status).toBe(204);
+      expect((await remove(member, tripId, fruitEn.id)).status).toBe(404);
+      expect(await listOf(member, tripId, 'buy')).not.toContain('fruit');
+
+      expect((await activityTypes(tripId)).slice(2)).toEqual([
+        'category_added',
+        'category_added',
+        'category_added',
+        'category_renamed',
+        'category_renamed',
+        'categories_reordered',
+        'category_deleted',
+      ]);
+    });
+
+    it('deletes a category with items: they become uncategorized', async () => {
+      const { member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const category = data.categories[0]!;
+      const inside = data.items.filter((i) => i.categoryId === category.id);
+      expect(inside.length).toBeGreaterThan(0);
+      await items()[':itemId'].$delete({ param: { tripId, itemId: inside[0]!.id } }, as(member));
+
+      expect((await remove(member, tripId, category.id)).status).toBe(204);
+      const after = await (await detail(member, tripId)).json();
+      expect(after.categories.map((cat) => cat.id)).not.toContain(category.id);
+      for (const { id } of inside.slice(1)) {
+        expect(after.items.find((i) => i.id === id)).not.toHaveProperty('categoryId');
+      }
+    });
+
+    it('puts items into a category of their list, or none', async () => {
+      const { member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const bringCat = data.categories.find((cat) => cat.list === 'bring')!;
+      const buyCat = data.categories.find((cat) => cat.list === 'buy')!;
+      const create = (categoryId?: string | null) =>
+        items().$post(
+          { param: { tripId }, json: { list: 'bring', name: 'מחצלת', kind: 'single', categoryId } },
+          as(member),
+        );
+      const edit = (itemId: string, json: { categoryId?: string | null; list?: 'buy' }) =>
+        items()[':itemId'].$patch({ param: { tripId, itemId }, json }, as(member));
+
+      const created = await create(bringCat.id);
+      expect(created.status).toBe(201);
+      const item = await created.json();
+      expect(item.categoryId).toBe(bringCat.id);
+      expect((await create(buyCat.id)).status).toBe(400);
+      expect((await create('00000000-0000-4000-8000-000000000000')).status).toBe(404);
+      expect(await (await create(null)).json()).not.toHaveProperty('categoryId');
+
+      expect((await edit(item.id, { categoryId: buyCat.id })).status).toBe(400);
+      const other = data.categories.filter((cat) => cat.list === 'bring')[1]!;
+      expect((await (await edit(item.id, { categoryId: other.id })).json()).categoryId).toBe(
+        other.id,
+      );
+      expect(await (await edit(item.id, { categoryId: null })).json()).not.toHaveProperty(
+        'categoryId',
+      );
+      const moved = await edit(item.id, { list: 'buy', categoryId: buyCat.id });
+      expect(await moved.json()).toMatchObject({ list: 'buy', categoryId: buyCat.id });
+    });
+
+    it('hides categories from non-members', async () => {
+      const { data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const stranger = await guest('stranger');
+      const category = data.categories[0]!;
+      expect((await categories().$get({ param: { tripId } }, as(stranger))).status).toBe(404);
+      expect((await add(stranger, tripId, 'bring', 'x')).status).toBe(404);
+      expect((await rename(stranger, tripId, category.id, 'x')).status).toBe(404);
+      expect((await reorder(stranger, tripId, 'bring', [category.id])).status).toBe(404);
+      expect((await remove(stranger, tripId, category.id)).status).toBe(404);
+      // A category of another trip can't be used, renamed or deleted through this one.
+      const { member, data: mine } = await tripWithMember();
+      expect((await rename(member, mine.trip.id, category.id, 'x')).status).toBe(404);
+      expect((await remove(member, mine.trip.id, category.id)).status).toBe(404);
+      expect(
+        (
+          await items().$post(
+            {
+              param: { tripId: mine.trip.id },
+              json: { list: category.list, name: 'x', kind: 'single', categoryId: category.id },
+            },
+            as(member),
+          )
+        ).status,
+      ).toBe(404);
     });
   });
 });

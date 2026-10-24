@@ -11,6 +11,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
@@ -182,6 +183,29 @@ export const tripMembers = pgTable(
   ],
 );
 
+/**
+ * A trip's named groups of items, ordered within their list. They exist apart from items, so a
+ * category can be empty. Names are unique per list ignoring case; the index covers exact
+ * duplicates (DSQL has no expression indexes), the API checks case under the trip lock.
+ */
+export const tripCategories = pgTable(
+  'trip_categories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tripId: uuid('trip_id')
+      .notNull()
+      .references(() => trips.id),
+    list: text('list', { enum: LISTS }).notNull(),
+    name: text('name').notNull(),
+    position: integer('position').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    uniqueIndex('trip_categories_name_idx').on(t.tripId, t.list, t.name),
+    oneOf('trip_categories_list_check', t.list, LISTS),
+  ],
+);
+
 export const items = pgTable(
   'items',
   {
@@ -190,7 +214,14 @@ export const items = pgTable(
       .notNull()
       .references(() => trips.id),
     list: text('list', { enum: LISTS }).notNull(),
-    category: text('category').notNull(),
+    /** Null: uncategorized. A category of the item's own list. */
+    categoryId: uuid('category_id').references(() => tripCategories.id),
+    /**
+     * The free-text category from before trip_categories. Read only by the migration runner,
+     * which moves it into `categoryId` (src/db/migrate.ts); new rows store ''. DSQL can't drop
+     * the column or its NOT NULL.
+     */
+    legacyCategory: text('category').notNull(),
     position: integer('position').notNull(),
     name: text('name').notNull(),
     kind: text('kind', { enum: KINDS }).notNull(),

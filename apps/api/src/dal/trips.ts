@@ -13,7 +13,8 @@ import {
   trips,
 } from '../db/schema';
 import type { Executor, Tx } from '../db/tx';
-import { toExpense, toItem, toTrip } from '../trip-data';
+import { toCategory, toExpense, toItem, toTrip } from '../trip-data';
+import { listCategories } from './categories';
 
 export async function insertTrip(tx: Executor, values: typeof trips.$inferInsert) {
   const [trip] = await tx.insert(trips).values(values).returning();
@@ -50,48 +51,57 @@ export async function tripByToken(tx: Executor, token: string) {
 /** Everything about the given trips that the app's trip screens need, in one snapshot. */
 export async function loadTrips(tx: Executor, tripIds: string[]) {
   if (tripIds.length === 0) return [];
-  const [tripRows, memberRows, itemRows, claimRows, expenseRows, shareRows, paymentRows] =
-    await Promise.all([
-      tx.select().from(trips).where(inArray(trips.id, tripIds)),
-      tx
-        .select({
-          tripId: tripMembers.tripId,
-          userId: tripMembers.userId,
-          displayName: tripMembers.displayName,
-          role: tripMembers.role,
-          status: tripMembers.status,
-          color: profiles.avatarColor,
-        })
-        .from(tripMembers)
-        .innerJoin(profiles, eq(profiles.id, tripMembers.userId))
-        .where(inArray(tripMembers.tripId, tripIds))
-        .orderBy(asc(tripMembers.joinedAt)),
-      tx
-        .select()
-        .from(items)
-        .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt)))
-        .orderBy(asc(items.list), asc(items.position)),
-      tx
-        .select({ tripId: items.tripId, claim: claims })
-        .from(claims)
-        .innerJoin(items, eq(items.id, claims.itemId))
-        .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt))),
-      tx
-        .select()
-        .from(expenses)
-        .where(inArray(expenses.tripId, tripIds))
-        .orderBy(asc(expenses.createdAt)),
-      tx
-        .select({ expenseId: expenseShares.expenseId, userId: expenseShares.userId })
-        .from(expenseShares)
-        .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
-        .where(inArray(expenses.tripId, tripIds)),
-      tx
-        .select()
-        .from(payments)
-        .where(inArray(payments.tripId, tripIds))
-        .orderBy(asc(payments.markedAt)),
-    ]);
+  const [
+    tripRows,
+    memberRows,
+    categoryRows,
+    itemRows,
+    claimRows,
+    expenseRows,
+    shareRows,
+    paymentRows,
+  ] = await Promise.all([
+    tx.select().from(trips).where(inArray(trips.id, tripIds)),
+    tx
+      .select({
+        tripId: tripMembers.tripId,
+        userId: tripMembers.userId,
+        displayName: tripMembers.displayName,
+        role: tripMembers.role,
+        status: tripMembers.status,
+        color: profiles.avatarColor,
+      })
+      .from(tripMembers)
+      .innerJoin(profiles, eq(profiles.id, tripMembers.userId))
+      .where(inArray(tripMembers.tripId, tripIds))
+      .orderBy(asc(tripMembers.joinedAt)),
+    listCategories(tx, tripIds),
+    tx
+      .select()
+      .from(items)
+      .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt)))
+      .orderBy(asc(items.list), asc(items.position)),
+    tx
+      .select({ tripId: items.tripId, claim: claims })
+      .from(claims)
+      .innerJoin(items, eq(items.id, claims.itemId))
+      .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt))),
+    tx
+      .select()
+      .from(expenses)
+      .where(inArray(expenses.tripId, tripIds))
+      .orderBy(asc(expenses.createdAt)),
+    tx
+      .select({ expenseId: expenseShares.expenseId, userId: expenseShares.userId })
+      .from(expenseShares)
+      .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
+      .where(inArray(expenses.tripId, tripIds)),
+    tx
+      .select()
+      .from(payments)
+      .where(inArray(payments.tripId, tripIds))
+      .orderBy(asc(payments.markedAt)),
+  ]);
 
   const liveItems = new Set(itemRows.map((i) => i.id));
   return tripRows.map((trip) => ({
@@ -100,6 +110,7 @@ export async function loadTrips(tx: Executor, tripIds: string[]) {
     members: memberRows
       .filter((m) => m.tripId === trip.id)
       .map(({ tripId: _, ...member }) => member),
+    categories: categoryRows.filter((c) => c.tripId === trip.id).map(toCategory),
     items: itemRows.filter((i) => i.tripId === trip.id).map(toItem),
     claims: claimRows
       .filter((c) => c.tripId === trip.id)

@@ -60,7 +60,9 @@ Write these as migrations. Column names are suggestions; keep the semantics.
 
 **trip_members** — PK (`trip_id`, `user_id`), `role` (`organizer|member`), `status` (`pending|active|removed`), `display_name` (snapshot at join, editable), `joined_at`. The creator is an active organizer.
 
-**items** — `id`, `trip_id`, `list` (`bring|buy`), `category` (text), `position`, `name`, `kind` (`single|qty|each`), `quantity_needed` int (1 for single; ≥2 for qty; ignored for each), `unit` (nullable, e.g. "שקים"), `display_qty` (nullable free text for buy items, e.g. "4 ק״ג", "30"), `note`, `created_by`, `created_at`, `deleted_at` (soft delete).
+**trip_categories** — `id`, `trip_id`, `list` (`bring|buy`), `name` (unique per trip and list, ignoring case), `position`, `created_at`. Any active member adds, renames, reorders or deletes them; deleting one makes its items uncategorized. A trip made from a template starts with the template's categories.
+
+**items** — `id`, `trip_id`, `list` (`bring|buy`), `category_id` (nullable: uncategorized, shown last), `position`, `name`, `kind` (`single|qty|each`), `quantity_needed` int (1 for single; ≥2 for qty; ignored for each), `unit` (nullable, e.g. "שקים"), `display_qty` (nullable free text for buy items, e.g. "4 ק״ג", "30"), `note`, `created_by`, `created_at`, `deleted_at` (soft delete).
 
 **claims** — PK (`item_id`, `user_id`), `quantity` int > 0, `arrived_at` (nullable; set in trip-day mode), `created_at`. For `each` items a claim means "I have mine".
 

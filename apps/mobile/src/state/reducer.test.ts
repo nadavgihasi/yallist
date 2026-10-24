@@ -15,7 +15,7 @@ const member = (userId: string, role: TripMember['role'] = 'member'): TripMember
 const chairs: Item = {
   id: 'chairs',
   list: 'bring',
-  category: 'ישיבה',
+  categoryId: 'sitting',
   position: 0,
   name: 'כיסאות מתקפלים',
   kind: 'qty',
@@ -45,6 +45,7 @@ function trip(overrides: Partial<TripData> = {}): TripData {
     },
     inviteToken: 'token',
     members: [member('me', 'organizer'), member('ron')],
+    categories: [],
     items: [chairs, meat],
     claims: [],
     expenses: [],
@@ -99,10 +100,49 @@ describe('editItem', () => {
       name: 'צידנית',
       kind: 'qty',
       quantityNeeded: 2,
-      category: 'אוכל',
+      categoryId: 'food',
     } as const;
     const next = applyAction(trip(), { type: 'editItem', itemId: 'meat', changes }, 'me');
     expect(next.items).toEqual([chairs, { ...meat, ...changes }]);
+  });
+
+  it('moves the item out of its category, or waits for a new one', () => {
+    const changes = { ...chairs, categoryId: null };
+    const out = applyAction(trip(), { type: 'editItem', itemId: 'chairs', changes }, 'me');
+    expect(out.items[0]).toEqual({ ...chairs, categoryId: undefined });
+    const action = { type: 'editItem', itemId: 'chairs', changes, newCategory: 'חדש' } as const;
+    expect(applyAction(trip(), action, 'me').items[0]).toEqual(chairs);
+  });
+});
+
+describe('categories', () => {
+  const t = () =>
+    trip({
+      categories: [
+        { id: 'sitting', list: 'bring', name: 'ישיבה', position: 0 },
+        { id: 'sleeping', list: 'bring', name: 'לינה', position: 1 },
+      ],
+    });
+
+  it('renames and reorders at once', () => {
+    const renamed = applyAction(
+      t(),
+      { type: 'renameCategory', categoryId: 'sitting', name: 'כיסאות' },
+      'me',
+    );
+    expect(renamed.categories[0]).toMatchObject({ id: 'sitting', name: 'כיסאות' });
+    const order = ['sleeping', 'sitting'];
+    const action = { type: 'reorderCategories', list: 'bring', categoryIds: order } as const;
+    expect(applyAction(t(), action, 'me').categories.map((c) => [c.id, c.position])).toEqual([
+      ['sitting', 1],
+      ['sleeping', 0],
+    ]);
+  });
+
+  it('deletes a category and keeps its items, uncategorized', () => {
+    const next = applyAction(t(), { type: 'deleteCategory', categoryId: 'sitting' }, 'me');
+    expect(next.categories.map((c) => c.id)).toEqual(['sleeping']);
+    expect(next.items[0]).toEqual({ ...chairs, categoryId: undefined });
   });
 });
 
@@ -128,7 +168,7 @@ describe('changes that need a server id', () => {
     const t = trip();
     const action = {
       type: 'addItem',
-      item: { list: 'buy', name: 'אבטיח', kind: 'single', quantityNeeded: 1, category: 'כללי' },
+      item: { list: 'buy', name: 'אבטיח', kind: 'single', quantityNeeded: 1, categoryId: null },
       claim: 1,
     } as const;
     expect(applyAction(t, action, 'me')).toBe(t);

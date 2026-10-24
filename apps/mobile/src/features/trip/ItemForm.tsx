@@ -1,11 +1,4 @@
-import {
-  QUICK_SUGGESTIONS,
-  TEMPLATES,
-  type Item,
-  type ItemKind,
-  type ListKind,
-  type TemplateId,
-} from '@yallist/domain';
+import { QUICK_SUGGESTIONS, type Item, type ItemKind, type ListKind } from '@yallist/domain';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -22,28 +15,28 @@ import { colors, fonts } from '@/theme';
 
 const KINDS: ItemKind[] = ['single', 'qty', 'each'];
 
-/** Categories already in this list, then the trip template's own, with "כללי" if there are none. */
-function categoriesFor(list: ListKind, template: TemplateId, existing: string[]): string[] {
-  const defaults = TEMPLATES[template].filter((t) => t.list === list).map((t) => t.category);
-  const all = [...new Set([...existing, ...defaults])];
-  return all.length > 0 ? all : [he.addItem.generalCategory];
-}
+/** Marks the "new category" chip as the picked category. */
+const NEW = 'new';
 
 /**
  * The add-item sheet, also used to edit an item: `item` prefills it. Claiming is only offered
- * for a new item; an existing one is claimed from its sheet.
+ * for a new item; an existing one is claimed from its sheet. A category can be created on the
+ * spot: `onSubmit` then gets its name as `newCategory`.
  */
 export function ItemForm({
   tripId,
   item,
   list: initialList = 'bring',
+  categoryId: initialCategory,
   onSubmit,
   onClose,
 }: {
   tripId: string;
   item?: Item;
   list?: ListKind;
-  onSubmit: (item: NewItemInput, claim: boolean) => void;
+  /** Preselected for a new item, e.g. when added from inside a category. */
+  categoryId?: string;
+  onSubmit: (item: NewItemInput, claim: boolean, newCategory?: string) => void;
   onClose: () => void;
 }) {
   const data = useTrip(tripId);
@@ -51,23 +44,34 @@ export function ItemForm({
   const [name, setName] = useState(item?.name ?? '');
   const [kind, setKind] = useState<ItemKind>(item?.kind ?? 'single');
   const [qty, setQty] = useState(item?.kind === 'qty' ? item.quantityNeeded : 4);
-  const [category, setCategory] = useState(item?.category);
+  const [category, setCategory] = useState(item ? item.categoryId : initialCategory);
+  const [newName, setNewName] = useState('');
   const [claim, setClaim] = useState(false);
 
   if (!data) return null;
 
-  const categories = categoriesFor(
-    list,
-    data.trip.template,
-    data.items.filter((i) => i.list === list).map((i) => i.category),
-  );
-  const pickedCategory = category && categories.includes(category) ? category : categories[0]!;
+  const categories = data.categories
+    .filter((c) => c.list === list)
+    .sort((a, b) => a.position - b.position);
+  // A category of the other list (after switching lists) doesn't apply: uncategorized.
+  const picked =
+    category === NEW || categories.some((c) => c.id === category) ? category : undefined;
+  const newCategory = newName.trim();
+  // Typing an existing name picks that category instead of making a second one.
+  const existing = categories.find((c) => c.name.toLowerCase() === newCategory.toLowerCase());
   const trimmed = name.trim();
+  const valid = !!trimmed && (picked !== NEW || !!newCategory);
 
   const submit = () => {
-    if (!trimmed) return;
+    if (!valid) return;
     const quantityNeeded = kind === 'qty' ? qty : 1;
-    onSubmit({ list, name: trimmed, kind, quantityNeeded, category: pickedCategory }, claim);
+    const creating = picked === NEW && !existing;
+    const categoryId = picked === NEW ? (existing?.id ?? null) : (picked ?? null);
+    onSubmit(
+      { list, name: trimmed, kind, quantityNeeded, categoryId },
+      claim,
+      creating ? newCategory : undefined,
+    );
   };
 
   const claimLabel =
@@ -86,7 +90,7 @@ export function ItemForm({
           label={item ? he.editItem.save : he.addItem.cta(trimmed, list)}
           size="xl"
           wide
-          disabled={!trimmed}
+          disabled={!valid}
           onPress={submit}
         />
       }
@@ -177,13 +181,34 @@ export function ItemForm({
         <ChipGroup label={he.addItem.category}>
           {categories.map((c) => (
             <FilterChip
-              key={c}
-              label={c}
-              selected={c === pickedCategory}
-              onPress={() => setCategory(c)}
+              key={c.id}
+              label={c.name}
+              selected={c.id === picked}
+              onPress={() => setCategory(c.id)}
             />
           ))}
+          <FilterChip
+            label={he.trip.uncategorized}
+            selected={picked === undefined}
+            onPress={() => setCategory(undefined)}
+          />
+          <FilterChip
+            label={`+ ${he.addItem.newCategory}`}
+            selected={picked === NEW}
+            onPress={() => setCategory(NEW)}
+          />
         </ChipGroup>
+        {picked === NEW && (
+          <Input
+            value={newName}
+            onChangeText={setNewName}
+            placeholder={he.category.placeholder}
+            accessibilityLabel={he.category.name}
+            maxLength={40}
+            autoFocus
+            style={styles.input}
+          />
+        )}
       </View>
 
       {!item && (

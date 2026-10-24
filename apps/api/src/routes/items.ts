@@ -5,20 +5,22 @@ import { z } from 'zod';
 import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
 import { logActivity } from '../dal/activity';
+import { lockCategory } from '../dal/categories';
 import { lockClaims, setClaim } from '../dal/claims';
 import { findPurchase } from '../dal/expenses';
 import { appendItem, deleteItem, endOfList, lockItem, updateItem } from '../dal/items';
 import { requireMember } from '../dal/members';
 import type { Db } from '../db/client';
 import { KINDS, LISTS } from '../db/schema';
-import { transact } from '../db/tx';
+import { transact, type Tx } from '../db/tx';
 import { toItem } from '../trip-data';
 
 const text = (maxLength: number) => z.string().trim().min(1).max(maxLength);
 const optionalText = (maxLength: number) => z.string().trim().max(maxLength).nullable();
 
 const itemFields = {
-  category: text(40),
+  /** Null: uncategorized. */
+  categoryId: z.uuid().nullable(),
   name: text(80),
   unit: optionalText(20),
   displayQty: optionalText(20),
@@ -36,6 +38,7 @@ const addItem = z
     list: z.enum(LISTS),
     kind: z.enum(KINDS),
     quantityNeeded: z.int().min(1).max(999).default(1),
+    categoryId: itemFields.categoryId.optional(),
     unit: itemFields.unit.optional(),
     displayQty: itemFields.displayQty.optional(),
     note: itemFields.note.optional(),
@@ -49,6 +52,15 @@ const editItem = z
     quantityNeeded: z.int().min(1).max(999),
   })
   .partial();
+
+/**
+ * The category an item is put into, locked so it can't be deleted meanwhile. Lock order:
+ * trip → member → category → item → claims.
+ */
+async function categoryFor(tx: Tx, tripId: string, categoryId: string | null | undefined) {
+  return categoryId ? lockCategory(tx, tripId, categoryId) : undefined;
+}
+const CATEGORY_RULE = 'The category is on the other list';
 
 const tripParam = z.object({ tripId: z.uuid() });
 const itemParam = z.object({ tripId: z.uuid(), itemId: z.uuid() });
@@ -68,6 +80,8 @@ export const itemRoutes = (auth: Auth, db: Db) =>
       const me = c.var.user.id;
       const item = await transact(db, async (tx) => {
         await requireMember(tx, tripId, me, { lock: true });
+        const category = await categoryFor(tx, tripId, input.categoryId);
+        if (category && category.list !== input.list) throw fail(400, CATEGORY_RULE);
         const created = await appendItem(tx, tripId, me, input);
         await logActivity(tx, tripId, me, 'item_added', { itemId: created.id, name: created.name });
         return created;
@@ -85,7 +99,12 @@ export const itemRoutes = (auth: Auth, db: Db) =>
         const me = c.var.user.id;
         const item = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
+          const category = await categoryFor(tx, tripId, changes.categoryId);
           const current = await lockItem(tx, tripId, itemId);
+          // Moved to the other list without picking a category there: uncategorized.
+          if (changes.list && changes.list !== current.list && !('categoryId' in changes)) {
+            changes.categoryId = null;
+          }
           const changed = Object.fromEntries(
             Object.entries(changes).filter(([k, v]) => v !== current[k as keyof typeof current]),
           ) as typeof changes;
@@ -94,6 +113,7 @@ export const itemRoutes = (auth: Auth, db: Db) =>
 
           const next = { ...current, ...changed };
           if (!validQuantity(next)) throw fail(400, QUANTITY_RULE);
+          if (category && category.list !== next.list) throw fail(400, CATEGORY_RULE);
           if (changed.kind || changed.quantityNeeded) {
             const claimed = claimedQuantity(itemId, await lockClaims(tx, itemId));
             // A claim means something else per kind (a share, the whole item, "I have mine"),

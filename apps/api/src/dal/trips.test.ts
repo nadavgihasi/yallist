@@ -43,7 +43,7 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
   }
 
   const buy = (tripId: string, userId: string, name: string) =>
-    appendItem(db, tripId, userId, { list: 'buy', category: 'אוכל', name, kind: 'single' });
+    appendItem(db, tripId, userId, { list: 'buy', name, kind: 'single' });
 
   it('returns each trip with only its own rows, and nothing for no trips', async () => {
     const { id: me } = await signInAsGuest(testApp(db), 'me');

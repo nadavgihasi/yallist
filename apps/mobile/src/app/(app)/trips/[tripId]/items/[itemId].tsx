@@ -43,8 +43,8 @@ export default function ItemSheet() {
       <ItemForm
         tripId={tripId}
         item={item}
-        onSubmit={(changes) => {
-          act({ type: 'editItem', itemId, changes });
+        onSubmit={(changes, _claim, newCategory) => {
+          act({ type: 'editItem', itemId, changes, newCategory });
           setEditing(false);
         }}
         onClose={() => setEditing(false)}

@@ -6,15 +6,16 @@ import { ItemForm } from '@/features/trip/ItemForm';
 import { useTripAction } from '@/state/trips';
 
 export default function AddItem() {
-  const params = useLocalSearchParams<{ tripId: string; list?: ListKind }>();
+  const params = useLocalSearchParams<{ tripId: string; list?: ListKind; categoryId?: string }>();
   const act = useTripAction(params.tripId);
   const close = () => closeSheet(params.tripId);
   return (
     <ItemForm
       tripId={params.tripId}
       list={params.list === 'buy' ? 'buy' : 'bring'}
-      onSubmit={(item, claim) => {
-        act({ type: 'addItem', item, claim: claim ? item.quantityNeeded : 0 });
+      categoryId={params.categoryId}
+      onSubmit={(item, claim, newCategory) => {
+        act({ type: 'addItem', item, claim: claim ? item.quantityNeeded : 0, newCategory });
         close();
       }}
       onClose={close}

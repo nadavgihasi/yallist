@@ -2,13 +2,14 @@ import {
   activeMemberIds,
   balances,
   suggestTransfers,
+  type Category,
   type Expense,
   type Item,
   type Member,
   type Payment,
 } from '@yallist/domain';
 
-import type { expenses, items, trips } from './db/schema';
+import type { expenses, items, tripCategories, trips } from './db/schema';
 
 // The shapes the app already works with (apps/mobile/src/state/types.ts, @yallist/domain).
 // Nullable columns become absent fields rather than nulls.
@@ -33,7 +34,7 @@ export function toItem(row: typeof items.$inferSelect): Item {
   return {
     id: row.id,
     list: row.list,
-    category: row.category,
+    categoryId: opt(row.categoryId),
     position: row.position,
     name: row.name,
     kind: row.kind,
@@ -42,6 +43,10 @@ export function toItem(row: typeof items.$inferSelect): Item {
     displayQty: opt(row.displayQty),
     note: opt(row.note),
   };
+}
+
+export function toCategory(row: typeof tripCategories.$inferSelect): Category {
+  return { id: row.id, list: row.list, name: row.name, position: row.position };
 }
 
 export function toExpense(row: typeof expenses.$inferSelect, shares: string[]): Expense {
