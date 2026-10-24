@@ -86,7 +86,14 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
     expect(data!.items).toEqual([]);
     expect(data!.claims).toEqual([]);
     expect(data!.expenses).toEqual([
-      { id: expect.any(String), description: 'קרח', amountAgorot: 1000, paidBy: me, shares: [me] },
+      {
+        id: expect.any(String),
+        description: 'קרח',
+        amountAgorot: 1000,
+        paidBy: me,
+        shares: [me],
+        hasReceipt: false,
+      },
     ]);
   });
 });

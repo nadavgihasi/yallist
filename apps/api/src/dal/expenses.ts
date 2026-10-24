@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { fail } from '../access';
 import { expenseShares, expenses } from '../db/schema';
-import type { Executor, Tx } from '../db/tx';
+import type { Executor } from '../db/tx';
 
 /** The expense and the members it is split between. */
 export async function insertExpense(
@@ -26,15 +26,24 @@ export async function findPurchase(tx: Executor, itemId: string) {
   return expense;
 }
 
-export async function lockExpense(tx: Tx, tripId: string, expenseId: string) {
-  const [expense] = await tx
+/** The trip's expense, or 404. Writes pass `lock`. */
+export async function findExpense(
+  tx: Executor,
+  tripId: string,
+  expenseId: string,
+  { lock = false } = {},
+) {
+  const query = tx
     .select()
     .from(expenses)
-    .where(and(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)))
-    .for('update');
+    .where(and(eq(expenses.id, expenseId), eq(expenses.tripId, tripId)));
+  const [expense] = await (lock ? query.for('update') : query);
   if (!expense) throw fail(404, 'Expense not found');
   return expense;
 }
+
+export const setReceiptPath = (tx: Executor, expenseId: string, receiptPath: string | null) =>
+  tx.update(expenses).set({ receiptPath }).where(eq(expenses.id, expenseId));
 
 export async function deleteExpense(tx: Executor, expenseId: string) {
   // No cascades on DSQL: shares go first, in the same transaction.

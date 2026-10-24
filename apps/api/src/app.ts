@@ -5,15 +5,23 @@ import { HTTPException } from 'hono/http-exception';
 import type { Auth } from './auth';
 import type { Db } from './db/client';
 import type { Publish } from './realtime';
+import type { ReceiptStore } from './receipts';
 import { categoryRoutes } from './routes/categories';
 import { feedbackRoutes, type FeedbackConfig } from './routes/feedback';
 import { inviteRoutes } from './routes/invites';
 import { itemRoutes } from './routes/items';
 import { meRoutes } from './routes/me';
 import { moneyRoutes } from './routes/money';
+import { receiptRoutes } from './routes/receipts';
 import { tripRoutes } from './routes/trips';
 
-export function createApp(auth: Auth, db: Db, publish: Publish, feedback: FeedbackConfig) {
+export function createApp(
+  auth: Auth,
+  db: Db,
+  publish: Publish,
+  feedback: FeedbackConfig,
+  receipts: ReceiptStore,
+) {
   // Realtime is best effort: a failed publish is logged, the write has already succeeded.
   const notify = (tripId: string) =>
     publish(tripId).catch((err: unknown) => console.error('Realtime publish failed', err));
@@ -41,7 +49,8 @@ export function createApp(auth: Auth, db: Db, publish: Publish, feedback: Feedba
     .route('/trips', tripRoutes(auth, db))
     .route('/trips', categoryRoutes(auth, db))
     .route('/trips', itemRoutes(auth, db))
-    .route('/trips', moneyRoutes(auth, db))
+    .route('/trips', moneyRoutes(auth, db, receipts))
+    .route('/trips', receiptRoutes(auth, db, receipts))
     .route('/invites', inviteRoutes(auth, db, notify));
 }
 

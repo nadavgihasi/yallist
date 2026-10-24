@@ -4,11 +4,14 @@
  * Migrates the database first. Google sign-in needs GOOGLE_CLIENT_ID (the dev OAuth client).
  */
 import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 
 import { createApp } from './app';
 import { createAuth } from './auth';
 import { connect, createDb } from './db/client';
 import { migrate } from './db/migrate';
+import { localReceiptStore } from './receipts-local';
 
 if (!process.env.DATABASE_URL) throw new Error('Set DATABASE_URL to a local Postgres.');
 
@@ -27,8 +30,15 @@ const auth = createAuth(db, {
   },
 });
 
-// No realtime locally: publishing is a no-op.
+// No realtime locally: publishing is a no-op. Receipts stay in memory, served by this server.
 // No GitHub token locally: feedback is only saved.
-const app = createApp(auth, db, async () => {}, { stage: 'local' });
+const receipts = localReceiptStore(`http://localhost:${port}/dev/receipts`);
+const app = new Hono()
+  .use('/dev/receipts/*', cors())
+  .route('/dev/receipts', receipts.routes)
+  .route(
+    '/',
+    createApp(auth, db, async () => {}, { stage: 'local' }, receipts.store),
+  );
 
 serve({ fetch: app.fetch, port }, () => console.log(`API on http://localhost:${port}`));

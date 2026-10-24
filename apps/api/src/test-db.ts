@@ -7,6 +7,7 @@ import { createAuth } from './auth';
 import type { Db } from './db/client';
 import type { Publish } from './realtime';
 import type { FeedbackConfig } from './routes/feedback';
+import { localReceiptStore } from './receipts-local';
 
 /** Postgres server for DB tests; CI provides one. Tests that need it skip without it. */
 export const DATABASE_URL = process.env.DATABASE_URL;
@@ -38,12 +39,16 @@ export const testAuth = (db: Db) =>
     google: { clientId: 'test', clientSecret: 'test' },
   });
 
+/** In-memory receipts bucket; tests upload through its `routes`. */
+export const testReceipts = () => localReceiptStore('http://receipts.test');
+
 /** The app with test auth config; realtime events go to `publish`, feedback isn't sent to GitHub. */
 export const testApp = (
   db: Db,
   publish: Publish = async () => {},
   feedback: FeedbackConfig = { stage: 'test' },
-) => createApp(testAuth(db), db, publish, feedback);
+  receipts = testReceipts().store,
+) => createApp(testAuth(db), db, publish, feedback, receipts);
 
 /** A new guest user, with the headers that authenticate as them. */
 export async function signInAsGuest(app: ReturnType<typeof testApp>, name: string) {

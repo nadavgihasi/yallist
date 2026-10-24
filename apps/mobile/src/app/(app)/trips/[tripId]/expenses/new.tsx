@@ -11,6 +11,7 @@ import { Sheet } from '@/components/Sheet';
 import { showToast } from '@/components/Toast';
 import { useCloseSheet } from '@/features/trip/closeSheet';
 import { deriveTrip } from '@/features/trip/derive';
+import { ReceiptField } from '@/features/trip/ReceiptField';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
 import { useMe } from '@/state/store';
@@ -34,6 +35,7 @@ function AddExpenseBody({ data }: { data: TripData }) {
   const [itemId, setItemId] = useState<string>();
   const [payer, setPayer] = useState(me);
   const [shares, setShares] = useShares(view);
+  const [receipt, setReceipt] = useState<string>();
 
   const close = useCloseSheet(data.trip.id);
   const agorot = parseShekel(amount);
@@ -48,6 +50,7 @@ function AddExpenseBody({ data }: { data: TripData }) {
       act({
         type: 'addExpense',
         expense: { itemId, description: what.trim(), amountAgorot: agorot, paidBy: payer, shares },
+        receipt,
       });
       // The list shows it only once the API answers, so say it went through.
       showToast(he.addExpense.saved(formatShekel(agorot)));
@@ -141,6 +144,8 @@ function AddExpenseBody({ data }: { data: TripData }) {
         amount={agorot}
         showHint={false}
       />
+
+      <ReceiptField uri={receipt} onChange={setReceipt} />
     </Sheet>
   );
 }

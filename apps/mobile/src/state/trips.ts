@@ -5,6 +5,7 @@ import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
 import { api, statusOf } from '@/lib/api';
 
+import { uploadReceipt } from './receipts';
 import { applyAction, type Action, type NewItemInput } from './reducer';
 import { useMe } from './store';
 import type { TripData } from './types';
@@ -113,11 +114,25 @@ async function send(tripId: string, action: Action): Promise<unknown> {
           json: { note: action.note || null },
         }),
       );
-    case 'addExpense':
-      return parseResponse(trip.expenses.$post({ param, json: action.expense }));
+    case 'addExpense': {
+      const expense = await parseResponse(trip.expenses.$post({ param, json: action.expense }));
+      // Not awaited: the expense is saved either way; the money tab shows progress and retry.
+      if (action.receipt) {
+        void uploadReceipt(tripId, expense.id, action.receipt).then(
+          (ok) => ok || showToast(he.receipt.failedToast),
+        );
+      }
+      return expense;
+    }
     case 'deleteExpense':
       return parseResponse(
         trip.expenses[':expenseId'].$delete({ param: { ...param, expenseId: action.expenseId } }),
+      );
+    case 'deleteReceipt':
+      return parseResponse(
+        trip.expenses[':expenseId'].receipt.$delete({
+          param: { ...param, expenseId: action.expenseId },
+        }),
       );
     case 'markPayment': {
       const { toUser, amountAgorot } = action;
