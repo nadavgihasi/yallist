@@ -10,6 +10,7 @@ Infrastructure is [SST](https://sst.dev), in two SST apps. Both live in the `@ya
 [deploy.yml](../.github/workflows/deploy.yml) runs on every push to `main`. It deploys `global`, then `dev`, then `production`, each in the GitHub environment of the same name. Those environments only accept the `main` branch.
 
 - **Credentials:** jobs get them through GitHub OIDC. They assume the role in the repo variable `AWS_DEPLOY_ROLE_ARN`, so no AWS keys are stored in GitHub.
+- **Checks:** after each stage deploys and migrates, the job fetches the API's `/health` and the web app's URL. If dev fails, production doesn't deploy.
 - **Laptops:** don't deploy from a laptop except for the one-time bootstrap below or an emergency.
 
 ### One-time bootstrap

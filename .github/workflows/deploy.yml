@@ -63,6 +63,11 @@ jobs:
       # Open the GitHub issues that saved feedback is missing (docs/deploy.md, Feedback).
       - if: github.job != 'global'
         run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api feedback:retry
+      # Smoke check: the API Lambda boots and the web app is served, so a broken dev stops production.
+      - if: github.job != 'global'
+        run: |
+          curl -fsS --retry 5 --retry-all-errors "$(jq -r .api infra/app/.sst/outputs.json)/health"
+          curl -fsS --retry 5 --retry-all-errors -o /dev/null "$(jq -r .url infra/app/.sst/outputs.json)"
 
   dev:
     needs: [global, version]
