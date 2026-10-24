@@ -24,7 +24,7 @@ SPEC Phase 0, adapted to [tech-decisions.md](../tech-decisions.md): AWS backend 
 - Fonts: Fredoka 600/700 and Rubik 400/500/600 via `@expo-google-fonts/*`, loaded behind the splash screen.
 - RTL:
   - Native: `I18nManager` plus `expo-localization` with `supportsRTL`/`forcesRTL`.
-  - Web: `app/+html.tsx` sets `<html lang="he" dir="rtl">`.
+  - Web: single-page output (`web.output: "single"`, for S3 + CloudFront) with `public/index.html` setting `<html lang="he" dir="rtl">`.
 - `src/i18n/he.ts`: the single locale file, with a `t()` helper and plural helpers (`חסר 1` / `חסרים 3`).
 - Route skeleton:
   - `(auth)/login`, `(app)/index`, `j/[token]`: placeholders

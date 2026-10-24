@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Yallist",
+    "slug": "yallist",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "yallist",
+    "userInterfaceStyle": "light",
+    "android": {
+      "package": "app.yallist",
+      "adaptiveIcon": {
+        "backgroundColor": "#3B5BFD",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "backgroundImage": "./assets/images/android-icon-background.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png",
+      "lang": "he"
+    },
+    "plugins": [
+      ["expo-router", { "asyncRoutes": false }],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F4F5F8",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 76
+        }
+      ],
+      ["expo-localization", { "supportsRTL": true, "forcesRTL": true }]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
