@@ -80,6 +80,34 @@ export DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres
 pnpm test
 ```
 
+## Auth
+
+[Better Auth](https://better-auth.com) ([auth.ts](../apps/api/src/auth.ts)) is served by the API under `/api/auth/*`, with its tables (`users`, `sessions`, `accounts`, `verifications`) in the same database.
+
+- **Sign-in:** as a guest (`POST /api/auth/sign-in/anonymous` with `{ "name": "…" }`) or with Google. A guest who later signs in with Google keeps their trips: they move to the Google user, and the guest user is deleted.
+- **Tokens:** clients send the session token as `Authorization: Bearer <token>`, not as a cookie. The API and the web app are on different domains, and Android has no cookie jar. Sign-in responses return the token.
+- **Profiles:** every new user gets a `profiles` row, named after their Google name or the name given for guest sign-in. `GET /me` returns it.
+- **Google OAuth clients:** one per stage, in Google Cloud Console. The client IDs are public and set in [infra/app/sst.config.ts](../infra/app/sst.config.ts). Each client needs the redirect URI `<api>/api/auth/callback/google`, where `<api>` is that stage's `api` output.
+
+### Secrets
+
+The API needs two secrets per stage, `BetterAuthSecret` (signs sessions; changing it signs everyone out) and `GoogleClientSecret`. Their source of truth is GitHub: each is an environment secret on the `dev` and `production` environments.
+
+| SST secret           | GitHub environment secret |
+| -------------------- | ------------------------- |
+| `BetterAuthSecret`   | `BETTER_AUTH_SECRET`      |
+| `GoogleClientSecret` | `GOOGLE_CLIENT_SECRET`    |
+
+SST reads a secret's value from the `SST_SECRET_<name>` environment variable, so [deploy.yml](../.github/workflows/deploy.yml) sets `SST_SECRET_BetterAuthSecret` and `SST_SECRET_GoogleClientSecret` from them on the `dev` and `production` jobs. Nothing is stored with `sst secret set`.
+
+```sh
+gh secret set BETTER_AUTH_SECRET --env dev --body "$(openssl rand -base64 32)"
+gh secret set GOOGLE_CLIENT_SECRET --env dev   # paste the client secret from Google Cloud
+# and the same with --env production
+```
+
+For a local emergency deploy, export the same variables first, e.g. `SST_SECRET_BetterAuthSecret=… SST_SECRET_GoogleClientSecret=… pnpm deploy:dev`.
+
 ## Naming and tags
 
 Every resource has the stage in its name or identifier, so dev and production never collide and are easy to tell apart in the console:

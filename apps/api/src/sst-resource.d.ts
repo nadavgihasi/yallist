@@ -4,6 +4,10 @@ import 'sst';
 
 declare module 'sst' {
   export interface Resource {
+    Api: { url: string };
+    BetterAuthSecret: { value: string };
     Database: { endpoint: string; region: string };
+    GoogleClientSecret: { value: string };
+    Web: { url: string };
   }
 }

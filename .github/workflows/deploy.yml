@@ -42,10 +42,18 @@ jobs:
     needs: global
     runs-on: ubuntu-latest
     environment: dev
+    # SST reads a secret's value from SST_SECRET_<name>; the values are this environment's secrets.
+    env:
+      SST_SECRET_BetterAuthSecret: ${{ secrets.BETTER_AUTH_SECRET }}
+      SST_SECRET_GoogleClientSecret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps: *deploy
 
   production:
     needs: dev
     runs-on: ubuntu-latest
     environment: production
+    # SST reads a secret's value from SST_SECRET_<name>; the values are this environment's secrets.
+    env:
+      SST_SECRET_BetterAuthSecret: ${{ secrets.BETTER_AUTH_SECRET }}
+      SST_SECRET_GoogleClientSecret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps: *deploy
