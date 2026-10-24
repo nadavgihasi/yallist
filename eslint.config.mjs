@@ -13,4 +13,23 @@ export default defineConfig([
       },
     },
   },
+  {
+    // The app may only borrow the API's types (for `hc<AppType>`); a value import would bundle
+    // server code into the client.
+    files: ['apps/mobile/**/*.{ts,tsx}'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@yallist/api', '@yallist/api/*'],
+              allowTypeImports: true,
+              message: 'Only `import type` from the API; never runtime code.',
+            },
+          ],
+        },
+      ],
+    },
+  },
 ]);
