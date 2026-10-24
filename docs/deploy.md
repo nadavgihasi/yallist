@@ -108,6 +108,14 @@ gh secret set GOOGLE_CLIENT_SECRET --env dev   # paste the client secret from Go
 
 For a local emergency deploy, export the same variables first, e.g. `SST_SECRET_BetterAuthSecret=… SST_SECRET_GoogleClientSecret=… pnpm deploy:dev`.
 
+## Realtime
+
+An [AppSync Events](https://docs.aws.amazon.com/appsync/latest/eventapi/event-api-welcome.html) API per stage, `yallist-<stage>-realtime` ([realtime.ts](../apps/api/src/realtime.ts)), with one channel per trip: `/trips/<tripId>` in the `trips` namespace.
+
+- **Publish:** after each successful write to a trip, the API publishes `{ "type": "changed", "tripId": "…" }` to its channel, signed with the API Lambda's IAM role. Events carry no personal data; clients refetch through the API. Publishing is best effort: a failure is logged and the write still succeeds.
+- **Subscribe:** clients connect to `wss://<realtime host>/event/realtime` with their session token as the authorization. The web build gets the host as `EXPO_PUBLIC_REALTIME_URL`. The `host` in the connection's auth header is the matching HTTP host: `appsync-realtime-api` replaced by `appsync-api`.
+- **Authorizer:** a Lambda ([realtime-authorizer.ts](../apps/api/src/realtime-authorizer.ts)) checks the token with Better Auth on connect, and active membership of the trip on subscribe. Clients can't publish. Results aren't cached, so a removed member can't subscribe again; an open subscription keeps getting "changed" events, but the refetch fails.
+
 ## Naming and tags
 
 Every resource has the stage in its name or identifier, so dev and production never collide and are easy to tell apart in the console:
@@ -115,6 +123,7 @@ Every resource has the stage in its name or identifier, so dev and production ne
 - **Named resources** (S3 bucket, CloudFront functions, CloudFront key-value store) are named `yallist-<stage>-<name>-<hash>` by SST, for example `yallist-dev-webassetsbucket-abcdefgh`.
 - **The CloudFront distribution** has no name; its comment is set to `yallist-<stage>-web`.
 - **The DSQL cluster** has no name; its `Name` tag is `yallist-<stage>-database`.
+- **The AppSync Events API** is named `yallist-<stage>-realtime`.
 - **Tags:** every resource is tagged `app=yallist` and `stage=<stage>`, through the AWS provider's default tags. SST also adds its own `sst:app` and `sst:stage` tags.
 
 ## Remove dev

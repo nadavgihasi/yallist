@@ -53,12 +53,66 @@ export default $config({
     // Its route is added after the web app, whose URL Better Auth trusts.
     const api = new sst.aws.ApiGatewayV2('Api');
 
+    // Better Auth (apps/api/src/auth.ts). Secret values come from SST_SECRET_<name>, which the
+    // deploy workflow sets from GitHub environment secrets (docs/deploy.md#secrets).
+    const authSecret = new sst.Secret('BetterAuthSecret');
+    const googleClientSecret = new sst.Secret('GoogleClientSecret');
+    // OAuth client IDs are public; one Google Cloud OAuth client per stage.
+    const authEnvironment = { GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage] };
+
+    // Realtime (apps/api/src/realtime.ts): an AppSync Events API with a channel per trip,
+    // /trips/<tripId>. Clients connect and subscribe with their session token, checked by the
+    // authorizer; only the API publishes, signed with its IAM role.
+    const realtimeAuthorizer = new sst.aws.Function('RealtimeAuthorizer', {
+      handler: '../../apps/api/src/realtime-authorizer.handler',
+      link: [database, api, authSecret, googleClientSecret],
+      environment: authEnvironment,
+    });
+    const realtimeApi = new aws.appsync.Api('RealtimeApi', {
+      name: `${$app.name}-${$app.stage}-realtime`,
+      eventConfig: {
+        authProviders: [
+          {
+            authType: 'AWS_LAMBDA',
+            // No caching: a cached decision would be reused for other channels.
+            lambdaAuthorizerConfig: {
+              authorizerUri: realtimeAuthorizer.arn,
+              authorizerResultTtlInSeconds: 0,
+            },
+          },
+          { authType: 'AWS_IAM' },
+        ],
+        connectionAuthModes: [{ authType: 'AWS_LAMBDA' }],
+        defaultSubscribeAuthModes: [{ authType: 'AWS_LAMBDA' }],
+        defaultPublishAuthModes: [{ authType: 'AWS_IAM' }],
+      },
+    });
+    new aws.lambda.Permission('RealtimeAuthorizerInvoke', {
+      action: 'lambda:InvokeFunction',
+      function: realtimeAuthorizer.name,
+      principal: 'appsync.amazonaws.com',
+      sourceArn: realtimeApi.apiArn,
+    });
+    new aws.appsync.ChannelNamespace('RealtimeTrips', { apiId: realtimeApi.apiId, name: 'trips' });
+    const realtime = new sst.Linkable('Realtime', {
+      properties: { http: realtimeApi.dns.apply((dns) => dns.HTTP!) },
+      include: [
+        sst.aws.permission({
+          actions: ['appsync:EventPublish'],
+          resources: [$interpolate`${realtimeApi.apiArn}/*`],
+        }),
+      ],
+    });
+
     // Single-page Expo web export on S3 + CloudFront. Unknown paths fall back to index.html
     // so deep links like /trips/:id load the app.
     const web = new sst.aws.StaticSite('Web', {
       path: '../../apps/mobile',
       build: { command: 'pnpm export:web', output: 'dist' },
-      environment: { EXPO_PUBLIC_API_URL: api.url },
+      environment: {
+        EXPO_PUBLIC_API_URL: api.url,
+        EXPO_PUBLIC_REALTIME_URL: realtimeApi.dns.apply((dns) => dns.REALTIME!),
+      },
       transform: {
         // A distribution has no name, only a comment (default "Web site"); put the stage in it.
         cdn: (args) => {
@@ -67,15 +121,10 @@ export default $config({
       },
     });
 
-    // Better Auth (apps/api/src/auth.ts). Secret values come from SST_SECRET_<name>, which the
-    // deploy workflow sets from GitHub environment secrets (docs/deploy.md#secrets).
-    const authSecret = new sst.Secret('BetterAuthSecret');
-    const googleClientSecret = new sst.Secret('GoogleClientSecret');
     api.route('$default', {
       handler: '../../apps/api/src/lambda.handler',
-      link: [database, api, web, authSecret, googleClientSecret],
-      // OAuth client IDs are public; one Google Cloud OAuth client per stage.
-      environment: { GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage] },
+      link: [database, api, web, authSecret, googleClientSecret, realtime],
+      environment: authEnvironment,
     });
 
     return { url: web.url, api: api.url };
