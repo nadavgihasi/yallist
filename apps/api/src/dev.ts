@@ -30,6 +30,10 @@ const auth = createAuth(db, {
 });
 
 // API Gateway answers CORS in AWS, for any origin (infra/app/sst.config.ts); locally, this does.
-const app = new Hono().use(cors()).route('/', createApp(auth, db));
+// No realtime locally: publishing is a no-op.
+const app = new Hono().use(cors()).route(
+  '/',
+  createApp(auth, db, async () => {}),
+);
 
 serve({ fetch: app.fetch, port }, () => console.log(`API on http://localhost:${port}`));
