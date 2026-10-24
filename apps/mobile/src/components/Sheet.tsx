@@ -66,31 +66,32 @@ export function Sheet({
           <View style={styles.grabberRow}>
             <View style={styles.grabber} />
           </View>
+          {/* Pinned: only the body scrolls, so the title and X stay in reach. */}
+          <View style={[styles.header, !subtitle && { alignItems: 'center' }]}>
+            <View style={styles.titles}>
+              <Text
+                nativeID={TITLE_ID}
+                style={[styles.title, { fontSize: titleSize, lineHeight: titleSize + 4 }]}
+                accessibilityRole="header"
+              >
+                {title}
+              </Text>
+              {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={he.close}
+              onPress={onClose}
+              style={styles.close}
+            >
+              <Icon name="close" />
+            </Pressable>
+          </View>
           <ScrollView
-            contentContainerStyle={[styles.body, { gap }]}
+            contentContainerStyle={[styles.body, { gap, paddingTop: gap }]}
             keyboardShouldPersistTaps="handled"
             automaticallyAdjustKeyboardInsets
           >
-            <View style={[styles.header, !subtitle && { alignItems: 'center' }]}>
-              <View style={styles.titles}>
-                <Text
-                  nativeID={TITLE_ID}
-                  style={[styles.title, { fontSize: titleSize, lineHeight: titleSize + 4 }]}
-                  accessibilityRole="header"
-                >
-                  {title}
-                </Text>
-                {subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={he.close}
-                onPress={onClose}
-                style={styles.close}
-              >
-                <Icon name="close" />
-              </Pressable>
-            </View>
             {children}
           </ScrollView>
           {footer && <View style={styles.footer}>{footer}</View>}
@@ -117,8 +118,10 @@ const styles = StyleSheet.create({
   },
   grabberRow: { alignItems: 'center', paddingTop: 10 },
   grabber: { width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(14,23,38,0.18)' },
-  body: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 20 },
+  body: { paddingHorizontal: 20, paddingBottom: 20 },
   header: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
