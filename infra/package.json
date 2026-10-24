@@ -1,0 +1,14 @@
+{
+  "name": "@yallist/infra",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "sst": "cd app && sst",
+    "deploy:dev": "cd app && sst deploy --stage dev",
+    "deploy:prod": "cd app && sst deploy --stage production",
+    "deploy:global": "cd global && sst deploy --stage global"
+  },
+  "devDependencies": {
+    "sst": "4.17.2"
+  }
+}

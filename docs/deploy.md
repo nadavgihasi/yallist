@@ -1,8 +1,8 @@
 # Deploying the web app
 
-Infrastructure is [SST](https://sst.dev), in two SST apps:
+Infrastructure is [SST](https://sst.dev), in two SST apps. Both live in the `@yallist/infra` workspace package under [infra/](../infra), which owns the `sst` dependency and the deploy scripts; the root `pnpm deploy:*` and `pnpm sst` scripts delegate to it.
 
-- **App** ([sst.config.ts](../sst.config.ts)): today one static site, the Expo web export on S3 + CloudFront. Stages `dev` and `production`.
+- **App** ([infra/app/sst.config.ts](../infra/app/sst.config.ts)): today one static site, the Expo web export on S3 + CloudFront. Stages `dev` and `production`.
 - **Global** ([infra/global/sst.config.ts](../infra/global/sst.config.ts)): account-wide resources in `eu-central-1`. These are the $10/month budget, which emails `BUDGET_EMAIL` at 80% actual and 100% forecasted spend, and the IAM role GitHub Actions deploys with. One stage, `global`, protected.
 
 ## Deploys come from `main`
@@ -32,9 +32,9 @@ There are exactly two stages. Any other `--stage` fails before touching AWS.
 | `dev`        | `us-east-2`    | `pnpm deploy:dev`  | `yallist-dev`  | Everything is deleted.                 |
 | `production` | `eu-central-1` | `pnpm deploy:prod` | `yallist-prod` | Refused (`protect`). Buckets retained. |
 
-The profile and region are set per stage in `sst.config.ts`, not in the scripts. In CI (`CI=true`) no profile is used. That way every `sst` command (`deploy`, `diff`, `remove`) picks the right credentials without an `AWS_PROFILE=` prefix.
+The profile and region are set per stage in `infra/app/sst.config.ts`, not in the scripts. In CI (`CI=true`) no profile is used. That way every `sst` command (`deploy`, `diff`, `remove`) picks the right credentials without an `AWS_PROFILE=` prefix.
 
-Every `sst` command needs `--stage dev` or `--stage production`, including `pnpm sst install`. SST's default personal stage (your username) is rejected.
+Every `sst` command needs `--stage dev` or `--stage production`, including `pnpm sst install`. From the repo root, `pnpm sst <args>` runs `sst <args>` against the app. SST's default personal stage (your username) is rejected.
 
 ## Prerequisites
 

@@ -17,7 +17,7 @@ Every PR deploys via `main` → global → dev → production. Domain rules are 
 
 1. **`feat(api): Hono API on Lambda + API Gateway`**
    - **`apps/api`:** Hono app with `GET /health`, an `AppType` export for the typed `hc` client, and a Lambda handler. Vitest calls it through `app.request()`.
-   - **`sst.config.ts`:** `sst.aws.ApiGatewayV2('Api')` with a `$default` route to the function, and CORS for the web origin plus `localhost:8081`. The web build gets `EXPO_PUBLIC_API_URL`.
+   - **`infra/app/sst.config.ts`:** `sst.aws.ApiGatewayV2('Api')` with a `$default` route to the function, and CORS for the web origin plus `localhost:8081`. The web build gets `EXPO_PUBLIC_API_URL`.
    - **Docs:** `docs/plans/phase-1-backend.md`, and record the three decisions in `tech-decisions.md`.
 2. **`feat(db): DSQL cluster, Drizzle schema, migrations`**
    - **Cluster:** `sst.aws.Dsql('Database')` (per stage, `yallist-<stage>-…`), linked to the API, using IAM auth.
