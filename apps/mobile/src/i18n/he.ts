@@ -13,6 +13,7 @@ export const he = {
     loadFailed: 'לא הצלחנו לטעון. בודקים את החיבור ומנסים שוב.',
     retry: 'לנסות שוב',
     signIn: 'הכניסה לא הצליחה, נסו שוב',
+    sessionExpired: 'צריך להיכנס שוב',
   },
   login: {
     title: 'מי מביא מה?',
@@ -35,6 +36,8 @@ export const he = {
     nameLabel: 'איך קוראים לך?',
     namePlaceholder: 'איך קוראים לך?',
     start: 'יאללה',
+    starting: 'נכנסים…',
+    otherWays: 'דרכים אחרות להיכנס',
     google: 'המשך עם Google',
     googleSoon: 'כניסה עם Google בקרוב',
   },
@@ -259,18 +262,33 @@ export const he = {
     save: 'שמירת ההוצאה',
   },
   join: {
-    title: 'הצטרפות לטיול',
+    invited: 'הוזמנת לטיול',
     missing: 'מה עוד חסר',
     nameLabel: 'איך קוראים לך?',
     join: 'הצטרפות לטיול',
+    joining: 'מצטרפים…',
+    noAccount: 'בלי הורדה ובלי סיסמה. אפשר להתקין את האפליקציה אחר כך.',
     invalid: 'הקישור לא תקף',
     invalidText: 'אולי הוחלף בקישור חדש. מבקשים מהמארגנים את הקישור העדכני.',
     pendingTitle: 'הבקשה נשלחה',
-    pendingText: 'המארגנים יאשרו אותך בקרוב, והטיול ייפתח כאן.',
+    pendingText: 'המארגנים יאשרו אותך בקרוב, והטיול ייפתח כאן. הדף מתעדכן לבד.',
+    checkNow: 'בדיקה עכשיו',
+    checking: 'בודקים…',
     removed: 'אין אפשרות להצטרף לטיול הזה',
     toTrips: 'לטיולים שלי',
+    toStart: 'למסך הפתיחה',
   },
 } as const;
+
+/** `ועוד 5`, after a cut-off list. */
+export function andMore(n: number): string {
+  return `ועוד ${n}`;
+}
+
+/** Under the join button when already signed in. */
+export function joiningAs(name: string): string {
+  return `ההצטרפות תהיה בשם ${name}`;
+}
 
 /** `חסר 1` / `חסרים 3` */
 export function missingCount(n: number): string {
