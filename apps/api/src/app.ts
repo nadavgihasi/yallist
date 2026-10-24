@@ -16,8 +16,9 @@ export function createApp(auth: Auth, db: Db, publish: Publish) {
   const notify = (tripId: string) =>
     publish(tripId).catch((err: unknown) => console.error('Realtime publish failed', err));
 
-  // CORS for any origin (auth is bearer tokens, not cookies), echoing the requested headers.
-  // Here, not in API Gateway: its `$default` route forwards preflights to this Lambda.
+  // Answers CORS preflights with a 2xx: API Gateway's `$default` route forwards them to this
+  // Lambda. Deployed, API Gateway replaces these headers with its own (infra/app/sst.config.ts);
+  // locally, they're the ones the browser sees.
   return new Hono()
     .use(cors())
     .onError((err, c) => {
