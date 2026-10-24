@@ -5,6 +5,7 @@ import postgres from 'postgres';
 import { createApp } from './app';
 import { createAuth } from './auth';
 import type { Db } from './db/client';
+import type { Publish } from './realtime';
 
 /** Postgres server for DB tests; CI provides one. Tests that need it skip without it. */
 export const DATABASE_URL = process.env.DATABASE_URL;
@@ -27,16 +28,18 @@ export async function createTestDatabase() {
   };
 }
 
-/** The app with test auth config. */
-export function testApp(db: Db) {
-  const auth = createAuth(db, {
+/** Better Auth with test config. */
+export const testAuth = (db: Db) =>
+  createAuth(db, {
     baseURL: 'http://localhost:3000',
     webURL: 'http://localhost:8081',
     secret: 'test-secret-at-least-32-characters-long',
     google: { clientId: 'test', clientSecret: 'test' },
   });
-  return createApp(auth, db);
-}
+
+/** The app with test auth config; realtime events go to `publish`. */
+export const testApp = (db: Db, publish: Publish = async () => {}) =>
+  createApp(testAuth(db), db, publish);
 
 /** A new guest user, with the headers that authenticate as them. */
 export async function signInAsGuest(app: ReturnType<typeof testApp>, name: string) {

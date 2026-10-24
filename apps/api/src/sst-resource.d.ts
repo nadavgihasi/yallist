@@ -8,6 +8,7 @@ declare module 'sst' {
     BetterAuthSecret: { value: string };
     Database: { endpoint: string; region: string };
     GoogleClientSecret: { value: string };
+    Realtime: { http: string };
     Web: { url: string };
   }
 }
