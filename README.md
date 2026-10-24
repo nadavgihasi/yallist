@@ -15,9 +15,11 @@ Requires Node 22+ and pnpm 10.
 
 ```sh
 pnpm install
-pnpm --filter mobile web   # opens the web app at http://localhost:8081
+# The API on http://localhost:3000, against a local Postgres (migrated on start):
+DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres pnpm --filter @yallist/api dev
+pnpm --filter mobile web   # opens the web app at http://localhost:8081, using that API
 ```
 
-The current web MVP is local-only: everything is saved in the browser. Tap "טיול לדוגמה" on the empty home screen to see a filled-in trip.
+For Google sign-in locally, set `GOOGLE_CLIENT_ID` for the API and `EXPO_PUBLIC_GOOGLE_CLIENT_ID` for the app to the dev OAuth client ID (`infra/app/sst.config.ts`).
 
 Checks: `pnpm typecheck && pnpm lint && pnpm test && pnpm format:check`.
