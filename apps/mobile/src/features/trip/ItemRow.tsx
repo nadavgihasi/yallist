@@ -31,8 +31,10 @@ export function ItemRow({
   const qty = quantityText(item, claims);
   const mine = view.myQuantity(item.id);
 
+  // Once bought (it has an expense), claims are settled: show who has it instead of controls.
+  const bought = status.kind === 'bought';
   let action = null;
-  if (item.kind === 'each') {
+  if (item.kind === 'each' && !bought) {
     action = (
       <PillButton
         label={he.trip.have}
@@ -42,7 +44,7 @@ export function ItemRow({
         onPress={() => onClaim(mine ? 0 : 1)}
       />
     );
-  } else if (item.kind === 'qty') {
+  } else if (item.kind === 'qty' && !bought) {
     action = (
       <ClaimStepper
         mine={mine}

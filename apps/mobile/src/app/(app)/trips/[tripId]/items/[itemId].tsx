@@ -1,4 +1,4 @@
-import { claimCap, linkedExpense, parseShekel } from '@yallist/domain';
+import { claimCap, linkedExpense, parseShekel, type Expense } from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
@@ -60,33 +60,40 @@ function ItemSheetBody({
   const [shares, setShares] = useShares(view, expense?.shares);
   const [note, setNote] = useState(item.note ?? '');
 
-  // Save the note however the sheet goes away (X, scrim, save, Escape, Android back).
-  const noteRef = useRef(note);
-  const changeNote = (text: string) => {
-    noteRef.current = text;
-    setNote(text);
-  };
+  const isBuy = item.list === 'buy';
+  const qty = quantityText(item, data.claims);
+  const amount = parseShekel(price);
+  const bought = status.kind === 'bought';
+  // `each` items are everyone's own purchase, so they aren't priced as one shared expense.
+  const canPrice = isBuy && item.kind !== 'each' && (mine > 0 || !!expense);
+  const expenseEdit =
+    expense &&
+    amount &&
+    shares.length > 0 &&
+    (amount !== expense.amountAgorot ||
+      shares.length !== expense.shares.length ||
+      shares.some((id) => !expense.shares.includes(id)))
+      ? { ...expense, amountAgorot: amount, shares }
+      : undefined;
+
+  // Save edits however the sheet goes away (X, scrim, Escape, browser or Android back): keep the
+  // latest valid ones in a ref and dispatch them on unmount.
+  const edits = useRef<{ note?: string; expense?: Expense }>({});
+  useEffect(() => {
+    edits.current = { note, expense: expenseEdit };
+  });
   useEffect(() => {
     const original = item.note ?? '';
     return () => {
-      if (noteRef.current !== original) {
-        dispatch({ type: 'setNote', tripId, itemId, note: noteRef.current });
+      const { note: latest, expense: edited } = edits.current;
+      if (latest !== undefined && latest !== original) {
+        dispatch({ type: 'setNote', tripId, itemId, note: latest });
       }
+      if (edited) dispatch({ type: 'saveExpense', tripId, expense: edited });
     };
     // Only on unmount: compare against the note as it was when the sheet opened.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const isBuy = item.list === 'buy';
-  const qty = quantityText(item, data.claims);
-  const amount = parseShekel(price);
-  // `each` items are everyone's own purchase, so they aren't priced as one shared expense.
-  const canPrice = isBuy && item.kind !== 'each' && (mine > 0 || !!expense);
-  const dirty =
-    !!expense &&
-    (amount !== expense.amountAgorot ||
-      shares.length !== expense.shares.length ||
-      shares.some((id) => !expense.shares.includes(id)));
 
   const claim = (quantity: number) =>
     dispatch({ type: 'setClaim', tripId, itemId: item.id, userId: me, quantity });
@@ -108,8 +115,11 @@ function ItemSheetBody({
     onClose();
   };
 
-  // The parent closes the sheet once the item is gone.
-  const remove = () => dispatch({ type: 'deleteItem', tripId, itemId: item.id });
+  // The parent closes the sheet once the item is gone; don't save edits to it on the way out.
+  const remove = () => {
+    edits.current = {};
+    dispatch({ type: 'deleteItem', tripId, itemId: item.id });
+  };
 
   return (
     <Sheet
@@ -121,16 +131,16 @@ function ItemSheetBody({
       gap={22}
       footer={
         <>
-          {canPrice && (!expense || dirty) && (
+          {canPrice && !expense && (
             <PillButton
-              label={expense ? he.item.updatePrice : he.item.markBought}
+              label={he.item.markBought}
               size="xl"
               wide
               disabled={!amount || shares.length === 0}
               onPress={saveBought}
             />
           )}
-          {expense && !dirty && (
+          {expense && (
             <PillButton
               label={he.item.unmarkBought}
               variant="neutral"
@@ -162,7 +172,7 @@ function ItemSheetBody({
             onPress={() => claim(item.quantityNeeded)}
           />
         )}
-        {item.kind === 'qty' && (
+        {item.kind === 'qty' && !bought && (
           <ClaimStepper
             mine={mine}
             canAdd={claimCap(item, data.claims, me) > mine}
@@ -186,6 +196,7 @@ function ItemSheetBody({
             value={price}
             onChangeText={setPrice}
             onSubmitEditing={saveBought}
+            error={price.trim() && amount === undefined ? he.invalidAmount : undefined}
           />
           <SharePicker view={view} shares={shares} onChange={setShares} amount={amount} />
         </>
@@ -195,7 +206,7 @@ function ItemSheetBody({
         <Text style={fieldStyles.label}>{he.item.note}</Text>
         <TextInput
           value={note}
-          onChangeText={changeNote}
+          onChangeText={setNote}
           multiline
           accessibilityLabel={he.item.note}
           style={styles.note}

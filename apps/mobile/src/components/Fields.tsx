@@ -38,12 +38,15 @@ export function AmountField({
   onChangeText,
   size = 'md',
   onSubmitEditing,
+  error,
 }: {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
   size?: keyof typeof AMOUNT_SIZES;
   onSubmitEditing?: () => void;
+  /** Shown under the field, e.g. when the text isn't a valid amount. */
+  error?: string;
 }) {
   const sz = AMOUNT_SIZES[size];
   return (
@@ -63,6 +66,11 @@ export function AmountField({
           style={[styles.amountInput, { fontSize: sz.input }]}
         />
       </View>
+      {error && (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      )}
     </View>
   );
 }
@@ -93,6 +101,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
   },
+  error: { fontFamily: fonts.medium, fontSize: 13, color: colors.missing },
   currency: { fontFamily: fonts.display, fontSize: 30, color: colors.inkSecondary },
   amountInput: {
     flex: 1,

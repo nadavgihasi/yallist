@@ -72,6 +72,7 @@ function AddExpenseBody({ data }: { data: TripData }) {
         onChangeText={setAmount}
         size="lg"
         onSubmitEditing={save}
+        error={amount.trim() && agorot === undefined ? he.invalidAmount : undefined}
       />
 
       <View style={styles.field}>

@@ -3,6 +3,7 @@ export const he = {
   appName: 'Yallist',
   close: 'סגירה',
   unknownPerson: 'לא ידוע',
+  invalidAmount: 'סכום לא תקין',
   me: 'אני',
   login: {
     title: 'כל הטיול ברשימה אחת',
@@ -176,7 +177,6 @@ export const he = {
     pickSomeone: 'בוחרים לפחות משתתף אחד',
     note: 'הערה',
     markBought: 'סימון כנקנה',
-    updatePrice: 'שמירת הסכום',
     unmarkBought: 'ביטול הסימון כנקנה',
     delete: 'מחיקת הפריט',
   },
