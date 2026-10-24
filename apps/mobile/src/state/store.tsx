@@ -4,6 +4,8 @@ import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
+import { showToast } from '@/components/Toast';
+import { he } from '@/i18n/he';
 import { setAuth, statusOf, type AuthResult } from '@/lib/api';
 
 import { cacheBuster } from './cacheBuster';
@@ -53,8 +55,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const activate = (next: Session | null) => {
     setAuth(next?.token, () => {
-      // The session expired or was revoked: back to the login screen.
+      // The session expired or was revoked: back to the login screen, saying why.
       AsyncStorage.removeItem(SESSION_KEY).catch(() => {});
+      showToast(he.errors.sessionExpired);
       queryClient.clear();
       activate(null);
     });

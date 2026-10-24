@@ -7,7 +7,7 @@ import { TextField } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { GoogleButton } from '@/features/auth/GoogleButton';
-import { he, missingItems, participants } from '@/i18n/he';
+import { andMore, he, joiningAs, missingItems, participants } from '@/i18n/he';
 import { signInAsGuest, signInWithGoogle, statusOf, type AuthResult } from '@/lib/api';
 import { formatRange } from '@/lib/dates';
 import { useSession } from '@/state/store';
@@ -29,7 +29,8 @@ export default function Join() {
     queryKey: ['join', token],
     queryFn: () => joinTrip(token),
     enabled: state === 'pending',
-    refetchInterval: 10_000,
+    // Stops once declined (403): the page says so instead.
+    refetchInterval: (query) => (statusOf(query.state.error) === 403 ? false : 10_000),
     // While they switch to WhatsApp to nudge the organizer, too.
     refetchIntervalInBackground: true,
     gcTime: 0,
@@ -45,18 +46,30 @@ export default function Join() {
     if (approvedTrip) open(approvedTrip);
   });
 
-  const join = async (signingIn?: Promise<AuthResult>) => {
+  const join = async (signingIn?: () => Promise<AuthResult>) => {
+    if (busy) return;
     setBusy(true);
     try {
-      if (signingIn) await signIn(await signingIn);
+      if (signingIn) await signIn(await signingIn());
+    } catch {
+      setBusy(false);
+      return showToast(he.errors.signIn);
+    }
+    try {
       const result = await joinTrip(token);
       if (result.status === 'active') return open(result.tripId);
       setState('pending');
     } catch (error) {
-      if (statusOf(error) === 403) setState('removed');
-      else showToast(he.errors.failed);
+      const status = statusOf(error);
+      if (status === 403) setState('removed');
+      // 401: the session expired; the store says so and this page asks for a name again.
+      else if (status !== 401) showToast(he.errors.failed);
     }
     setBusy(false);
+  };
+  const joinAsGuest = () => {
+    const trimmed = name.trim();
+    if (trimmed) join(() => signInAsGuest(trimmed));
   };
 
   if (invite.isPending) return <ActivityIndicator color={colors.primary} style={styles.center} />;
@@ -67,15 +80,18 @@ export default function Join() {
       <Message
         title={invalid ? he.join.invalid : he.errors.loadFailed}
         text={invalid ? he.join.invalidText : undefined}
+        signedIn={!!me}
+        onRetry={invalid ? undefined : () => invite.refetch()}
       />
     );
   }
-  if (state === 'removed') return <Message title={he.join.removed} />;
+  if (state === 'removed' || statusOf(recheck.error) === 403)
+    return <Message title={he.join.removed} signedIn={!!me} />;
 
   const trip = invite.data;
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
-      <Text style={styles.kicker}>{he.join.title}</Text>
+      <Text style={styles.kicker}>{he.join.invited}</Text>
       <View style={styles.card}>
         <Text style={styles.name} accessibilityRole="header">
           {trip.name}
@@ -86,18 +102,48 @@ export default function Join() {
         {trip.missingCount > 0 && (
           <View style={styles.missing}>
             <Text style={styles.missingTitle}>{missingItems(trip.missingCount)}</Text>
-            <Text style={styles.meta}>{trip.missingItems.join(', ')}</Text>
+            <Text style={styles.meta}>
+              {(trip.missingCount > trip.missingItems.length
+                ? [...trip.missingItems, andMore(trip.missingCount - trip.missingItems.length)]
+                : trip.missingItems
+              ).join(', ')}
+            </Text>
           </View>
         )}
       </View>
 
       {state === 'pending' ? (
-        <View style={styles.card} accessibilityLiveRegion="polite">
-          <Text style={styles.strong}>{he.join.pendingTitle}</Text>
-          <Text style={styles.meta}>{he.join.pendingText}</Text>
-        </View>
+        <>
+          <View style={styles.card} accessibilityLiveRegion="polite">
+            <Text style={styles.strong}>{he.join.pendingTitle}</Text>
+            <Text style={styles.meta}>{he.join.pendingText}</Text>
+          </View>
+          <PillButton
+            label={recheck.isFetching ? he.join.checking : he.join.checkNow}
+            variant="soft"
+            size="lg"
+            wide
+            disabled={recheck.isFetching}
+            onPress={() => recheck.refetch()}
+          />
+          <PillButton
+            label={he.join.toTrips}
+            variant="quiet"
+            wide
+            onPress={() => router.replace('/')}
+          />
+        </>
       ) : me ? (
-        <PillButton label={he.join.join} size="lg" wide disabled={busy} onPress={() => join()} />
+        <>
+          <PillButton
+            label={busy ? he.join.joining : he.join.join}
+            size="lg"
+            wide
+            disabled={busy}
+            onPress={() => join()}
+          />
+          <Text style={styles.note}>{joiningAs(me.name)}</Text>
+        </>
       ) : (
         <>
           <View style={styles.card}>
@@ -105,33 +151,50 @@ export default function Join() {
               label={he.join.nameLabel}
               value={name}
               onChangeText={setName}
-              onSubmitEditing={() => name.trim() && join(signInAsGuest(name.trim()))}
+              onSubmitEditing={joinAsGuest}
               placeholder={he.login.namePlaceholder}
               returnKeyType="go"
             />
           </View>
           <PillButton
-            label={he.join.join}
+            label={busy ? he.join.joining : he.join.join}
             size="lg"
             wide
             disabled={!name.trim() || busy}
-            onPress={() => join(signInAsGuest(name.trim()))}
+            onPress={joinAsGuest}
           />
-          <GoogleButton onIdToken={(idToken) => join(signInWithGoogle(idToken))} />
+          <Text style={styles.note}>{he.join.noAccount}</Text>
+          <GoogleButton onIdToken={(idToken) => join(() => signInWithGoogle(idToken))} />
         </>
       )}
     </ScrollView>
   );
 }
 
-function Message({ title, text }: { title: string; text?: string }) {
+function Message({
+  title,
+  text,
+  signedIn,
+  onRetry,
+}: {
+  title: string;
+  text?: string;
+  signedIn: boolean;
+  onRetry?: () => void;
+}) {
   return (
     <View style={styles.screen}>
       <Text style={styles.title} accessibilityRole="header">
         {title}
       </Text>
       {text && <Text style={styles.meta}>{text}</Text>}
-      <PillButton label={he.join.toTrips} size="lg" onPress={() => router.replace('/')} />
+      {onRetry && <PillButton label={he.errors.retry} size="lg" onPress={onRetry} />}
+      <PillButton
+        label={signedIn ? he.join.toTrips : he.join.toStart}
+        variant={onRetry ? 'quiet' : 'solid'}
+        size="lg"
+        onPress={() => router.replace('/')}
+      />
     </View>
   );
 }
@@ -160,4 +223,5 @@ const styles = StyleSheet.create({
   missing: { gap: space[1], marginTop: space[2] },
   missingTitle: { ...type.itemTitle, color: colors.ink },
   strong: { ...type.itemTitle, color: colors.ink },
+  note: { ...type.caption, color: colors.inkMuted, textAlign: 'center' },
 });

@@ -1,4 +1,4 @@
-import { Redirect, router } from 'expo-router';
+import { Redirect, router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,18 +19,21 @@ import { colors, layout, radius, space, type } from '@/theme';
 
 export default function Login() {
   const { me, signIn } = useSession();
+  // Where a deep link was headed before it was sent here; only paths inside the app.
+  const { next } = useLocalSearchParams<{ next?: string }>();
+  const target = (next?.startsWith('/') && !next.startsWith('//') ? next : '/') as Href;
   const insets = useSafeAreaInsets();
   const [askName, setAskName] = useState(false);
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
 
-  if (me) return <Redirect href="/" />;
+  if (me) return <Redirect href={target} />;
 
   const enter = (request: Promise<AuthResult>) => {
     setBusy(true);
     request
       .then(signIn)
-      .then(() => router.replace('/'))
+      .then(() => router.replace(target))
       .catch(() => {
         setBusy(false);
         showToast(he.errors.signIn);
@@ -78,11 +81,18 @@ export default function Login() {
                 style={styles.input}
               />
               <PillButton
-                label={he.login.start}
+                label={busy ? he.login.starting : he.login.start}
                 size="lg"
                 wide
                 disabled={!name.trim() || busy}
                 onPress={start}
+              />
+              <PillButton
+                label={he.login.otherWays}
+                variant="quiet"
+                wide
+                disabled={busy}
+                onPress={() => setAskName(false)}
               />
             </>
           ) : (
