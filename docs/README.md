@@ -1,11 +1,11 @@
 # Docs
 
-| Doc | What it is |
-|---|---|
-| [SPEC.md](SPEC.md) | Product spec: behavior, data model, domain rules, screens, design system, build plan. |
+| Doc                                    | What it is                                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [SPEC.md](SPEC.md)                     | Product spec: behavior, data model, domain rules, screens, design system, build plan.       |
 | [tech-decisions.md](tech-decisions.md) | Stack and infrastructure choices, plus how the SPEC's Supabase-based parts were overridden. |
-| [design/](design/README.md) | The 17 interactive mockups — source of truth for layout, copy and look. |
-| [plans/](plans/README.md) | Implementation plans, one per phase. |
+| [design/](design/README.md)            | The 17 interactive mockups — source of truth for layout, copy and look.                     |
+| [plans/](plans/README.md)              | Implementation plans, one per phase.                                                        |
 
 ## Which one wins
 

@@ -12,13 +12,13 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 
 ## Resolved conflicts with SPEC (2026-10-24)
 
-| Topic | SPEC.md said | Decision |
-|---|---|---|
-| Backend | Supabase (RLS, triggers, pg_cron, Realtime, Edge Functions) | **Hono on Lambda + Aurora DSQL + SST.** RLS and `SECURITY DEFINER` RPCs become authorization checks and transactional handlers in the API. Activity rows are written in the same transaction as the change. Scheduled jobs (day-before reminder) run on EventBridge. |
-| Cost split | Equal among each expense's participants, with exclusions | **Same as SPEC.** The earlier "organizer picks equal or by shares" idea is dropped. |
-| Sign-in | Anonymous join by link + Google + Apple | **Anonymous + Google now; Apple added when iOS ships** (App Store rules require it then). |
-| Realtime | Realtime sync on the trip screen | **Same as SPEC: realtime in v1.** Transport still open, see below. |
-| Platforms | iOS, Android and web from Phase 0 | **Android + web first, iOS later.** iPhone users use the web version until then. |
+| Topic      | SPEC.md said                                                | Decision                                                                                                                                                                                                                                                             |
+| ---------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend    | Supabase (RLS, triggers, pg_cron, Realtime, Edge Functions) | **Hono on Lambda + Aurora DSQL + SST.** RLS and `SECURITY DEFINER` RPCs become authorization checks and transactional handlers in the API. Activity rows are written in the same transaction as the change. Scheduled jobs (day-before reminder) run on EventBridge. |
+| Cost split | Equal among each expense's participants, with exclusions    | **Same as SPEC.** The earlier "organizer picks equal or by shares" idea is dropped.                                                                                                                                                                                  |
+| Sign-in    | Anonymous join by link + Google + Apple                     | **Anonymous + Google now; Apple added when iOS ships** (App Store rules require it then).                                                                                                                                                                            |
+| Realtime   | Realtime sync on the trip screen                            | **Same as SPEC: realtime in v1.** Transport still open, see below.                                                                                                                                                                                                   |
+| Platforms  | iOS, Android and web from Phase 0                           | **Android + web first, iOS later.** iPhone users use the web version until then.                                                                                                                                                                                     |
 
 ## Language
 
