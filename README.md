@@ -11,7 +11,7 @@ Working name — not final. Start with [docs/](docs/README.md):
 
 ## Run it
 
-Requires Node 22+ and pnpm 10.
+Requires Node 24+ (`nvm use` reads `.nvmrc`) and pnpm 10.
 
 ```sh
 pnpm install
