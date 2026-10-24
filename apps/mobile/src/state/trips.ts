@@ -5,7 +5,7 @@ import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
 import { api, statusOf } from '@/lib/api';
 
-import { applyAction, type Action } from './reducer';
+import { applyAction, type Action, type NewItemInput } from './reducer';
 import { useMe } from './store';
 import type { TripData } from './types';
 
@@ -55,6 +55,13 @@ export const joinTrip = (token: string) =>
 async function send(tripId: string, action: Action): Promise<unknown> {
   const trip = api.trips[':tripId'];
   const param = { tripId };
+  /** The item, put into a category created for it first when `newCategory` is given. */
+  const withNewCategory = async (item: NewItemInput, newCategory?: string) => {
+    if (!newCategory) return item;
+    const json = { list: item.list, name: newCategory };
+    const category = await parseResponse(trip.categories.$post({ param, json }));
+    return { ...item, categoryId: category.id };
+  };
   const claim = (itemId: string, quantity: number) =>
     parseResponse(
       trip.items[':itemId'].claim.$put({ param: { ...param, itemId }, json: { quantity } }),
@@ -63,7 +70,8 @@ async function send(tripId: string, action: Action): Promise<unknown> {
     case 'setClaim':
       return claim(action.itemId, action.quantity);
     case 'addItem': {
-      const item = await parseResponse(trip.items.$post({ param, json: action.item }));
+      const json = await withNewCategory(action.item, action.newCategory);
+      const item = await parseResponse(trip.items.$post({ param, json }));
       return action.claim > 0 && claim(item.id, action.claim);
     }
     case 'deleteItem':
@@ -74,7 +82,28 @@ async function send(tripId: string, action: Action): Promise<unknown> {
       return parseResponse(
         trip.items[':itemId'].$patch({
           param: { ...param, itemId: action.itemId },
-          json: action.changes,
+          json: await withNewCategory(action.changes, action.newCategory),
+        }),
+      );
+    case 'addCategory': {
+      const { list, name } = action;
+      return parseResponse(trip.categories.$post({ param, json: { list, name } }));
+    }
+    case 'renameCategory':
+      return parseResponse(
+        trip.categories[':categoryId'].$patch({
+          param: { ...param, categoryId: action.categoryId },
+          json: { name: action.name },
+        }),
+      );
+    case 'reorderCategories': {
+      const { list, categoryIds } = action;
+      return parseResponse(trip.categories.order.$put({ param, json: { list, categoryIds } }));
+    }
+    case 'deleteCategory':
+      return parseResponse(
+        trip.categories[':categoryId'].$delete({
+          param: { ...param, categoryId: action.categoryId },
         }),
       );
     case 'setNote':
@@ -132,13 +161,16 @@ export function useTripAction(tripId: string) {
     onError: (error, action, context) => {
       if (context?.before) queryClient.setQueryData(key, context.before);
       const conflict = statusOf(error) === 409;
-      showToast(
-        conflict && action.type === 'setClaim'
+      const message = !conflict
+        ? he.errors.failed
+        : action.type === 'setClaim'
           ? he.errors.claimTaken
-          : conflict && action.type === 'editItem'
-            ? he.errors.itemEditRefused
-            : he.errors.failed,
-      );
+          : action.type === 'addCategory' || action.type === 'renameCategory'
+            ? he.errors.categoryExists
+            : action.type === 'editItem'
+              ? he.errors.itemEditRefused
+              : he.errors.failed;
+      showToast(message);
     },
     // Refetch after the last queued change only; an earlier refetch would undo later ones.
     // Returning the refetch keeps the change pending until the screen shows the server's state.

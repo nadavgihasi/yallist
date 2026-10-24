@@ -7,7 +7,8 @@ export interface NewItemInput {
   name: string;
   kind: ItemKind;
   quantityNeeded: number;
-  category: string;
+  /** Null: uncategorized. */
+  categoryId: string | null;
 }
 
 export interface NewExpenseInput {
@@ -21,9 +22,14 @@ export interface NewExpenseInput {
 /** A change to a trip, sent to the API by `useTripAction`. */
 export type Action =
   | { type: 'setClaim'; itemId: string; quantity: number }
-  | { type: 'addItem'; item: NewItemInput; claim: number }
+  // `newCategory`: create a category of that name first, and put the item in it.
+  | { type: 'addItem'; item: NewItemInput; claim: number; newCategory?: string }
   | { type: 'deleteItem'; itemId: string }
-  | { type: 'editItem'; itemId: string; changes: NewItemInput }
+  | { type: 'editItem'; itemId: string; changes: NewItemInput; newCategory?: string }
+  | { type: 'addCategory'; list: ListKind; name: string }
+  | { type: 'renameCategory'; categoryId: string; name: string }
+  | { type: 'reorderCategories'; list: ListKind; categoryIds: string[] }
+  | { type: 'deleteCategory'; categoryId: string }
   | { type: 'setNote'; itemId: string; note: string }
   | { type: 'addExpense'; expense: NewExpenseInput }
   | { type: 'deleteExpense'; expenseId: string }
@@ -33,7 +39,8 @@ export type Action =
 
 /**
  * The trip as it will be once the API accepts `action`, shown right away (optimistic update).
- * Changes that need a server-made id (new items, expenses, payments) wait for the API instead.
+ * Changes that need a server-made id (new items, categories, expenses, payments) wait for the API
+ * instead.
  */
 export function applyAction(data: TripData, action: Action, me: string): TripData {
   switch (action.type) {
@@ -58,10 +65,44 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
           e.itemId === action.itemId ? { ...e, itemId: undefined } : e,
         ),
       };
-    case 'editItem':
+    case 'editItem': {
+      const { changes, newCategory } = action;
       return {
         ...data,
-        items: data.items.map((i) => (i.id === action.itemId ? { ...i, ...action.changes } : i)),
+        items: data.items.map((i) =>
+          i.id === action.itemId
+            ? {
+                ...i,
+                ...changes,
+                // A new category has no id yet: the item stays where it is until the API answers.
+                categoryId: newCategory ? i.categoryId : (changes.categoryId ?? undefined),
+              }
+            : i,
+        ),
+      };
+    }
+    case 'renameCategory':
+      return {
+        ...data,
+        categories: data.categories.map((c) =>
+          c.id === action.categoryId ? { ...c, name: action.name } : c,
+        ),
+      };
+    case 'reorderCategories':
+      return {
+        ...data,
+        categories: data.categories.map((c) => {
+          const position = action.categoryIds.indexOf(c.id);
+          return position < 0 ? c : { ...c, position };
+        }),
+      };
+    case 'deleteCategory':
+      return {
+        ...data,
+        categories: data.categories.filter((c) => c.id !== action.categoryId),
+        items: data.items.map((i) =>
+          i.categoryId === action.categoryId ? { ...i, categoryId: undefined } : i,
+        ),
       };
     case 'setNote':
       return {

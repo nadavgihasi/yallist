@@ -44,8 +44,9 @@ export default function TripScreen() {
     tab?: string;
     itemId?: string;
     list?: string;
+    categoryId?: string;
   }>();
-  const { tripId, itemId, list } = params;
+  const { tripId, itemId, list, categoryId } = params;
   const query = useTripQuery(tripId);
   const data = query.data;
   const me = useMe();
@@ -64,8 +65,10 @@ export default function TripScreen() {
   // screen is focused again: `router.setParams` targets the focused route, not necessarily this one.
   useFocusEffect(
     useCallback(() => {
-      if (itemId || list) router.setParams({ itemId: undefined, list: undefined });
-    }, [itemId, list]),
+      if (itemId || list || categoryId) {
+        router.setParams({ itemId: undefined, list: undefined, categoryId: undefined });
+      }
+    }, [itemId, list, categoryId]),
   );
 
   if (!data) {
