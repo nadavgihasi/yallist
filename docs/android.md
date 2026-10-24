@@ -21,7 +21,7 @@ The run's artifact `yallist-android-<stage>-<run>` contains:
 - `app-release.aab`: upload to Play Console → Testing → Internal testing.
 - `app-release.apk`: sideload until Play is ready. Download the artifact from the run page and unzip it (or `gh run download <run-id>`), copy the APK to the phone, open it and allow "install unknown apps" for the browser/file manager.
 
-`versionCode` is the workflow run number, so every run can be uploaded to Play. Bump `version` in `apps/mobile/app.json` for user-visible versions.
+`versionCode` is the workflow run number, so every run can be uploaded to Play. `versionName` is the latest release tag (see [releases.md](releases.md)).
 
 ## Play Console setup (after Google verifies the account)
 
