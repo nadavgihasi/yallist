@@ -99,6 +99,16 @@ const USER_COLUMNS = [
 export async function mergeUser(db: Db, from: string, to: string) {
   const id = sql.identifier;
   await db.transaction(async (tx) => {
+    // Where both are in a trip, the account keeps the stronger membership, so a trip never
+    // loses its organizer: organizer beats member, and active beats pending beats removed.
+    await tx.execute(sql`
+      update trip_members b set
+        role = case when a.role = 'organizer' then a.role else b.role end,
+        status = case
+          when a.status = 'active' or (a.status = 'pending' and b.status = 'removed') then a.status
+          else b.status end
+      from trip_members a
+      where a.trip_id = b.trip_id and a.user_id = ${from} and b.user_id = ${to}`);
     for (const [table, key] of USER_KEYED) {
       await tx.execute(sql`
         delete from ${id(table)} a where a.user_id = ${from} and exists (

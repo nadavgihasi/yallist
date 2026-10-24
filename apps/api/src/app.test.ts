@@ -68,7 +68,7 @@ describe.skipIf(!DATABASE_URL)('auth', () => {
     expect((await me('not-a-token')).status).toBe(401);
   });
 
-  it('moves a guest’s data to the account they link, keeping the account’s on overlap', async () => {
+  it('moves a guest’s data to the account they link, keeping the stronger membership on overlap', async () => {
     const guest = await signInAsGuest('guest');
     const account = await signInAsGuest('account');
     const [trip] = await sql<{ id: string }[]>`
@@ -81,10 +81,38 @@ describe.skipIf(!DATABASE_URL)('auth', () => {
 
     await mergeUser(db, guest.id, account.id);
 
+    // The guest organized the trip, so the account takes over as organizer.
     expect(await sql`select user_id, role from trip_members`).toEqual([
-      { user_id: account.id, role: 'member' },
+      { user_id: account.id, role: 'organizer' },
     ]);
     expect(await sql`select created_by from trips`).toEqual([{ created_by: account.id }]);
     expect(await sql`select id from profiles where id = ${guest.id}`).toEqual([]);
+  });
+
+  it('keeps the stronger role and status of overlapping memberships', async () => {
+    const guest = await signInAsGuest('guest');
+    const account = await signInAsGuest('account');
+    const trips = await sql<{ id: string }[]>`
+      insert into trips (name, starts_on, ends_on, template, invite_token, created_by)
+      values ('A', '2026-11-01', '2026-11-02', 'camp', 'token-a', ${account.id}),
+             ('B', '2026-11-01', '2026-11-02', 'camp', 'token-b', ${account.id})
+      returning id`;
+    const [a, b] = trips.map((t) => t.id);
+    await sql`
+      insert into trip_members (trip_id, user_id, role, status, display_name) values
+        (${a!}, ${guest.id}, 'member', 'active', 'guest'),
+        (${a!}, ${account.id}, 'member', 'pending', 'account'),
+        (${b!}, ${guest.id}, 'member', 'pending', 'guest'),
+        (${b!}, ${account.id}, 'organizer', 'active', 'account')`;
+
+    await mergeUser(db, guest.id, account.id);
+
+    const rows = await sql`
+      select trip_id, user_id, role, status from trip_members
+      where trip_id in (${a!}, ${b!}) order by trip_id = ${b!}`;
+    expect(rows).toEqual([
+      { trip_id: a, user_id: account.id, role: 'member', status: 'active' },
+      { trip_id: b, user_id: account.id, role: 'organizer', status: 'active' },
+    ]);
   });
 });
