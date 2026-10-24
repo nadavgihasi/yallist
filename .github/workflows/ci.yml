@@ -15,7 +15,8 @@ jobs:
         env:
           POSTGRES_PASSWORD: postgres
         ports: ['5432:5432']
-        options: --health-cmd pg_isready --health-interval 2s --health-retries 15
+        # -U postgres: without it pg_isready connects as root and the container logs a FATAL every probe.
+        options: --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 15
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
     steps:
