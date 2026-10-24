@@ -60,6 +60,9 @@ export function ItemForm({
   // Typing an existing name picks that category instead of making a second one.
   const existing = categories.find((c) => c.name.toLowerCase() === newCategory.toLowerCase());
   const trimmed = name.trim();
+  // Only suggest what this list doesn't have yet.
+  const taken = new Set(data.items.filter((i) => i.list === list).map((i) => i.name.trim()));
+  const suggestions = QUICK_SUGGESTIONS[list].filter((s) => !taken.has(s));
   const valid = !!trimmed && (picked !== NEW || !!newCategory);
 
   const submit = () => {
@@ -117,9 +120,9 @@ export function ItemForm({
           autoFocus={!item}
           style={styles.input}
         />
-        {!item && (
+        {!item && suggestions.length > 0 && (
           <View style={styles.wrap}>
-            {QUICK_SUGGESTIONS[list].map((s) => (
+            {suggestions.map((s) => (
               <SuggestionChip key={s} label={s} onPress={() => setName(s)} />
             ))}
           </View>
@@ -156,7 +159,7 @@ export function ItemForm({
             <View style={styles.qtyControls}>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={he.trip.plusOne}
+                accessibilityLabel={he.addItem.more}
                 onPress={() => setQty(qty + 1)}
                 style={styles.qtyButton}
               >
@@ -165,7 +168,7 @@ export function ItemForm({
               <Text style={styles.qtyValue}>{qty}</Text>
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={he.trip.minusOne}
+                accessibilityLabel={he.addItem.less}
                 disabled={qty <= 2}
                 onPress={() => setQty(qty - 1)}
                 style={[styles.qtyButton, qty <= 2 && { opacity: 0.35 }]}

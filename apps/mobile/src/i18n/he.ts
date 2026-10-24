@@ -135,11 +135,13 @@ export const he = {
     empty: {
       missing: { title: 'אין כאן מה שחסר', text: 'כל הפריטים ברשימה הזו מכוסים.' },
       mine: { title: 'עוד לא לקחת כלום', text: 'בוחרים פריט חסר ולוחצים על ״אני אביא״.' },
+      mineBuy: { title: 'עוד לא לקחת כלום', text: 'בוחרים פריט חסר ולוחצים על ״אני אקנה״.' },
       all: { title: 'הרשימה ריקה', text: 'מוסיפים פריט בכפתור הפלוס.' },
     },
     uncategorized: 'ללא קטגוריה',
     addCategory: 'קטגוריה חדשה',
     addToCategory: 'הוספת פריט',
+    addToCategoryLabel: (name: string) => `הוספת פריט לקטגוריה ${name}`,
     editCategory: (name: string) => `עריכת הקטגוריה ${name}`,
     fab: {
       bring: 'הוספת פריט להבאה',
@@ -211,6 +213,7 @@ export const he = {
     unmarkBought: 'ביטול הסימון כנקנה',
     edit: 'עריכת הפריט',
     delete: 'מחיקת הפריט',
+    confirmDelete: 'למחוק? לוחצים שוב לאישור',
   },
   category: {
     newTitle: 'קטגוריה חדשה',
@@ -240,6 +243,8 @@ export const he = {
       each: ['לכל אחד', 'כל אחד מביא משלו'],
     },
     total: 'כמה בסך הכול',
+    more: 'עוד אחד',
+    less: 'אחד פחות',
     category: 'קטגוריה',
     newCategory: 'קטגוריה חדשה',
     claimBring: 'אני אביא את זה',

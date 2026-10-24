@@ -15,16 +15,18 @@ import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
 import { useMe } from '@/state/store';
-import { useTrip, useTripAction } from '@/state/trips';
+import { useTrip, useTripAction, useTripQuery } from '@/state/trips';
 import { colors, fonts } from '@/theme';
 
 export default function ItemSheet() {
   const { tripId, itemId } = useLocalSearchParams<{ tripId: string; itemId: string }>();
-  const data = useTrip(tripId);
+  const query = useTripQuery(tripId);
+  const data = query.data;
   const item = data?.items.find((i) => i.id === itemId);
   const act = useTripAction(tripId);
   const [editing, setEditing] = useState(false);
-  const missing = !data || !item;
+  // Opened by URL, the trip may still be loading: wait for it before deciding the item is gone.
+  const gone = data ? !item : query.isError;
   // Close exactly once. A modal that's fading out still re-renders; a second back() would also
   // pop the trip screen (e.g. right after deleting this item).
   const closed = useRef(false);
@@ -34,9 +36,9 @@ export default function ItemSheet() {
     closeSheet(tripId);
   }, [tripId]);
   useEffect(() => {
-    if (missing) close();
-  }, [missing, close]);
-  if (missing) return null;
+    if (gone) close();
+  }, [gone, close]);
+  if (!data || !item) return null;
   // Editing swaps the sheet for the item form; closing the form comes back here.
   if (editing) {
     return (
@@ -143,8 +145,11 @@ function ItemSheetBody({
     onClose();
   };
 
-  // The parent closes the sheet once the item is gone; don't save edits to it on the way out.
+  // Deleting can't be undone: the first tap asks, the second deletes. The parent closes the
+  // sheet once the item is gone; don't save edits to it on the way out.
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const remove = () => {
+    if (!confirmingDelete) return setConfirmingDelete(true);
     edits.current = {};
     act({ type: 'deleteItem', itemId: item.id });
   };
@@ -184,7 +189,7 @@ function ItemSheetBody({
             onPress={onEdit}
           />
           <PillButton
-            label={he.item.delete}
+            label={confirmingDelete ? he.item.confirmDelete : he.item.delete}
             variant="danger"
             icon={<Icon name="trash" size={18} color={colors.brandStrong} />}
             onPress={remove}

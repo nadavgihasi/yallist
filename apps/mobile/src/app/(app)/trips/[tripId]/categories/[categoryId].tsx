@@ -3,17 +3,18 @@ import { useEffect } from 'react';
 
 import { CategoryForm } from '@/features/trip/CategoryForm';
 import { closeSheet } from '@/features/trip/closeSheet';
-import { useTrip } from '@/state/trips';
+import { useTripQuery } from '@/state/trips';
 
 export default function EditCategory() {
   const { tripId, categoryId } = useLocalSearchParams<{ tripId: string; categoryId: string }>();
-  const data = useTrip(tripId);
-  // Deleted (here or by someone else): nothing left to edit.
-  const missing = !data?.categories.some((c) => c.id === categoryId);
+  const query = useTripQuery(tripId);
+  const found = !!query.data?.categories.some((c) => c.id === categoryId);
+  // Deleted (here or by someone else): nothing left to edit. Opened by URL, wait for the trip.
+  const gone = query.data ? !found : query.isError;
   useEffect(() => {
-    if (missing) closeSheet(tripId);
-  }, [missing, tripId]);
-  if (missing) return null;
+    if (gone) closeSheet(tripId);
+  }, [gone, tripId]);
+  if (!found) return null;
   return (
     <CategoryForm tripId={tripId} categoryId={categoryId} onClose={() => closeSheet(tripId)} />
   );
