@@ -6,7 +6,10 @@
  *   pnpm deploy:global   # sst deploy --stage global (BUDGET_EMAIL must be set)
  * Deployed by CI from main; the very first deploy runs locally to create the CI role.
  */
-const REPO = 'nadavgihasi/yallist';
+// GitHub issues immutable OIDC subjects for this repo (owner@id/repo@id), which keep matching
+// after a rename and can't be claimed by a new repo reusing the name.
+// See: gh api repos/nadavgihasi/yallist/actions/oidc/customization/sub
+const REPO_SUBJECT = 'repo:nadavgihasi@37207301/yallist@1431912139';
 const GITHUB_OIDC = 'token.actions.githubusercontent.com';
 
 export default $config({
@@ -68,7 +71,7 @@ export default $config({
             Action: 'sts:AssumeRoleWithWebIdentity',
             Condition: {
               StringEquals: { [`${GITHUB_OIDC}:aud`]: 'sts.amazonaws.com' },
-              StringLike: { [`${GITHUB_OIDC}:sub`]: `repo:${REPO}:environment:*` },
+              StringLike: { [`${GITHUB_OIDC}:sub`]: `${REPO_SUBJECT}:environment:*` },
             },
           },
         ],
