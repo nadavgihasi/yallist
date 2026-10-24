@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar, type AvatarPerson } from './Avatar';
@@ -18,8 +19,8 @@ export function FilterChip({
 }) {
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
       onPress={onPress}
       style={[styles.chip, selected ? styles.dark : styles.light]}
     >
@@ -52,8 +53,8 @@ export function PersonChip({
 }) {
   return (
     <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ selected }}
+      accessibilityRole="checkbox"
+      accessibilityState={{ checked: selected }}
       onPress={onPress}
       style={[
         styles.person,
@@ -70,19 +71,35 @@ export function PersonChip({
   );
 }
 
-/** Outlined suggestion chip with a leading "+". */
-export function SuggestionChip({ label, onPress }: { label: string; onPress: () => void }) {
+/** Outlined suggestion chip, with a leading "+" unless `plus={false}`. */
+export function SuggestionChip({
+  label,
+  onPress,
+  plus = true,
+}: {
+  label: string;
+  onPress: () => void;
+  plus?: boolean;
+}) {
   return (
     <Pressable accessibilityRole="button" onPress={onPress} style={styles.suggestion}>
-      <View>
-        <Text style={styles.plus}>+</Text>
-      </View>
+      {plus && <Text style={styles.plus}>+</Text>}
       <Text style={styles.suggestionLabel}>{label}</Text>
     </Pressable>
   );
 }
 
+/** Wraps radio chips so screen readers announce them as one choice. */
+export function ChipGroup({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <View style={styles.group} accessibilityRole="radiogroup" accessibilityLabel={label}>
+      {children}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  group: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: {
     minHeight: 44,
     paddingHorizontal: 16,

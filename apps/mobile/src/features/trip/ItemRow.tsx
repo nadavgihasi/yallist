@@ -8,6 +8,7 @@ import { he } from '@/i18n/he';
 import { colors, fonts } from '@/theme';
 
 import type { TripView } from './derive';
+import { ClaimStepper } from './ClaimStepper';
 import { TONE_COLOR, quantityText, statusLine } from './labels';
 
 export function ItemRow({
@@ -37,28 +38,17 @@ export function ItemRow({
         label={he.trip.have}
         variant={mine ? 'solid' : 'soft'}
         icon={mine ? <Icon name="check" size={16} color={colors.white} /> : undefined}
-        accessibilityState={{ selected: mine > 0 }}
+        accessibilityState={{ checked: mine > 0 }}
         onPress={() => onClaim(mine ? 0 : 1)}
       />
     );
   } else if (item.kind === 'qty') {
-    const canAdd = status.kind === 'missing' || status.kind === 'partial';
     action = (
-      <View style={styles.stepper}>
-        <StepButton
-          icon="plus"
-          label={he.trip.plusOne}
-          disabled={!canAdd}
-          onPress={() => onClaim(mine + 1)}
-        />
-        <Text style={[styles.count, mine > 0 && { color: colors.accent }]}>{mine}</Text>
-        <StepButton
-          icon="minus"
-          label={he.trip.minusOne}
-          disabled={mine === 0}
-          onPress={() => onClaim(mine - 1)}
-        />
-      </View>
+      <ClaimStepper
+        mine={mine}
+        canAdd={status.kind === 'missing' || status.kind === 'partial'}
+        onChange={onClaim}
+      />
     );
   } else if (status.kind === 'missing') {
     action = (
@@ -73,6 +63,8 @@ export function ItemRow({
       <PillButton
         label={he.trip.release}
         variant="quiet"
+        size="sm"
+        accessibilityLabel={he.trip.releaseLabel}
         icon={<Icon name="close" size={16} color={colors.inkSecondary} />}
         onPress={() => onClaim(0)}
       />
@@ -99,30 +91,6 @@ export function ItemRow({
   );
 }
 
-function StepButton({
-  icon,
-  label,
-  disabled,
-  onPress,
-}: {
-  icon: 'plus' | 'minus';
-  label: string;
-  disabled: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={label}
-      disabled={disabled}
-      onPress={onPress}
-      style={[styles.step, disabled && { opacity: 0.3 }]}
-    >
-      <Icon name={icon} size={20} />
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
@@ -139,19 +107,4 @@ const styles = StyleSheet.create({
   statusLine: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
   status: { fontFamily: fonts.semibold, fontSize: 13 },
   detail: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: colors.ground,
-  },
-  step: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  count: {
-    minWidth: 20,
-    textAlign: 'center',
-    fontFamily: fonts.semibold,
-    fontSize: 16,
-    color: colors.inkSecondary,
-  },
 });

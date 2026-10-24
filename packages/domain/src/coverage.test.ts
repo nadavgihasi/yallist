@@ -42,6 +42,21 @@ describe('itemStatus', () => {
     });
   });
 
+  it('a fully claimed qty item that includes me is covered, not mine', () => {
+    const chairs = item({ id: 'chairs', kind: 'qty', quantityNeeded: 4 });
+    const claims = [claim('chairs', 'me', 2), claim('chairs', 'ron', 2)];
+    expect(itemStatus(chairs, claims, [], active, 'me')).toEqual({
+      kind: 'covered',
+      holderIds: ['me', 'ron'],
+    });
+  });
+
+  it('ignores claims from members who are no longer active for each items', () => {
+    const bag = item({ id: 'bag', kind: 'each' });
+    const claims = [claim('bag', 'me'), claim('bag', 'ron'), claim('bag', 'gone')];
+    expect(itemStatus(bag, claims, [], ['me', 'ron'], 'me').kind).toBe('covered');
+  });
+
   it('partial for qty items', () => {
     const chairs = item({ id: 'chairs', kind: 'qty', quantityNeeded: 8 });
     expect(
@@ -84,9 +99,19 @@ describe('isDone / filterItems', () => {
   const items = [item({ id: 'a' }), item({ id: 'b' }), item({ id: 'c', list: 'buy' })];
   const claims = [claim('a', 'me'), claim('c', 'ron')];
 
-  it('buy items are done only once bought', () => {
+  it('counts claimed (in progress) and bought items as done', () => {
     expect(isDone(items[2]!, claims, [], active)).toBe(true);
     expect(isDone(items[1]!, claims, [], active)).toBe(false);
+    const bought: Expense = {
+      id: 'e',
+      itemId: 'c',
+      description: '',
+      amountAgorot: 100,
+      paidBy: 'ron',
+      shares: active,
+    };
+    expect(isDone(items[2]!, [], [bought], active)).toBe(true);
+    expect(isDone(items[2]!, [], [], active)).toBe(false);
   });
 
   it('filters', () => {
@@ -99,6 +124,12 @@ describe('isDone / filterItems', () => {
 });
 
 describe('claimCap', () => {
+  it('caps each items at 1 and never goes negative', () => {
+    expect(claimCap(item({ id: 'bag', kind: 'each' }), [], 'me')).toBe(1);
+    const tent = item({ id: 'tent', kind: 'qty', quantityNeeded: 2 });
+    expect(claimCap(tent, [claim('tent', 'ron', 3)], 'me')).toBe(0);
+  });
+
   it('leaves room only for the unclaimed part', () => {
     const chairs = item({ id: 'chairs', kind: 'qty', quantityNeeded: 8 });
     const claims = [claim('chairs', 'me', 3), claim('chairs', 'ron', 2)];

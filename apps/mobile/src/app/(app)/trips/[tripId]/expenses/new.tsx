@@ -65,7 +65,13 @@ function AddExpenseBody({ data }: { data: TripData }) {
         <PillButton label={he.addExpense.save} size="xl" wide disabled={!valid} onPress={save} />
       }
     >
-      <AmountField label={he.addExpense.amount} value={amount} onChangeText={setAmount} />
+      <AmountField
+        label={he.addExpense.amount}
+        value={amount}
+        onChangeText={setAmount}
+        size="lg"
+        onSubmitEditing={save}
+      />
 
       <View style={styles.field}>
         <TextField
@@ -76,12 +82,16 @@ function AddExpenseBody({ data }: { data: TripData }) {
             setItemId(undefined);
           }}
           placeholder={he.addExpense.whatPlaceholder}
+          onSubmitEditing={save}
+          returnKeyType="done"
+          style={styles.whatInput}
         />
         {unbought.length > 0 && (
           <View style={styles.wrap}>
             <Text style={styles.meta}>{he.addExpense.fromList}</Text>
             {unbought.map((i) => (
               <SuggestionChip
+                plus={false}
                 key={i.id}
                 label={i.name}
                 onPress={() => {
@@ -100,6 +110,8 @@ function AddExpenseBody({ data }: { data: TripData }) {
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.payers}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={he.addExpense.paidBy}
         >
           {view.activeIds.map((id) => {
             const selected = id === payer;
@@ -107,7 +119,7 @@ function AddExpenseBody({ data }: { data: TripData }) {
               <Pressable
                 key={id}
                 accessibilityRole="radio"
-                accessibilityState={{ selected }}
+                accessibilityState={{ checked: selected }}
                 accessibilityLabel={view.nameOf(id)}
                 onPress={() => setPayer(id)}
                 style={styles.payer}
@@ -124,12 +136,19 @@ function AddExpenseBody({ data }: { data: TripData }) {
         </ScrollView>
       </View>
 
-      <SharePicker view={view} shares={shares} onChange={setShares} amount={agorot} />
+      <SharePicker
+        view={view}
+        shares={shares}
+        onChange={setShares}
+        amount={agorot}
+        showHint={false}
+      />
     </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
+  whatInput: { minHeight: 56, borderRadius: 20, paddingHorizontal: 18 },
   field: { gap: 10 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },

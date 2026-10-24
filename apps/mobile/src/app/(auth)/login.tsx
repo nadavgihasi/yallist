@@ -53,16 +53,30 @@ export default function Login() {
             />
             <PillButton
               label={he.login.start}
-              size="xl"
+              size="lg"
               wide
+              style={styles.button}
               disabled={!name.trim()}
               onPress={start}
             />
           </>
         ) : (
           <>
-            <PillButton label={he.login.withName} size="xl" wide onPress={() => setAskName(true)} />
-            <PillButton label={he.login.google} variant="outline" size="xl" wide disabled />
+            <PillButton
+              label={he.login.withName}
+              size="lg"
+              wide
+              style={styles.button}
+              onPress={() => setAskName(true)}
+            />
+            <PillButton
+              label={he.login.google}
+              variant="outline"
+              size="lg"
+              wide
+              style={styles.button}
+              disabled
+            />
             <Text style={styles.note}>{he.login.googleSoon}</Text>
           </>
         )}
@@ -99,6 +113,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     color: colors.ink,
   },
+  button: { minHeight: 56, borderRadius: 28 },
   note: {
     fontFamily: fonts.regular,
     fontSize: 13,

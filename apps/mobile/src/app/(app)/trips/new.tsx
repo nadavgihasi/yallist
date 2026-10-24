@@ -1,7 +1,7 @@
 import { TEMPLATES, type TemplateId } from '@yallist/domain';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Cover, SCENE_TINT } from '@/components/Cover';
@@ -17,11 +17,8 @@ import { colors, fonts, radius } from '@/theme';
 
 const KINDS: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
 
-/** First few item names of a template list, for the "what goes in" preview. */
-function preview(template: TemplateId, list: 'bring' | 'buy'): string {
-  const names = TEMPLATES[template].filter((t) => t.list === list).map((t) => t.name);
-  return names.length > 4 ? `${names.slice(0, 4).join(', ')} ועוד` : names.join(', ');
-}
+/** Web gets a real blur behind the cover label; native keeps the dark translucent panel. */
+const coverLabelBlur = Platform.OS === 'web' ? { backdropFilter: 'blur(14px)' } : {};
 
 export default function NewTrip() {
   const me = useMe();
@@ -42,7 +39,13 @@ export default function NewTrip() {
 
   const create = () => {
     const data = buildTrip(
-      { name: shownName, startsOn, endsOn, placeText: place.trim() || undefined, template },
+      {
+        name: shownName,
+        startsOn,
+        endsOn: endsOn < startsOn ? startsOn : endsOn,
+        placeText: place.trim() || undefined,
+        template,
+      },
       me,
     );
     dispatch({ type: 'createTrip', trip: data });
@@ -58,7 +61,7 @@ export default function NewTrip() {
         <View style={styles.topBar}>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={he.trip.back}
+            accessibilityLabel={he.newTrip.back}
             onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
             style={styles.back}
           >
@@ -70,7 +73,7 @@ export default function NewTrip() {
         </View>
 
         <Cover scene={template} style={styles.cover}>
-          <View style={styles.coverLabel}>
+          <View style={[styles.coverLabel, coverLabelBlur]}>
             <Text style={styles.coverName}>{shownName}</Text>
             <Text style={styles.coverDates}>{formatRange(startsOn, endsOn)}</Text>
           </View>
@@ -81,7 +84,11 @@ export default function NewTrip() {
             <Text style={styles.h2}>{he.newTrip.kind}</Text>
             <Text style={styles.hint}>{he.newTrip.kindHint}</Text>
           </View>
-          <View style={styles.grid}>
+          <View
+            style={styles.grid}
+            accessibilityRole="radiogroup"
+            accessibilityLabel={he.newTrip.kind}
+          >
             {KINDS.map((k) => {
               const selected = k === template;
               const count = TEMPLATES[k].length;
@@ -89,7 +96,7 @@ export default function NewTrip() {
                 <Pressable
                   key={k}
                   accessibilityRole="radio"
-                  accessibilityState={{ selected }}
+                  accessibilityState={{ checked: selected }}
                   onPress={() => setTemplate(k)}
                   style={[styles.tile, selected && styles.tileOn]}
                 >
@@ -140,11 +147,11 @@ export default function NewTrip() {
             <>
               <Text style={styles.previewLine}>
                 <Text style={styles.strong}>{he.newTrip.previewBring}</Text>
-                {preview(template, 'bring')}
+                {he.newTrip.previews[template][0]}
               </Text>
               <Text style={styles.previewLine}>
                 <Text style={styles.strong}>{he.newTrip.previewBuy}</Text>
-                {preview(template, 'buy')}
+                {he.newTrip.previews[template][1]}
               </Text>
             </>
           )}
@@ -152,7 +159,7 @@ export default function NewTrip() {
         <View style={{ height: 110 }} />
       </ScrollView>
       <View style={[styles.ctaWrap, { bottom: 24 + insets.bottom }]}>
-        <PillButton label={he.newTrip.create} size="xl" wide onPress={create} />
+        <PillButton label={he.newTrip.create} size="xl" wide style={styles.cta} onPress={create} />
       </View>
     </View>
   );
@@ -191,9 +198,9 @@ const styles = StyleSheet.create({
   h3: { fontFamily: fonts.display, fontSize: 19, color: colors.ink },
   hint: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkSecondary },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  // Strict two columns, so a lone last tile stays half width (NewTripV2 grid).
   tile: {
-    flexBasis: '48%',
-    flexGrow: 1,
+    width: '48.8%',
     minHeight: 120,
     padding: 14,
     borderRadius: 22,
@@ -212,4 +219,5 @@ const styles = StyleSheet.create({
   previewLine: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.ink },
   strong: { fontFamily: fonts.semibold },
   ctaWrap: { position: 'absolute', start: 16, end: 16 },
+  cta: { minHeight: 60, borderRadius: 30 },
 });

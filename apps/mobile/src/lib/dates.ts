@@ -1,20 +1,9 @@
+import { he } from '@/i18n/he';
+
 /** Dates are stored as `YYYY-MM-DD` (local, no time zone). */
 
-const WEEKDAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
-const MONTHS = [
-  'בינואר',
-  'בפברואר',
-  'במרץ',
-  'באפריל',
-  'במאי',
-  'ביוני',
-  'ביולי',
-  'באוגוסט',
-  'בספטמבר',
-  'באוקטובר',
-  'בנובמבר',
-  'בדצמבר',
-];
+const { weekdays: WEEKDAYS, months: MONTHS } = he.dates;
+/** `בנובמבר` → `נובמבר` */
 const MONTH_NAMES = MONTHS.map((m) => m.slice(1));
 
 export function parseDate(iso: string): Date {
@@ -42,17 +31,27 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((parseDate(to).getTime() - parseDate(from).getTime()) / 86_400_000);
 }
 
-/** `חמישי–שבת, 13–14 בנובמבר` / `שישי, 28 בנובמבר` / `שישי, 31 באוקטובר – ראשון, 2 בנובמבר` */
+/** ` 2027` when the date isn't in the current year, else empty. */
+function yearSuffix(d: Date): string {
+  return d.getFullYear() === new Date().getFullYear() ? '' : ` ${d.getFullYear()}`;
+}
+
+/**
+ * `חמישי–שבת, 13–14 בנובמבר` / `שישי, 28 בנובמבר` / `שישי, 31 באוקטובר – ראשון, 2 בנובמבר`.
+ * Adds the year when the trip isn't this year.
+ */
 export function formatRange(startsOn: string, endsOn: string): string {
   const a = parseDate(startsOn);
   const b = parseDate(endsOn);
   const wa = WEEKDAYS[a.getDay()];
   const wb = WEEKDAYS[b.getDay()];
-  if (startsOn === endsOn) return `${wa}, ${a.getDate()} ${MONTHS[a.getMonth()]}`;
-  if (a.getMonth() === b.getMonth()) {
-    return `${wa}–${wb}, ${a.getDate()}–${b.getDate()} ${MONTHS[a.getMonth()]}`;
+  const sameYear = a.getFullYear() === b.getFullYear();
+  if (startsOn === endsOn) return `${wa}, ${a.getDate()} ${MONTHS[a.getMonth()]}${yearSuffix(a)}`;
+  if (sameYear && a.getMonth() === b.getMonth()) {
+    return `${wa}–${wb}, ${a.getDate()}–${b.getDate()} ${MONTHS[a.getMonth()]}${yearSuffix(a)}`;
   }
-  return `${wa}, ${a.getDate()} ${MONTHS[a.getMonth()]} – ${wb}, ${b.getDate()} ${MONTHS[b.getMonth()]}`;
+  const startYear = sameYear ? '' : ` ${a.getFullYear()}`;
+  return `${wa}, ${a.getDate()} ${MONTHS[a.getMonth()]}${startYear} – ${wb}, ${b.getDate()} ${MONTHS[b.getMonth()]}${sameYear ? yearSuffix(b) : ` ${b.getFullYear()}`}`;
 }
 
 /** `חמישי, 13.11` */
@@ -61,16 +60,18 @@ export function formatShort(iso: string): string {
   return `${WEEKDAYS[d.getDay()]}, ${d.getDate()}.${d.getMonth() + 1}`;
 }
 
-/** `אוגוסט` */
+/** `אוגוסט` / `אוגוסט 2025` */
 export function monthName(iso: string): string {
-  return MONTH_NAMES[parseDate(iso).getMonth()]!;
+  const d = parseDate(iso);
+  return `${MONTH_NAMES[d.getMonth()]}${yearSuffix(d)}`;
 }
 
 /** `היום` / `מחר` / `בעוד יומיים` / `בעוד 22 ימים` / `עכשיו בטיול` */
 export function countdown(startsOn: string, endsOn: string, now = today()): string {
   const days = daysBetween(now, startsOn);
-  if (days <= 0) return daysBetween(now, endsOn) >= 0 ? 'עכשיו בטיול' : 'הסתיים';
-  if (days === 1) return 'מחר';
-  if (days === 2) return 'בעוד יומיים';
-  return `בעוד ${days} ימים`;
+  const c = he.countdown;
+  if (days <= 0) return daysBetween(now, endsOn) >= 0 ? c.now : c.ended;
+  if (days === 1) return c.tomorrow;
+  if (days === 2) return c.twoDays;
+  return c.days(days);
 }

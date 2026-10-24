@@ -53,7 +53,7 @@ const styles = StyleSheet.create({
   },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   numberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
-  number: { fontFamily: fonts.displayBold, fontSize: 56, lineHeight: 60 },
+  number: { fontFamily: fonts.displayBold, fontSize: 56, lineHeight: 56 },
   texts: { gap: 2, flexShrink: 1 },
   label: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
   covered: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },

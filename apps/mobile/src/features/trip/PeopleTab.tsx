@@ -4,7 +4,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Avatar } from '@/components/Avatar';
 import { ListGroup, SectionHeader } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
-import { he } from '@/i18n/he';
+import { he, participants } from '@/i18n/he';
 import { newId } from '@/lib/id';
 import { useDispatch } from '@/state/store';
 import type { TripData } from '@/state/types';
@@ -52,7 +52,7 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
           <PillButton label={he.people.add} disabled={!name.trim()} onPress={add} />
         </View>
       </View>
-      <SectionHeader title={he.people.count(data.members.length)} />
+      <SectionHeader title={participants(view.activeIds.length)} />
       <ListGroup inset={72}>
         {data.members.map((m) => {
           const c = counts(m.userId);
@@ -67,8 +67,12 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
                   )}
                 </View>
                 <View style={styles.chips}>
-                  <Text style={styles.chip}>{he.people.bring(c.bring)}</Text>
-                  <Text style={styles.chip}>{he.people.buy(c.buy)}</Text>
+                  <View style={[styles.pill, styles.chip]}>
+                    <Text style={styles.chipText}>{he.people.bring(c.bring)}</Text>
+                  </View>
+                  <View style={[styles.pill, styles.chip]}>
+                    <Text style={styles.chipText}>{he.people.buy(c.buy)}</Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -106,25 +110,10 @@ const styles = StyleSheet.create({
   personBody: { flex: 1, gap: 6 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 11,
-    backgroundColor: colors.ground,
-    color: colors.inkSecondary,
-    fontFamily: fonts.semibold,
-    fontSize: 12,
-    overflow: 'hidden',
-  },
+  pill: { backgroundColor: colors.ground, justifyContent: 'center' },
+  badge: { height: 22, paddingHorizontal: 8, borderRadius: 11 },
+  badgeText: { fontFamily: fonts.semibold, fontSize: 12, color: colors.inkSecondary },
   chips: { flexDirection: 'row', gap: 6 },
-  chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 12,
-    backgroundColor: colors.ground,
-    color: colors.inkSecondary,
-    fontFamily: fonts.regular,
-    fontSize: 13,
-    overflow: 'hidden',
-  },
+  chip: { height: 24, paddingHorizontal: 10, borderRadius: 12 },
+  chipText: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
 });

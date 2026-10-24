@@ -15,11 +15,13 @@ export function SharePicker({
   shares,
   onChange,
   amount,
+  showHint = true,
 }: {
   view: TripView;
   shares: string[];
   onChange: (shares: string[]) => void;
   amount: number | undefined;
+  showHint?: boolean;
 }) {
   const perPerson = amount && shares.length > 0 ? amount / shares.length : undefined;
   const toggle = (id: string) =>
@@ -34,7 +36,7 @@ export function SharePicker({
           </Text>
         )}
       </View>
-      <View style={styles.chips}>
+      <View style={styles.chips} accessibilityLabel={he.item.splitBetween}>
         {view.activeIds.map((id) => (
           <PersonChip
             key={id}
@@ -45,11 +47,15 @@ export function SharePicker({
           />
         ))}
       </View>
-      <Text style={styles.hint}>
-        {shares.length === 0
-          ? he.item.pickSomeone
-          : he.item.splitHint(shares.length, view.activeIds.length)}
-      </Text>
+      {(showHint || shares.length === 0) && (
+        <Text style={styles.hint}>
+          {shares.length === 0
+            ? he.item.pickSomeone
+            : amount === undefined
+              ? he.item.enterAmount
+              : he.item.splitHint(shares.length, view.activeIds.length)}
+        </Text>
+      )}
     </View>
   );
 }

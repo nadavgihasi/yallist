@@ -4,12 +4,14 @@ import {
   claimsFor,
   isDone,
   itemStatus,
+  splitEqually,
   suggestTransfers,
   type Item,
   type ListKind,
 } from '@yallist/domain';
 
 import type { AvatarPerson } from '@/components/Avatar';
+import { he } from '@/i18n/he';
 import type { TripData, TripMember } from '@/state/types';
 
 export function initial(name: string): string {
@@ -24,7 +26,9 @@ export function toAvatar(member: TripMember, me: string): AvatarPerson {
 export function deriveTrip(data: TripData, me: string) {
   const activeIds = activeMemberIds(data.members);
   const memberById = new Map(data.members.map((m) => [m.userId, m]));
-  const nameOf = (id: string) => (id === me ? 'אני' : (memberById.get(id)?.displayName ?? 'מישהו'));
+  const displayNameOf = (id: string) => memberById.get(id)?.displayName ?? he.unknownPerson;
+  /** "אני" for the current user (money rows, chips); use displayNameOf inside third-person phrases. */
+  const nameOf = (id: string) => (id === me ? he.me : displayNameOf(id));
   const avatarOf = (id: string): AvatarPerson => {
     const m = memberById.get(id);
     return m ? toAvatar(m, me) : { initial: '?', color: '#E9ECF2' };
@@ -45,6 +49,7 @@ export function deriveTrip(data: TripData, me: string) {
     activeIds,
     memberById,
     nameOf,
+    displayNameOf,
     avatarOf,
     items,
     done,
@@ -57,6 +62,10 @@ export function deriveTrip(data: TripData, me: string) {
     balance,
     transfers,
     totalSpent: data.expenses.reduce((sum, e) => sum + e.amountAgorot, 0),
+    myShare: data.expenses.reduce(
+      (sum, e) => sum + (splitEqually(e.amountAgorot, e.shares).get(me) ?? 0),
+      0,
+    ),
   };
 }
 

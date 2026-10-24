@@ -52,6 +52,7 @@ export function ListTab({
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filters}
+        accessibilityRole="radiogroup"
       >
         {FILTERS.map((f) => (
           <FilterChip
@@ -64,7 +65,9 @@ export function ListTab({
         ))}
       </ScrollView>
       {groups.length === 0 && (
-        <EmptyState title={he.trip.empty[filter].title} text={he.trip.empty[filter].text} />
+        <View style={styles.group}>
+          <EmptyState title={he.trip.empty[filter].title} text={he.trip.empty[filter].text} />
+        </View>
       )}
       {groups.map((g) => {
         const summary = groupSummary(g.missing);

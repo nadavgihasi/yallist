@@ -1,6 +1,9 @@
 /** All user-facing strings. Hebrew only for v1; another locale is a sibling file with the same shape. */
 export const he = {
   appName: 'Yallist',
+  close: 'סגירה',
+  unknownPerson: 'לא ידוע',
+  me: 'אני',
   login: {
     title: 'כל הטיול ברשימה אחת',
     subtitle: 'מי מביא מה, מה עוד חסר ומי חייב למי. בלי לגלול אחורה בקבוצה.',
@@ -12,19 +15,47 @@ export const he = {
     googleSoon: 'כניסה עם Google בקרוב',
     localOnly: 'בגרסה הזו הכול נשמר רק במכשיר הזה.',
   },
+  dates: {
+    dayEarlier: 'יום אחד קודם',
+    dayLater: 'יום אחד אחרי',
+    weekdays: ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'],
+    /** With the ב- prefix, as used after a day number. */
+    months: [
+      'בינואר',
+      'בפברואר',
+      'במרץ',
+      'באפריל',
+      'במאי',
+      'ביוני',
+      'ביולי',
+      'באוגוסט',
+      'בספטמבר',
+      'באוקטובר',
+      'בנובמבר',
+      'בדצמבר',
+    ],
+  },
+  countdown: {
+    now: 'עכשיו בטיול',
+    ended: 'הסתיים',
+    tomorrow: 'מחר',
+    twoDays: 'בעוד יומיים',
+    days: (n: number) => `בעוד ${n} ימים`,
+  },
   home: {
     title: 'הטיולים שלי',
     newTrip: 'טיול חדש',
     past: 'טיולים שהיו',
     mine: 'אצלך: ',
+    noItems: 'עוד אין פריטים',
   },
   firstHome: {
     emptyTitle: 'עוד אין טיולים',
-    emptyText: 'פותחים טיול, שולחים קישור לחברים, וכל אחד בוחר מה הוא מביא.',
+    emptyText: 'פותחים טיול, שולחים קישור לחברים, ובוחרים ביחד מי מביא מה.',
     steps: [
       ['פותחים טיול', 'בוחרים סוג, והרשימות מוכנות'],
       ['שולחים קישור בוואטסאפ', 'החברים מצטרפים מהדפדפן'],
-      ['כל אחד לוקח פריטים', 'ורואים בזמן אמת מה עוד חסר'],
+      ['לוקחים פריטים', 'ורואים בזמן אמת מה עוד חסר'],
     ],
     demoTitle: 'רוצים לראות איך זה נראה?',
     demoText: 'טיול לדוגמה עם חברים, פריטים והוצאות',
@@ -33,6 +64,7 @@ export const he = {
   },
   newTrip: {
     title: 'טיול חדש',
+    back: 'חזרה לטיולים שלי',
     kind: 'איזה סוג טיול?',
     kindHint: 'מתחילים מרשימה מוכנה ועורכים אחר כך',
     name: 'שם הטיול',
@@ -48,6 +80,13 @@ export const he = {
     previewBring: 'להביא: ',
     previewBuy: 'לקנות: ',
     previewBlank: 'מתחילים מאפס ומוסיפים פריטים אחרי היצירה.',
+    /** Curated highlights per template (NewTripV2), not the first N items. */
+    previews: {
+      camp: ['אוהלים, שקי שינה, גזייה, פנסי ראש ועוד', 'בשר, ביצים, מים, קפה ועוד'],
+      grill: ['מנגל, פחמים, צידנית, כיסאות מתקפלים ועוד', 'בשר, פיתות, סלטים, שתייה ועוד'],
+      zimmer: ['משחקי קופסה, רמקול, מגבות ועוד', 'ארוחת בוקר, יין, נשנושים ועוד'],
+      beach: ['צילייה, מחצלות, צידנית, מטקות ועוד', 'אבטיח, קרח, מים, כריכים ועוד'],
+    },
     create: 'יצירת הטיול',
     templates: {
       camp: 'קמפינג',
@@ -60,15 +99,17 @@ export const he = {
   },
   trip: {
     back: 'חזרה לכל הטיולים',
+    notFound: 'הטיול לא נמצא',
     tabs: { bring: 'להביא', buy: 'לקנות', people: 'אנשים', money: 'כסף' },
     filters: { all: 'הכול', missing: 'חסר', mine: 'אצלי' },
     allCovered: 'הכול מכוסה',
-    oneMissing: 'פריט אחד עוד חסר',
+    oneMissing: 'פריט עוד חסר',
     manyMissing: 'פריטים עוד חסרים',
     coveredOf: (done: number, total: number) => `${done} מתוך ${total} כבר מכוסים`,
     claimBring: 'אני אביא',
     claimBuy: 'אני אקנה',
     release: 'ביטול',
+    releaseLabel: 'שחרור הפריט',
     have: 'יש לי',
     plusOne: 'אני אביא עוד אחד',
     minusOne: 'אחד פחות',
@@ -82,32 +123,46 @@ export const he = {
       buy: 'הוספת פריט לקנייה',
       money: 'הוספת הוצאה',
     },
-    deleteTrip: 'מחיקת הטיול',
+  },
+  status: {
+    missing: 'חסר',
+    mine: 'אצלך',
+    covered: 'מכוסה',
+    inProgress: 'בטיפול',
+    bought: 'נקנה',
+    at: (names: string) => `אצל ${names}`,
+    mineQty: (n: number) => `אצלך ${n}`,
+    notYet: (names: string) => `עוד לא: ${names}`,
+    of: (have: number, total: number) => `${have} מתוך ${total}`,
+    boughtBy: (amount: string, name: string) => `${amount}, ${name}`,
+    boughtByMe: (amount: string) => `${amount}, שילמת`,
+    forEach: 'לכל אחד',
   },
   people: {
-    addTitle: 'עוד מישהו מצטרף?',
+    addTitle: 'עוד חברים מצטרפים?',
     addText: 'בקרוב: שולחים קישור בוואטסאפ ומצטרפים מהדפדפן. בינתיים אפשר להוסיף חברים לפי שם.',
     addPlaceholder: 'שם',
     add: 'הוספה',
-    count: (n: number) => `${n} משתתפים`,
     organizer: 'מארגן/ת',
     bring: (n: number) => `${n} להבאה`,
     buy: (n: number) => `${n} לקנייה`,
   },
   money: {
-    payTo: (name: string) => `להעביר ל${name}`,
+    payTo: (names: string) => `להעביר ל${names}`,
+    paidTo: (names: string) => `שולם ל${names}`,
     nothingToPay: 'אין לך מה להעביר',
     getFrom: 'מגיע לך',
-    share: (total: string, n: number) => `מתוך ${total} שהוצאו, מתחלק שווה בין ${n}`,
+    share: (mine: string, total: string) => `החלק שלך ${mine} מתוך ${total}`,
     markPaid: 'סימון כשולם',
-    paidTo: (name: string, amount: string) => `סימנת ששילמת ${amount} ל${name}`,
-    undo: 'ביטול',
+    markedPaid: 'סומן כשולם',
     transfers: 'מי מעביר למי',
     settled: 'אין העברות פתוחות',
     settledText: 'כולם מסודרים.',
     expenses: 'הוצאות',
+    noExpenses: 'עוד אין הוצאות',
+    noExpensesText: 'מוסיפים הוצאה בכפתור הפלוס.',
     total: (amount: string) => `סה״כ ${amount}`,
-    noExpenses: 'עוד אין הוצאות. מוסיפים בכפתור הפלוס.',
+    sharedBy: (n: number) => `${n} מתחלקים`,
   },
   item: {
     inBring: 'ברשימת ההבאה',
@@ -117,6 +172,7 @@ export const he = {
     splitBetween: 'מתחלק בין',
     perPerson: (amount: string) => `${amount} לכל אחד`,
     splitHint: (n: number, total: number) => `${n} מתוך ${total} משתתפים`,
+    enterAmount: 'רושמים סכום ורואים כמה יוצא לכל אחד',
     pickSomeone: 'בוחרים לפחות משתתף אחד',
     note: 'הערה',
     markBought: 'סימון כנקנה',
@@ -130,7 +186,7 @@ export const he = {
     placeholder: { bring: 'למשל: מחצלת', buy: 'למשל: אבטיח' },
     howMany: 'כמה צריך?',
     kinds: {
-      single: ['אחד', 'מישהו אחד לוקח'],
+      single: ['אחד', 'פריט אחד לכולם'],
       qty: ['כמות', 'מתחלקים בכמות'],
       each: ['לכל אחד', 'כל אחד מביא משלו'],
     },
@@ -163,12 +219,38 @@ export function missingCount(n: number): string {
   return n === 1 ? 'חסר 1' : `חסרים ${n}`;
 }
 
+/** Category header summary, mockup word order: `חסר 1` / `3 חסרים` */
+export function groupMissing(n: number): string {
+  return n === 1 ? 'חסר 1' : `${n} חסרים`;
+}
+
 /** `פריט אחד` / `3 פריטים` */
 export function itemsCount(n: number): string {
   return n === 1 ? 'פריט אחד' : `${n} פריטים`;
 }
 
+/** `פריט אחד חסר` / `11 פריטים חסרים` */
+export function missingItems(n: number): string {
+  return n === 1 ? 'פריט אחד חסר' : `${n} פריטים חסרים`;
+}
+
+/** `משתתף אחד` / `8 משתתפים` */
+export function participants(n: number): string {
+  return n === 1 ? 'משתתף אחד' : `${n} משתתפים`;
+}
+
+/** `העברה אחת פתוחה` / `2 העברות פתוחות` */
+export function openTransfers(n: number): string {
+  return n === 1 ? 'העברה אחת פתוחה' : `${n} העברות פתוחות`;
+}
+
 /** `טיול אחד בקרוב` / `2 טיולים בקרוב` */
 export function upcomingCount(n: number): string {
   return n === 1 ? 'טיול אחד בקרוב' : `${n} טיולים בקרוב`;
+}
+
+/** `דנה` / `דנה ורון` / `דנה, רון ושירה` */
+export function joinNames(names: string[]): string {
+  if (names.length <= 1) return names.join('');
+  return `${names.slice(0, -1).join(', ')} ו${names[names.length - 1]}`;
 }

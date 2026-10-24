@@ -28,7 +28,7 @@ export default function TripScreen() {
   if (!data) {
     return (
       <View style={styles.missing}>
-        <Text style={styles.missingText}>הטיול לא נמצא</Text>
+        <Text style={styles.missingText}>{he.trip.notFound}</Text>
         <Pressable onPress={() => router.replace('/')}>
           <Text style={styles.link}>{he.trip.back}</Text>
         </Pressable>

@@ -1,12 +1,13 @@
-import { linkedExpense, parseShekel } from '@yallist/domain';
+import { claimCap, linkedExpense, parseShekel } from '@yallist/domain';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AmountField, fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
+import { ClaimStepper } from '@/features/trip/ClaimStepper';
 import { deriveTrip } from '@/features/trip/derive';
 import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
@@ -25,11 +26,19 @@ export default function ItemSheet() {
   const data = useTrip(tripId);
   const item = data?.items.find((i) => i.id === itemId);
   const missing = !data || !item;
+  // Close exactly once. A modal that's fading out still re-renders; a second back() would also
+  // pop the trip screen (e.g. right after deleting this item).
+  const closed = useRef(false);
+  const close = useCallback(() => {
+    if (closed.current) return;
+    closed.current = true;
+    closeSheet();
+  }, []);
   useEffect(() => {
-    if (missing) closeSheet();
-  }, [missing]);
+    if (missing) close();
+  }, [missing, close]);
   if (missing) return null;
-  return <ItemSheetBody key={item.id} tripId={tripId} itemId={itemId} onClose={closeSheet} />;
+  return <ItemSheetBody key={item.id} tripId={tripId} itemId={itemId} onClose={close} />;
 }
 
 function ItemSheetBody({
@@ -55,10 +64,33 @@ function ItemSheetBody({
   const [shares, setShares] = useShares(view, expense?.shares);
   const [note, setNote] = useState(item.note ?? '');
 
+  // Save the note however the sheet goes away (X, scrim, save, Escape, Android back).
+  const noteRef = useRef(note);
+  const changeNote = (text: string) => {
+    noteRef.current = text;
+    setNote(text);
+  };
+  useEffect(() => {
+    const original = item.note ?? '';
+    return () => {
+      if (noteRef.current !== original) {
+        dispatch({ type: 'setNote', tripId, itemId, note: noteRef.current });
+      }
+    };
+    // Only on unmount: compare against the note as it was when the sheet opened.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const isBuy = item.list === 'buy';
   const qty = quantityText(item, data.claims);
   const amount = parseShekel(price);
-  const canPrice = isBuy && (mine > 0 || !!expense);
+  // `each` items are everyone's own purchase, so they aren't priced as one shared expense.
+  const canPrice = isBuy && item.kind !== 'each' && (mine > 0 || !!expense);
+  const dirty =
+    !!expense &&
+    (amount !== expense.amountAgorot ||
+      shares.length !== expense.shares.length ||
+      shares.some((id) => !expense.shares.includes(id)));
 
   const claim = (quantity: number) =>
     dispatch({ type: 'setClaim', tripId, itemId: item.id, userId: me, quantity });
@@ -71,7 +103,7 @@ function ItemSheetBody({
       expense: {
         id: expense?.id ?? newId(),
         itemId: item.id,
-        description: item.name,
+        description: expense?.description ?? item.name,
         amountAgorot: amount,
         paidBy: expense?.paidBy ?? me,
         shares,
@@ -80,24 +112,20 @@ function ItemSheetBody({
     onClose();
   };
 
-  const remove = () => {
-    dispatch({ type: 'deleteItem', tripId, itemId: item.id });
-    onClose();
-  };
+  // The parent closes the sheet once the item is gone.
+  const remove = () => dispatch({ type: 'deleteItem', tripId, itemId: item.id });
 
   return (
     <Sheet
       title={item.name}
       subtitle={[qty, isBuy ? he.item.inBuy : he.item.inBring].filter(Boolean).join(', ')}
-      onClose={() => {
-        if (note !== (item.note ?? ''))
-          dispatch({ type: 'setNote', tripId, itemId: item.id, note });
-        onClose();
-      }}
+      onClose={onClose}
       top={92}
+      titleSize={34}
+      gap={22}
       footer={
         <>
-          {canPrice && (
+          {canPrice && (!expense || dirty) && (
             <PillButton
               label={expense ? he.item.updatePrice : he.item.markBought}
               size="xl"
@@ -106,16 +134,13 @@ function ItemSheetBody({
               onPress={saveBought}
             />
           )}
-          {expense && (
+          {expense && !dirty && (
             <PillButton
               label={he.item.unmarkBought}
-              variant="quiet"
-              size="lg"
+              variant="neutral"
+              size="xl"
               wide
-              onPress={() => {
-                dispatch({ type: 'deleteExpense', tripId, expenseId: expense.id });
-                setPrice('');
-              }}
+              onPress={() => dispatch({ type: 'deleteExpense', tripId, expenseId: expense.id })}
             />
           )}
           <PillButton
@@ -141,6 +166,13 @@ function ItemSheetBody({
             onPress={() => claim(item.quantityNeeded)}
           />
         )}
+        {item.kind === 'qty' && (
+          <ClaimStepper
+            mine={mine}
+            canAdd={claimCap(item, data.claims, me) > mine}
+            onChange={claim}
+          />
+        )}
         {item.kind === 'each' && (
           <PillButton
             label={he.trip.have}
@@ -153,7 +185,12 @@ function ItemSheetBody({
 
       {canPrice && (
         <>
-          <AmountField label={he.item.price} value={price} onChangeText={setPrice} />
+          <AmountField
+            label={he.item.price}
+            value={price}
+            onChangeText={setPrice}
+            onSubmitEditing={saveBought}
+          />
           <SharePicker view={view} shares={shares} onChange={setShares} amount={amount} />
         </>
       )}
@@ -162,8 +199,7 @@ function ItemSheetBody({
         <Text style={fieldStyles.label}>{he.item.note}</Text>
         <TextInput
           value={note}
-          onChangeText={setNote}
-          onBlur={() => dispatch({ type: 'setNote', tripId, itemId: item.id, note })}
+          onChangeText={changeNote}
           multiline
           accessibilityLabel={he.item.note}
           style={styles.note}

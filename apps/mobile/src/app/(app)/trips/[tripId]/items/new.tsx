@@ -3,7 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { FilterChip, SuggestionChip } from '@/components/Chips';
+import { ChipGroup, FilterChip, SuggestionChip } from '@/components/Chips';
 import { SegmentedControl, Switch } from '@/components/Controls';
 import { fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
@@ -105,6 +105,7 @@ export default function AddItem() {
           value={name}
           onChangeText={setName}
           onSubmitEditing={add}
+          returnKeyType="done"
           placeholder={he.addItem.placeholder[list]}
           placeholderTextColor={colors.inkTertiary}
           accessibilityLabel={he.addItem.what}
@@ -120,7 +121,11 @@ export default function AddItem() {
 
       <View style={styles.field}>
         <Text style={fieldStyles.label}>{he.addItem.howMany}</Text>
-        <View style={styles.kinds}>
+        <View
+          style={styles.kinds}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={he.addItem.howMany}
+        >
           {KINDS.map((k) => {
             const selected = k === kind;
             const [label, hint] = he.addItem.kinds[k];
@@ -128,7 +133,7 @@ export default function AddItem() {
               <Pressable
                 key={k}
                 accessibilityRole="radio"
-                accessibilityState={{ selected }}
+                accessibilityState={{ checked: selected }}
                 onPress={() => setKind(k)}
                 style={[styles.kind, selected && styles.kindOn]}
               >
@@ -167,7 +172,7 @@ export default function AddItem() {
 
       <View style={styles.field}>
         <Text style={fieldStyles.label}>{he.addItem.category}</Text>
-        <View style={styles.wrap}>
+        <ChipGroup label={he.addItem.category}>
           {categories.map((c) => (
             <FilterChip
               key={c}
@@ -176,7 +181,7 @@ export default function AddItem() {
               onPress={() => setCategory(c)}
             />
           ))}
-        </View>
+        </ChipGroup>
       </View>
 
       <View style={styles.switchRow}>
@@ -219,8 +224,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 12,
-    padding: 8,
-    paddingStart: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 18,
     borderRadius: 20,
     backgroundColor: 'rgba(14,23,38,0.05)',
   },

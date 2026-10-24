@@ -1,7 +1,7 @@
 import { createElement } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { formatShort } from '@/lib/dates';
+import { formatRange, formatShort } from '@/lib/dates';
 import { colors, fonts } from '@/theme';
 
 /** Web: a native date input laid transparently over the formatted label, so the whole tile opens the picker. */
@@ -24,8 +24,12 @@ export function DateField({
         type: 'date',
         value,
         min,
-        'aria-label': label,
-        onChange: (e: { target: { value: string } }) => e.target.value && onChange(e.target.value),
+        'aria-label': `${label}: ${formatRange(value, value)}`,
+        // `min` only limits the picker; typed dates still need clamping.
+        onChange: (e: { target: { value: string } }) => {
+          const next = e.target.value;
+          if (next) onChange(min && next < min ? min : next);
+        },
         style: {
           position: 'absolute',
           inset: 0,

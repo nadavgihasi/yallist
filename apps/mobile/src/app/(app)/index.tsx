@@ -23,6 +23,8 @@ export default function Home() {
   const all = Object.values(trips).sort((a, b) => a.trip.startsOn.localeCompare(b.trip.startsOn));
   const now = today();
   const upcoming = all.filter((t) => daysBetween(now, t.trip.endsOn) >= 0);
+  // Trips already under way stay in the list but aren't "בקרוב".
+  const soon = upcoming.filter((t) => t.trip.startsOn > now).length;
   const past = all.filter((t) => daysBetween(now, t.trip.endsOn) < 0).reverse();
   const empty = all.length === 0;
 
@@ -40,9 +42,7 @@ export default function Home() {
             <Text style={styles.h1} accessibilityRole="header">
               {he.home.title}
             </Text>
-            {upcoming.length > 0 && (
-              <Text style={styles.subtitle}>{upcomingCount(upcoming.length)}</Text>
-            )}
+            {soon > 0 && <Text style={styles.subtitle}>{upcomingCount(soon)}</Text>}
           </View>
           <View accessibilityLabel={me.name}>
             <Avatar
@@ -62,7 +62,7 @@ export default function Home() {
             ))}
             {past.length > 0 && <Text style={styles.h2}>{he.home.past}</Text>}
             {past.map((t) => (
-              <PastTripRow key={t.trip.id} data={t} />
+              <PastTripRow key={t.trip.id} data={t} me={me.userId} />
             ))}
           </>
         )}
@@ -97,7 +97,7 @@ function FirstHome({ onDemo }: { onDemo: () => void }) {
             <View style={styles.stepNum}>
               <Text style={styles.stepNumText}>{i + 1}</Text>
             </View>
-            <View style={styles.titles}>
+            <View style={styles.stepTexts}>
               <Text style={styles.stepTitle}>{title}</Text>
               <Text style={styles.stepText}>{text}</Text>
             </View>
@@ -120,6 +120,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, gap: 16 },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   titles: { flex: 1, gap: 4 },
+  stepTexts: { flex: 1, gap: 2 },
   h1: { fontFamily: fonts.displayBold, fontSize: 36, lineHeight: 40, color: colors.ink },
   subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.inkSecondary },
   h2: {

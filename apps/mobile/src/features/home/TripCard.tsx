@@ -6,7 +6,7 @@ import { Cover } from '@/components/Cover';
 import { glassStyle } from '@/components/GlassTabBar';
 import { Pegs } from '@/components/Pegs';
 import { deriveTrip, toAvatar } from '@/features/trip/derive';
-import { he, itemsCount } from '@/i18n/he';
+import { he, missingItems, openTransfers, participants } from '@/i18n/he';
 import { countdown, formatRange, monthName } from '@/lib/dates';
 import type { TripData } from '@/state/types';
 import { colors, fonts, radius } from '@/theme';
@@ -23,7 +23,7 @@ export function TripCard({ data, me, large }: { data: TripData; me: string; larg
             <Text style={styles.countdownText}>{countdown(trip.startsOn, trip.endsOn)}</Text>
           </View>
         </Cover>
-        <View style={[styles.body, { gap: large ? 14 : 12 }]}>
+        <View style={[styles.body, { gap: large ? 14 : 12 }, !large && { paddingTop: 16 }]}>
           <View style={styles.titles}>
             <Text style={[styles.name, { fontSize: large ? 26 : 22 }]}>{trip.name}</Text>
             <Text style={styles.dates}>{formatRange(trip.startsOn, trip.endsOn)}</Text>
@@ -31,9 +31,15 @@ export function TripCard({ data, me, large }: { data: TripData; me: string; larg
           <Pegs done={view.doneCount} total={view.items.length} height={8} />
           <View style={styles.row}>
             <View style={styles.counts}>
-              <Text style={[styles.missing, missing === 0 && { color: colors.success }]}>
-                {missing === 0 ? he.trip.allCovered : `${itemsCount(missing)} חסרים`}
-              </Text>
+              {view.items.length === 0 ? (
+                <Text style={[styles.missing, { color: colors.inkSecondary }]}>
+                  {he.home.noItems}
+                </Text>
+              ) : (
+                <Text style={[styles.missing, missing === 0 && { color: colors.success }]}>
+                  {missing === 0 ? he.trip.allCovered : missingItems(missing)}
+                </Text>
+              )}
               {large && view.items.length > 0 && (
                 <Text style={styles.meta}>
                   {he.trip.coveredOf(view.doneCount, view.items.length)}
@@ -54,8 +60,10 @@ export function TripCard({ data, me, large }: { data: TripData; me: string; larg
   );
 }
 
-export function PastTripRow({ data }: { data: TripData }) {
+export function PastTripRow({ data, me }: { data: TripData; me: string }) {
   const { trip } = data;
+  const view = deriveTrip(data, me);
+  const open = view.transfers.filter((t) => t.from === me || t.to === me).length;
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
       <Pressable style={styles.past} accessibilityRole="link">
@@ -63,9 +71,14 @@ export function PastTripRow({ data }: { data: TripData }) {
         <View style={styles.titles}>
           <Text style={styles.pastName}>{trip.name}</Text>
           <Text style={styles.dates}>
-            {monthName(trip.startsOn)}, {data.members.length} משתתפים
+            {monthName(trip.startsOn)}, {participants(view.activeIds.length)}
           </Text>
         </View>
+        {open > 0 && (
+          <View style={styles.openBadge}>
+            <Text style={styles.openText}>{openTransfers(open)}</Text>
+          </View>
+        )}
       </Pressable>
     </Link>
   );
@@ -110,5 +123,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   thumb: { width: 64, height: 64, borderRadius: 18 },
+  openBadge: {
+    height: 30,
+    paddingHorizontal: 10,
+    borderRadius: 15,
+    backgroundColor: colors.missingTint,
+    justifyContent: 'center',
+  },
+  openText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.missing },
   pastName: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
 });

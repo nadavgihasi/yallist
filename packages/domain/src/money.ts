@@ -23,6 +23,8 @@ export function balances(
   const result = new Map<string, number>(memberIds.map((id) => [id, 0]));
   const add = (id: string, delta: number) => result.set(id, (result.get(id) ?? 0) + delta);
   for (const e of expenses) {
+    // An expense nobody shares can't be split; skipping it keeps balances summing to zero.
+    if (e.shares.length === 0) continue;
     add(e.paidBy, e.amountAgorot);
     for (const [id, owed] of splitEqually(e.amountAgorot, e.shares)) add(id, -owed);
   }
