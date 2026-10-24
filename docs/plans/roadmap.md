@@ -1,8 +1,8 @@
 # Roadmap: what's still missing
 
-Gap analysis against [SPEC.md](../SPEC.md) and the [mockups](../design/README.md), as of 2026-10-24. It assumes Phase 1 lands as planned: auth (#19), trips/members/invites/items/claims API (#21), expenses/payments API (#22), AppSync Events realtime, the app on the API with TanStack Query, release-please (#16) and the e2e design (#20).
+Gap analysis against [SPEC.md](../SPEC.md) and the [mockups](../design/README.md), as of 2026-10-24. **Done:** Phase 1 (auth #19, trips/members/invites/items/claims API #21, expenses/payments API #22, AppSync Events realtime #24, the app on the API with TanStack Query #26), editing items (#34) and the [e2e design](e2e-live-environments.md) (#20). **In flight:** release-please (#16).
 
-After Phase 1, the app has login (guest + Google on the API), My trips, New trip, the trip screen with lists, claims, Add item, Item sheet, Add expense and the Money tab, all synced in realtime. Everything below is still missing (**M**) or only exists as a local-only or partial version (**P**).
+So the app has login (guest + Google on the API), My trips, New trip, the trip screen with lists, claims, Add item, Item sheet with editing, Add expense and the Money tab, all synced in realtime. Everything below is still missing (**M**) or only exists as a local-only or partial version (**P**).
 
 ## Summary
 
