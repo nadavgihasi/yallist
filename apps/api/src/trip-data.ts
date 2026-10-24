@@ -1,4 +1,12 @@
-import type { Claim, Expense, Item, Payment } from '@yallist/domain';
+import {
+  activeMemberIds,
+  balances,
+  suggestTransfers,
+  type Claim,
+  type Expense,
+  type Item,
+  type Payment,
+} from '@yallist/domain';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 
 import {
@@ -44,6 +52,17 @@ export function toItem(row: typeof items.$inferSelect): Item {
     unit: opt(row.unit),
     displayQty: opt(row.displayQty),
     note: opt(row.note),
+  };
+}
+
+export function toExpense(row: typeof expenses.$inferSelect, shares: string[]): Expense {
+  return {
+    id: row.id,
+    itemId: opt(row.itemId),
+    description: row.description,
+    amountAgorot: row.amountAgorot,
+    paidBy: row.paidBy,
+    shares,
   };
 }
 
@@ -111,15 +130,13 @@ export async function loadTrips(tx: Tx, tripIds: string[]) {
       })),
     expenses: expenseRows
       .filter((e) => e.tripId === trip.id)
-      .map((e): Expense => ({
-        id: e.id,
-        // A purchase of an item that was since deleted no longer marks anything bought.
-        itemId: e.itemId && liveItems.has(e.itemId) ? e.itemId : undefined,
-        description: e.description,
-        amountAgorot: e.amountAgorot,
-        paidBy: e.paidBy,
-        shares: shareRows.filter((s) => s.expenseId === e.id).map((s) => s.userId),
-      })),
+      .map((e) =>
+        toExpense(
+          // A purchase of an item that was since deleted no longer marks anything bought.
+          { ...e, itemId: e.itemId && liveItems.has(e.itemId) ? e.itemId : null },
+          shareRows.filter((s) => s.expenseId === e.id).map((s) => s.userId),
+        ),
+      ),
     payments: paymentRows
       .filter((p) => p.tripId === trip.id)
       .map((p): Payment => ({
@@ -132,4 +149,10 @@ export async function loadTrips(tx: Tx, tripIds: string[]) {
   }));
 }
 
-export type TripData = Awaited<ReturnType<typeof loadTrips>>[number];
+type TripData = Awaited<ReturnType<typeof loadTrips>>[number];
+
+/** Who owes whom: balances (positive: the group owes them) and the transfers that settle them. */
+export function settleUp({ members, expenses, payments }: TripData) {
+  const balance = balances(activeMemberIds(members), expenses, payments);
+  return { balances: Object.fromEntries(balance), transfers: suggestTransfers(balance) };
+}

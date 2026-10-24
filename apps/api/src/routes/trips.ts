@@ -19,7 +19,7 @@ import {
   TRIP_STATUSES,
 } from '../db/schema';
 import { transact, type Tx } from '../db/tx';
-import { loadTrips, toTrip } from '../trip-data';
+import { loadTrips, settleUp, toTrip } from '../trip-data';
 
 /** 128 bits from a CSPRNG, URL-safe (SPEC §5): the invite link is a bearer capability. */
 export const newInviteToken = () => randomBytes(16).toString('base64url');
@@ -154,19 +154,21 @@ export const tripRoutes = (auth: Auth, db: Db) =>
             mine: d.items
               .filter((i) => claimsFor(i.id, d.claims).some((cl) => cl.userId === me))
               .map((i) => i.name),
+            /** Suggested transfers I'm part of: still to pay or to receive. */
+            transfers: settleUp(d).transfers.filter((t) => t.from === me || t.to === me),
           };
         });
       return c.json({ trips: summaries });
     })
 
-    // Everything the trip screens need. Active members only.
+    // Everything the trip screens need, with balances. Active members only.
     .get('/:tripId', validate('param', tripParam), async (c) => {
       const { tripId } = c.req.valid('param');
       const data = await transact(db, async (tx) => {
         await requireMember(tx, tripId, c.var.user.id);
         return (await loadTrips(tx, [tripId]))[0]!;
       });
-      return c.json(data);
+      return c.json({ ...data, ...settleUp(data) });
     })
 
     .patch('/:tripId', validate('param', tripParam), validate('json', updateTrip), async (c) => {
