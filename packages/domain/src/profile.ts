@@ -11,12 +11,12 @@ export const AVATAR_COLORS = [
 export type AvatarColor = (typeof AVATAR_COLORS)[number];
 
 /**
- * An Israeli mobile number as people type it ("050-123 4567", "+972 50 1234567") in E.164
- * ("+972501234567"), or undefined if it isn't one. Mobile only: Bit and PayBox need one.
+ * An Israeli mobile number as people type or autofill it ("050-123 4567", "+972 50 1234567",
+ * "+972 (0)50-1234567") in E.164 ("+972501234567"), or undefined if it isn't one. Mobile only: Bit and PayBox need one.
  */
 export function parseIsraeliMobile(text: string): string | undefined {
   const digits = text.replace(/[\s\-().]/g, '');
-  const national = /^(?:\+?972|0)(5\d{8})$/.exec(digits)?.[1];
+  const national = /^(?:\+?9720?|0)(5\d{8})$/.exec(digits)?.[1];
   return national && `+972${national}`;
 }
 
