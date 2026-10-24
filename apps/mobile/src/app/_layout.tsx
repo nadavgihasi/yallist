@@ -1,9 +1,8 @@
-import {
-  Rubik_400Regular,
-  Rubik_700Bold,
-  Rubik_800ExtraBold,
-  useFonts,
-} from '@expo-google-fonts/rubik';
+// Per weight: the package's index requires all 18 Rubik files, which would all ship in the build.
+import { Rubik_400Regular } from '@expo-google-fonts/rubik/400Regular';
+import { Rubik_700Bold } from '@expo-google-fonts/rubik/700Bold';
+import { Rubik_800ExtraBold } from '@expo-google-fonts/rubik/800ExtraBold';
+import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
