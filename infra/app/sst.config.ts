@@ -43,7 +43,11 @@ export default $config({
     const database = new sst.aws.Dsql('Database', {
       transform: {
         // A cluster has no name, only an identifier; put the stage in its Name tag.
-        cluster: { tags: { Name: `yallist-${$app.stage}-database` } },
+        cluster: {
+          tags: { Name: `yallist-${$app.stage}-database` },
+          // `protect` only stops SST; this also stops a delete from the console or CLI.
+          deletionProtectionEnabled: $app.stage === 'production',
+        },
       },
     });
 
