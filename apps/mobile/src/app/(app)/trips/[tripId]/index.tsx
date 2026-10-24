@@ -54,7 +54,11 @@ export default function TripScreen() {
 
   const view = deriveTrip(data, me.userId);
   const { trip } = data;
-  const lightCover = trip.template === 'beach' || trip.template === 'blank';
+  // Beach sand is light: title on a dark panel (SPEC). Blank is pale all over: ink text instead.
+  const onPanel = trip.template === 'beach';
+  const inkText = trip.template === 'blank' && { color: colors.ink };
+  // Long names get a smaller size; two lines at most, and long words break inside the cover.
+  const titleSize = trip.name.length > 18 ? styles.titleLong : undefined;
 
   const fab =
     tab === 'people'
@@ -78,14 +82,23 @@ export default function TripScreen() {
               <Icon name="back" />
             </Pressable>
           </View>
-          <View style={[styles.titleBlock, lightCover && styles.titlePanel]}>
+          <View style={[styles.titleBlock, onPanel && styles.titlePanel]}>
             <View style={styles.dateChip}>
               <Text style={styles.dateText}>{formatRange(trip.startsOn, trip.endsOn)}</Text>
             </View>
-            <Text style={styles.title} accessibilityRole="header">
+            <Text
+              style={[styles.title, titleSize, inkText]}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              accessibilityRole="header"
+            >
               {trip.name}
             </Text>
-            {trip.placeText && <Text style={styles.place}>{trip.placeText}</Text>}
+            {trip.placeText && (
+              <Text style={[styles.place, inkText]} numberOfLines={1}>
+                {trip.placeText}
+              </Text>
+            )}
           </View>
         </Cover>
         <StatusCard view={view} members={data.members} me={me.userId} />
@@ -158,6 +171,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   dateText: { fontFamily: fonts.medium, fontSize: 13, color: colors.white },
-  title: { fontFamily: fonts.displayBold, fontSize: 42, lineHeight: 44, color: colors.white },
+  // Stretch so a long unbroken word wraps at the cover's width instead of overflowing it.
+  title: {
+    alignSelf: 'stretch',
+    fontFamily: fonts.displayBold,
+    fontSize: 42,
+    lineHeight: 44,
+    color: colors.white,
+  },
+  titleLong: { fontSize: 32, lineHeight: 36 },
   place: { fontFamily: fonts.medium, fontSize: 15, color: colors.white, opacity: 0.9 },
 });
