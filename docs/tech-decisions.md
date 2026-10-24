@@ -53,8 +53,8 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 - Constraints:
   - DSQL rejects conflicting concurrent writes, so writes need retries.
   - No triggers or extensions.
-  - Max 10,000 rows changed per transaction.
-  - Foreign keys, JSONB, identity columns and sequences are supported.
+  - Max 3,000 rows changed per transaction (cascading foreign-key actions count too). One DDL statement per transaction, never mixed with DML.
+  - Foreign keys, JSONB, identity columns and sequences are supported. Enum types are not (no `CREATE TYPE`); use text with a `CHECK`.
   - No local emulator: tests run against Postgres in Docker, staying within DSQL's subset.
 - Store money as integer agorot.
 - Rejected:

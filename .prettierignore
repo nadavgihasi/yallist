@@ -1,3 +1,4 @@
 docs/design/screens/
 pnpm-lock.yaml
 **/.sst/
+apps/api/drizzle/
