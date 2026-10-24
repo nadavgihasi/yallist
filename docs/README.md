@@ -6,6 +6,7 @@
 | [tech-decisions.md](tech-decisions.md) | Stack and infrastructure choices, plus how the SPEC's Supabase-based parts were overridden. |
 | [design/](design/README.md)            | Design system v2 (tokens, brand, reference screens) and the superseded v1 mockups.          |
 | [plans/](plans/README.md)              | Implementation plans, one per phase.                                                        |
+| [research/](research/README.md)        | Competitor research and next-feature candidates (input, not decisions).                     |
 | [releases.md](releases.md)             | Versioning: release tags made from commit titles on every push to main.                     |
 
 ## Which one wins
