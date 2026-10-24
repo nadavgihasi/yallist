@@ -1,9 +1,8 @@
 import { AwsClient } from 'aws4fetch';
-import { and, eq } from 'drizzle-orm';
 
 import type { Auth } from './auth';
+import { findMember } from './dal/members';
 import type { Db } from './db/client';
-import { tripMembers } from './db/schema';
 
 /**
  * Realtime is AppSync Events: one channel per trip, `/trips/<tripId>`, in the `trips` namespace
@@ -64,9 +63,6 @@ export async function authorize(auth: Auth, db: Db, event: AuthorizerEvent): Pro
   if (operation !== 'EVENT_SUBSCRIBE') return false;
   const tripId = TRIP_CHANNEL.exec(channel ?? '')?.[1];
   if (!tripId) return false;
-  const [member] = await db
-    .select({ status: tripMembers.status })
-    .from(tripMembers)
-    .where(and(eq(tripMembers.tripId, tripId), eq(tripMembers.userId, session.user.id)));
+  const member = await findMember(db, tripId, session.user.id);
   return member?.status === 'active';
 }

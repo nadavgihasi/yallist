@@ -1,24 +1,18 @@
 import { activeMemberIds, isDone } from '@yallist/domain';
-import { and, eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
-import { displayNameOf, fail, logActivity, validate } from '../access';
+import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
+import { logActivity } from '../dal/activity';
+import { findMember, insertMember } from '../dal/members';
+import { displayNameOf } from '../dal/profiles';
+import { loadTrips, tripByToken } from '../dal/trips';
 import type { Db } from '../db/client';
-import { tripMembers, trips } from '../db/schema';
-import { transact, type Tx } from '../db/tx';
+import { transact } from '../db/tx';
 import type { Publish } from '../realtime';
-import { loadTrips } from '../trip-data';
 
 const tokenParam = z.object({ token: z.string().min(1).max(64) });
-
-async function tripByToken(tx: Tx, token: string) {
-  const [trip] = await tx.select().from(trips).where(eq(trips.inviteToken, token));
-  // Unknown and rotated tokens look the same.
-  if (!trip) throw fail(404, 'Invite not found');
-  return trip;
-}
 
 /** The invite link: a bearer capability for joining one trip (SPEC §5). */
 export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
@@ -54,15 +48,12 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
         const user = c.var.user;
         const result = await transact(db, async (tx) => {
           const trip = await tripByToken(tx, token);
-          const [existing] = await tx
-            .select()
-            .from(tripMembers)
-            .where(and(eq(tripMembers.tripId, trip.id), eq(tripMembers.userId, user.id)));
+          const existing = await findMember(tx, trip.id, user.id);
           if (existing?.status === 'removed') throw fail(403, 'Removed from this trip');
           if (existing) return { tripId: trip.id, status: existing.status };
 
           const status = trip.requireApproval ? 'pending' : 'active';
-          await tx.insert(tripMembers).values({
+          await insertMember(tx, {
             tripId: trip.id,
             userId: user.id,
             role: 'member',
