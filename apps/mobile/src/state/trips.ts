@@ -127,6 +127,12 @@ async function send(tripId: string, action: Action): Promise<unknown> {
       return parseResponse(
         trip.payments[':paymentId'].$delete({ param: { ...param, paymentId: action.paymentId } }),
       );
+    case 'confirmPayment':
+      return parseResponse(
+        trip.payments[':paymentId'].confirm.$post({
+          param: { ...param, paymentId: action.paymentId },
+        }),
+      );
     case 'approveMember':
     case 'declineMember':
     case 'removeMember': {

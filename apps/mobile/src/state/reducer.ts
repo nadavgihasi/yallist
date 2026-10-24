@@ -35,6 +35,7 @@ export type Action =
   | { type: 'deleteExpense'; expenseId: string }
   | { type: 'markPayment'; toUser: string; amountAgorot: number }
   | { type: 'deletePayment'; paymentId: string }
+  | { type: 'confirmPayment'; paymentId: string }
   | { type: 'approveMember' | 'declineMember' | 'removeMember'; userId: string };
 
 /**
@@ -115,6 +116,13 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
       return { ...data, expenses: data.expenses.filter((e) => e.id !== action.expenseId) };
     case 'deletePayment':
       return { ...data, payments: data.payments.filter((p) => p.id !== action.paymentId) };
+    case 'confirmPayment':
+      return {
+        ...data,
+        payments: data.payments.map((p) =>
+          p.id === action.paymentId ? { ...p, status: 'confirmed' } : p,
+        ),
+      };
     case 'approveMember':
     case 'declineMember':
     case 'removeMember': {

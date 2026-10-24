@@ -163,6 +163,24 @@ describe('members', () => {
   });
 });
 
+describe('payments', () => {
+  it('confirms a payment at once', () => {
+    const payment = {
+      id: 'p1',
+      fromUser: 'ron',
+      toUser: 'me',
+      amountAgorot: 9000,
+      status: 'marked',
+    } as const;
+    const next = applyAction(
+      trip({ payments: [payment] }),
+      { type: 'confirmPayment', paymentId: 'p1' },
+      'me',
+    );
+    expect(next.payments).toEqual([{ ...payment, status: 'confirmed' }]);
+  });
+});
+
 describe('changes that need a server id', () => {
   it('wait for the API', () => {
     const t = trip();

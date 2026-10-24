@@ -1,11 +1,13 @@
 import { useIsMutating } from '@tanstack/react-query';
 import { formatShekel } from '@yallist/domain';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
 import { Card, EmptyState, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
+import { showToast } from '@/components/Toast';
 import { he, joinNames } from '@/i18n/he';
 import { tripKey, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
@@ -15,6 +17,8 @@ import type { TripView } from './derive';
 
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
   const act = useTripAction(data.trip.id);
+  const [confirmDelete, setConfirmDelete] = useState<string>();
+  const organizer = view.memberById.get(me)?.role === 'organizer';
   // Transfers come from the API: until it answers, a second tap would pay twice.
   const saving = useIsMutating({ mutationKey: tripKey(data.trip.id) }) > 0;
   const sum = (xs: { amountAgorot: number }[]) => xs.reduce((n, x) => n + x.amountAgorot, 0);
@@ -23,7 +27,8 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
   // The greedy matcher can split my debt across several people, so show all of it.
   const myOpen = view.transfers.filter((t) => t.from === me);
   const myPaid = data.payments.filter((p) => p.fromUser === me);
-  const owedToMe = sum(view.transfers.filter((t) => t.to === me));
+  const toMe = view.transfers.filter((t) => t.to === me);
+  const myUnconfirmed = myPaid.filter((p) => p.status === 'marked');
 
   let title: string = he.money.nothingToPay;
   let amount = 0;
@@ -33,18 +38,18 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
   } else if (myPaid.length > 0) {
     title = he.money.paidTo(names(myPaid.map((p) => p.toUser)));
     amount = sum(myPaid);
-  } else if (owedToMe > 0) {
-    title = he.money.getFrom;
-    amount = owedToMe;
+  } else if (toMe.length > 0) {
+    title = he.money.getFrom(names(toMe.map((t) => t.from)));
+    amount = sum(toMe);
   }
 
-  const markPaid = () =>
+  const markPaid = () => {
     myOpen.forEach((t) => act({ type: 'markPayment', toUser: t.to, amountAgorot: t.amountAgorot }));
+    showToast(he.money.markedToast(formatShekel(sum(myOpen))));
+  };
   // A payment the receiver already confirmed stays.
   const unmarkPaid = () =>
-    myPaid
-      .filter((p) => p.status === 'marked')
-      .forEach((p) => act({ type: 'deletePayment', paymentId: p.id }));
+    myUnconfirmed.forEach((p) => act({ type: 'deletePayment', paymentId: p.id }));
 
   return (
     <View style={styles.wrap}>
@@ -68,23 +73,33 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           />
         ) : (
           myPaid.length > 0 && (
-            <PillButton
-              label={he.money.markedPaid}
-              variant="soft"
-              size="md"
-              wide
-              icon={<Icon name="check" size={18} color={colors.primaryStrong} />}
-              accessibilityState={{ checked: true }}
-              style={styles.heroButton}
-              disabled={saving}
-              onPress={unmarkPaid}
-            />
+            <>
+              <View style={styles.heroStatus}>
+                <Icon name="check" size={18} color={colors.primaryStrong} />
+                <Text style={styles.heroText}>
+                  {myUnconfirmed.length > 0 ? he.money.waiting : he.money.received}
+                </Text>
+              </View>
+              {myUnconfirmed.length > 0 && (
+                <PillButton
+                  label={he.money.unmark}
+                  variant="quiet"
+                  size="md"
+                  wide
+                  disabled={saving}
+                  onPress={unmarkPaid}
+                />
+              )}
+            </>
           )
         )}
       </Card>
 
       {view.transfers.length === 0 ? (
-        <EmptyState title={he.money.settled} text={he.money.settledText} />
+        // With no expenses yet, the empty expenses card below says it all.
+        data.expenses.length > 0 && (
+          <EmptyState title={he.money.settled} text={he.money.settledText} />
+        )
       ) : (
         <ListGroup title={he.money.transfers}>
           {view.transfers.map((t) => (
@@ -104,6 +119,39 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
         </ListGroup>
       )}
 
+      {data.payments.length > 0 && (
+        <ListGroup title={he.money.payments}>
+          {data.payments.map((p) => {
+            const waiting = p.status === 'marked';
+            return (
+              <View key={p.id} style={styles.transfer}>
+                <View style={styles.transferWho}>
+                  <Avatar person={view.avatarOf(p.fromUser)} ring={false} />
+                  <Text style={styles.transferName}>{view.nameOf(p.fromUser)}</Text>
+                  <Icon name="arrowEnd" size={18} color={colors.inkFaint} />
+                  <Avatar person={view.avatarOf(p.toUser)} ring={false} />
+                  <Text style={styles.transferName}>{view.nameOf(p.toUser)}</Text>
+                </View>
+                <View style={styles.paymentEnd}>
+                  <Text style={styles.amount}>{formatShekel(p.amountAgorot)}</Text>
+                  <Text style={styles.expenseWho}>
+                    {waiting ? he.money.paymentWaiting : he.money.paymentConfirmed}
+                  </Text>
+                </View>
+                {waiting && p.toUser === me && (
+                  <PillButton
+                    label={he.money.confirmReceived}
+                    size="sm"
+                    disabled={saving}
+                    onPress={() => act({ type: 'confirmPayment', paymentId: p.id })}
+                  />
+                )}
+              </View>
+            );
+          })}
+        </ListGroup>
+      )}
+
       {data.expenses.length === 0 ? (
         <EmptyState title={he.money.noExpenses} text={he.money.noExpensesText} />
       ) : (
@@ -120,6 +168,19 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
                 </Text>
               </View>
               <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+              {/* The API also lets whoever added it delete it, but the app doesn't know who that was. */}
+              {(e.paidBy === me || organizer) && (
+                <PillButton
+                  label={confirmDelete === e.id ? he.money.confirmDelete : he.money.deleteExpense}
+                  variant={confirmDelete === e.id ? 'danger' : 'quiet'}
+                  size="sm"
+                  onPress={() => {
+                    if (confirmDelete !== e.id) return setConfirmDelete(e.id);
+                    act({ type: 'deleteExpense', expenseId: e.id });
+                    setConfirmDelete(undefined);
+                  }}
+                />
+              )}
             </View>
           ))}
         </ListGroup>
@@ -134,6 +195,8 @@ const styles = StyleSheet.create({
   heroAmount: { ...type.bigNumber, color: colors.ink },
   heroText: { ...type.caption, color: colors.inkMuted },
   heroButton: { marginTop: space[3] },
+  heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },
+  paymentEnd: { alignItems: 'flex-end' },
   transfer: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: space.touch },
   transferWho: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
   transferName: { ...type.itemTitle, color: colors.ink },

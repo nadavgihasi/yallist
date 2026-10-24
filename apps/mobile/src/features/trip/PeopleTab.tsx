@@ -18,7 +18,9 @@ import { toAvatar, type TripView } from './derive';
 async function shareLink(url: string) {
   try {
     await Share.share({ message: url, url });
-  } catch {
+  } catch (e) {
+    // Closing the share sheet isn't a failure: don't copy behind the user's back.
+    if (e instanceof Error && e.name === 'AbortError') return;
     await navigator.clipboard?.writeText(url);
     showToast(he.people.copied);
   }
@@ -26,17 +28,41 @@ async function shareLink(url: string) {
 
 export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
   const act = useTripAction(data.trip.id);
-  const [confirmRemove, setConfirmRemove] = useState<string>();
+  // `${action}:${userId}` armed by a first tap; a second tap does it.
+  const [confirming, setConfirming] = useState<string>();
   const organizer = view.memberById.get(me)?.role === 'organizer';
   const pending = data.members.filter((m) => m.status === 'pending');
 
-  const counts = (userId: string) => {
+  const taken = (userId: string) => {
     const ids = new Set(data.claims.filter((c) => c.userId === userId).map((c) => c.itemId));
     const mine = view.items.filter((i) => ids.has(i.id));
-    return {
-      bring: mine.filter((i) => i.list === 'bring').length,
-      buy: mine.filter((i) => i.list === 'buy').length,
-    };
+    const bring = mine.filter((i) => i.list === 'bring').length;
+    const buy = mine.filter((i) => i.list === 'buy').length;
+    const parts = [bring > 0 && he.people.bring(bring), buy > 0 && he.people.buy(buy)];
+    return parts.filter(Boolean).join(', ') || he.people.noItems;
+  };
+
+  /** A button that asks once more before `run`. */
+  const confirmButton = (
+    action: string,
+    userId: string,
+    label: string,
+    confirmLabel: string,
+    run: () => void,
+  ) => {
+    const armed = confirming === `${action}:${userId}`;
+    return (
+      <PillButton
+        label={armed ? confirmLabel : label}
+        variant={armed ? 'danger' : 'quiet'}
+        size="sm"
+        onPress={() => {
+          if (!armed) return setConfirming(`${action}:${userId}`);
+          run();
+          setConfirming(undefined);
+        }}
+      />
+    );
   };
 
   const name = (m: TripMember) => (
@@ -73,12 +99,9 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
                 size="sm"
                 onPress={() => act({ type: 'approveMember', userId: m.userId })}
               />
-              <PillButton
-                label={he.people.decline}
-                variant="quiet"
-                size="sm"
-                onPress={() => act({ type: 'declineMember', userId: m.userId })}
-              />
+              {confirmButton('decline', m.userId, he.people.decline, he.people.confirmDecline, () =>
+                act({ type: 'declineMember', userId: m.userId }),
+              )}
             </View>
           ))}
         </ListGroup>
@@ -86,29 +109,19 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
 
       <ListGroup title={participants(view.activeIds.length)}>
         {view.active.map((m) => {
-          const c = counts(m.userId);
-          const confirming = confirmRemove === m.userId;
           return (
             <View key={m.userId} style={styles.person}>
               <Avatar person={toAvatar(m)} size={44} />
               <View style={styles.personBody}>
                 {name(m)}
-                <Text style={styles.chipText}>
-                  {he.people.bring(c.bring)} · {he.people.buy(c.buy)}
-                </Text>
+                <Text style={styles.chipText}>{taken(m.userId)}</Text>
               </View>
-              {organizer && m.userId !== me && (
-                <PillButton
-                  label={confirming ? he.people.confirmRemove : he.people.remove}
-                  variant={confirming ? 'danger' : 'quiet'}
-                  size="sm"
-                  onPress={() => {
-                    if (!confirming) return setConfirmRemove(m.userId);
-                    act({ type: 'removeMember', userId: m.userId });
-                    setConfirmRemove(undefined);
-                  }}
-                />
-              )}
+              {organizer &&
+                m.userId !== me &&
+                confirmButton('remove', m.userId, he.people.remove, he.people.confirmRemove, () => {
+                  act({ type: 'removeMember', userId: m.userId });
+                  showToast(he.people.removed(view.displayNameOf(m.userId)));
+                })}
             </View>
           );
         })}
