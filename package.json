@@ -10,13 +10,15 @@
     "lint": "eslint .",
     "test": "pnpm -r --if-present test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "deploy:dev": "sst deploy --stage dev"
   },
   "devDependencies": {
     "eslint": "^9.39.5",
     "eslint-config-expo": "58.0.4",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.10",
+    "sst": "4.17.2",
     "typescript": "~6.0.3"
   }
 }
