@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>משתתפים – קמפינג בכנרת</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+<div style="position: absolute; inset: 0; overflow-y: auto; padding: 0 16px; box-sizing: border-box; display: flex; flex-direction: column; gap: 16px">
+
+<div style="padding-top: 12px; display: flex; align-items: center; gap: 12px">
+<a href="TripSettingsV2.dc.html" aria-label="חזרה להגדרות הטיול" style="width: 44px; height: 44px; border-radius: 22px; background: #FFFFFF; color: #0E1726; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; flex: 0 0 auto">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+<div style="display: flex; flex-direction: column">
+<h1 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 28px; line-height: 1.1; font-weight: 700">משתתפים</h1>
+<span style="font-size: 14px; color: #4B5565">קמפינג בכנרת</span>
+</div>
+</div>
+
+<sc-if value="{{hasPending}}" hint-placeholder-val="{{true}}">
+<section style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 8px; padding: 4px 4px 0">
+<h2 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 20px; font-weight: 600">מחכים לאישור</h2>
+<span style="min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; border-radius: 11px; background: #C2410C; color: #FFFFFF; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center">{{pendingCount}}</span>
+</div>
+<div style="border-radius: 24px; background: #FFFFFF; overflow: hidden">
+<sc-for list="{{pending}}" as="p" hint-placeholder-count="2">
+<sc-if value="{{p.notFirst}}" hint-placeholder-val="{{true}}"><div style="height: 1px; background: #EEF0F4; margin-inline-start: 72px"></div></sc-if>
+<div style="min-height: 72px; padding: 12px 16px; box-sizing: border-box; display: flex; align-items: center; gap: 12px">
+<span aria-hidden="true" style="{{p.avatarStyle}}">{{p.initial}}</span>
+<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 17px; font-weight: 500">{{p.name}}</span>
+<span style="font-size: 13px; color: #4B5565">{{p.when}}</span>
+</div>
+<button onClick="{{p.decline}}" aria-label="{{p.declineLabel}}" style="width: 44px; height: 44px; flex: 0 0 auto; border: none; border-radius: 22px; background: #F4F5F8; color: #4B5565; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg></button>
+<button onClick="{{p.approve}}" style="{{approveStyle}}">אישור</button>
+</div>
+</sc-for>
+</div>
+</section>
+</sc-if>
+
+<section style="display: flex; flex-direction: column; gap: 8px">
+<h2 style="margin: 0; padding: 4px 4px 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 20px; font-weight: 600">{{membersTitle}}</h2>
+<div style="border-radius: 24px; background: #FFFFFF; overflow: hidden">
+<sc-for list="{{members}}" as="m" hint-placeholder-count="8">
+<sc-if value="{{m.notFirst}}" hint-placeholder-val="{{true}}"><div style="height: 1px; background: #EEF0F4; margin-inline-start: 72px"></div></sc-if>
+<button onClick="{{m.toggle}}" aria-expanded="{{m.open}}" style="width: 100%; min-height: 68px; padding: 12px 16px; border: none; background: transparent; color: #0E1726; display: flex; align-items: center; gap: 12px; text-align: start; cursor: pointer">
+<span aria-hidden="true" style="{{m.avatarStyle}}">{{m.initial}}</span>
+<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 4px">
+<div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+<span style="font-size: 17px; font-weight: 500">{{m.name}}</span>
+<sc-if value="{{m.organizer}}" hint-placeholder-val="{{false}}"><span style="height: 22px; padding: 0 8px; border-radius: 11px; background: #F4F5F8; color: #4B5565; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center">מארגן/ת</span></sc-if>
+<sc-if value="{{m.isNew}}" hint-placeholder-val="{{false}}"><span style="{{newChip}}">חדש בטיול</span></sc-if>
+</div>
+<span style="font-size: 13px; color: #4B5565">{{m.sub}}</span>
+</div>
+<sc-if value="{{m.canManage}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9AA3B2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="{{m.chevronStyle}}"><path d="M6 9l6 6 6-6"></path></svg></sc-if>
+</button>
+<sc-if value="{{m.open}}" hint-placeholder-val="{{false}}">
+<div style="padding: 0 16px 14px 16px; padding-inline-start: 72px; display: flex; gap: 8px; flex-wrap: wrap">
+<button onClick="{{m.promote}}" style="{{softPill}}">{{m.promoteLabel}}</button>
+<button onClick="{{m.remove}}" style="min-height: 44px; padding: 0 16px; border-radius: 22px; border: none; background: #FFE9DE; color: #C2410C; font-size: 14px; font-weight: 600; cursor: pointer">הסרה מהטיול</button>
+</div>
+</sc-if>
+</sc-for>
+</div>
+</section>
+
+<a href="InviteV2.dc.html" style="{{inviteStyle}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+<span>הזמנת עוד חברים</span>
+</a>
+
+<div style="height: 24px; flex: 0 0 auto"></div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const tint = accent + '1F';
+    const approved = s.approved || {};
+    const declined = s.declined || {};
+    const removed = s.removed || {};
+    const promoted = s.promoted || {};
+    const openId = s.openId || null;
+    const set = function (key, obj, id, val) {
+      const next = Object.assign({}, obj);
+      if (val) next[id] = true; else delete next[id];
+      const patch = {};
+      patch[key] = next;
+      return patch;
+    };
+    const REQUESTS = [
+      { id: 'gal', name: 'גל', initial: 'ג', bg: '#FFF0B3', when: 'ביקשו להצטרף לפני 10 דקות' },
+      { id: 'noam', name: 'נעם', initial: 'נ', bg: '#D8F0E0', when: 'ביקשו להצטרף לפני שעה' }
+    ];
+    const MEMBERS = [
+      { id: 'me', name: 'אני', initial: 'י', bg: accent, organizer: true, sub: 'זה החשבון שלך' },
+      { id: 'dana', name: 'דנה', initial: 'ד', bg: '#FFD9C2', sub: '1 להבאה, 1 לקנייה' },
+      { id: 'yoav', name: 'יואב', initial: 'י', bg: '#D8F0E0', sub: '2 להבאה' },
+      { id: 'michal', name: 'מיכל', initial: 'מ', bg: '#F1DDF7', sub: '3 להבאה, 1 לקנייה' },
+      { id: 'ori', name: 'אורי', initial: 'א', bg: '#FFF0B3', sub: '3 להבאה' },
+      { id: 'ron', name: 'רון', initial: 'ר', bg: '#D3F1F4', sub: '2 להבאה, 1 לקנייה' },
+      { id: 'shira', name: 'שירה', initial: 'ש', bg: '#FFDDE4', sub: '3 להבאה, 1 לקנייה' },
+      { id: 'alon', name: 'אלון', initial: 'א', bg: '#E3E0FF', sub: '2 להבאה' }
+    ];
+    const avatar = function (bg, isMe) {
+      return 'width: 44px; height: 44px; flex: 0 0 auto; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 17px; font-weight: 600; background: ' + bg + '; color: ' + (isMe ? '#FFFFFF' : '#0E1726');
+    };
+    const pendingLeft = REQUESTS.filter(function (r) { return !approved[r.id] && !declined[r.id]; });
+    const joined = REQUESTS.filter(function (r) { return approved[r.id]; }).map(function (r) {
+      return { id: r.id, name: r.name, initial: r.initial, bg: r.bg, sub: 'עוד לא לקחו פריטים', isNew: true };
+    });
+    const all = MEMBERS.concat(joined).filter(function (m) { return !removed[m.id]; });
+    return {
+      hasPending: pendingLeft.length > 0,
+      pendingCount: String(pendingLeft.length),
+      pending: pendingLeft.map(function (r, i) {
+        return {
+          name: r.name,
+          initial: r.initial,
+          when: r.when,
+          notFirst: i > 0,
+          avatarStyle: avatar(r.bg, false),
+          declineLabel: 'דחיית הבקשה של ' + r.name,
+          approve: function () { self.setState(set('approved', approved, r.id, true)); },
+          decline: function () { self.setState(set('declined', declined, r.id, true)); }
+        };
+      }),
+      approveStyle: 'min-height: 44px; padding: 0 18px; flex: 0 0 auto; border: none; border-radius: 22px; background: ' + accent + '; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer',
+      membersTitle: all.length + ' בטיול',
+      members: all.map(function (m, i) {
+        const isMe = m.id === 'me';
+        const open = openId === m.id && !isMe;
+        const isOrganizer = !!m.organizer || !!promoted[m.id];
+        return {
+          name: m.name,
+          initial: m.initial,
+          sub: m.sub,
+          organizer: isOrganizer,
+          isNew: !!m.isNew,
+          notFirst: i > 0,
+          canManage: !isMe,
+          open: open,
+          avatarStyle: avatar(m.bg, isMe),
+          chevronStyle: 'flex: 0 0 auto; transform: rotate(' + (open ? '180' : '0') + 'deg)',
+          toggle: function () { if (!isMe) self.setState({ openId: open ? null : m.id }); },
+          promoteLabel: promoted[m.id] ? 'ביטול הרשאת מארגן' : 'הפיכה למארגן/ת',
+          promote: function () { self.setState(set('promoted', promoted, m.id, !promoted[m.id])); },
+          remove: function () {
+            const patch = set('removed', removed, m.id, true);
+            patch.openId = null;
+            self.setState(patch);
+          }
+        };
+      }),
+      newChip: 'height: 22px; padding: 0 8px; border-radius: 11px; background: ' + tint + '; color: ' + accent + '; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center',
+      softPill: 'min-height: 44px; padding: 0 16px; border-radius: 22px; border: none; background: ' + tint + '; color: ' + accent + '; font-size: 14px; font-weight: 600; cursor: pointer',
+      inviteStyle: 'min-height: 56px; border-radius: 28px; background: #FFFFFF; color: ' + accent + '; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none'
+    };
+  }
+}
+</script>
+</body>
+</html>

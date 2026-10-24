@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>סיכום טיול – צימר בגליל</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+<div style="position: absolute; inset: 0; overflow-y: auto">
+
+<div style="position: relative; height: 270px; overflow: hidden">
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="390" height="270" aria-hidden="true" style="position: absolute; inset: 0; display: block"><rect width="390" height="300" fill="#FFCDB2"></rect><circle cx="300" cy="90" r="34" fill="#FFF0C2"></circle><path d="M0 170 C90 140 170 160 250 140 C320 124 360 140 390 134 L390 300 L0 300 Z" fill="#D9936A"></path><path d="M0 214 C100 190 190 210 280 192 C330 182 370 192 390 188 L390 300 L0 300 Z" fill="#A8613F"></path><path d="M150 216 L150 178 L185 152 L220 178 L220 216 Z" fill="#FFF6EC"></path><path d="M140 182 L185 146 L230 182 L222 186 L185 157 L148 186 Z" fill="#E8590C"></path><rect x="176" y="192" width="18" height="24" fill="#7A3E12"></rect><path d="M100 218 C96 198 98 178 104 164 C110 178 112 198 108 218 Z M262 212 C258 192 260 174 266 160 C272 174 274 192 270 212 Z" fill="#3F5E3A"></path><path d="M0 246 C120 232 230 254 390 236 L390 300 L0 300 Z" fill="#5E3423"></path></svg>
+<div style="position: absolute; top: 12px; right: 16px; left: 16px; display: flex; align-items: center; justify-content: space-between">
+<a href="HomeV2.dc.html" aria-label="חזרה לטיולים שלי" style="width: 44px; height: 44px; border-radius: 22px; background: rgba(255,255,255,0.72); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); color: #0E1726; display: inline-flex; align-items: center; justify-content: center; text-decoration: none">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="M13 6l6 6-6 6"></path></svg>
+</a>
+<span style="height: 32px; padding: 0 14px; border-radius: 16px; background: rgba(255,255,255,0.72); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); font-size: 14px; font-weight: 600; display: inline-flex; align-items: center">הטיול הסתיים</span>
+</div>
+<div style="position: absolute; right: 20px; left: 20px; bottom: 42px; color: #FFFFFF; display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 42px; line-height: 1.02; font-weight: 700">צימר בגליל</h1>
+<span style="font-size: 15px; font-weight: 500">14–16 באוגוסט, 6 משתתפים</span>
+</div>
+</div>
+
+<section style="position: relative; margin: -26px 12px 0; padding: 20px; border-radius: 28px; background: #FFFFFF; display: flex; flex-direction: column; gap: 14px">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<h2 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 22px; font-weight: 600">התחשבנות</h2>
+<span aria-live="polite" style="{{progressTextStyle}}">{{progressText}}</span>
+</div>
+<sc-if value="{{allDone}}" hint-placeholder-val="{{false}}">
+<span aria-hidden="true" style="width: 48px; height: 48px; border-radius: 50%; background: #E3F4EA; color: #1E7A4C; display: inline-flex; align-items: center; justify-content: center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"></path></svg></span>
+</sc-if>
+</div>
+<div aria-hidden="true" style="display: flex; gap: 4px">
+<sc-for list="{{segments}}" as="sg" hint-placeholder-count="4"><span style="{{sg.style}}"></span></sc-for>
+</div>
+
+<div style="display: flex; flex-direction: column">
+<sc-for list="{{transfers}}" as="t" hint-placeholder-count="4">
+<sc-if value="{{t.notFirst}}" hint-placeholder-val="{{true}}"><div style="height: 1px; background: #EEF0F4"></div></sc-if>
+<div style="padding: 12px 0; display: flex; flex-direction: column; gap: 10px">
+<div style="display: flex; align-items: center; gap: 8px">
+<span aria-hidden="true" style="{{t.fromStyle}}">{{t.fromInitial}}</span>
+<span style="font-size: 16px; font-weight: 500">{{t.fromName}}</span>
+<svg role="img" aria-label="מעביר/ה ל" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4B5565" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"></path><path d="M11 6l-6 6 6 6"></path></svg>
+<span aria-hidden="true" style="{{t.toStyle}}">{{t.toInitial}}</span>
+<span style="flex: 1 1 auto; font-size: 16px; font-weight: 500">{{t.toName}}</span>
+<span style="font-size: 17px; font-weight: 600">{{t.amount}}</span>
+</div>
+<div style="display: flex; align-items: center; gap: 8px; padding-inline-start: 2px">
+<span style="{{t.statusStyle}}">
+<sc-if value="{{t.done}}" hint-placeholder-val="{{true}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg></sc-if>
+<span>{{t.status}}</span>
+</span>
+</div>
+<sc-if value="{{t.actionable}}" hint-placeholder-val="{{false}}">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<button onClick="{{t.nudge}}" style="{{t.nudgeStyle}}">{{t.nudgeLabel}}</button>
+<button onClick="{{t.receive}}" style="{{receiveStyle}}">קיבלתי את הכסף</button>
+</div>
+</sc-if>
+</div>
+</sc-for>
+</div>
+</section>
+
+<section style="padding: 20px 16px 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<div style="padding: 16px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 30px; font-weight: 600">₪1,860</span><span style="font-size: 14px; color: #4B5565">הוצאות ביחד</span></div>
+<div style="padding: 16px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 30px; font-weight: 600">₪310</span><span style="font-size: 14px; color: #4B5565">לכל אחד</span></div>
+<div style="padding: 16px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 30px; font-weight: 600">32</span><span style="font-size: 14px; color: #4B5565">פריטים הגיעו</span></div>
+<div style="padding: 16px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; gap: 2px"><span style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 30px; font-weight: 600">0</span><span style="font-size: 14px; color: #4B5565">דברים ששכחנו</span></div>
+</section>
+
+<section style="margin: 8px 16px 0; padding: 16px 18px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; gap: 12px">
+<h2 style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 19px; font-weight: 600">שיאי הטיול</h2>
+<div style="display: flex; align-items: center; gap: 12px">
+<span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 50%; background: #F1DDF7; color: #0E1726; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center">מ</span>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">הכי הרבה פריטים</span><span style="font-size: 14px; color: #4B5565">מיכל, 7 פריטים</span></div>
+</div>
+<div style="display: flex; align-items: center; gap: 12px">
+<span aria-hidden="true" style="width: 40px; height: 40px; border-radius: 50%; background: #FFDDE4; color: #0E1726; font-size: 16px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center">ש</span>
+<div style="display: flex; flex-direction: column; gap: 2px"><span style="font-size: 16px; font-weight: 500">הקנייה הגדולה</span><span style="font-size: 14px; color: #4B5565">שירה, ארוחת שישי ב-₪720</span></div>
+</div>
+</section>
+
+<section style="margin: 8px 16px 0; padding: 18px; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column; gap: 12px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<span style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 19px; font-weight: 600">עושים את זה שוב?</span>
+<span style="font-size: 14px; color: #4B5565; line-height: 1.45">אותם אנשים ואותה רשימה, רק עם תאריכים חדשים.</span>
+</div>
+<a href="NewTripV2.dc.html" style="{{againStyle}}">שכפול לטיול הבא</a>
+</section>
+
+<div style="padding: 8px 16px 40px">
+<button style="width: 100%; min-height: 48px; border: none; background: transparent; color: #4B5565; font-size: 15px; font-weight: 500; cursor: pointer">העברה לארכיון</button>
+</div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const nudged = !!s.nudged;
+    const received = !!s.received;
+    const P = {
+      me: ['אני', 'י', accent], shira: ['שירה', 'ש', '#FFDDE4'], ron: ['רון', 'ר', '#D3F1F4'],
+      michal: ['מיכל', 'מ', '#F1DDF7'], tal: ['טל', 'ט', '#FFF0B3'], noa: ['נועה', 'נ', '#D8F0E0']
+    };
+    const MOVES = [
+      { from: 'ron', to: 'me', amount: 140, pending: !received },
+      { from: 'noa', to: 'shira', amount: 210, note: 'הועבר ב-Bit, 17.8' },
+      { from: 'tal', to: 'michal', amount: 95, note: 'סומן כשולם, 18.8' },
+      { from: 'tal', to: 'shira', amount: 25, note: 'הועבר ב-PayBox, 18.8' }
+    ];
+    const doneCount = MOVES.filter(function (m) { return !m.pending; }).length;
+    const allDone = doneCount === MOVES.length;
+    const av = function (id) {
+      return 'width: 32px; height: 32px; flex: 0 0 auto; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; background: ' + P[id][2] + '; color: ' + (id === 'me' ? '#FFFFFF' : '#0E1726');
+    };
+    const chip = 'display: inline-flex; align-items: center; gap: 4px; height: 26px; padding: 0 10px; border-radius: 13px; font-size: 13px; font-weight: 600';
+    const pill = 'min-height: 48px; border-radius: 24px; border: none; font-size: 15px; font-weight: 600; cursor: pointer';
+    return {
+      allDone: allDone,
+      progressText: allDone ? 'כולם התחשבנו' : doneCount + ' מתוך ' + MOVES.length + ' העברות בוצעו',
+      progressTextStyle: 'font-size: 15px; font-weight: 500; color: ' + (allDone ? '#1E7A4C' : '#4B5565'),
+      segments: MOVES.map(function (m) {
+        return { style: 'flex: 1 1 0; height: 10px; border-radius: 5px; background: ' + (m.pending ? '#FFE1D2' : (allDone ? '#1E7A4C' : accent)) };
+      }),
+      transfers: MOVES.map(function (m, i) {
+        const mineIncoming = m.to === 'me' && m.pending;
+        return {
+          fromName: P[m.from][0], fromInitial: P[m.from][1], fromStyle: av(m.from),
+          toName: P[m.to][0], toInitial: P[m.to][1], toStyle: av(m.to),
+          amount: '₪' + m.amount,
+          done: !m.pending,
+          status: m.pending ? (nudged ? 'מחכה, תזכורת נשלחה היום' : 'מחכה כבר 9 שבועות') : (m.note || 'התקבל, סומן היום'),
+          statusStyle: chip + '; ' + (m.pending ? 'background: #FFE9DE; color: #C2410C' : 'padding: 0; color: #1E7A4C'),
+          actionable: mineIncoming,
+          nudge: function () { self.setState({ nudged: true }); },
+          nudgeLabel: nudged ? 'התזכורת נשלחה' : 'תזכורת לרון',
+          nudgeStyle: pill + '; ' + (nudged ? 'background: #F4F5F8; color: #4B5565' : 'background: ' + accent + '1F; color: ' + accent),
+          receive: function () { self.setState({ received: true }); },
+          notFirst: i > 0
+        };
+      }),
+      receiveStyle: pill + '; background: ' + accent + '; color: #FFFFFF',
+      againStyle: 'min-height: 54px; border-radius: 27px; background: ' + accent + '1F; color: ' + accent + '; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; text-decoration: none'
+    };
+  }
+}
+</script>
+</body>
+</html>

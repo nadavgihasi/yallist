@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>פריט חדש</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+
+<div aria-hidden="true" style="position: absolute; inset: 0">
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="390" height="300" style="display: block"><rect width="390" height="300" fill="#FFB774"></rect><circle cx="268" cy="118" r="48" fill="#FFE39B"></circle><path d="M0 168 C70 138 128 152 190 136 C250 121 310 146 390 128 L390 300 L0 300 Z" fill="#B07CC6"></path><path d="M0 196 C80 170 150 188 220 172 C290 157 340 182 390 170 L390 300 L0 300 Z" fill="#7A55B5"></path><rect y="206" width="390" height="94" fill="#2F4FD8"></rect><path d="M0 262 C90 248 170 272 260 256 C320 246 360 258 390 252 L390 300 L0 300 Z" fill="#1F1752"></path></svg>
+<div style="position: absolute; inset: 0; background: rgba(14,23,38,0.38)"></div>
+</div>
+
+<section role="dialog" aria-modal="true" aria-labelledby="add-item-title" style="position: absolute; top: 64px; right: 8px; bottom: 8px; left: 8px; border-radius: 34px; background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 20px 50px rgba(14,23,38,0.25); display: flex; flex-direction: column; overflow: hidden">
+<div aria-hidden="true" style="display: flex; justify-content: center; padding-top: 10px"><span style="width: 40px; height: 5px; border-radius: 3px; background: rgba(14,23,38,0.18)"></span></div>
+
+<div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 20px 20px; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<h1 id="add-item-title" style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 30px; font-weight: 700">פריט חדש</h1>
+<a href="TripV2.dc.html" aria-label="סגירה" style="width: 44px; height: 44px; flex: 0 0 auto; border-radius: 22px; background: rgba(14,23,38,0.06); color: #0E1726; display: inline-flex; align-items: center; justify-content: center; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+</a>
+</div>
+
+<div role="group" aria-label="לאיזו רשימה" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 24px; background: rgba(14,23,38,0.06)">
+<sc-for list="{{lists}}" as="l" hint-placeholder-count="2">
+<button onClick="{{l.pick}}" aria-pressed="{{l.on}}" style="{{l.style}}">{{l.label}}</button>
+</sc-for>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<label for="add-item-name" style="font-size: 15px; font-weight: 600">מה צריך?</label>
+<input id="add-item-name" value="{{name}}" onChange="{{onName}}" placeholder="{{namePlaceholder}}" style="width: 100%; box-sizing: border-box; min-height: 60px; padding: 0 18px; border-radius: 20px; border: none; background: rgba(14,23,38,0.05); font-size: 19px; color: #0E1726">
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{suggestions}}" as="sg" hint-placeholder-count="5">
+<button onClick="{{sg.pick}}" style="min-height: 40px; padding: 0 14px; border-radius: 20px; border: 1.5px solid #D9DDE6; background: transparent; color: #0E1726; font-size: 14px; font-weight: 500; display: inline-flex; align-items: center; gap: 6px; cursor: pointer">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg>
+<span>{{sg.label}}</span>
+</button>
+</sc-for>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 15px; font-weight: 600">כמה צריך?</span>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+<sc-for list="{{kinds}}" as="k" hint-placeholder-count="3">
+<button onClick="{{k.pick}}" aria-pressed="{{k.on}}" style="{{k.style}}">
+<span style="font-size: 15px; font-weight: 600">{{k.label}}</span>
+<span style="font-size: 12px; color: #4B5565; line-height: 1.35">{{k.hint}}</span>
+</button>
+</sc-for>
+</div>
+<sc-if value="{{isQty}}" hint-placeholder-val="{{false}}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 8px 8px 18px; border-radius: 20px; background: rgba(14,23,38,0.05)">
+<span style="padding-inline-start: 10px; font-size: 15px; font-weight: 500">כמה בסך הכול</span>
+<div style="display: flex; align-items: center; gap: 4px">
+<button aria-label="עוד אחד" onClick="{{qtyPlus}}" style="width: 44px; height: 44px; border: none; border-radius: 22px; background: #FFFFFF; color: #0E1726; display: inline-flex; align-items: center; justify-content: center; cursor: pointer"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"></path><path d="M5 12h14"></path></svg></button>
+<span style="min-width: 36px; text-align: center; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 24px; font-weight: 600">{{qty}}</span>
+<button aria-label="אחד פחות" onClick="{{qtyMinus}}" style="{{qtyMinusStyle}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path></svg></button>
+</div>
+</div>
+</sc-if>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 10px">
+<span style="font-size: 15px; font-weight: 600">קטגוריה</span>
+<div style="display: flex; flex-wrap: wrap; gap: 8px">
+<sc-for list="{{cats}}" as="c" hint-placeholder-count="3">
+<button onClick="{{c.pick}}" aria-pressed="{{c.on}}" style="{{c.style}}">{{c.label}}</button>
+</sc-for>
+</div>
+</div>
+
+<div style="min-height: 64px; padding: 10px 18px; box-sizing: border-box; border-radius: 20px; background: rgba(14,23,38,0.05); display: flex; align-items: center; gap: 12px">
+<span id="add-item-claim" style="flex: 1 1 auto; font-size: 16px; font-weight: 500">{{claimLabel}}</span>
+<button role="switch" aria-checked="{{claim}}" aria-labelledby="add-item-claim" onClick="{{toggleClaim}}" style="{{claimTrack}}"><span style="width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(14,23,38,0.25)"></span></button>
+</div>
+
+</div>
+
+<div style="padding: 12px 20px 20px; flex: 0 0 auto">
+<a href="TripV2.dc.html" style="{{ctaStyle}}">{{ctaLabel}}</a>
+</div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const tint = accent + '1F';
+    const list = s.list || 'bring';
+    const name = s.name ?? '';
+    const kind = s.kind || 'single';
+    const qty = s.qty || 4;
+    const claim = !!s.claim;
+    const CATS = {
+      bring: ['בישול ועל האש', 'לינה וישיבה', 'כללי'],
+      buy: ['בשר', 'לחם וסלטים', 'שתייה', 'ארוחת בוקר']
+    };
+    const SUGGEST = {
+      bring: ['מלקחיים', 'קרש חיתוך', 'צלחות וסכו״ם', 'מטקות', 'גפרורים'],
+      buy: ['קרח', 'לחמניות', 'ירקות לסלט', 'מרשמלו', 'חטיפים']
+    };
+    const cat = s.cat && CATS[list].indexOf(s.cat) >= 0 ? s.cat : CATS[list][0];
+    const KINDS = [
+      { id: 'single', label: 'אחד', hint: 'מישהו אחד לוקח' },
+      { id: 'qty', label: 'כמות', hint: 'מתחלקים בכמות' },
+      { id: 'each', label: 'לכל אחד', hint: 'כל אחד מביא משלו' }
+    ];
+    const chip = 'min-height: 44px; padding: 0 16px; border-radius: 22px; font-size: 15px; font-weight: 500; cursor: pointer; ';
+    return {
+      lists: [{ id: 'bring', label: 'להביא' }, { id: 'buy', label: 'לקנות' }].map(function (l) {
+        const on = l.id === list;
+        return {
+          label: l.label,
+          on: on,
+          pick: function () { self.setState({ list: l.id }); },
+          style: 'min-height: 44px; border: none; border-radius: 20px; font-size: 16px; cursor: pointer; ' + (on ? 'background: #FFFFFF; color: #0E1726; font-weight: 600; box-shadow: 0 1px 4px rgba(14,23,38,0.14)' : 'background: transparent; color: #4B5565; font-weight: 500')
+        };
+      }),
+      name: name,
+      onName: function (e) { self.setState({ name: e.target.value }); },
+      namePlaceholder: list === 'bring' ? 'למשל: מחצלת' : 'למשל: אבטיח',
+      suggestions: SUGGEST[list].map(function (label) {
+        return { label: label, pick: function () { self.setState({ name: label }); } };
+      }),
+      kinds: KINDS.map(function (k) {
+        const on = k.id === kind;
+        return {
+          label: k.label,
+          hint: k.hint,
+          on: on,
+          pick: function () { self.setState({ kind: k.id }); },
+          style: 'min-height: 84px; padding: 12px 10px; border-radius: 20px; display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: 4px; text-align: start; cursor: pointer; color: #0E1726; ' + (on ? 'border: 2px solid ' + accent + '; background: ' + tint : 'border: 2px solid transparent; background: rgba(14,23,38,0.05)')
+        };
+      }),
+      isQty: kind === 'qty',
+      qty: String(qty),
+      qtyPlus: function () { self.setState({ qty: qty + 1 }); },
+      qtyMinus: function () { if (qty > 2) self.setState({ qty: qty - 1 }); },
+      qtyMinusStyle: 'width: 44px; height: 44px; border: none; border-radius: 22px; background: #FFFFFF; color: #0E1726; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; opacity: ' + (qty > 2 ? '1' : '0.35'),
+      cats: CATS[list].map(function (label) {
+        const on = label === cat;
+        return {
+          label: label,
+          on: on,
+          pick: function () { self.setState({ cat: label }); },
+          style: chip + (on ? 'border: 1.5px solid #0E1726; background: #0E1726; color: #FFFFFF' : 'border: 1.5px solid #D9DDE6; background: transparent; color: #0E1726')
+        };
+      }),
+      claim: claim,
+      claimLabel: kind === 'each' ? 'יש לי כבר' : (list === 'bring' ? 'אני אביא את זה' : 'אני אקנה את זה'),
+      toggleClaim: function () { self.setState({ claim: !claim }); },
+      claimTrack: 'width: 52px; height: 32px; flex: 0 0 auto; box-sizing: border-box; padding: 3px; border: none; border-radius: 16px; display: flex; align-items: center; cursor: pointer; justify-content: ' + (claim ? 'flex-end' : 'flex-start') + '; background: ' + (claim ? accent : '#D9DDE6'),
+      ctaLabel: name.trim() ? 'הוספת ״' + name.trim() + '״ ל' + (list === 'bring' ? 'רשימת ההבאה' : 'רשימת הקניות') : 'הוספה לרשימה',
+      ctaStyle: 'width: 100%; min-height: 58px; box-sizing: border-box; padding: 0 16px; border-radius: 29px; background: ' + accent + '; color: #FFFFFF; font-size: 17px; font-weight: 600; display: flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; box-shadow: 0 10px 24px rgba(14,23,38,0.2)'
+    };
+  }
+}
+</script>
+</body>
+</html>

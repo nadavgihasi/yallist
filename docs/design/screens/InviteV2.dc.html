@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>הזמנה לטיול</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&amp;family=Rubik:wght@400;500;600&amp;display=swap">
+<style>
+body{margin:0}
+button,input,textarea{font-family:inherit}
+a{color:#3B5BFD}a:hover{color:#2A44D1}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; direction: rtl; background: #F4F5F8; color: #0E1726; font-family: 'Rubik', system-ui, sans-serif">
+
+<div aria-hidden="true" style="position: absolute; inset: 0">
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="390" height="300" style="display: block"><rect width="390" height="300" fill="#FFB774"></rect><circle cx="268" cy="118" r="48" fill="#FFE39B"></circle><path d="M0 168 C70 138 128 152 190 136 C250 121 310 146 390 128 L390 300 L0 300 Z" fill="#B07CC6"></path><path d="M0 196 C80 170 150 188 220 172 C290 157 340 182 390 170 L390 300 L0 300 Z" fill="#7A55B5"></path><rect y="206" width="390" height="94" fill="#2F4FD8"></rect><path d="M0 262 C90 248 170 272 260 256 C320 246 360 258 390 252 L390 300 L0 300 Z" fill="#1F1752"></path></svg>
+<div style="position: absolute; inset: 0; background: rgba(14,23,38,0.38)"></div>
+</div>
+
+<section role="dialog" aria-modal="true" aria-labelledby="invite-title" style="position: absolute; top: 48px; right: 8px; bottom: 8px; left: 8px; border-radius: 34px; background: rgba(255,255,255,0.92); -webkit-backdrop-filter: blur(30px) saturate(180%); backdrop-filter: blur(30px) saturate(180%); border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 20px 50px rgba(14,23,38,0.25); display: flex; flex-direction: column; overflow: hidden">
+<div aria-hidden="true" style="display: flex; justify-content: center; padding-top: 10px"><span style="width: 40px; height: 5px; border-radius: 3px; background: rgba(14,23,38,0.18)"></span></div>
+
+<div style="flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 20px 24px; display: flex; flex-direction: column; gap: 20px">
+
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<h1 id="invite-title" style="margin: 0; font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 30px; font-weight: 700">הזמנה לטיול</h1>
+<a href="TripV2.dc.html" aria-label="סגירה" style="width: 44px; height: 44px; flex: 0 0 auto; border-radius: 22px; background: rgba(14,23,38,0.06); color: #0E1726; display: inline-flex; align-items: center; justify-content: center; text-decoration: none">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 6l12 12"></path><path d="M18 6L6 18"></path></svg>
+</a>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<span style="font-size: 14px; color: #4B5565">ככה הקישור ייראה בוואטסאפ</span>
+<div style="border-radius: 22px; background: #FFFFFF; overflow: hidden; box-shadow: 0 1px 3px rgba(14,23,38,0.08)">
+<div style="height: 130px; overflow: hidden">
+<svg viewBox="0 0 390 300" preserveAspectRatio="xMidYMid slice" width="100%" height="130" aria-hidden="true" style="display: block"><rect width="390" height="300" fill="#FFB774"></rect><circle cx="268" cy="118" r="48" fill="#FFE39B"></circle><path d="M0 168 C70 138 128 152 190 136 C250 121 310 146 390 128 L390 300 L0 300 Z" fill="#B07CC6"></path><path d="M0 196 C80 170 150 188 220 172 C290 157 340 182 390 170 L390 300 L0 300 Z" fill="#7A55B5"></path><rect y="206" width="390" height="94" fill="#2F4FD8"></rect><path d="M0 262 C90 248 170 272 260 256 C320 246 360 258 390 252 L390 300 L0 300 Z" fill="#1F1752"></path><path d="M44 264 L84 214 L124 264 Z" fill="#FFCF3F"></path></svg>
+</div>
+<div style="padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 3px">
+<span style="font-size: 16px; font-weight: 600">קמפינג בכנרת</span>
+<span style="font-size: 14px; color: #4B5565; line-height: 1.4">13–14 בנובמבר. 8 כבר בפנים, ו-11 פריטים עוד חסרים.</span>
+<span style="font-size: 13px; color: #9AA3B2">[הדומיין של האפליקציה]</span>
+</div>
+</div>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<label for="invite-msg" style="font-size: 15px; font-weight: 600">ההודעה</label>
+<textarea id="invite-msg" rows="3" value="{{message}}" onChange="{{onMessage}}" style="width: 100%; box-sizing: border-box; padding: 14px 16px; border-radius: 20px; border: none; background: rgba(14,23,38,0.05); font-size: 16px; line-height: 1.45; color: #0E1726; resize: none"></textarea>
+</div>
+
+<div style="display: flex; flex-direction: column; gap: 8px">
+<button style="{{shareStyle}}">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20l1.5-4.2A8 8 0 1 1 8.4 18.7z"></path></svg>
+<span>שליחה בוואטסאפ</span>
+</button>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+<button onClick="{{copy}}" aria-live="polite" style="{{copyStyle}}">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="3"></rect><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"></path></svg>
+<span>{{copyLabel}}</span>
+</button>
+<button style="min-height: 52px; border-radius: 26px; border: none; background: rgba(14,23,38,0.06); color: #0E1726; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1"></rect><rect x="14" y="4" width="6" height="6" rx="1"></rect><rect x="4" y="14" width="6" height="6" rx="1"></rect><path d="M14 14h2v2h-2zM18 18h2v2h-2zM18 14h2M14 18v2"></path></svg>
+<span>קוד QR</span>
+</button>
+</div>
+</div>
+
+<section style="padding: 6px 0; border-radius: 22px; background: #FFFFFF; display: flex; flex-direction: column">
+<div style="padding: 12px 18px 4px; display: flex; flex-direction: column; gap: 2px">
+<span style="font-family: 'Fredoka', 'Rubik', system-ui, sans-serif; font-size: 19px; font-weight: 600">מי יכול להצטרף</span>
+<span style="font-size: 14px; color: #4B5565; line-height: 1.4">{{accessText}}</span>
+</div>
+<div style="min-height: 64px; padding: 8px 18px; box-sizing: border-box; display: flex; align-items: center; gap: 12px">
+<div style="flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<span id="invite-approve" style="font-size: 16px; font-weight: 500">אישור שלי לפני הצטרפות</span>
+<span style="font-size: 13px; color: #4B5565">מצטרפים חדשים מחכים עד שמאשרים אותם</span>
+</div>
+<button role="switch" aria-checked="{{approve}}" aria-labelledby="invite-approve" onClick="{{toggleApprove}}" style="{{approveTrack}}"><span style="width: 26px; height: 26px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(14,23,38,0.25)"></span></button>
+</div>
+<div style="height: 1px; background: #EEF0F4; margin-inline-start: 18px"></div>
+<button onClick="{{rotate}}" style="min-height: 60px; padding: 8px 18px; border: none; background: transparent; color: #0E1726; display: flex; align-items: center; gap: 12px; text-align: start; cursor: pointer">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"></path><path d="M4 4v4h4"></path><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"></path><path d="M20 20v-4h-4"></path></svg>
+<div style="flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px">
+<span style="font-size: 16px; font-weight: 500">יצירת קישור חדש</span>
+<span aria-live="polite" style="{{rotateHintStyle}}">{{rotateHint}}</span>
+</div>
+</button>
+</section>
+
+</div>
+</section>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"accent":{"editor":"color","default":"#3B5BFD","options":["#3B5BFD","#0E7C66","#7C3AED"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const self = this;
+    const s = this.state || {};
+    const accent = this.props.accent ?? '#3B5BFD';
+    const copied = !!s.copied;
+    const approve = !!s.approve;
+    const rotated = !!s.rotated;
+    const pill = 'min-height: 52px; border-radius: 26px; border: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer';
+    return {
+      message: s.message ?? 'מצטרפים לקמפינג בכנרת? כאן רואים מה כל אחד מביא ומה עוד חסר:',
+      onMessage: function (e) { self.setState({ message: e.target.value }); },
+      shareStyle: pill + '; min-height: 58px; border-radius: 29px; font-size: 17px; background: ' + accent + '; color: #FFFFFF; box-shadow: 0 10px 24px rgba(14,23,38,0.2)',
+      copy: function () { self.setState({ copied: !copied }); },
+      copyLabel: copied ? 'הקישור הועתק' : 'העתקת קישור',
+      copyStyle: pill + '; ' + (copied ? 'background: #E3F4EA; color: #1E7A4C' : 'background: rgba(14,23,38,0.06); color: #0E1726'),
+      accessText: approve ? 'כל מי שיש לו את הקישור יכול לבקש להצטרף, והמארגנים מאשרים.' : 'כל מי שיש לו את הקישור יכול להצטרף מיד.',
+      approve: approve,
+      toggleApprove: function () { self.setState({ approve: !approve }); },
+      approveTrack: 'width: 52px; height: 32px; flex: 0 0 auto; box-sizing: border-box; padding: 3px; border: none; border-radius: 16px; display: flex; align-items: center; cursor: pointer; justify-content: ' + (approve ? 'flex-end' : 'flex-start') + '; background: ' + (approve ? accent : '#D9DDE6'),
+      rotate: function () { self.setState({ rotated: true, copied: false }); },
+      rotateHint: rotated ? 'נוצר קישור חדש. הקישור הקודם כבר לא עובד.' : 'הקישור הנוכחי יפסיק לעבוד',
+      rotateHintStyle: 'font-size: 13px; color: ' + (rotated ? '#1E7A4C' : '#4B5565')
+    };
+  }
+}
+</script>
+</body>
+</html>
