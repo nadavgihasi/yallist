@@ -1,6 +1,17 @@
-import { Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type PressableStateCallbackType,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { colors, type } from '@/theme';
+
+/** react-native-web adds these to Pressable's state. */
+type WebState = PressableStateCallbackType & { hovered?: boolean; focused?: boolean };
 
 /** Pill segments on a white track (trip.html tabs); pass a `ground` track when it sits on a card. */
 export function SegmentedControl<T extends string>({
@@ -57,12 +68,14 @@ export function Switch({
       accessibilityState={{ checked: value }}
       onPress={() => onChange(!value)}
       hitSlop={6} // 32px track, 44px target
-      style={[
+      style={(state: WebState) => [
         styles.switchTrack,
         {
           justifyContent: value ? 'flex-end' : 'flex-start',
           backgroundColor: value ? colors.primary : colors.line,
         },
+        state.hovered && styles.switchHover,
+        state.focused && styles.switchFocus,
       ]}
     >
       <View style={styles.knob} />
@@ -94,6 +107,14 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  switchHover: { opacity: 0.85 },
+  // Keyboard focus ring on web.
+  switchFocus: {
+    outlineColor: colors.primary,
+    outlineStyle: 'solid',
+    outlineWidth: 2,
+    outlineOffset: 2,
   },
   knob: { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.card },
 });

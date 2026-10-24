@@ -1,7 +1,17 @@
 import { AVATAR_COLORS, formatIsraeliMobile, parseIsraeliMobile } from '@yallist/domain';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  type PressableStateCallbackType,
+  type ViewStyle,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
@@ -19,9 +29,15 @@ import { signInWithGoogle } from '@/lib/api';
 import { useProfile, useUpdateProfile, type Profile } from '@/state/profile';
 import { useSession } from '@/state/store';
 import { colors, layout, size, space, type } from '@/theme';
-import { useBreakpoint } from '@/theme/breakpoint';
+import { useBreakpoint, type Breakpoint } from '@/theme/breakpoint';
 
 const NOTIFY_PREFS = ['notifyUpdates', 'notifyDayBefore', 'notifySettle'] as const;
+
+/** react-native-web adds these to Pressable's state. */
+type WebState = PressableStateCallbackType & { hovered?: boolean; focused?: boolean };
+
+/** Keeps the desktop profile column in view while the settings scroll (web only). */
+const sticky = (Platform.OS === 'web' ? { position: 'sticky', top: 24 } : {}) as ViewStyle;
 
 /**
  * The user's profile and settings: cards of rows, one per section. A new setting is a row in
@@ -30,13 +46,17 @@ const NOTIFY_PREFS = ['notifyUpdates', 'notifyDayBefore', 'notifySettle'] as con
 export default function ProfileScreen() {
   const profile = useProfile();
   const insets = useSafeAreaInsets();
-  const wide = useBreakpoint() !== 'phone';
+  // Tablet: a wider centered column. Desktop: the profile beside the settings.
+  const bp = useBreakpoint();
+  const wide = bp !== 'phone';
 
   return (
     <ScrollView
       style={styles.screen}
       contentContainerStyle={[
         styles.content,
+        wide && styles.contentWide,
+        bp === 'desktop' && styles.contentDesktop,
         { paddingTop: (wide ? 32 : 12) + insets.top, paddingBottom: 32 + insets.bottom },
       ]}
       keyboardShouldPersistTaps="handled"
@@ -46,7 +66,11 @@ export default function ProfileScreen() {
           accessibilityRole="button"
           accessibilityLabel={he.profile.back}
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-          style={styles.back}
+          style={(state: WebState) => [
+            styles.back,
+            (state.hovered || state.pressed) && styles.hover,
+            state.focused && styles.focus,
+          ]}
         >
           <Icon name="back" strokeWidth={2.5} />
         </Pressable>
@@ -57,7 +81,7 @@ export default function ProfileScreen() {
 
       {profile.data ? (
         // Keyed: after linking Google it's another user, whose fields start fresh.
-        <Settings key={profile.data.id} profile={profile.data} />
+        <Settings key={profile.data.id} profile={profile.data} bp={bp} />
       ) : profile.isError ? (
         <Pressable onPress={() => profile.refetch()} style={styles.status}>
           <Text style={styles.caption}>{he.errors.loadFailed}</Text>
@@ -70,7 +94,7 @@ export default function ProfileScreen() {
   );
 }
 
-function Settings({ profile }: { profile: Profile }) {
+function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
   const update = useUpdateProfile();
   const { signIn } = useSession();
   const guest = profile.account.type === 'guest';
@@ -100,7 +124,9 @@ function Settings({ profile }: { profile: Profile }) {
       .then(() => showToast(he.profile.linked))
       .catch(() => showToast(he.errors.signIn));
 
-  return (
+  const desktop = bp === 'desktop';
+
+  const you = (
     <>
       <Card>
         <View style={styles.identity}>
@@ -125,7 +151,12 @@ function Settings({ profile }: { profile: Profile }) {
                 accessibilityLabel={he.profile.colorOption(i + 1)}
                 accessibilityState={{ checked: selected }}
                 onPress={() => selected || update.mutate({ avatarColor: color })}
-                style={[styles.swatch, selected && styles.swatchOn]}
+                style={(state: WebState) => [
+                  styles.swatch,
+                  state.hovered && styles.swatchHover,
+                  selected && styles.swatchOn,
+                  state.focused && styles.focus,
+                ]}
               >
                 <View style={[styles.swatchFill, { backgroundColor: color }]} />
               </Pressable>
@@ -169,7 +200,11 @@ function Settings({ profile }: { profile: Profile }) {
           <Text style={styles.caption}>{he.profile.phoneHint}</Text>
         )}
       </ListGroup>
+    </>
+  );
 
+  const settings = (
+    <>
       <ListGroup title={he.profile.account}>
         {guest ? (
           <>
@@ -198,6 +233,18 @@ function Settings({ profile }: { profile: Profile }) {
 
       <SignOut guest={guest} />
       <VersionLine />
+    </>
+  );
+
+  return desktop ? (
+    <View style={styles.columns}>
+      <View style={[styles.side, sticky]}>{you}</View>
+      <View style={styles.main}>{settings}</View>
+    </View>
+  ) : (
+    <>
+      {you}
+      {settings}
     </>
   );
 }
@@ -270,6 +317,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.screen,
     gap: space[4],
   },
+  // Tablet: one column, as wide as the trip screen's.
+  contentWide: { maxWidth: 640, paddingHorizontal: space[6] },
+  contentDesktop: { maxWidth: 960, gap: space[6] },
+  columns: { flexDirection: 'row', alignItems: 'flex-start', gap: space[6] },
+  // Fits the seven color swatches on one row.
+  side: { width: 400, gap: space[4] },
+  main: { flex: 1, minWidth: 0, gap: space[4] },
   topBar: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   back: {
     width: size.avatar,
@@ -279,6 +333,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  hover: { opacity: 0.8 },
+  // A ring for keyboard focus on web; the width matches the selected swatch's border.
+  focus: { outlineColor: colors.primary, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 2 },
   h1: { ...type.pageTitle, color: colors.ink, flexShrink: 1 },
   status: { alignItems: 'center', gap: space[2], paddingVertical: 48 },
   retry: { ...type.buttonSm, color: colors.primary },
@@ -292,6 +349,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     padding: 3,
   },
+  swatchHover: { borderColor: colors.line },
   swatchOn: { borderColor: colors.primary },
   swatchFill: { flex: 1, borderRadius: size.avatar / 2 },
   ltr: { writingDirection: 'ltr', textAlign: 'right' },
