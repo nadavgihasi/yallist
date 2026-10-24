@@ -6,4 +6,11 @@ export default defineConfig([
   globalIgnores(['**/dist/', '**/.expo/', '.sst/', 'sst-env.d.ts', '**/expo-env.d.ts']),
   expoConfig,
   prettierConfig,
+  {
+    settings: {
+      'import/resolver': {
+        typescript: { project: ['apps/*/tsconfig.json', 'packages/*/tsconfig.json'] },
+      },
+    },
+  },
 ]);
