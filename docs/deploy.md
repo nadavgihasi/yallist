@@ -91,15 +91,22 @@ pnpm test
 
 ### Secrets
 
-Each stage needs two SST secrets. A deploy fails until both are set:
+The API needs two secrets per stage, `BetterAuthSecret` (signs sessions; changing it signs everyone out) and `GoogleClientSecret`. Their source of truth is GitHub: each is an environment secret on the `dev` and `production` environments.
+
+| SST secret           | GitHub environment secret |
+| -------------------- | ------------------------- |
+| `BetterAuthSecret`   | `BETTER_AUTH_SECRET`      |
+| `GoogleClientSecret` | `GOOGLE_CLIENT_SECRET`    |
+
+SST reads a secret's value from the `SST_SECRET_<name>` environment variable, so [deploy.yml](../.github/workflows/deploy.yml) sets `SST_SECRET_BetterAuthSecret` and `SST_SECRET_GoogleClientSecret` from them on the `dev` and `production` jobs. Nothing is stored with `sst secret set`.
 
 ```sh
-pnpm sst secret set BetterAuthSecret "$(openssl rand -base64 32)" --stage dev
-pnpm sst secret set GoogleClientSecret <client secret from Google Cloud> --stage dev
-# and the same with --stage production
+gh secret set BETTER_AUTH_SECRET --env dev --body "$(openssl rand -base64 32)"
+gh secret set GOOGLE_CLIENT_SECRET --env dev   # paste the client secret from Google Cloud
+# and the same with --env production
 ```
 
-`BetterAuthSecret` signs sessions. Changing it signs everyone out. `pnpm sst secret list --stage <stage>` shows what is set.
+For a local emergency deploy, export the same variables first, e.g. `SST_SECRET_BetterAuthSecret=… SST_SECRET_GoogleClientSecret=… pnpm deploy:dev`.
 
 ## Naming and tags
 

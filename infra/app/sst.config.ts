@@ -67,9 +67,8 @@ export default $config({
       },
     });
 
-    // Better Auth (apps/api/src/auth.ts). Set both secrets per stage before deploying:
-    //   pnpm sst secret set BetterAuthSecret "$(openssl rand -base64 32)" --stage <stage>
-    //   pnpm sst secret set GoogleClientSecret <secret> --stage <stage>
+    // Better Auth (apps/api/src/auth.ts). Secret values come from SST_SECRET_<name>, which the
+    // deploy workflow sets from GitHub environment secrets (docs/deploy.md#secrets).
     const authSecret = new sst.Secret('BetterAuthSecret');
     const googleClientSecret = new sst.Secret('GoogleClientSecret');
     api.route('$default', {
