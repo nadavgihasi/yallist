@@ -1,17 +1,38 @@
 # Deploying the web app
 
-Infrastructure is [SST](https://sst.dev) in `eu-central-1`, defined in [sst.config.ts](../sst.config.ts). Today it's one static site: the Expo web export on S3 + CloudFront.
+Infrastructure is [SST](https://sst.dev), in two SST apps:
+
+- **App** ([sst.config.ts](../sst.config.ts)): today one static site, the Expo web export on S3 + CloudFront. Stages `dev` and `production`.
+- **Global** ([infra/global/sst.config.ts](../infra/global/sst.config.ts)): account-wide resources in `eu-central-1`. These are the $10/month budget, which emails `BUDGET_EMAIL` at 80% actual and 100% forecasted spend, and the IAM role GitHub Actions deploys with. One stage, `global`, protected.
+
+## Deploys come from `main`
+
+[deploy.yml](../.github/workflows/deploy.yml) runs on every push to `main`. It deploys `global`, then `dev`, then `production`, each in the GitHub environment of the same name. Those environments only accept the `main` branch.
+
+- **Credentials:** jobs get them through GitHub OIDC. They assume the role in the repo variable `AWS_DEPLOY_ROLE_ARN`, so no AWS keys are stored in GitHub.
+- **Laptops:** don't deploy from a laptop except for the one-time bootstrap below or an emergency.
+
+### One-time bootstrap
+
+The deploy role is created by the global stack, so the first global deploy runs locally:
+
+```sh
+BUDGET_EMAIL=$(gh variable get BUDGET_EMAIL) pnpm deploy:global
+gh variable set AWS_DEPLOY_ROLE_ARN --body <deployRoleArn from the output>
+```
+
+After that, the `yallist-dev` access key is only needed for emergencies. Consider deactivating it in IAM.
 
 ## Stages
 
 There are exactly two stages. Any other `--stage` fails before touching AWS.
 
-| Stage        | Command            | AWS profile    | On `sst remove`                        |
-| ------------ | ------------------ | -------------- | -------------------------------------- |
-| `dev`        | `pnpm deploy:dev`  | `yallist-dev`  | Everything is deleted.                 |
-| `production` | `pnpm deploy:prod` | `yallist-prod` | Refused (`protect`). Buckets retained. |
+| Stage        | Region         | Command            | AWS profile    | On `sst remove`                        |
+| ------------ | -------------- | ------------------ | -------------- | -------------------------------------- |
+| `dev`        | `us-east-2`    | `pnpm deploy:dev`  | `yallist-dev`  | Everything is deleted.                 |
+| `production` | `eu-central-1` | `pnpm deploy:prod` | `yallist-prod` | Refused (`protect`). Buckets retained. |
 
-The profile is set per stage in `sst.config.ts`, not in the scripts. That way every `sst` command (`deploy`, `diff`, `remove`) picks the right credentials without an `AWS_PROFILE=` prefix.
+The profile and region are set per stage in `sst.config.ts`, not in the scripts. In CI (`CI=true`) no profile is used. That way every `sst` command (`deploy`, `diff`, `remove`) picks the right credentials without an `AWS_PROFILE=` prefix.
 
 Every `sst` command needs `--stage dev` or `--stage production`, including `pnpm sst install`. SST's default personal stage (your username) is rejected.
 
@@ -26,7 +47,7 @@ aws configure --profile yallist-prod   # same keys for now
 
 To move production to its own account or IAM user later, point the `yallist-prod` profile at the new credentials. No code change is needed.
 
-## Deploy
+## Deploy locally (bootstrap or emergency only)
 
 ```sh
 pnpm deploy:dev    # dev

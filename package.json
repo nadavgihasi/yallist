@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "deploy:dev": "sst deploy --stage dev",
-    "deploy:prod": "sst deploy --stage production"
+    "deploy:prod": "sst deploy --stage production",
+    "deploy:global": "cd infra/global && sst deploy --stage global"
   },
   "devDependencies": {
     "eslint": "^9.39.5",

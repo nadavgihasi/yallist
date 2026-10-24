@@ -1,7 +1,7 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
 /**
- * AWS infrastructure (SST, eu-central-1). Two stages, nothing else:
+ * AWS infrastructure (SST). Two stages, nothing else: dev in us-east-2, production in eu-central-1.
  *   pnpm deploy:dev    # sst deploy --stage dev         (AWS profile yallist-dev)
  *   pnpm deploy:prod   # sst deploy --stage production  (AWS profile yallist-prod)
  * SST names resources `yallist-<stage>-<name>-<hash>`; every resource is also tagged app/stage.
@@ -22,9 +22,11 @@ export default $config({
       home: 'aws',
       providers: {
         aws: {
-          region: 'eu-central-1',
+          // Each stage in its own region.
+          region: production ? 'eu-central-1' : 'us-east-2',
           // Per stage, so every sst command (deploy, remove, diff) uses the right credentials.
-          profile: production ? 'yallist-prod' : 'yallist-dev',
+          // CI gets credentials from the GitHub OIDC role instead.
+          profile: process.env.CI ? undefined : production ? 'yallist-prod' : 'yallist-dev',
           defaultTags: { tags: { app: 'yallist', stage } },
         },
       },

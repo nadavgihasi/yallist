@@ -1,0 +1,48 @@
+name: Deploy
+
+# main is the only way changes reach AWS: global (account-wide), then dev, then production.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # GitHub OIDC token, exchanged for the deploy role
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  global:
+    runs-on: ubuntu-latest
+    environment: global
+    steps: &deploy
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: eu-central-1
+      # deploy:global, deploy:dev or deploy:prod
+      - run: pnpm deploy:${{ github.job == 'production' && 'prod' || github.job }}
+        env:
+          BUDGET_EMAIL: ${{ vars.BUDGET_EMAIL }}
+
+  dev:
+    needs: global
+    runs-on: ubuntu-latest
+    environment: dev
+    steps: *deploy
+
+  production:
+    needs: dev
+    runs-on: ubuntu-latest
+    environment: production
+    steps: *deploy
