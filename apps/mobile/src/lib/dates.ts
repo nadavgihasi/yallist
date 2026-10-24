@@ -66,7 +66,7 @@ export function monthName(iso: string): string {
   return `${MONTH_NAMES[d.getMonth()]}${yearSuffix(d)}`;
 }
 
-/** `היום` / `מחר` / `בעוד יומיים` / `בעוד 22 ימים` / `עכשיו בטיול` */
+/** `מחר` / `בעוד יומיים` / `בעוד 22 ימים`; `עכשיו בטיול` from the first day to the last, then `הסתיים`. */
 export function countdown(startsOn: string, endsOn: string, now = today()): string {
   const days = daysBetween(now, startsOn);
   const c = he.countdown;
