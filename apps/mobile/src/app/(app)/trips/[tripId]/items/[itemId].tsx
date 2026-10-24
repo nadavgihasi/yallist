@@ -1,5 +1,5 @@
 import { claimCap, linkedExpense, parseShekel } from '@yallist/domain';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -8,6 +8,7 @@ import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { ClaimStepper } from '@/features/trip/ClaimStepper';
+import { closeSheet } from '@/features/trip/closeSheet';
 import { deriveTrip } from '@/features/trip/derive';
 import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
@@ -15,11 +16,6 @@ import { he } from '@/i18n/he';
 import { newId } from '@/lib/id';
 import { useDispatch, useMe, useTrip } from '@/state/store';
 import { colors, fonts } from '@/theme';
-
-function closeSheet() {
-  if (router.canGoBack()) router.back();
-  else router.replace('/');
-}
 
 export default function ItemSheet() {
   const { tripId, itemId } = useLocalSearchParams<{ tripId: string; itemId: string }>();
@@ -32,8 +28,8 @@ export default function ItemSheet() {
   const close = useCallback(() => {
     if (closed.current) return;
     closed.current = true;
-    closeSheet();
-  }, []);
+    closeSheet(tripId);
+  }, [tripId]);
   useEffect(() => {
     if (missing) close();
   }, [missing, close]);

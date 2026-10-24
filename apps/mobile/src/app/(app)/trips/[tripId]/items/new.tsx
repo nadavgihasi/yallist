@@ -1,5 +1,5 @@
 import { QUICK_SUGGESTIONS, TEMPLATES, type ItemKind, type ListKind } from '@yallist/domain';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -9,6 +9,7 @@ import { fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
+import { closeSheet } from '@/features/trip/closeSheet';
 import { he } from '@/i18n/he';
 import { buildItem } from '@/state/reducer';
 import { useDispatch, useMe, useTrip } from '@/state/store';
@@ -34,7 +35,7 @@ export default function AddItem() {
   const [category, setCategory] = useState<string>();
   const [claim, setClaim] = useState(false);
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  const close = () => closeSheet(params.tripId);
   if (!data) return null;
 
   const categories = categoriesFor(

@@ -1,5 +1,5 @@
 import { linkedExpense, parseShekel } from '@yallist/domain';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -8,6 +8,7 @@ import { SuggestionChip } from '@/components/Chips';
 import { AmountField, TextField, fieldStyles } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
+import { closeSheet } from '@/features/trip/closeSheet';
 import { deriveTrip } from '@/features/trip/derive';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
@@ -33,7 +34,7 @@ function AddExpenseBody({ data }: { data: TripData }) {
   const [payer, setPayer] = useState(me);
   const [shares, setShares] = useShares(view);
 
-  const close = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  const close = () => closeSheet(data.trip.id);
   const agorot = parseShekel(amount);
   const unbought = view.items
     .filter((i) => i.list === 'buy' && !linkedExpense(i.id, data.expenses))

@@ -1,5 +1,5 @@
-import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
+import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -16,14 +16,30 @@ import { formatRange } from '@/lib/dates';
 import { useMe, useTrip } from '@/state/store';
 import { colors, fonts } from '@/theme';
 
-type Tab = 'bring' | 'buy' | 'people' | 'money';
+const TABS = ['bring', 'buy', 'people', 'money'] as const;
+type Tab = (typeof TABS)[number];
 
 export default function TripScreen() {
-  const { tripId } = useLocalSearchParams<{ tripId: string }>();
+  const params = useLocalSearchParams<{
+    tripId: string;
+    tab?: string;
+    itemId?: string;
+    list?: string;
+  }>();
+  const { tripId, itemId, list } = params;
   const data = useTrip(tripId);
   const me = useMe();
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<Tab>('bring');
+  // The tab lives in the URL (`?tab=buy`) so reload and Back keep it.
+  const tab: Tab = TABS.find((t) => t === params.tab) ?? 'bring';
+  const setTab = (next: Tab) => router.setParams({ tab: next });
+  // A sheet opened by URL hands its params to this screen underneath it. Clear them once this
+  // screen is focused again: `router.setParams` targets the focused route, not necessarily this one.
+  useFocusEffect(
+    useCallback(() => {
+      if (itemId || list) router.setParams({ itemId: undefined, list: undefined });
+    }, [itemId, list]),
+  );
 
   if (!data) {
     return (
