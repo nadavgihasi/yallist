@@ -16,6 +16,7 @@ import { Avatar } from '@/components/Avatar';
 import { Cover } from '@/components/Cover';
 import { FLOATING_CLEARANCE, FloatingAction } from '@/components/FloatingAction';
 import { Card } from '@/components/ListGroup';
+import { VersionLine } from '@/components/VersionLine';
 import { PastTripRow, TripCard } from '@/features/home/TripCard';
 import { initial } from '@/features/trip/derive';
 import { he } from '@/i18n/he';
@@ -97,6 +98,7 @@ export default function Home() {
             </View>
           </>
         )}
+        <VersionLine />
         <View style={{ height: FLOATING_CLEARANCE }} />
       </ScrollView>
       <FloatingAction

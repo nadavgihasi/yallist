@@ -60,6 +60,7 @@ jobs:
           EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
           EXPO_PUBLIC_REALTIME_URL: ${{ vars.EXPO_PUBLIC_REALTIME_URL }}
           EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID }}
+          EXPO_PUBLIC_GIT_SHA: ${{ github.sha }}
         run: ./gradlew bundleRelease assembleRelease --no-daemon
 
       - uses: actions/upload-artifact@v7
