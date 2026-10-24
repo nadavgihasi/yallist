@@ -29,7 +29,7 @@ export function ListGroup({
 export function SectionHeader({
   title,
   aside,
-  asideColor = colors.inkSecondary,
+  asideColor = colors.inkMuted,
 }: {
   title: string;
   aside?: string;
@@ -53,8 +53,8 @@ export function EmptyState({ title, text }: { title: string; text: string }) {
 }
 
 const styles = StyleSheet.create({
-  group: { borderRadius: radius.group, backgroundColor: colors.surface, overflow: 'hidden' },
-  divider: { height: 1, backgroundColor: colors.divider },
+  group: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
+  divider: { height: 1, backgroundColor: colors.ground },
   header: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -62,21 +62,21 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 4,
   },
-  title: { fontFamily: fonts.display, fontSize: 22, color: colors.ink },
-  aside: { fontFamily: fonts.semibold, fontSize: 13 },
+  title: { fontFamily: fonts.extraBold, fontSize: 22, color: colors.ink },
+  aside: { fontFamily: fonts.bold, fontSize: 13 },
   empty: {
     paddingVertical: 32,
     paddingHorizontal: 20,
-    borderRadius: radius.group,
-    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    backgroundColor: colors.card,
     alignItems: 'center',
     gap: 8,
   },
-  emptyTitle: { fontFamily: fonts.display, fontSize: 22, color: colors.ink, textAlign: 'center' },
+  emptyTitle: { fontFamily: fonts.extraBold, fontSize: 22, color: colors.ink, textAlign: 'center' },
   emptyText: {
     fontFamily: fonts.regular,
     fontSize: 15,
-    color: colors.inkSecondary,
+    color: colors.inkMuted,
     textAlign: 'center',
   },
 });

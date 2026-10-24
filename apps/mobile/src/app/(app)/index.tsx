@@ -73,21 +73,17 @@ export default function Home() {
             <PillButton
               label={empty ? he.firstHome.cta : he.home.newTrip}
               size="lg"
-              icon={<Icon name="plus" color={colors.white} />}
+              icon={<Icon name="plus" color={colors.onPrimary} />}
               onPress={() => router.push('/trips/new')}
             />
           )}
           <View accessibilityLabel={me.name}>
-            <Avatar
-              person={{ initial: initial(me.name), color: '', isMe: true }}
-              size={44}
-              ring={false}
-            />
+            <Avatar person={{ initial: initial(me.name) }} size={44} ring={false} />
           </View>
         </View>
 
         {trips.isPending ? (
-          <ActivityIndicator color={colors.accent} style={styles.status} />
+          <ActivityIndicator color={colors.primary} style={styles.status} />
         ) : trips.isError && !trips.data ? (
           <Pressable onPress={() => trips.refetch()} style={styles.status}>
             <Text style={styles.subtitle}>{he.errors.loadFailed}</Text>
@@ -120,8 +116,8 @@ export default function Home() {
         <View style={[styles.ctaWrap, { bottom: 24 + insets.bottom }]} pointerEvents="box-none">
           <PillButton
             label={empty ? he.firstHome.cta : he.home.newTrip}
-            size="xl"
-            icon={<Icon name="plus" color={colors.white} />}
+            size="lg"
+            icon={<Icon name="plus" color={colors.onPrimary} />}
             onPress={() => router.push('/trips/new')}
             style={styles.cta}
           />
@@ -169,10 +165,10 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   titles: { flex: 1, gap: 4 },
   stepTexts: { flex: 1, gap: 2 },
-  h1: { fontFamily: fonts.displayBold, fontSize: 36, lineHeight: 40, color: colors.ink },
-  subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.inkSecondary },
+  h1: { fontFamily: fonts.extraBold, fontSize: 36, lineHeight: 40, color: colors.ink },
+  subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.inkMuted },
   h2: {
-    fontFamily: fonts.display,
+    fontFamily: fonts.extraBold,
     fontSize: 22,
     color: colors.ink,
     marginTop: 12,
@@ -181,14 +177,14 @@ const styles = StyleSheet.create({
   spacer: { height: 120 },
   spacerWide: { height: 40 },
   status: { alignItems: 'center', gap: 8, paddingVertical: 48 },
-  retry: { fontFamily: fonts.semibold, fontSize: 16, color: colors.accent },
+  retry: { fontFamily: fonts.bold, fontSize: 16, color: colors.primary },
   ctaWrap: { position: 'absolute', start: 0, end: 0, alignItems: 'center' },
   cta: { height: 60, borderRadius: 30, paddingHorizontal: 28 },
-  card: { borderRadius: radius.card, backgroundColor: colors.surface, overflow: 'hidden' },
+  card: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
   cardBody: { paddingHorizontal: 20, paddingTop: 20, paddingBottom: 22, gap: 8 },
-  cardTitle: { fontFamily: fonts.display, fontSize: 26, color: colors.ink },
-  cardText: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24, color: colors.inkSecondary },
-  steps: { borderRadius: radius.group, backgroundColor: colors.surface, paddingVertical: 6 },
+  cardTitle: { fontFamily: fonts.extraBold, fontSize: 26, color: colors.ink },
+  cardText: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24, color: colors.inkMuted },
+  steps: { borderRadius: radius.card, backgroundColor: colors.card, paddingVertical: 6 },
   step: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -200,11 +196,11 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.accentTint,
+    backgroundColor: colors.primaryTint,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepNumText: { fontFamily: fonts.display, fontSize: 19, color: colors.accent },
-  stepTitle: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
-  stepText: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkSecondary },
+  stepNumText: { fontFamily: fonts.extraBold, fontSize: 19, color: colors.primary },
+  stepTitle: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
+  stepText: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
 });

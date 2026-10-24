@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { AvatarStack } from '@/components/Avatar';
 import { Cover } from '@/components/Cover';
 import { glassStyle } from '@/components/GlassTabBar';
-import { Pegs } from '@/components/Pegs';
+import { Progress } from '@/components/Progress';
 import { toAvatar } from '@/features/trip/derive';
 import { he, missingItems, openTransfers, participants } from '@/i18n/he';
 import { countdown, formatRange, monthName } from '@/lib/dates';
@@ -27,15 +27,13 @@ export function TripCard({ data, me, large }: { data: TripSummary; me: string; l
             <Text style={[styles.name, { fontSize: large ? 26 : 22 }]}>{trip.name}</Text>
             <Text style={styles.dates}>{formatRange(trip.startsOn, trip.endsOn)}</Text>
           </View>
-          <Pegs done={doneCount} total={itemCount} height={8} />
+          <Progress done={doneCount} total={itemCount} />
           <View style={styles.row}>
             <View style={styles.counts}>
               {itemCount === 0 ? (
-                <Text style={[styles.missing, { color: colors.inkSecondary }]}>
-                  {he.home.noItems}
-                </Text>
+                <Text style={[styles.missing, { color: colors.inkMuted }]}>{he.home.noItems}</Text>
               ) : (
-                <Text style={[styles.missing, missing === 0 && { color: colors.success }]}>
+                <Text style={[styles.missing, missing === 0 && { color: colors.inkMuted }]}>
                   {missing === 0 ? he.trip.allCovered : missingItems(missing)}
                 </Text>
               )}
@@ -43,7 +41,7 @@ export function TripCard({ data, me, large }: { data: TripSummary; me: string; l
                 <Text style={styles.meta}>{he.trip.coveredOf(doneCount, itemCount)}</Text>
               )}
             </View>
-            <AvatarStack people={data.members.map((m) => toAvatar(m, me))} />
+            <AvatarStack people={data.members.map((m) => toAvatar(m))} />
           </View>
           {large && data.mine.length > 0 && (
             <Text style={styles.mine}>
@@ -82,7 +80,7 @@ export function PastTripRow({ data }: { data: TripSummary }) {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.card, backgroundColor: colors.surface, overflow: 'hidden' },
+  card: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
   countdown: {
     position: 'absolute',
     top: 12,
@@ -92,23 +90,23 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     justifyContent: 'center',
   },
-  countdownText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.ink },
+  countdownText: { fontFamily: fonts.bold, fontSize: 13, color: colors.ink },
   body: { padding: 18 },
   titles: { gap: 4, flex: 1 },
-  name: { fontFamily: fonts.display, color: colors.ink },
-  dates: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkSecondary },
+  name: { fontFamily: fonts.extraBold, color: colors.ink },
+  dates: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
   row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   counts: { gap: 2 },
-  missing: { fontFamily: fonts.semibold, fontSize: 15, color: colors.missing },
-  meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
+  missing: { fontFamily: fonts.bold, fontSize: 15, color: colors.brandStrong },
+  meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
   mine: {
     alignSelf: 'flex-start',
     paddingVertical: 8,
     paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: colors.accentTint,
-    color: colors.accent,
-    fontFamily: fonts.medium,
+    backgroundColor: colors.primaryTint,
+    color: colors.primary,
+    fontFamily: fonts.bold,
     fontSize: 14,
   },
   past: {
@@ -116,17 +114,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     padding: 12,
-    borderRadius: radius.group,
-    backgroundColor: colors.surface,
+    borderRadius: radius.card,
+    backgroundColor: colors.card,
   },
   thumb: { width: 64, height: 64, borderRadius: 18 },
   openBadge: {
     height: 30,
     paddingHorizontal: 10,
     borderRadius: 15,
-    backgroundColor: colors.missingTint,
+    backgroundColor: colors.ground,
     justifyContent: 'center',
   },
-  openText: { fontFamily: fonts.semibold, fontSize: 13, color: colors.missing },
-  pastName: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
+  openText: { fontFamily: fonts.bold, fontSize: 13, color: colors.brandStrong },
+  pastName: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
 });

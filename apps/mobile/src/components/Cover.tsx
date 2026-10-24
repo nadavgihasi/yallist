@@ -2,26 +2,33 @@ import type { ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
+import { colors } from '@/theme';
+
+const illo = colors.illustration;
+
 export type Scene = 'camp' | 'grill' | 'zimmer' | 'beach' | 'blank';
 
-/** Flat layered scenes from SPEC Appendix B (viewBox 390×300), cropped like CSS `cover`. */
+/**
+ * Flat layered scenes from SPEC Appendix B (viewBox 390×300), cropped like CSS `cover`. The camp
+ * scene is the v2 empty-state illustration, in the `illustration` tokens.
+ */
 const SCENES: Record<Scene, ReactNode> = {
   camp: (
     <>
-      <Rect width="390" height="300" fill="#FFB774" />
-      <Circle cx="268" cy="118" r="48" fill="#FFE39B" />
+      <Rect width="390" height="300" fill={illo.sky} />
+      <Circle cx="268" cy="118" r="48" fill={illo.sun} />
       <Path
         d="M0 168 C70 138 128 152 190 136 C250 121 310 146 390 128 L390 300 L0 300 Z"
-        fill="#B07CC6"
+        fill={illo.hill}
       />
       <Path
         d="M0 196 C80 170 150 188 220 172 C290 157 340 182 390 170 L390 300 L0 300 Z"
-        fill="#7A55B5"
+        fill={illo.hillDeep}
       />
-      <Rect y="206" width="390" height="94" fill="#2F4FD8" />
+      <Rect y="206" width="390" height="94" fill={illo.water} />
       <Path
         d="M232 222 h72 M246 236 h44 M256 250 h24"
-        stroke="#FFE39B"
+        stroke={illo.sun}
         strokeWidth="4"
         strokeLinecap="round"
         opacity="0.7"
@@ -30,7 +37,7 @@ const SCENES: Record<Scene, ReactNode> = {
         d="M0 262 C90 248 170 272 260 256 C320 246 360 258 390 252 L390 300 L0 300 Z"
         fill="#1F1752"
       />
-      <Path d="M44 264 L84 214 L124 264 Z" fill="#FFCF3F" />
+      <Path d="M44 264 L84 214 L124 264 Z" fill={illo.tent} />
       <Path d="M84 264 L84 232 L100 264 Z" fill="#E8590C" />
     </>
   ),
@@ -120,7 +127,7 @@ const SCENES: Record<Scene, ReactNode> = {
 
 /** Tile background color per scene (template picker). */
 export const SCENE_TINT: Record<Scene, string> = {
-  camp: '#FFB774',
+  camp: illo.sky,
   grill: '#BDE5CF',
   zimmer: '#FFCDB2',
   beach: '#A8DBF7',

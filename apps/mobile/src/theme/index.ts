@@ -1,67 +1,99 @@
 import type { TextStyle } from 'react-native';
 
+/**
+ * Design system v2 tokens (docs/design/tokens). Names follow the handoff, except the page
+ * background: the handoff's `surface` is `ground` here, so `surface` never silently changes
+ * meaning from "card" to "page".
+ */
 export const colors = {
-  ink: '#0E1726',
-  inkSecondary: '#4B5565',
-  inkTertiary: '#9AA3B2',
+  /** Page background behind cards (handoff `surface`). */
   ground: '#F4F5F8',
-  surface: '#FFFFFF',
-  divider: '#EEF0F4',
-  borderChip: '#E4E7EE',
-  borderPill: '#D9DDE6',
-  borderCheckbox: '#C5CCD8',
-  accent: '#3B5BFD',
-  accentTint: '#3B5BFD1F',
-  missing: '#C2410C',
-  missingTint: '#FFE9DE',
-  missingPeg: '#FFE1D2',
-  success: '#1E7A4C',
-  successTint: '#E3F4EA',
-  white: '#FFFFFF',
-  scrim: 'rgba(14,23,38,0.38)',
-  glass: 'rgba(255,255,255,0.72)',
-  glassFallback: 'rgba(255,255,255,0.92)',
-  darkGlass: 'rgba(14,23,38,0.35)',
+  /** Cards and sheets, always on `ground`. */
+  card: '#FFFFFF',
+  ink: '#101725',
+  inkMuted: '#4D5564',
+  /** Everything you can tap. */
+  primary: '#425AF4',
+  onPrimary: '#FFFFFF',
+  /** Tonal buttons, step circles, selected chips. */
+  primaryTint: '#E8EBFE',
+  /** Blue text on `primaryTint` at small sizes. */
+  primaryStrong: '#3D53E8',
+  /** Yallist orange: the logo, done checks and progress. Graphics only; never buttons. */
+  brand: '#FF5A1F',
+  /** Orange text on `card` (e.g. "אצלך", errors). */
+  brandStrong: '#C93F0E',
+  /** Empty-state and cover illustrations only. */
+  illustration: {
+    sky: '#F4BA7E',
+    sun: '#FAE4A4',
+    hill: '#A87EC1',
+    hillDeep: '#7457AF',
+    water: '#364ED0',
+    tent: '#F7D15C',
+  },
+  // App additions the handoff doesn't cover.
+  /** Placeholders. */
+  inkFaint: '#8B93A1',
+  /** Switch track when off. */
+  line: '#D5D9E2',
+  scrim: 'rgba(16,23,37,0.38)',
 } as const;
 
-export const avatarPalette = [
-  '#FFD9C2',
-  '#D8F0E0',
-  '#F1DDF7',
-  '#FFF0B3',
-  '#D3F1F4',
-  '#FFDDE4',
-  '#E3E0FF',
-] as const;
-
+/** Rubik at 400, 700 and 800 (`@expo-google-fonts/rubik`). */
 export const fonts = {
-  display: 'Fredoka_600SemiBold',
-  displayBold: 'Fredoka_700Bold',
   regular: 'Rubik_400Regular',
-  medium: 'Rubik_500Medium',
-  semibold: 'Rubik_600SemiBold',
+  bold: 'Rubik_700Bold',
+  extraBold: 'Rubik_800ExtraBold',
 } as const;
 
+/**
+ * Text styles. Sizes within 2px of what the app already used keep the app's value (handoff
+ * task 2). No `fontWeight`: each weight is its own font family, and a weight on top of it makes
+ * web synthesize bold and Android fall back to the system font.
+ */
 export const type = {
-  screenTitle: { fontFamily: fonts.display, fontSize: 32, lineHeight: 38 },
-  sectionTitle: { fontFamily: fonts.display, fontSize: 20, lineHeight: 26 },
-  bigNumber: { fontFamily: fonts.displayBold, fontSize: 56, lineHeight: 60 },
-  itemName: { fontFamily: fonts.medium, fontSize: 17, lineHeight: 22 },
-  body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 22 },
-  label: { fontFamily: fonts.medium, fontSize: 15, lineHeight: 20 },
-  meta: { fontFamily: fonts.regular, fontSize: 13, lineHeight: 18 },
-  tab: { fontFamily: fonts.medium, fontSize: 11, lineHeight: 14 },
+  pageTitle: { fontFamily: fonts.extraBold, fontSize: 36, lineHeight: 40, letterSpacing: -0.36 },
+  sectionTitle: { fontFamily: fonts.extraBold, fontSize: 26, lineHeight: 32 },
+  body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24 },
+  itemTitle: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 22 },
+  caption: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  stepNumber: { fontFamily: fonts.extraBold, fontSize: 19, lineHeight: 24 },
+  buttonLg: { fontFamily: fonts.extraBold, fontSize: 17, lineHeight: 24 },
+  buttonSm: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 20 },
+  /** App addition: the money total. */
+  bigNumber: { fontFamily: fonts.extraBold, fontSize: 56, lineHeight: 60 },
 } satisfies Record<string, TextStyle>;
 
-export const radius = {
-  card: 28,
-  group: 24,
-  sheet: 34,
-  input: 18,
-  pill: 999,
+export const space = {
+  1: 4,
+  2: 8,
+  3: 12,
+  4: 16,
+  5: 20,
+  6: 24,
+  /** Screen side padding. */
+  screen: 16,
+  /** Minimum touch target. */
+  touch: 44,
 } as const;
 
-export const space = {
-  screen: 16,
-  touch: 44,
+export const radius = {
+  card: 24,
+  input: 16,
+  pill: 999,
+  /** The icon tile: 22.5% of its size. */
+  iconRatio: 0.225,
+} as const;
+
+export const size = {
+  step: 40,
+  avatar: 44,
+  buttonSm: 44,
+  buttonLg: 60,
+} as const;
+
+/** Only the floating primary button has a shadow; cards stay flat. */
+export const shadow = {
+  float: { boxShadow: '0 10px 24px rgba(16,23,37,0.18)' },
 } as const;

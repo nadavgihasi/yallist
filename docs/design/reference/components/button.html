@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head><meta charset="utf-8">
+<link rel="stylesheet" href="../../tokens/tokens.css"><title>Button — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;800&amp;display=swap">
+<style>
+html,body{margin:0}
+body{background:var(--surface);font-family:var(--font-sans);color:var(--ink)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:var(--space-6);padding:var(--space-5) var(--space-6)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-4);border:0;border-radius:var(--radius-pill);font-family:var(--font-sans);cursor:pointer}
+.btn-primary{height:var(--size-button-lg);padding-inline:var(--space-6);background:var(--primary);color:var(--on-primary);box-shadow:var(--shadow-float)}
+.btn-tonal{height:var(--size-button-sm);padding-inline:var(--space-5);background:var(--primary-tint);color:var(--primary-strong)}
+.btn svg{flex:none}
+</style></head>
+<body>
+<div class="row">
+<button class="btn btn-primary button-lg" type="button"><svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>פתיחת טיול ראשון</button>
+<button class="btn btn-tonal button-sm" type="button">טיול לדוגמה</button>
+</div>
+</body>
+</html>

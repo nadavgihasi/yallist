@@ -14,10 +14,10 @@ import type { TripView } from './derive';
 export type Tone = 'missing' | 'mine' | 'ok' | 'success';
 
 export const TONE_COLOR: Record<Tone, string> = {
-  missing: colors.missing,
-  mine: colors.accent,
-  ok: colors.inkSecondary,
-  success: colors.success,
+  missing: colors.brandStrong,
+  mine: colors.primary,
+  ok: colors.inkMuted,
+  success: colors.inkMuted,
 };
 
 /** Hebrew status line for an item row (SPEC §4 table). Never puts "אני" after "אצל". */
@@ -88,6 +88,6 @@ export function quantityText(item: Item, claims: readonly Claim[]): string {
 }
 
 export function groupSummary(missing: number): { text: string; color: string } {
-  if (missing === 0) return { text: he.trip.allCovered, color: colors.success };
-  return { text: groupMissing(missing), color: colors.missing };
+  if (missing === 0) return { text: he.trip.allCovered, color: colors.inkMuted };
+  return { text: groupMissing(missing), color: colors.brandStrong };
 }

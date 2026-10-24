@@ -205,7 +205,7 @@ export default function NewTrip() {
             {wide && (
               <PillButton
                 label={he.newTrip.create}
-                size="xl"
+                size="lg"
                 wide
                 style={styles.cta}
                 disabled={createTrip.isPending}
@@ -220,7 +220,7 @@ export default function NewTrip() {
         <View style={[styles.ctaWrap, { bottom: 24 + insets.bottom }]}>
           <PillButton
             label={he.newTrip.create}
-            size="xl"
+            size="lg"
             wide
             style={styles.cta}
             disabled={createTrip.isPending}
@@ -247,11 +247,11 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  h1: { fontFamily: fonts.displayBold, fontSize: 28, color: colors.ink },
+  h1: { fontFamily: fonts.extraBold, fontSize: 28, color: colors.ink },
   cover: { height: 220, borderRadius: radius.card },
   coverLabel: {
     position: 'absolute',
@@ -265,13 +265,13 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   coverLabelPlain: { backgroundColor: 'transparent' },
-  coverName: { fontFamily: fonts.display, fontSize: 26, color: colors.white },
-  coverDates: { fontFamily: fonts.regular, fontSize: 14, color: colors.white, opacity: 0.9 },
+  coverName: { fontFamily: fonts.extraBold, fontSize: 26, color: colors.onPrimary },
+  coverDates: { fontFamily: fonts.regular, fontSize: 14, color: colors.onPrimary, opacity: 0.9 },
   section: { gap: 10 },
   sectionHead: { gap: 2, paddingHorizontal: 4 },
-  h2: { fontFamily: fonts.display, fontSize: 22, color: colors.ink },
-  h3: { fontFamily: fonts.display, fontSize: 19, color: colors.ink },
-  hint: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkSecondary },
+  h2: { fontFamily: fonts.extraBold, fontSize: 22, color: colors.ink },
+  h3: { fontFamily: fonts.extraBold, fontSize: 19, color: colors.ink },
+  hint: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   // Strict two columns, so a lone last tile stays half width (NewTripV2 grid).
   tile: {
@@ -280,11 +280,11 @@ const styles = StyleSheet.create({
     padding: 14,
     borderRadius: 22,
     borderWidth: 2,
-    borderColor: colors.surface,
-    backgroundColor: colors.surface,
+    borderColor: colors.card,
+    backgroundColor: colors.card,
     gap: 8,
   },
-  tileOn: { borderColor: colors.accent, boxShadow: '0 6px 18px rgba(14,23,38,0.10)' },
+  tileOn: { borderColor: colors.primary, boxShadow: '0 6px 18px rgba(14,23,38,0.10)' },
   swatch: {
     width: 44,
     height: 44,
@@ -292,13 +292,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  tileName: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
-  tileMeta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
-  card: { padding: 16, borderRadius: radius.group, backgroundColor: colors.surface, gap: 16 },
+  tileName: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
+  tileMeta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
+  card: { padding: 16, borderRadius: radius.card, backgroundColor: colors.card, gap: 16 },
   field: { gap: 8 },
   dates: { flexDirection: 'row', gap: 8 },
   previewLine: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.ink },
-  strong: { fontFamily: fonts.semibold },
+  strong: { fontFamily: fonts.bold },
   ctaWrap: { position: 'absolute', start: 16, end: 16 },
   cta: { minHeight: 60, borderRadius: 30 },
 });

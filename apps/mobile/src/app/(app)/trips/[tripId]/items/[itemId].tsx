@@ -162,7 +162,7 @@ function ItemSheetBody({
           {canPrice && !expense && (
             <PillButton
               label={he.item.markBought}
-              size="xl"
+              size="lg"
               wide
               disabled={!amount || shares.length === 0}
               onPress={saveBought}
@@ -171,8 +171,8 @@ function ItemSheetBody({
           {expense && (
             <PillButton
               label={he.item.unmarkBought}
-              variant="neutral"
-              size="xl"
+              variant="quiet"
+              size="lg"
               wide
               onPress={() => act({ type: 'deleteExpense', expenseId: expense.id })}
             />
@@ -180,13 +180,13 @@ function ItemSheetBody({
           <PillButton
             label={he.item.edit}
             variant="quiet"
-            icon={<Icon name="pencil" size={18} color={colors.inkSecondary} />}
+            icon={<Icon name="pencil" size={18} color={colors.inkMuted} />}
             onPress={onEdit}
           />
           <PillButton
             label={he.item.delete}
             variant="danger"
-            icon={<Icon name="trash" size={18} color={colors.missing} />}
+            icon={<Icon name="trash" size={18} color={colors.brandStrong} />}
             onPress={remove}
           />
         </>
@@ -194,7 +194,7 @@ function ItemSheetBody({
     >
       <View style={styles.statusRow}>
         <View style={[styles.chip, { backgroundColor: chipBg(line.tone) }]}>
-          {status.kind === 'bought' && <Icon name="check" size={16} color={colors.success} />}
+          {status.kind === 'bought' && <Icon name="check" size={16} color={colors.inkMuted} />}
           <Text style={[styles.chipText, { color: chipFg(line.tone) }]}>{line.label}</Text>
         </View>
         {item.kind === 'single' && status.kind === 'mine' && (
@@ -252,14 +252,14 @@ function ItemSheetBody({
 
 function chipBg(tone: keyof typeof TONE_COLOR) {
   return {
-    missing: colors.missingTint,
-    mine: colors.accent,
+    missing: colors.ground,
+    mine: colors.primary,
     ok: colors.ground,
-    success: colors.successTint,
+    success: colors.ground,
   }[tone];
 }
 function chipFg(tone: keyof typeof TONE_COLOR) {
-  return tone === 'mine' ? colors.white : TONE_COLOR[tone];
+  return tone === 'mine' ? colors.onPrimary : TONE_COLOR[tone];
 }
 
 const styles = StyleSheet.create({
@@ -277,15 +277,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 18,
   },
-  chipText: { fontFamily: fonts.semibold, fontSize: 15 },
-  detail: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkSecondary, marginTop: -8 },
+  chipText: { fontFamily: fonts.bold, fontSize: 15 },
+  detail: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted, marginTop: -8 },
   field: { gap: 8 },
   note: {
     minHeight: 72,
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 18,
-    backgroundColor: 'rgba(14,23,38,0.05)',
+    backgroundColor: colors.ground,
     fontFamily: fonts.regular,
     fontSize: 16,
     lineHeight: 22,

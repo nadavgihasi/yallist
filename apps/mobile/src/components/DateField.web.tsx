@@ -51,10 +51,10 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 16,
-    backgroundColor: 'rgba(14,23,38,0.05)',
+    backgroundColor: colors.ground,
     justifyContent: 'center',
     gap: 2,
   },
-  label: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
-  value: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
+  label: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
+  value: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
 });

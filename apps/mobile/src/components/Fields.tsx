@@ -7,7 +7,7 @@ import { colors, fonts } from '@/theme';
  * (placeholder and caret on the left), so on web it's pinned to RTL. Native follows I18nManager.
  */
 export function Input(props: TextInputProps) {
-  return <TextInput placeholderTextColor={colors.inkTertiary} {...webRtl} {...props} />;
+  return <TextInput placeholderTextColor={colors.inkFaint} {...webRtl} {...props} />;
 }
 
 const webRtl = Platform.OS === 'web' ? ({ dir: 'rtl' } as object) : {};
@@ -66,7 +66,7 @@ export function AmountField({
           inputMode="decimal"
           returnKeyType="done"
           placeholder="0"
-          placeholderTextColor={colors.inkTertiary}
+          placeholderTextColor={colors.inkFaint}
           accessibilityLabel={label}
           style={[styles.amountInput, { fontSize: sz.input }]}
         />
@@ -81,18 +81,18 @@ export function AmountField({
 }
 
 export const fieldStyles = StyleSheet.create({
-  label: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
+  label: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
 });
 
 const styles = StyleSheet.create({
   wrap: { gap: 8 },
   label: fieldStyles.label,
-  hint: { fontFamily: fonts.regular, color: colors.inkSecondary },
+  hint: { fontFamily: fonts.regular, color: colors.inkMuted },
   input: {
     minHeight: 54,
     paddingHorizontal: 16,
     borderRadius: 16,
-    backgroundColor: 'rgba(14,23,38,0.05)',
+    backgroundColor: colors.ground,
     fontFamily: fonts.regular,
     fontSize: 17,
     color: colors.ink,
@@ -101,17 +101,17 @@ const styles = StyleSheet.create({
     minHeight: 80,
     paddingHorizontal: 20,
     borderRadius: 22,
-    backgroundColor: 'rgba(14,23,38,0.05)',
+    backgroundColor: colors.ground,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  error: { fontFamily: fonts.medium, fontSize: 13, color: colors.missing },
-  currency: { fontFamily: fonts.display, fontSize: 30, color: colors.inkSecondary },
+  error: { fontFamily: fonts.bold, fontSize: 13, color: colors.brandStrong },
+  currency: { fontFamily: fonts.extraBold, fontSize: 30, color: colors.inkMuted },
   amountInput: {
     flex: 1,
     minWidth: 0,
-    fontFamily: fonts.display,
+    fontFamily: fonts.extraBold,
     fontSize: 40,
     color: colors.ink,
   },

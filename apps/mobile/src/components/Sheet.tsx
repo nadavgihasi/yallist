@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   sheet: {
     width: '100%',
     maxWidth: 560,
-    borderRadius: radius.sheet,
+    borderRadius: radius.card,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.9)',
     boxShadow: '0 20px 50px rgba(14,23,38,0.25)',
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   // Sized to content, scrolling only past the window height.
   fill: { flex: 1 },
   // More opaque than the phone sheet: on wide screens it floats over dense content.
-  dialog: { maxHeight: '100%', backgroundColor: colors.glassFallback },
+  dialog: { maxHeight: '100%', backgroundColor: colors.card },
   dialogTop: { height: 14 },
   grabberRow: { alignItems: 'center', paddingTop: 10 },
   grabber: { width: 40, height: 5, borderRadius: 3, backgroundColor: 'rgba(14,23,38,0.18)' },
@@ -146,13 +146,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   titles: { flex: 1, gap: 4 },
-  title: { fontFamily: fonts.displayBold, color: colors.ink },
-  subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.inkSecondary },
+  title: { fontFamily: fonts.extraBold, color: colors.ink },
+  subtitle: { fontFamily: fonts.regular, fontSize: 15, color: colors.inkMuted },
   close: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(14,23,38,0.06)',
+    backgroundColor: colors.ground,
     alignItems: 'center',
     justifyContent: 'center',
   },

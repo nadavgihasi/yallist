@@ -1,4 +1,5 @@
-docs/design/screens/
+docs/design/*
+!docs/design/README.md
 pnpm-lock.yaml
 **/.sst/
 apps/api/drizzle/

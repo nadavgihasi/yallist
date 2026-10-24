@@ -1,8 +1,7 @@
-import { Fredoka_600SemiBold, Fredoka_700Bold } from '@expo-google-fonts/fredoka';
 import {
   Rubik_400Regular,
-  Rubik_500Medium,
-  Rubik_600SemiBold,
+  Rubik_700Bold,
+  Rubik_800ExtraBold,
   useFonts,
 } from '@expo-google-fonts/rubik';
 import { Stack } from 'expo-router';
@@ -27,11 +26,9 @@ const webRtl = Platform.OS === 'web' ? ({ dir: 'rtl' } as object) : {};
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
-    Fredoka_600SemiBold,
-    Fredoka_700Bold,
     Rubik_400Regular,
-    Rubik_500Medium,
-    Rubik_600SemiBold,
+    Rubik_700Bold,
+    Rubik_800ExtraBold,
   });
   const ready = fontsLoaded || fontError !== null;
 

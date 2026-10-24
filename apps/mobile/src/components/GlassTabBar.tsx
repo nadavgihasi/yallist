@@ -9,10 +9,10 @@ import { colors, fonts } from '@/theme';
 export const glassStyle =
   Platform.OS === 'web'
     ? {
-        backgroundColor: colors.glass,
+        backgroundColor: colors.card,
         backdropFilter: 'blur(20px) saturate(180%)',
       }
-    : { backgroundColor: colors.glassFallback };
+    : { backgroundColor: colors.card };
 
 export interface TabSpec<T extends string> {
   value: T;
@@ -35,7 +35,7 @@ export function GlassTabBar<T extends string>({
     <View style={[styles.bar, glassStyle]} accessibilityRole="tablist">
       {tabs.map((t) => {
         const selected = t.value === value;
-        const color = selected ? colors.accent : colors.inkSecondary;
+        const color = selected ? colors.primary : colors.inkMuted;
         return (
           <Pressable
             key={t.value}
@@ -43,7 +43,7 @@ export function GlassTabBar<T extends string>({
             accessibilityLabel={t.label}
             accessibilityState={{ selected }}
             onPress={() => onChange(t.value)}
-            style={[styles.tab, selected && { backgroundColor: colors.accentTint }]}
+            style={[styles.tab, selected && { backgroundColor: colors.primaryTint }]}
           >
             <View>
               <Icon name={t.icon} color={color} size={22} />
@@ -98,7 +98,7 @@ const styles = StyleSheet.create({
     boxShadow: '0 10px 30px rgba(14,23,38,0.16)',
   },
   tab: { flex: 1, borderRadius: 28, alignItems: 'center', justifyContent: 'center', gap: 2 },
-  tabLabel: { fontFamily: fonts.semibold, fontSize: 11 },
+  tabLabel: { fontFamily: fonts.bold, fontSize: 11 },
   badge: {
     position: 'absolute',
     top: -5,
@@ -108,12 +108,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 5,
     borderRadius: 9,
     borderWidth: 2,
-    borderColor: colors.white,
-    backgroundColor: colors.missing,
+    borderColor: colors.card,
+    backgroundColor: colors.brandStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: { color: colors.white, fontFamily: fonts.semibold, fontSize: 10, lineHeight: 12 },
+  badgeText: { color: colors.onPrimary, fontFamily: fonts.bold, fontSize: 10, lineHeight: 12 },
   fab: {
     position: 'absolute',
     bottom: 22,
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
     boxShadow: '0 10px 24px rgba(14,23,38,0.28)',

@@ -60,7 +60,7 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           <PillButton
             label={he.money.markPaid}
             variant="soft"
-            size="lg"
+            size="md"
             wide
             style={styles.heroButton}
             disabled={saving}
@@ -70,10 +70,10 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           myPaid.length > 0 && (
             <PillButton
               label={he.money.markedPaid}
-              variant="success"
-              size="lg"
+              variant="soft"
+              size="md"
               wide
-              icon={<Icon name="check" size={18} color={colors.success} />}
+              icon={<Icon name="check" size={18} color={colors.primaryStrong} />}
               accessibilityState={{ checked: true }}
               style={styles.heroButton}
               disabled={saving}
@@ -93,11 +93,11 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
               <View style={styles.transferWho}>
                 <Avatar person={view.avatarOf(t.from)} ring={false} />
                 <Text style={styles.transferName}>{view.nameOf(t.from)}</Text>
-                <Icon name="arrowEnd" size={18} color={colors.inkTertiary} />
+                <Icon name="arrowEnd" size={18} color={colors.inkFaint} />
                 <Avatar person={view.avatarOf(t.to)} ring={false} />
                 <Text style={styles.transferName}>{view.nameOf(t.to)}</Text>
               </View>
-              <Text style={[styles.amount, t.from === me && { color: colors.accent }]}>
+              <Text style={[styles.amount, t.from === me && { color: colors.primary }]}>
                 {formatShekel(t.amountAgorot)}
               </Text>
             </View>
@@ -140,12 +140,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     borderRadius: radius.card,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     gap: 6,
   },
-  heroTitle: { fontFamily: fonts.medium, fontSize: 15, color: colors.inkSecondary },
-  heroAmount: { fontFamily: fonts.displayBold, fontSize: 60, lineHeight: 64, color: colors.ink },
-  heroText: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkSecondary },
+  heroTitle: { fontFamily: fonts.bold, fontSize: 15, color: colors.inkMuted },
+  heroAmount: { fontFamily: fonts.extraBold, fontSize: 60, lineHeight: 64, color: colors.ink },
+  heroText: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
   heroButton: { marginTop: 12 },
   transfer: {
     flexDirection: 'row',
@@ -156,8 +156,8 @@ const styles = StyleSheet.create({
     minHeight: 64,
   },
   transferWho: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 },
-  transferName: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
-  amount: { fontFamily: fonts.semibold, fontSize: 17, color: colors.ink },
+  transferName: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
+  amount: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
   expense: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -166,6 +166,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   expenseBody: { flex: 1, gap: 2 },
-  expenseWhat: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
-  expenseWho: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
+  expenseWhat: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
+  expenseWho: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
 });

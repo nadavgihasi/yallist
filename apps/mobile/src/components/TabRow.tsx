@@ -23,7 +23,7 @@ export function TabRow<T extends string>({
       <View style={styles.tabs} accessibilityRole="tablist">
         {tabs.map((t) => {
           const selected = t.value === value;
-          const color = selected ? colors.accent : colors.inkSecondary;
+          const color = selected ? colors.primary : colors.inkMuted;
           return (
             <Pressable
               key={t.value}
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     padding: 4,
     gap: 4,
     borderRadius: 26,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
   },
   tab: {
     flexDirection: 'row',
@@ -71,16 +71,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 22,
   },
-  tabOn: { backgroundColor: colors.accentTint },
-  label: { fontFamily: fonts.semibold, fontSize: 15 },
+  tabOn: { backgroundColor: colors.primaryTint },
+  label: { fontFamily: fonts.bold, fontSize: 15 },
   badge: {
     minWidth: 22,
     height: 22,
     paddingHorizontal: 6,
     borderRadius: 11,
-    backgroundColor: colors.missing,
+    backgroundColor: colors.brandStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  badgeText: { color: colors.white, fontFamily: fonts.semibold, fontSize: 12, lineHeight: 14 },
+  badgeText: { color: colors.onPrimary, fontFamily: fonts.bold, fontSize: 12, lineHeight: 14 },
 });
