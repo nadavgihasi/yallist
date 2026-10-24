@@ -1,4 +1,4 @@
-import type { Claim, Item, ItemStatus } from '@yallist/domain';
+import { claimCap, type Claim, type Item, type ItemStatus } from '@yallist/domain';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarStack } from '@/components/Avatar';
@@ -61,11 +61,7 @@ export function ItemRow({
     );
   } else if (item.kind === 'qty' && !bought) {
     action = (
-      <ClaimStepper
-        mine={mine}
-        canAdd={status.kind === 'missing' || status.kind === 'partial'}
-        onChange={onClaim}
-      />
+      <ClaimStepper mine={mine} canAdd={claimCap(item, claims, me) > mine} onChange={onClaim} />
     );
   } else if (status.kind === 'missing') {
     action = (

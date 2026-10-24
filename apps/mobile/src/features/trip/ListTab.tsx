@@ -86,7 +86,7 @@ export function ListTab({
         ))}
       </ScrollView>
       {groups.length === 0 && (
-        <EmptyState title={he.trip.empty[filter].title} text={he.trip.empty[filter].text} />
+        <EmptyState {...he.trip.empty[filter === 'mine' && list === 'buy' ? 'mineBuy' : filter]} />
       )}
       {groups.map(({ category, total, missing, items }) => (
         <Card key={category?.id ?? 'none'} gap={space[3]}>
@@ -127,6 +127,7 @@ export function ListTab({
           {category && filter === 'all' && (
             <Pressable
               accessibilityRole="button"
+              accessibilityLabel={he.trip.addToCategoryLabel(category.name)}
               onPress={() => addItem(category.id)}
               style={styles.addRow}
             >

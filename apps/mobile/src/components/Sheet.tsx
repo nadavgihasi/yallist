@@ -45,9 +45,11 @@ export function Sheet({
 
   useEffect(() => {
     if (Platform.OS !== 'web') return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !e.isComposing && onClose();
+    // Capture: react-native-web's TextInput stops keydown from bubbling, so a sheet whose field
+    // has focus (add item autofocuses one) would otherwise ignore Escape.
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
   }, [onClose]);
 
   return (
