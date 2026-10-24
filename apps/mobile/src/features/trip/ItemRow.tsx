@@ -39,7 +39,7 @@ export function ItemRow({
       <PillButton
         label={he.trip.have}
         variant={mine ? 'solid' : 'soft'}
-        icon={mine ? <Icon name="check" size={16} color={colors.white} /> : undefined}
+        icon={mine ? <Icon name="check" size={16} color={colors.onPrimary} /> : undefined}
         accessibilityState={{ checked: mine > 0 }}
         onPress={() => onClaim(mine ? 0 : 1)}
       />
@@ -67,7 +67,7 @@ export function ItemRow({
         variant="quiet"
         size="sm"
         accessibilityLabel={he.trip.releaseLabel}
-        icon={<Icon name="close" size={16} color={colors.inkSecondary} />}
+        icon={<Icon name="close" size={16} color={colors.inkMuted} />}
         onPress={() => onClaim(0)}
       />
     );
@@ -104,9 +104,9 @@ const styles = StyleSheet.create({
   },
   main: { flex: 1, minWidth: 0, gap: 4 },
   nameLine: { flexDirection: 'row', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' },
-  name: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
-  qty: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
+  name: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
+  qty: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
   statusLine: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-  status: { fontFamily: fonts.semibold, fontSize: 13 },
-  detail: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
+  status: { fontFamily: fonts.bold, fontSize: 13 },
+  detail: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
 });

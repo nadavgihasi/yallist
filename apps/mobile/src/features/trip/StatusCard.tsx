@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AvatarStack } from '@/components/Avatar';
-import { Pegs } from '@/components/Pegs';
+import { Progress } from '@/components/Progress';
 import { he } from '@/i18n/he';
 import type { TripMember } from '@/state/types';
 import { colors, fonts, radius } from '@/theme';
@@ -20,7 +20,7 @@ export function StatusCard({
   me: string;
   style?: StyleProp<ViewStyle>;
 }) {
-  const avatars = <AvatarStack people={members.map((m) => toAvatar(m, me))} />;
+  const avatars = <AvatarStack people={members.map((m) => toAvatar(m))} />;
   // Nothing to cover yet: a neutral line, not a green "0, all covered" (matches TripCard).
   if (view.items.length === 0) {
     return (
@@ -38,7 +38,9 @@ export function StatusCard({
     <View style={[styles.card, style]}>
       <View style={styles.top}>
         <View style={styles.numberRow}>
-          <Text style={[styles.number, { color: missing === 0 ? colors.success : colors.missing }]}>
+          <Text
+            style={[styles.number, { color: missing === 0 ? colors.inkMuted : colors.brandStrong }]}
+          >
             {missing}
           </Text>
           <View style={styles.texts}>
@@ -50,7 +52,7 @@ export function StatusCard({
         </View>
         {avatars}
       </View>
-      <Pegs done={view.doneCount} total={view.items.length} />
+      <Progress done={view.doneCount} total={view.items.length} />
     </View>
   );
 }
@@ -61,14 +63,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
     padding: 20,
     borderRadius: radius.card,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.card,
     gap: 16,
   },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   numberRow: { flexDirection: 'row', alignItems: 'center', gap: 12, flexShrink: 1 },
-  number: { fontFamily: fonts.displayBold, fontSize: 56, lineHeight: 56 },
+  number: { fontFamily: fonts.extraBold, fontSize: 56, lineHeight: 56 },
   texts: { gap: 2, flexShrink: 1 },
-  label: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
-  empty: { fontFamily: fonts.semibold, fontSize: 16, color: colors.inkSecondary, flexShrink: 1 },
-  covered: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
+  label: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
+  empty: { fontFamily: fonts.bold, fontSize: 16, color: colors.inkMuted, flexShrink: 1 },
+  covered: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
 });

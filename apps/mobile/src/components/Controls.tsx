@@ -27,8 +27,8 @@ export function SegmentedControl<T extends string>({
               style={[
                 styles.label,
                 selected
-                  ? { color: colors.ink, fontFamily: fonts.semibold }
-                  : { color: colors.inkSecondary },
+                  ? { color: colors.ink, fontFamily: fonts.bold }
+                  : { color: colors.inkMuted },
               ]}
             >
               {o.label}
@@ -61,7 +61,7 @@ export function Switch({
         styles.switchTrack,
         {
           justifyContent: value ? 'flex-end' : 'flex-start',
-          backgroundColor: value ? colors.accent : colors.borderPill,
+          backgroundColor: value ? colors.primary : colors.line,
         },
       ]}
     >
@@ -76,7 +76,7 @@ const styles = StyleSheet.create({
     gap: 4,
     padding: 4,
     borderRadius: 24,
-    backgroundColor: 'rgba(14,23,38,0.06)',
+    backgroundColor: colors.ground,
   },
   segment: {
     flex: 1,
@@ -85,8 +85,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  selected: { backgroundColor: colors.white, boxShadow: '0 1px 4px rgba(14,23,38,0.14)' },
-  label: { fontFamily: fonts.medium, fontSize: 16 },
+  selected: { backgroundColor: colors.card, boxShadow: '0 1px 4px rgba(14,23,38,0.14)' },
+  label: { fontFamily: fonts.bold, fontSize: 16 },
   switchTrack: {
     width: 52,
     height: 32,
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     boxShadow: '0 1px 3px rgba(14,23,38,0.25)',
   },
 });

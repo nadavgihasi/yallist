@@ -10,7 +10,7 @@ export function GoogleButton(_: { onIdToken: (idToken: string) => void }) {
     <>
       <PillButton
         label={he.login.google}
-        variant="outline"
+        variant="card"
         size="lg"
         wide
         style={styles.button}
@@ -26,7 +26,7 @@ const styles = StyleSheet.create({
   note: {
     fontFamily: fonts.regular,
     fontSize: 13,
-    color: colors.inkSecondary,
+    color: colors.inkMuted,
     textAlign: 'center',
   },
 });

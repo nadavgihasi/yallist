@@ -108,7 +108,7 @@ export function ListTab({
                   onPress={() => editCategory(category.id)}
                   style={styles.headerButton}
                 >
-                  <Icon name="pencil" size={18} color={colors.inkSecondary} />
+                  <Icon name="pencil" size={18} color={colors.inkMuted} />
                 </Pressable>
               )}
             </View>
@@ -135,7 +135,7 @@ export function ListTab({
                   onPress={() => addItem(category.id)}
                   style={styles.addRow}
                 >
-                  <Icon name="plus" size={18} color={colors.accent} />
+                  <Icon name="plus" size={18} color={colors.primary} />
                   <Text style={styles.addText}>{he.trip.addToCategory}</Text>
                 </Pressable>
               )}
@@ -147,7 +147,7 @@ export function ListTab({
         <View style={styles.group}>
           <PillButton
             label={he.trip.addCategory}
-            variant="outline"
+            variant="card"
             icon={<Icon name="plus" size={18} />}
             onPress={() =>
               router.push({ pathname: '/trips/[tripId]/categories/new', params: { tripId, list } })
@@ -180,6 +180,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  addText: { fontFamily: fonts.medium, fontSize: 15, color: colors.accent },
+  addText: { fontFamily: fonts.bold, fontSize: 15, color: colors.primary },
   addCategory: { alignSelf: 'flex-start' },
 });

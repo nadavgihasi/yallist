@@ -55,7 +55,7 @@ function AddExpenseBody({ data }: { data: TripData }) {
       title={he.addExpense.title}
       onClose={close}
       footer={
-        <PillButton label={he.addExpense.save} size="xl" wide disabled={!valid} onPress={save} />
+        <PillButton label={he.addExpense.save} size="lg" wide disabled={!valid} onPress={save} />
       }
     >
       <AmountField
@@ -145,11 +145,11 @@ const styles = StyleSheet.create({
   whatInput: { minHeight: 56, borderRadius: 20, paddingHorizontal: 18 },
   field: { gap: 10 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
-  meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
+  meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
   payers: { gap: 10, paddingVertical: 4, paddingHorizontal: 2 },
   payer: { minWidth: 56, alignItems: 'center', gap: 6 },
   payerRing: { borderRadius: 30, padding: 3, borderWidth: 2, borderColor: 'transparent' },
-  payerOn: { borderColor: colors.accent },
-  payerName: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
-  payerNameOn: { fontFamily: fonts.semibold, color: colors.ink },
+  payerOn: { borderColor: colors.primary },
+  payerName: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
+  payerNameOn: { fontFamily: fonts.bold, color: colors.ink },
 });

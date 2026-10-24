@@ -55,7 +55,7 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
         <PillButton
           label={he.people.share}
           variant="soft"
-          size="lg"
+          size="md"
           wide
           onPress={() => shareLink(Linking.createURL(`/j/${data.inviteToken}`))}
         />
@@ -67,7 +67,7 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
           <ListGroup inset={72}>
             {pending.map((m) => (
               <View key={m.userId} style={styles.person}>
-                <Avatar person={toAvatar(m, me)} size={44} />
+                <Avatar person={toAvatar(m)} size={44} />
                 <View style={styles.personBody}>{name(m)}</View>
                 <PillButton
                   label={he.people.approve}
@@ -93,7 +93,7 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
           const confirming = confirmRemove === m.userId;
           return (
             <View key={m.userId} style={styles.person}>
-              <Avatar person={toAvatar(m, me)} size={44} />
+              <Avatar person={toAvatar(m)} size={44} />
               <View style={styles.personBody}>
                 {name(m)}
                 <View style={styles.chips}>
@@ -127,10 +127,10 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
 
 const styles = StyleSheet.create({
   wrap: { paddingTop: 20, paddingHorizontal: 16, gap: 16 },
-  card: { padding: 20, borderRadius: radius.group, backgroundColor: colors.surface, gap: 14 },
+  card: { padding: 20, borderRadius: radius.card, backgroundColor: colors.card, gap: 14 },
   texts: { gap: 4 },
-  title: { fontFamily: fonts.display, fontSize: 21, color: colors.ink },
-  text: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.inkSecondary },
+  title: { fontFamily: fonts.extraBold, fontSize: 21, color: colors.ink },
+  text: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20, color: colors.inkMuted },
   person: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -140,10 +140,10 @@ const styles = StyleSheet.create({
   },
   personBody: { flex: 1, gap: 6 },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  name: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink },
+  name: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
   pill: { backgroundColor: colors.ground, justifyContent: 'center' },
   badge: { height: 22, paddingHorizontal: 8, borderRadius: 11 },
   chips: { flexDirection: 'row', gap: 6 },
   chip: { height: 24, paddingHorizontal: 10, borderRadius: 12 },
-  chipText: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
+  chipText: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
 });

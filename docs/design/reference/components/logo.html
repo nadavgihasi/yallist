@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8">
+<link rel="stylesheet" href="../../tokens/tokens.css"><title>Logo — preview</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;800&amp;display=swap">
+<style>
+html,body{margin:0}
+body{background:var(--surface);font-family:var(--font-sans);color:var(--ink)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--space-4);padding:var(--space-5)}
+.tile{display:flex;flex-direction:column;gap:var(--space-3);padding:var(--space-5);border-radius:var(--radius-card);background:var(--card)}
+.tile.dark{background:var(--ink)}
+.stage{display:flex;align-items:center;justify-content:center;gap:var(--space-5);min-height:112px}
+.label{margin:0;color:var(--ink-muted)}
+.dark .label{color:var(--surface)}
+.lockup{display:block;height:48px;width:auto}
+.zone{padding:17px;border:1px dashed var(--ink-muted);border-radius:4px}
+.zone img{display:block;height:40px;width:auto}
+.sizes{align-items:flex-end}
+.size{display:flex;flex-direction:column;align-items:center;gap:var(--space-1)}
+.size img{display:block}
+</style></head>
+<body>
+<div class="grid">
+<div class="tile">
+<div class="stage"><img class="lockup" src="../../brand/logo/yallist-lockup.svg" alt="Yallist"></div>
+<p class="label caption">On light: yallist-lockup.svg</p>
+</div>
+<div class="tile dark">
+<div class="stage"><img class="lockup" src="../../brand/logo/yallist-lockup-reversed.svg" alt="Yallist"></div>
+<p class="label caption">On dark: yallist-lockup-reversed.svg</p>
+</div>
+<div class="tile">
+<div class="stage"><div class="zone"><img src="../../brand/logo/yallist-lockup.svg" alt="Yallist with its clear-space zone"></div></div>
+<p class="label caption">Clear space: half the mark’s height on every side</p>
+</div>
+<div class="tile">
+<div class="stage sizes">
+<div class="size"><img src="../../brand/logo/yallist-icon.svg" width="60" height="60" alt="App icon, 60 px"><span class="caption label">60</span></div>
+<div class="size"><img src="../../brand/logo/yallist-icon.svg" width="40" height="40" alt="App icon, 40 px"><span class="caption label">40</span></div>
+<div class="size"><img src="../../brand/logo/yallist-icon.svg" width="24" height="24" alt="App icon, 24 px"><span class="caption label">24</span></div>
+<div class="size"><img src="../../brand/logo/yallist-mark.svg" height="40" alt="Mark alone"><span class="caption label">mark</span></div>
+</div>
+<p class="label caption">Icon at real sizes, and the mark alone</p>
+</div>
+</div>
+</body>
+</html>

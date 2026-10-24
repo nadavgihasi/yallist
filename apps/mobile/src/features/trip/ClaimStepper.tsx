@@ -22,7 +22,7 @@ export function ClaimStepper({
         disabled={!canAdd}
         onPress={() => onChange(mine + 1)}
       />
-      <Text style={[styles.count, mine > 0 && { color: colors.accent }]}>{mine}</Text>
+      <Text style={[styles.count, mine > 0 && { color: colors.primary }]}>{mine}</Text>
       <StepButton
         icon="minus"
         label={he.trip.minusOne}
@@ -69,8 +69,8 @@ const styles = StyleSheet.create({
   count: {
     minWidth: 20,
     textAlign: 'center',
-    fontFamily: fonts.semibold,
+    fontFamily: fonts.bold,
     fontSize: 16,
-    color: colors.inkSecondary,
+    color: colors.inkMuted,
   },
 });

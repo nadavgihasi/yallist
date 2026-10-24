@@ -1,0 +1,42 @@
+:root {
+  --surface: #f4f5f8;
+  --card: #ffffff;
+  --ink: #101725;
+  --ink-muted: #4d5564;
+  --primary: #425af4;
+  --on-primary: #ffffff;
+  --primary-tint: #e8ebfe;
+  --primary-strong: #3d53e8;
+  --brand: #ff5a1f;
+  --brand-strong: #c93f0e;
+  --illo-sky: #f4ba7e;
+  --illo-sun: #fae4a4;
+  --illo-hill: #a87ec1;
+  --illo-hill-deep: #7457af;
+  --illo-water: #364ed0;
+  --illo-tent: #f7d15c;
+  --font-sans: Rubik, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --space-1: 4px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --content-max: 448px;
+  --radius-card: 24px;
+  --radius-pill: 999px;
+  --radius-icon: 22.5%;
+  --size-step: 40px;
+  --size-avatar: 44px;
+  --size-button-sm: 44px;
+  --size-button-lg: 60px;
+  --shadow-float: 0 10px 24px rgba(16, 23, 37, 0.18);
+}
+
+.page-title { font-family: var(--font-sans); font-size: 34px; line-height: 40px; font-weight: 800; letter-spacing: -0.01em; }
+.section-title { font-family: var(--font-sans); font-size: 24px; line-height: 30px; font-weight: 800; }
+.body { font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 400; }
+.item-title { font-family: var(--font-sans); font-size: 16px; line-height: 22px; font-weight: 700; }
+.caption { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 400; }
+.step-number { font-family: var(--font-sans); font-size: 18px; line-height: 24px; font-weight: 800; }
+.button-lg { font-family: var(--font-sans); font-size: 18px; line-height: 24px; font-weight: 800; }
+.button-sm { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 700; }

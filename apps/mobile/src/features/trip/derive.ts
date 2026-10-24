@@ -16,8 +16,8 @@ export function initial(name: string): string {
   return name.trim().charAt(0) || '?';
 }
 
-export function toAvatar(member: TripMember, me: string): AvatarPerson {
-  return { initial: initial(member.displayName), color: member.color, isMe: member.userId === me };
+export function toAvatar(member: TripMember): AvatarPerson {
+  return { initial: initial(member.displayName) };
 }
 
 /** Everything the trip screens derive from raw trip data, computed once per render. */
@@ -30,7 +30,7 @@ export function deriveTrip(data: TripData, me: string) {
   const nameOf = (id: string) => (id === me ? he.me : displayNameOf(id));
   const avatarOf = (id: string): AvatarPerson => {
     const m = memberById.get(id);
-    return m ? toAvatar(m, me) : { initial: '?', color: '#E9ECF2' };
+    return m ? toAvatar(m) : { initial: '?' };
   };
 
   const items = [...data.items].sort((a, b) => a.position - b.position);

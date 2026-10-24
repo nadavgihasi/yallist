@@ -24,13 +24,12 @@ export function FilterChip({
       onPress={onPress}
       style={[styles.chip, selected ? styles.dark : styles.light]}
     >
-      <Text style={[styles.label, { color: selected ? colors.white : colors.ink }]}>{label}</Text>
+      <Text style={[styles.label, { color: selected ? colors.onPrimary : colors.ink }]}>
+        {label}
+      </Text>
       {count !== undefined && (
         <Text
-          style={[
-            styles.count,
-            { color: selected ? 'rgba(255,255,255,0.75)' : colors.inkSecondary },
-          ]}
+          style={[styles.count, { color: selected ? 'rgba(255,255,255,0.75)' : colors.inkMuted }]}
         >
           {count}
         </Text>
@@ -59,14 +58,12 @@ export function PersonChip({
       style={[
         styles.person,
         selected
-          ? { borderColor: colors.accent, backgroundColor: colors.accentTint }
-          : { borderColor: colors.borderPill, backgroundColor: 'transparent' },
+          ? { borderColor: colors.primary, backgroundColor: colors.primaryTint }
+          : { borderColor: colors.line, backgroundColor: 'transparent' },
       ]}
     >
       <Avatar person={person} ring={false} dimmed={!selected} />
-      <Text style={[styles.label, { color: selected ? colors.ink : colors.inkSecondary }]}>
-        {name}
-      </Text>
+      <Text style={[styles.label, { color: selected ? colors.ink : colors.inkMuted }]}>{name}</Text>
     </Pressable>
   );
 }
@@ -112,9 +109,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   dark: { backgroundColor: colors.ink, borderColor: colors.ink },
-  light: { backgroundColor: colors.white, borderColor: colors.borderChip },
-  label: { fontFamily: fonts.medium, fontSize: 15 },
-  count: { fontFamily: fonts.semibold, fontSize: 13 },
+  light: { backgroundColor: colors.card, borderColor: colors.line },
+  label: { fontFamily: fonts.bold, fontSize: 15 },
+  count: { fontFamily: fonts.bold, fontSize: 13 },
   person: {
     minHeight: 44,
     paddingStart: 6,
@@ -131,11 +128,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     borderRadius: 20,
     borderWidth: 1.5,
-    borderColor: colors.borderPill,
+    borderColor: colors.line,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
   },
-  plus: { fontFamily: fonts.medium, fontSize: 16, color: colors.inkSecondary },
-  suggestionLabel: { flexShrink: 1, fontFamily: fonts.medium, fontSize: 14, color: colors.ink },
+  plus: { fontFamily: fonts.bold, fontSize: 16, color: colors.inkMuted },
+  suggestionLabel: { flexShrink: 1, fontFamily: fonts.bold, fontSize: 14, color: colors.ink },
 });

@@ -10,14 +10,11 @@ import { AmountField, TextField } from '@/components/Fields';
 import { Fab, GlassTabBar } from '@/components/GlassTabBar';
 import { Icon } from '@/components/Icon';
 import { EmptyState, ListGroup, SectionHeader } from '@/components/ListGroup';
-import { Pegs } from '@/components/Pegs';
+import { Progress } from '@/components/Progress';
 import { PillButton } from '@/components/PillButton';
-import { avatarPalette, colors, fonts } from '@/theme';
+import { colors, fonts } from '@/theme';
 
-const PEOPLE: AvatarPerson[] = ['ד', 'מ', 'ר', 'ש', 'א', 'י'].map((initial, i) => ({
-  initial,
-  color: avatarPalette[i % avatarPalette.length]!,
-}));
+const PEOPLE: AvatarPerson[] = ['ד', 'מ', 'ר', 'ש', 'א', 'י'].map((initial) => ({ initial }));
 const SCENES: Scene[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
 
 /** Dev-only gallery of the design-system components. */
@@ -40,17 +37,20 @@ export default function ComponentsPreview() {
           <Cover key={s} scene={s} style={styles.cover} />
         ))}
 
-        <SectionHeader title="התקדמות ואווטרים" aside="חסרים 3" asideColor={colors.missing} />
-        <Pegs done={9} total={20} />
-        <AvatarStack people={[{ initial: 'י', color: '', isMe: true }, ...PEOPLE]} />
+        <SectionHeader title="התקדמות ואווטרים" aside="חסרים 3" asideColor={colors.brandStrong} />
+        <Progress done={9} total={20} />
+        <AvatarStack people={PEOPLE} />
 
         <SectionHeader title="כפתורים" />
         <View style={styles.row}>
           <PillButton label="אני אביא" variant="soft" />
           <PillButton label="ביטול" variant="quiet" icon={<Icon name="close" size={16} />} />
-          <PillButton label="יש לי" icon={<Icon name="check" size={16} color={colors.white} />} />
+          <PillButton
+            label="יש לי"
+            icon={<Icon name="check" size={16} color={colors.onPrimary} />}
+          />
         </View>
-        <PillButton label="יצירת הטיול" size="xl" wide />
+        <PillButton label="יצירת הטיול" size="lg" wide />
         <PillButton label="מחיקת הפריט" variant="danger" />
 
         <SectionHeader title="צ׳יפים ובקרות" />
@@ -111,7 +111,7 @@ export default function ComponentsPreview() {
       />
       <Fab
         label="הוספה"
-        icon={<Icon name="plus" color={colors.white} size={28} />}
+        icon={<Icon name="plus" color={colors.onPrimary} size={28} />}
         onPress={() => {}}
       />
     </View>
@@ -128,10 +128,10 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  h1: { fontFamily: fonts.displayBold, fontSize: 36, color: colors.ink },
+  h1: { fontFamily: fonts.extraBold, fontSize: 36, color: colors.ink },
   cover: { height: 160, borderRadius: 28 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
-  body: { fontFamily: fonts.medium, fontSize: 16, color: colors.ink, flex: 1 },
-  rowText: { fontFamily: fonts.medium, fontSize: 17, color: colors.ink, padding: 16 },
+  body: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink, flex: 1 },
+  rowText: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink, padding: 16 },
   spacer: { height: 120 },
 });

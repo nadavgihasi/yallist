@@ -88,7 +88,7 @@ export function ItemForm({
       footer={
         <PillButton
           label={item ? he.editItem.save : he.addItem.cta(trimmed, list)}
-          size="xl"
+          size="lg"
           wide
           disabled={!valid}
           onPress={submit}
@@ -227,7 +227,7 @@ const styles = StyleSheet.create({
     minHeight: 60,
     paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: 'rgba(14,23,38,0.05)',
+    backgroundColor: colors.ground,
     fontFamily: fonts.regular,
     fontSize: 19,
     color: colors.ink,
@@ -242,12 +242,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 2,
     borderColor: 'transparent',
-    backgroundColor: 'rgba(14,23,38,0.05)',
+    backgroundColor: colors.ground,
     gap: 4,
   },
-  kindOn: { borderColor: colors.accent, backgroundColor: colors.accentTint },
-  kindLabel: { fontFamily: fonts.semibold, fontSize: 15, color: colors.ink },
-  kindHint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.inkSecondary },
+  kindOn: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
+  kindLabel: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
+  kindHint: { fontFamily: fonts.regular, fontSize: 12, lineHeight: 16, color: colors.inkMuted },
   qtyRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -256,22 +256,22 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: 'rgba(14,23,38,0.05)',
+    backgroundColor: colors.ground,
   },
-  qtyLabel: { fontFamily: fonts.medium, fontSize: 15, color: colors.ink },
+  qtyLabel: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
   qtyControls: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   qtyButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
   qtyValue: {
     minWidth: 36,
     textAlign: 'center',
-    fontFamily: fonts.display,
+    fontFamily: fonts.extraBold,
     fontSize: 24,
     color: colors.ink,
   },
@@ -280,10 +280,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: 'rgba(14,23,38,0.05)',
+    backgroundColor: colors.ground,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  switchLabel: { flex: 1, fontFamily: fonts.medium, fontSize: 16, color: colors.ink },
+  switchLabel: { flex: 1, fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
 });

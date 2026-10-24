@@ -4,10 +4,9 @@ import { colors, fonts } from '@/theme';
 
 export interface AvatarPerson {
   initial: string;
-  color: string;
-  isMe?: boolean;
 }
 
+/** Initial badge: `primary` fill, `onPrimary` letter. `dimmed` for someone left out (share picker). */
 export function Avatar({
   person,
   size = 32,
@@ -19,8 +18,6 @@ export function Avatar({
   ring?: boolean;
   dimmed?: boolean;
 }) {
-  const bg = dimmed ? '#E9ECF2' : person.isMe ? colors.accent : person.color;
-  const fg = dimmed ? colors.inkSecondary : person.isMe ? colors.white : colors.ink;
   return (
     <View
       style={[
@@ -28,13 +25,20 @@ export function Avatar({
         {
           width: size,
           height: size,
-          borderRadius: size / 2,
-          backgroundColor: bg,
+          backgroundColor: dimmed ? colors.primaryTint : colors.primary,
           borderWidth: ring ? 2 : 0,
         },
       ]}
     >
-      <Text style={{ color: fg, fontFamily: fonts.semibold, fontSize: Math.round(size * 0.42) }}>
+      <Text
+        style={[
+          styles.initial,
+          {
+            color: dimmed ? colors.primaryStrong : colors.onPrimary,
+            fontSize: Math.round(size * 0.42),
+          },
+        ]}
+      >
         {person.initial}
       </Text>
     </View>
@@ -44,8 +48,8 @@ export function Avatar({
 /** Overlapping avatars with a "+N" bubble when there are more than `max`. */
 export function AvatarStack({
   people,
-  max = 4,
-  size = 32,
+  max = 3,
+  size = 28,
 }: {
   people: AvatarPerson[];
   max?: number;
@@ -61,15 +65,10 @@ export function AvatarStack({
         </View>
       ))}
       {extra > 0 && (
-        <View
-          style={[
-            styles.avatar,
-            styles.overlap,
-            styles.more,
-            { width: size, height: size, borderRadius: size / 2 },
-          ]}
-        >
-          <Text style={styles.moreText}>+{extra}</Text>
+        <View style={[styles.avatar, styles.overlap, styles.more, { width: size, height: size }]}>
+          <Text style={[styles.initial, styles.moreText, { fontSize: Math.round(size * 0.42) }]}>
+            +{extra}
+          </Text>
         </View>
       )}
     </View>
@@ -77,9 +76,15 @@ export function AvatarStack({
 }
 
 const styles = StyleSheet.create({
-  avatar: { alignItems: 'center', justifyContent: 'center', borderColor: colors.white },
+  avatar: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 999,
+    borderColor: colors.card,
+  },
+  initial: { fontFamily: fonts.extraBold },
   stack: { flexDirection: 'row', alignItems: 'center' },
   overlap: { marginStart: -8 },
-  more: { backgroundColor: colors.ground, borderWidth: 2 },
-  moreText: { color: colors.inkSecondary, fontFamily: fonts.semibold, fontSize: 12 },
+  more: { backgroundColor: colors.primaryTint, borderWidth: 2 },
+  moreText: { color: colors.primaryStrong },
 });

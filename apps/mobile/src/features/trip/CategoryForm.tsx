@@ -73,7 +73,7 @@ export function CategoryForm({
         <>
           <PillButton
             label={category ? he.category.save : he.category.add}
-            size="xl"
+            size="lg"
             wide
             disabled={!trimmed}
             onPress={save}
@@ -82,7 +82,7 @@ export function CategoryForm({
             <PillButton
               label={confirming ? he.category.confirmDelete : he.category.delete}
               variant="danger"
-              icon={<Icon name="trash" size={18} color={colors.missing} />}
+              icon={<Icon name="trash" size={18} color={colors.brandStrong} />}
               onPress={remove}
             />
           )}
@@ -104,13 +104,13 @@ export function CategoryForm({
         <View style={styles.moves}>
           <PillButton
             label={he.category.moveUp}
-            variant="outline"
+            variant="soft"
             disabled={index <= 0}
             onPress={() => move(-1)}
           />
           <PillButton
             label={he.category.moveDown}
-            variant="outline"
+            variant="soft"
             disabled={index >= siblings.length - 1}
             onPress={() => move(1)}
           />
@@ -125,7 +125,7 @@ const styles = StyleSheet.create({
   hint: {
     fontFamily: fonts.regular,
     fontSize: 14,
-    color: colors.inkSecondary,
+    color: colors.inkMuted,
     textAlign: 'center',
   },
 });

@@ -59,7 +59,7 @@ export default function Join() {
     setBusy(false);
   };
 
-  if (invite.isPending) return <ActivityIndicator color={colors.accent} style={styles.center} />;
+  if (invite.isPending) return <ActivityIndicator color={colors.primary} style={styles.center} />;
 
   if (!invite.data) {
     const invalid = (statusOf(invite.error) ?? 500) < 500;
@@ -97,7 +97,7 @@ export default function Join() {
           <Text style={styles.meta}>{he.join.pendingText}</Text>
         </View>
       ) : me ? (
-        <PillButton label={he.join.join} size="xl" wide disabled={busy} onPress={() => join()} />
+        <PillButton label={he.join.join} size="lg" wide disabled={busy} onPress={() => join()} />
       ) : (
         <>
           <TextField
@@ -110,7 +110,7 @@ export default function Join() {
           />
           <PillButton
             label={he.join.join}
-            size="xl"
+            size="lg"
             wide
             disabled={!name.trim() || busy}
             onPress={() => join(signInAsGuest(name.trim()))}
@@ -145,12 +145,12 @@ const styles = StyleSheet.create({
     paddingTop: 64,
     gap: 16,
   },
-  title: { ...type.screenTitle, color: colors.ink },
-  kicker: { fontFamily: fonts.medium, fontSize: 15, color: colors.inkSecondary },
-  card: { padding: 20, borderRadius: radius.card, backgroundColor: colors.surface, gap: 8 },
-  name: { fontFamily: fonts.displayBold, fontSize: 32, lineHeight: 38, color: colors.ink },
-  meta: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.inkSecondary },
+  title: { ...type.pageTitle, color: colors.ink },
+  kicker: { fontFamily: fonts.bold, fontSize: 15, color: colors.inkMuted },
+  card: { padding: 20, borderRadius: radius.card, backgroundColor: colors.card, gap: 8 },
+  name: { fontFamily: fonts.extraBold, fontSize: 32, lineHeight: 38, color: colors.ink },
+  meta: { fontFamily: fonts.regular, fontSize: 15, lineHeight: 22, color: colors.inkMuted },
   missing: { gap: 4, marginTop: 8 },
-  missingTitle: { fontFamily: fonts.semibold, fontSize: 16, color: colors.missing },
-  strong: { fontFamily: fonts.semibold, fontSize: 16, color: colors.ink },
+  missingTitle: { fontFamily: fonts.bold, fontSize: 16, color: colors.brandStrong },
+  strong: { fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
 });

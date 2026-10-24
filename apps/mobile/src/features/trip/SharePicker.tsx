@@ -68,7 +68,7 @@ export function useShares(view: TripView, initial?: string[]) {
 const styles = StyleSheet.create({
   wrap: { gap: 12 },
   head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
-  per: { fontFamily: fonts.display, fontSize: 22, color: colors.accent },
+  per: { fontFamily: fonts.extraBold, fontSize: 22, color: colors.primary },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkSecondary },
+  hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
 });

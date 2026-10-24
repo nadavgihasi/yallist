@@ -4,7 +4,7 @@
 
 A mobile + web app for planning a group trip together: a shared **bring list** (gear people already own) and **buy list** (things someone purchases), where everyone claims what they'll bring, marks what they bought and what it cost, and the app shows who owes whom. Israel-first: Hebrew, right-to-left, WhatsApp-native sharing, Bit/PayBox for settling up. A later phase helps the group choose a place.
 
-The full visual design exists as 17 interactive mockups in `design/screens/` (see "Design reference" below). This document is the source of truth for behavior, data and architecture; the mockups are the source of truth for layout, copy and look.
+The look is design system v2 in `design/` (tokens, brand, reference screens; see §9). The 17 v1 mockups in `design/v1/screens/` are superseded for look but remain the reference for layout and copy where v2 has no screen. This document is the source of truth for behavior, data and architecture.
 
 ---
 
@@ -33,18 +33,18 @@ These were decided during design. Do not re-open them without asking.
 
 ## 2. Tech stack
 
-| Concern       | Choice                                                          | Notes                                                                                                                                                                         |
-| ------------- | --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Client        | **Expo** (React Native) + **Expo Router**, TypeScript strict    | One codebase for iOS, Android, and the web join link. Use the latest stable Expo SDK.                                                                                         |
-| Backend       | **Supabase**: Postgres, Auth, Realtime, Storage, Edge Functions | Local dev via Supabase CLI (Docker). Schema lives in `supabase/migrations`.                                                                                                   |
-| Server state  | **TanStack Query** with persisted cache                         | Offline: persisted queries + paused mutations that resume on reconnect.                                                                                                       |
-| Auth          | Supabase anonymous sign-in; Google + Apple via ID-token sign-in | Follow the current Supabase docs for native Google/Apple sign-in on Expo. Use identity linking to upgrade anonymous users.                                                    |
-| Styling       | Typed theme tokens (`src/theme`)                                | RTL-safe: use start/end, never left/right.                                                                                                                                    |
-| Fonts         | Fredoka (display) + Rubik (UI), via `@expo-google-fonts/*`      | Both support Hebrew.                                                                                                                                                          |
-| Glass effects | Native blur for floating tab bar and sheets                     | Check whether a native iOS Liquid Glass module is available in the current Expo SDK; otherwise `expo-blur`. Android/web fallback: translucent white `rgba(255,255,255,0.92)`. |
-| Illustrations | `react-native-svg` components                                   | Trip cover scenes, see Appendix B.                                                                                                                                            |
-| Push          | Expo Notifications                                              | Tokens stored in Supabase; sent from an Edge Function.                                                                                                                        |
-| Tests         | Unit tests for domain logic; database tests for RLS and RPCs    | Pure domain functions in `src/domain` with no React or Supabase imports.                                                                                                      |
+| Concern       | Choice                                                          | Notes                                                                                                                      |
+| ------------- | --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Client        | **Expo** (React Native) + **Expo Router**, TypeScript strict    | One codebase for iOS, Android, and the web join link. Use the latest stable Expo SDK.                                      |
+| Backend       | **Supabase**: Postgres, Auth, Realtime, Storage, Edge Functions | Local dev via Supabase CLI (Docker). Schema lives in `supabase/migrations`.                                                |
+| Server state  | **TanStack Query** with persisted cache                         | Offline: persisted queries + paused mutations that resume on reconnect.                                                    |
+| Auth          | Supabase anonymous sign-in; Google + Apple via ID-token sign-in | Follow the current Supabase docs for native Google/Apple sign-in on Expo. Use identity linking to upgrade anonymous users. |
+| Styling       | Typed theme tokens (`src/theme`)                                | RTL-safe: use start/end, never left/right.                                                                                 |
+| Fonts         | Rubik 400/700/800, via `@expo-google-fonts/rubik`               | Covers Latin and Hebrew.                                                                                                   |
+| Glass effects | None                                                            | Design system v2 is flat: cards on `ground`, one shadow on the floating button.                                            |
+| Illustrations | `react-native-svg` components                                   | Trip cover scenes, see Appendix B.                                                                                         |
+| Push          | Expo Notifications                                              | Tokens stored in Supabase; sent from an Edge Function.                                                                     |
+| Tests         | Unit tests for domain logic; database tests for RLS and RPCs    | Pure domain functions in `src/domain` with no React or Supabase imports.                                                   |
 
 Language: the UI is Hebrew-only for v1 but keep every string in a single `he` locale file so another language can be added later. Force RTL on native (`I18nManager`) and set `dir="rtl"` on web.
 
@@ -174,7 +174,7 @@ Treat the invite link as a bearer capability and the database as the enforcement
 
 ## 8. Screens and routes
 
-Routes use Expo Router. Modal routes use sheet presentation. Every screen maps to a mockup in `design/screens/`.
+Routes use Expo Router. Modal routes use sheet presentation. Every screen maps to a v1 mockup in `design/v1/screens/`; login, home and trip also have v2 references (`design/README.md`).
 
 | Screen             | Route                                          | Mockup           | Notes                                                                                                                                                                                                                                               |
 | ------------------ | ---------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -200,44 +200,7 @@ Routes use Expo Router. Modal routes use sheet presentation. Every screen maps t
 
 ## 9. Design system
 
-Implement these as tokens and shared components before building screens. Exact values come from the mockups.
-
-**Color**
-
-| Token          | Value                                                                                                 |
-| -------------- | ----------------------------------------------------------------------------------------------------- |
-| ink            | `#0E1726`                                                                                             |
-| inkSecondary   | `#4B5565`                                                                                             |
-| inkTertiary    | `#9AA3B2`                                                                                             |
-| ground         | `#F4F5F8`                                                                                             |
-| surface        | `#FFFFFF`                                                                                             |
-| divider        | `#EEF0F4`                                                                                             |
-| border         | `#E4E7EE` (chips), `#D9DDE6` (outlined pills), `#C5CCD8` (checkbox)                                   |
-| accent         | `#3B5BFD` (also accept a theme override)                                                              |
-| accentTint     | accent at 12% alpha (`#3B5BFD1F`)                                                                     |
-| missing        | `#C2410C`, tint `#FFE9DE`, peg `#FFE1D2`                                                              |
-| success        | `#1E7A4C`, tint `#E3F4EA`                                                                             |
-| scrim          | `rgba(14,23,38,0.38)`                                                                                 |
-| glass          | `rgba(255,255,255,0.72)` + blur 20 + saturate 180%                                                    |
-| darkGlass      | `rgba(14,23,38,0.35)` + blur 12                                                                       |
-| avatar palette | `#FFD9C2 #D8F0E0 #F1DDF7 #FFF0B3 #D3F1F4 #FFDDE4 #E3E0FF`; the current user is accent with white text |
-
-**Type.** Fredoka 600/700 for titles and big numbers (screen titles 28–42, section titles 19–22, big numbers 52–60). Rubik 400/500/600 for UI (item names 17, body 16, buttons and labels 15, meta 13, tab labels 11). Never all-caps.
-
-**Shape and spacing.** Cards and covers radius 28; list groups 24; floating sheets radius 34, inset 8 from screen edges; pills fully rounded; inputs 16–22. Every touch target ≥ 44×44. Screen side padding 16.
-
-**Components**
-
-- `Cover` (scene by template, optional overlay title/chips)
-- `StatusCard` (big missing number + pegs + avatar stack)
-- `Pegs` (segmented progress)
-- `Avatar`, `AvatarStack` (overlap −8, white 2px ring, "+N" bubble)
-- `ListGroup` (white rounded card with inset dividers)
-- `ItemRow` (name, qty, status line, right-side action slot: claim pill / release chip / avatars / stepper / "יש לי" toggle)
-- `PillButton` (solid, soft-tint, quiet), `Chip` / `FilterChip`, `SegmentedControl`, `Switch` (knob at start when off, end when on, in RTL)
-- `GlassTabBar` (floating, bottom 20, start inset 16, end inset 92, height 68, radius 34) + `Fab` (64, at the end side)
-- `Sheet` (floating glass sheet with grabber)
-- `OfflineBanner`, `EmptyState`
+Design system v2: [`design/DESIGN.md`](design/DESIGN.md) is the brand book and [`design/tokens/`](design/tokens/) the token source; the app's tokens are `apps/mobile/src/theme`. [`design/README.md`](design/README.md) maps reference screens to routes, lists where the app's token names differ, and what changed from v1. Every touch target ≥ 44×44; screen side padding 16.
 
 **Hebrew copy rules**
 
@@ -249,13 +212,7 @@ Implement these as tokens and shared components before building screens. Exact v
 
 ## 10. Design reference
 
-`design/screens/*.dc.html` are the 17 mockups. They are HTML with a small templating layer: `{{name}}` holes, `<sc-for>` loops, `<sc-if>` conditionals, and a `renderVals()` method holding sample data and interaction logic. They will not run standalone (their runtime is not included). Read them for:
-
-- exact layout, spacing, colors and type sizes (inline styles),
-- all Hebrew copy and sample data,
-- interaction details (what toggles, what each state shows).
-
-Do not port the markup or the templating. Rebuild with React Native components and the tokens above.
+`design/reference/screens/*.html` are static v2 screens; open them at 390px wide. `design/v1/screens/*.dc.html` are the 17 v1 mockups, superseded for look. They use a small templating layer that won't run standalone; read them for Hebrew copy, sample data and interaction details. Do not port the markup; rebuild with React Native components and the theme tokens.
 
 ---
 

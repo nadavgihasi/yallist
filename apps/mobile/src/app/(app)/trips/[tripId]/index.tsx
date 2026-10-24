@@ -73,7 +73,7 @@ export default function TripScreen() {
 
   if (!data) {
     if (query.isPending) {
-      return <ActivityIndicator color={colors.accent} style={styles.missing} />;
+      return <ActivityIndicator color={colors.primary} style={styles.missing} />;
     }
     // Not a member (or no such trip) is a 4xx; anything else may pass.
     const gone = (statusOf(query.error) ?? 500) < 500;
@@ -167,7 +167,7 @@ export default function TripScreen() {
                   fab && (
                     <PillButton
                       label={he.trip.fab[tab as 'bring' | 'buy' | 'money']}
-                      icon={<Icon name="plus" color={colors.white} size={20} />}
+                      icon={<Icon name="plus" color={colors.onPrimary} size={20} />}
                       onPress={fab}
                     />
                   )
@@ -209,7 +209,7 @@ export default function TripScreen() {
       {!wide && fab && (
         <Fab
           label={he.trip.fab[tab as 'bring' | 'buy' | 'money']}
-          icon={<Icon name="plus" color={colors.white} size={28} />}
+          icon={<Icon name="plus" color={colors.onPrimary} size={28} />}
           onPress={fab}
         />
       )}
@@ -220,8 +220,8 @@ export default function TripScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.ground },
   missing: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 12 },
-  missingText: { fontFamily: fonts.display, fontSize: 22, color: colors.ink },
-  link: { fontFamily: fonts.semibold, fontSize: 16, color: colors.accent },
+  missingText: { fontFamily: fonts.extraBold, fontSize: 22, color: colors.ink },
+  link: { fontFamily: fonts.bold, fontSize: 16, color: colors.primary },
   page: { width: '100%', maxWidth: contentMaxWidth, alignSelf: 'center', paddingHorizontal: 16 },
   statusWide: { marginHorizontal: 16 },
   tabRow: { paddingHorizontal: 16, paddingTop: 24 },
@@ -229,9 +229,9 @@ const styles = StyleSheet.create({
   main: { flex: 1, minWidth: 0 },
   side: { width: 380, paddingTop: 20, paddingEnd: 16, gap: 16 },
   statusSide: { marginTop: 0, marginHorizontal: 0 },
-  sideCard: { padding: 20, borderRadius: radius.card, backgroundColor: colors.surface, gap: 4 },
-  sideTitle: { fontFamily: fonts.display, fontSize: 19, color: colors.ink },
-  sideText: { fontFamily: fonts.regular, fontSize: 15, color: colors.inkSecondary },
+  sideCard: { padding: 20, borderRadius: radius.card, backgroundColor: colors.card, gap: 4 },
+  sideTitle: { fontFamily: fonts.extraBold, fontSize: 19, color: colors.ink },
+  sideText: { fontFamily: fonts.regular, fontSize: 15, color: colors.inkMuted },
   topBar: { position: 'absolute', start: 16, end: 16, flexDirection: 'row' },
   roundButton: {
     width: 44,
@@ -259,18 +259,18 @@ const styles = StyleSheet.create({
     height: 28,
     paddingHorizontal: 12,
     borderRadius: 14,
-    backgroundColor: colors.darkGlass,
+    backgroundColor: 'rgba(16,23,37,0.35)',
     justifyContent: 'center',
   },
-  dateText: { fontFamily: fonts.medium, fontSize: 13, color: colors.white },
+  dateText: { fontFamily: fonts.bold, fontSize: 13, color: colors.onPrimary },
   // Stretch so a long unbroken word wraps at the cover's width instead of overflowing it.
   title: {
     alignSelf: 'stretch',
-    fontFamily: fonts.displayBold,
+    fontFamily: fonts.extraBold,
     fontSize: 42,
     lineHeight: 44,
-    color: colors.white,
+    color: colors.onPrimary,
   },
   titleLong: { fontSize: 32, lineHeight: 36 },
-  place: { fontFamily: fonts.medium, fontSize: 15, color: colors.white, opacity: 0.9 },
+  place: { fontFamily: fonts.bold, fontSize: 15, color: colors.onPrimary, opacity: 0.9 },
 });

@@ -91,13 +91,13 @@ export default function Login() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: colors.white, justifyContent: 'flex-end' },
+  screen: { flex: 1, backgroundColor: colors.card, justifyContent: 'flex-end' },
   panel: {
     paddingTop: 30,
     paddingHorizontal: 20,
     borderTopLeftRadius: 32,
     borderTopRightRadius: 32,
-    backgroundColor: colors.white,
+    backgroundColor: colors.card,
     gap: 14,
   },
   // Wide screens: a centered card floating over the full-bleed cover.
@@ -109,19 +109,19 @@ const styles = StyleSheet.create({
     borderRadius: 32,
     boxShadow: '0 24px 60px rgba(14,23,38,0.25)',
   },
-  title: { fontFamily: fonts.displayBold, fontSize: 36, lineHeight: 40, color: colors.ink },
+  title: { fontFamily: fonts.extraBold, fontSize: 36, lineHeight: 40, color: colors.ink },
   subtitle: {
     fontFamily: fonts.regular,
     fontSize: 16,
     lineHeight: 24,
-    color: colors.inkSecondary,
+    color: colors.inkMuted,
     marginBottom: 10,
   },
   input: {
     minHeight: 56,
     paddingHorizontal: 18,
     borderRadius: 20,
-    backgroundColor: 'rgba(14,23,38,0.05)',
+    backgroundColor: colors.ground,
     fontFamily: fonts.regular,
     fontSize: 17,
     color: colors.ink,
