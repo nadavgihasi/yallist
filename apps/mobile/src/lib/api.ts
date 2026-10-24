@@ -2,7 +2,7 @@ import type { AppType } from '@yallist/api/app';
 import { DetailedError, hc } from 'hono/client';
 
 /** Set at build time by SST (`infra/app/sst.config.ts`); locally, the dev API (`pnpm --filter @yallist/api dev`). */
-export const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 let token: string | undefined;
 let onUnauthorized = () => {};
