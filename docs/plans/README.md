@@ -10,3 +10,4 @@ One file per phase from the [SPEC build plan](../SPEC.md#11-build-plan), adapted
 | 0 — Foundation | [phase-0-foundation.md](phase-0-foundation.md)       | Planned |
 | 1 — Backend    | [phase-1-backend.md](phase-1-backend.md)             | Planned |
 | Live e2e tests | [e2e-live-environments.md](e2e-live-environments.md) | Design  |
+| 2+ — Roadmap   | [roadmap.md](roadmap.md)                             | Draft   |
