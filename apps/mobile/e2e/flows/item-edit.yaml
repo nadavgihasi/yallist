@@ -1,6 +1,11 @@
 # Add an item, rename it, and see the new name on the trip.
 appId: app.yallist
 url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
 tags: [items]
 ---
 - runFlow: ../common/sign-in.yaml

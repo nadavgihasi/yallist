@@ -4,10 +4,10 @@
 #
 #   DATABASE_URL=postgres://postgres:postgres@localhost:55432/postgres scripts/e2e-web.sh [args]
 #
-# DATABASE_URL is only used to create and drop the run's database. Needs psql, Chrome and the
-# Maestro CLI (on PATH, or MAESTRO=/path/to/maestro). Args go to `maestro test` in place of the
-# default, which runs every flow. Logs and Maestro's screenshots go to $E2E_OUT (default: a
-# temp dir).
+# DATABASE_URL is only used to create and drop the run's database. Needs psql and the Maestro
+# CLI (on PATH, or MAESTRO=/path/to/maestro). Args are flow files or folders (default: all).
+# Results go to $E2E_OUT (default: a temp dir): junit.xml, the API and web logs, and per flow
+# under maestro/ a video (startRecording/), screenshots on failure and Maestro's logs.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -43,7 +43,11 @@ for url in "http://localhost:$API_PORT/health" "http://localhost:$WEB_PORT"; do
 done
 
 (($#)) || set -- apps/mobile/e2e
+# Recording needs Chrome DevTools for a Chrome version that Maestro 2.11.0 bundles (145–147).
+# Selenium Manager downloads that Chrome for Testing once (~/.cache/selenium).
+export SE_BROWSER_VERSION=${SE_BROWSER_VERSION:-147}
 # A tall phone-width window: the phone layout, with nothing below the fold (taps don't scroll).
 MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true \
   "${MAESTRO:-maestro}" test -p web --headless --screen-size 500x1400 \
-  -e WEB_URL="http://localhost:$WEB_PORT" --debug-output "$OUT/maestro" "$@"
+  -e WEB_URL="http://localhost:$WEB_PORT" --test-output-dir "$OUT/maestro" \
+  --format junit --output "$OUT/junit.xml" "$@"

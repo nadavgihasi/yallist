@@ -38,7 +38,7 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # Uses the runner's Java 17 and Chrome.
+      # Uses the runner's Java 17. Chrome for Testing 147 comes via Selenium (see e2e-web.sh).
       - name: Install Maestro
         run: |
           curl -fsSL -o "$RUNNER_TEMP/maestro.zip" \
@@ -48,9 +48,17 @@ jobs:
       - run: scripts/e2e-web.sh
         env:
           E2E_OUT: ${{ runner.temp }}/ui-tests
+      # Videos, JUnit, screenshots on failure, Maestro, API and web logs.
       - uses: actions/upload-artifact@v7
-        if: failure()
+        id: upload
+        if: always()
         with:
-          name: ui-tests-web-${{ github.run_number }}
+          name: ui-tests-web-${{ github.run_number }}-${{ github.run_attempt }}
           path: ${{ runner.temp }}/ui-tests
-          retention-days: 7
+          retention-days: 14
+      - name: Summary
+        if: always()
+        env:
+          JUNIT: ${{ runner.temp }}/ui-tests/junit.xml
+          ARTIFACTS: '[Videos and logs](${{ steps.upload.outputs.artifact-url }}): one MP4 per flow under `maestro/*/<flow>/startRecording/`.'
+        run: python3 scripts/ui-tests-summary.py "$JUNIT" >> "$GITHUB_STEP_SUMMARY"
