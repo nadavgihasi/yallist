@@ -18,6 +18,7 @@ jobs:
   # Tags main with the next version from commit titles and creates a GitHub release (docs/releases.md).
   version:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       contents: write
     outputs:
@@ -34,6 +35,8 @@ jobs:
   global:
     runs-on: ubuntu-latest
     environment: global
+    # Deploys take minutes; CloudFront updates can take ~15. Don't let a hung one hold the queue for 6 hours.
+    timeout-minutes: 30
     steps: &deploy
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
@@ -62,6 +65,7 @@ jobs:
     needs: [global, version]
     runs-on: ubuntu-latest
     environment: dev
+    timeout-minutes: 30
     # SST reads a secret's value from SST_SECRET_<name>; the values are this environment's secrets.
     env:
       APP_VERSION: ${{ needs.version.outputs.version }} # app.config.ts
@@ -76,6 +80,7 @@ jobs:
     needs: [dev, version]
     runs-on: ubuntu-latest
     environment: production
+    timeout-minutes: 30
     # SST reads a secret's value from SST_SECRET_<name>; the values are this environment's secrets.
     env:
       APP_VERSION: ${{ needs.version.outputs.version }}

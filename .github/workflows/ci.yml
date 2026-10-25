@@ -5,9 +5,18 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
+# A new push to a PR supersedes its running check; main runs every commit.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     # API tests migrate a throwaway database here; DSQL has no local emulator.
     services:
       postgres:
