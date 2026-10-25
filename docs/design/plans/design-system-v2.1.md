@@ -1,176 +1,223 @@
 # Design system v2.1: richer without clutter
 
-Design plan, 2026-10-24. Scope: the design system itself — tokens, components, the dev gallery — so the screen plans can make the app feel less empty without each screen inventing its own styles. Companion to [home and trip](home-and-trip.md) (PR #63) and the onboarding/content plan (not yet published when this was written; its system needs should slot into the PRs below). Inputs: [DESIGN.md](../DESIGN.md), `docs/design/tokens/`, `apps/mobile/src/theme`, every file in `apps/mobile/src/components`, a grep of screens for one-off styles, and WCAG ratios computed from the token hex values.
+Design plan, 2026-10-24. Scope: tokens, components and the dev gallery, so the screen plans ([home and trip](home-and-trip.md), PR #63, and the onboarding/content plan) can fill the app without each screen inventing styles. Inputs: [DESIGN.md](../DESIGN.md), `docs/design/tokens/`, `apps/mobile/src/theme`, every file in `apps/mobile/src/components`, a grep of screens for one-off styles, and WCAG ratios computed from the token hexes.
+
+"Before" images are screenshots of the dev site (v0.6.1, guest account); "after" images are HTML mockups built from the proposed tokens.
+
+![v2.1 at a glance: palette, type scale, key components](assets/design-system-v2.1/overview.png)
 
 ## Diagnosis
 
-v2 is a good _thin_ system: two hues, flat cards, Rubik, one shadow. "Empty" comes less from missing color than from a missing middle layer:
+v2 is a good _thin_ system: two hues, flat cards, Rubik, one shadow. The app feels empty because the middle layer is missing, not because it lacks color:
 
-1. **No vocabulary for "summary" content.** There is a Card and a ListGroup, but nothing for a number with a label, a ring, a person doing something, a countdown or a callout. Screens fall back to a caption line, which is why the countdown, readiness and "who's in" all read as small print.
-2. **Only one empty state, and it's text.** `EmptyState` is a title and a caption; the illustrated first-run card and the template tiles live inline in screens.
-3. **No motion, no loading shape.** Reanimated is installed but unused; loading is a centered `ActivityIndicator` on three screens.
-4. **Screens re-implement components.** The card, the round back button, the small section title and the form field each exist 2–4 times with drifting sizes and radii (see [consistency fixes](#consistency-fixes)).
+![Today's home, trip list and money tab with the problems marked](assets/design-system-v2.1/diagnosis.png)
 
-v2.1 keeps every v2 rule (blue = tap, orange = brand/progress, cards flat, one floating action) and adds the missing layer. No new hues.
+1. **No vocabulary for summaries.** Card and ListGroup exist, but nothing for a number with a label, a ring, a person doing something, a countdown or a callout. Countdown, readiness and "who's in" fall back to caption lines.
+2. **One empty state, text only.** The illustrated first-run card and the template tiles live inline in screens.
+3. **No motion, no loading shape.** Reanimated is installed but unused; three screens show a centered spinner.
+4. **Screens re-implement components.** Card, round button, section title and form field each exist 2–4 times, with sizes and radii drifting apart.
 
-## Audit: component inventory
-
-| Component                                                       | Variants / states                                                                         | Used in                                                                         | Issues                                                                                                                                                                                   |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Avatar`                                                        | `primary` / `dimmed` / pale `color`; `ring`; any `size` (default 32)                      | MoneyTab, PeopleTab, profile, ProfileButton, expenses/new                       | README says "avatars are one color"; profile added `AVATAR_COLORS` (7 pale hexes in `@yallist/domain`, not tokens). Size is free-form (28, 32, 44, 52). Initial size is `size × 0.42`.  |
-| `AvatarStack`                                                   | `max`, `size`; `+N` bubble                                                                | home, TripCard, ItemRow, login                                                  | `+N` is not announced (no label for the stack). Fine otherwise; this is the "avatar group with overflow" already.                                                                         |
-| `FilterChip` / `PersonChip` / `SuggestionChip` / `ChipGroup`    | selected / not; count                                                                     | ListTab, ItemForm, SharePicker, new trip                                        | Count at `opacity: 0.8` fails contrast (below). No pressed/hover/focus state on any chip.                                                                                                |
-| `SegmentedControl`, `Switch`                                    | selected; Switch hover/focus                                                              | trip tabs, ItemForm, profile                                                    | Only `Switch` has a web focus ring; SegmentedControl, chips, PillButton have none. Switch off-track `line` is 1.4:1 on card.                                                            |
-| `Cover`                                                         | 5 scenes                                                                                  | home first-run, new trip                                                        | 4 of 5 scenes use ~40 raw hexes outside `illustration` tokens (grill greens, beach blues, zimmer browns). No size tokens (heights 160, 220, 320, aspect 390/240).                        |
-| `TripTile`                                                      | 5 templates; any `size`                                                                   | TripCard, new trip                                                              | `zimmer` white icon on `illo.hill` is 3.3:1 (OK for an icon, not for text). Good.                                                                                                         |
-| `PillButton`                                                    | solid / soft / quiet / card / danger × sm / md / lg; `float`, `wide`, disabled, pressed   | 13 files                                                                        | Disabled = `opacity 0.4` (fine, exempt) but no hover/focus. `danger` is `brandStrong` text: orange on a button, against the "never orange for buttons" rule (document it as the one exception or move to `ink`). |
-| `FloatingAction`                                                | label, icon, disabled                                                                     | trip, home                                                                      | OK. `FLOATING_CLEARANCE = 120` is a hidden layout token.                                                                                                                                 |
-| `Card` / `ListGroup` / `EmptyState` (all in `ListGroup.tsx`)    | `gap`; ListGroup title + aside                                                            | 8 files; EmptyState in ListTab, MoneyTab                                        | TripCard, new trip and home re-declare the card style by hand. ListGroup's header is re-implemented in ListTab and home (`h2`). EmptyState has no illustration or action.             |
-| `Progress`                                                      | done/total; hidden at 0 total                                                             | ProgressCard, TripCard                                                          | `brand` fill on `ground` track is 2.9:1 (below 3:1 for a graphic); at 0 done the bar is an invisible gray line (seen on the dev site). No animation.                                    |
-| `StatusRing`                                                    | open (dashed) / held / done                                                               | ItemRow, TripCard, login                                                        | Hard-coded 28px; ListTab's "add" ring copies it at 28/14.                                                                                                                                |
-| `Sheet`                                                         | phone sheet / tablet-desktop dialog; `titleSize`, `gap`, `top`, footer                    | item, add item, category, new trip                                              | Padding 20, header 10, radius 22 close button: literals, not tokens. `titleSize` is a free number.                                                                                       |
-| `Toast` (`showToast`)                                           | one style: ink pill, 3.5s                                                                 | profile, expenses/new                                                           | One tone for success and error alike; no action ("ביטול"); no icon; no enter/exit motion; `fontSize: 15` literal.                                                                         |
-| `TextField` / `Input` / `AmountField` / `DateField` / `DateTile` | md/lg amount; date active/focused; error on AmountField only                              | 4 + 3 + 2 + 1 files                                                             | Field radius 16 (TextField), 18 (note), 20 (ItemForm), 22/24 (amount); input text 16/17/19. Error state only on AmountField. Label 15 bold is `fieldStyles.label`, not a `type` style. |
-| `Icon`                                                          | 19 glyphs, `size`, `strokeWidth`                                                          | 11 files                                                                        | Sizes 16/18/20/22 picked ad hoc. Missing glyphs the plans need: clock, users, wallet, sparkle/party, arrow-up-right, info, alert.                                                         |
-| `Logo`, `VersionLine`, `DateField(.web)`                        | —                                                                                         | login; home, login, profile; new trip                                           | Fine.                                                                                                                                                                                    |
-
-Feature-level components that are really system pieces: `features/trip/ProgressCard`, the Steps list inline in `app/(app)/index.tsx`, the template tile grid in `trips/new.tsx`, the round back button in `trips/[tripId]/index.tsx` and `trips/new.tsx`, `ClaimStepper`/qty stepper (two copies).
-
-## Token gaps
-
-All additions go in `tokens.json` first, then `theme/index.ts`, `theme.ts` and `tokens.css`, with a line in DESIGN.md.
-
-| Gap                         | Proposal                                                                                                                                                                                                                                                                                       |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Surface layers**          | Name what exists: `ground` (page), `card`, `well` (= `ground` used _inside_ a card: fields, quiet pills, close button; same hex, separate name so intent is greppable), `selected` (= `primaryTint`). Add `overlay` = `rgba(16,23,37,0.55)` for text on illustrations (replaces the `0.45` literal) and keep `scrim` for modals. |
-| **Elevation**               | Keep "cards are flat". Add exactly one more level, `shadow.raised` = `0 4px 16px rgba(16,23,37,0.08)`, for things that _float over content_: Toast, the desktop sticky side panel when scrolled, a dragged row later. `shadow.float` stays the FAB's. Rule: shadow means "above the page", never decoration. |
-| **Motion**                  | `motion.fast` 150ms (press, chip toggle), `motion.base` 250ms (ring/bar fill, sheet, toast in/out), `motion.slow` 400ms (layout, count tick), `motion.celebrate` 1200ms (agent 1's #8). One easing: `easing.out` = cubic-bezier(0.2, 0, 0, 1); `easing.inOut` for sheets. All gated by a `useReducedMotion()` hook (Reanimated's `useReducedMotion`), which zeroes durations. |
-| **Data viz / progress**     | `progress.fill` = `brand`, `progress.track` = `line` (visible at 0%, which `ground` on `card` is not), `progress.done` = `brand`. The fill never carries the value alone: the "6/24" text is always shown (see accessibility). Money: no new hues. "You owe" = `ink`, "owed to you" = `primaryStrong` (it's tappable: settle), settled = `inkMuted` + done ring. Avoid red/green; the brand book removed them on purpose. |
-| **Sizes**                   | `size.ring` 72 (hero) / 56 (card) / 28 (`statusRing`, already literal); `size.avatar` scale `xs 24, sm 28, md 32, lg 44, xl 56` (replaces 28/32/44/52 literals); `size.icon` `sm 16, md 20, lg 24`; `size.tile` 48 / 40.                                                                       |
-| **Radius**                  | `radius.field` 20 for every input-like box (TextField, note, ItemForm rows, amount md), `radius.chip` = `pill`, `radius.inner` 16 for tiles inside a card. Retire 18 and 22.                                                                                                                   |
-| **Type**                    | Add `type.label` (15/20 bold: field labels, chip text, toast) and `type.micro` (13/18 regular: date label, hints, payer name, errors) to replace 12/13/15 literals; `type.stat` (28/32 extraBold) between `sectionTitle` and `bigNumber` for StatCard/countdown on cards. `type.input` 17/24. |
-| **Illustration**            | Promote the scene palettes to `illustration.<scene>.*` tokens (camp already is). Add `illustration.size` aspect tokens: `cover.band` 88 (agent 1 Q1), `cover.card` 390/240, `cover.hero` 320. Empty-state spots: 120×90 crops of the same scenes, same palette rule.                       |
-| **Avatar palette**          | Decide (Q2). If kept, move `AVATAR_COLORS` into theme as `avatar.*` with `ink` initials (all ≥ 13:1).                                                                                                                                                                                         |
-| **Density / desktop**       | `layout.contentMax` 448 (phone column, handoff), `layout.column` 640 (tablet single column; today a literal in 3 screens), `layout.page` 1160 (`contentMaxWidth`), `layout.sidePanel` 340, `layout.gutter` = `space[6]` on desktop. Desktop cards keep `space[5]` padding; grids use `space[4]` gaps. No compact density mode: a list app on desktop needs width, not smaller text. |
-
-## Proposed components
-
-All in `apps/mobile/src/components`, built from Card, tokens and Reanimated. Feature components (ReadinessHero, NextTripCard, ActivityRow strip, Celebration) stay in `features/` per agent 1; these are the parts they're made of.
-
-| Component                | Props sketch                                                                                                    | States / notes                                                                                                                                                         | Needed by                                  |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
-| `ProgressRing`           | `{ done, total, size?: 'card' \| 'hero', label?: ReactNode }`                                                    | empty (track only, `line`), partial, full (check replaces label). SVG, animates on change (`motion.base`). `accessibilityRole="progressbar"` with value. Shares math with `Progress`. | readiness hero, NextTripCard               |
-| `StatCard` / `Stat`      | `{ value: string; label: string; tone?: 'ink' \| 'brand' \| 'primary'; onPress? }`                               | `Stat` is the inline pair (value `type.stat`, label `caption`); `StatCard` is a Card of 2–3 Stats in a row. Pressable when it navigates (then primary tone + chevron). | money summary, home "waiting for you", recap |
-| `Countdown`              | `{ startsOn, endsOn, size?: 'hero' \| 'inline' }`                                                                | before ("עוד 14 ימים"), tomorrow, today, during ("יום 1 מתוך 2"), after (hidden). Pure formatter in `lib/dates` + a Text; `inline` is a `card` pill for Cover overlays. | hero, NextTripCard, TripCard               |
-| `ActivityItem`           | `{ person: AvatarPerson; text: ReactNode; time: string; icon?: IconName }`                                      | default, grouped ("+2 more"), mine (no avatar repeat). Avatar `sm`, sentence `body`, time `micro`/`inkMuted` at the end.                                                | activity strip, Phase 6 feed               |
-| `EmptyState` v2          | `{ title; text?; scene?: Scene; action?: { label, onPress }; children? }`                                        | text-only (today), illustrated (Cover spot on top, Illustrated-card rule), with action (tonal PillButton), with `children` for suggestion chips/template tiles.        | home empty, list empty, filters, money     |
-| `Skeleton`               | `<Skeleton.Line width />`, `<Skeleton.Circle size />`, `<Skeleton.Card rows />`                                  | `well` fill, 1.2s opacity pulse (static under reduced motion), `accessibilityLabel="טוען"` on the container only. Replaces the three ActivityIndicators.               | home, trip, profile, join                  |
-| `Toast` v2               | `showToast(text, { tone?: 'neutral' \| 'success' \| 'error', action?: { label, onPress }, icon? })`              | neutral = ink (today); success = ink + brand check (celebrations, "נשמר"); error = ink + `alert` icon and `assertive` live region, others `polite`. Action keeps it 6s. `shadow.raised`, slide/fade `motion.base`. | undo delete, celebrations, saves           |
-| `Callout`                | `{ text; icon?; action?; tone?: 'info' \| 'brand' }`                                                             | A Card variant: `info` = `primaryTint` fill + `primaryStrong` text (4.9:1), `brand` = card + brand icon + `brandStrong` text. One per screen. Dismissible optional.    | solo-trip nudge, offline, invite pending   |
-| `Pill` (badge)           | `{ label; tone: 'neutral' \| 'primary' \| 'brand' \| 'onCover'; icon? }`                                         | Non-interactive, 24–28px tall, `type.micro` bold. neutral = `well`/`inkMuted`, primary = `primaryTint`/`primaryStrong`, brand = card/`brandStrong`, onCover = card/ink. Not pressable: chips are. | missing count on TripCard, countdown on Cover |
-| `SectionHeader`          | `{ title; aside?: string; action?: { label, onPress } }`                                                         | Replaces the three copies of "caption bold inkMuted" headers; `action` is a text link in `primary` (≥ 44px target via hitSlop). `accessibilityRole="header"`.          | ListGroup, ListTab, home, side panel       |
-| `AvatarStack` (extend)   | `+ label?: string; size?: AvatarSize; onPress?`                                                                  | Accessible name ("דנה, אבי ועוד 2"); pressable variant opens People.                                                                                                   | hero, TripCard                             |
-| `IconButton`             | `{ icon; label; variant?: 'card' \| 'well' \| 'tint'; size?: 36 \| 44 }`                                         | pressed, hover, focus ring, disabled. Replaces the back button (×2), Sheet close, category edit, qty +/-.                                                              | everywhere                                 |
-| `Stepper`                | `{ value; min; max; onChange; label }`                                                                          | Merges `ClaimStepper` and ItemForm's qty row.                                                                                                                          | item sheet, add item                       |
-| `TemplateTile`           | `{ template; selected?; onPress; meta? }`                                                                        | Extract from `trips/new.tsx`: TripTile + name + item count. Selected = `selected` fill.                                                                                 | new trip, home empty, home side column     |
-| `CardGrid` / `SidePanel` | `CardGrid { columns: { phone, tablet, desktop }; children }`; `SidePanel { sticky?; children }`                 | CardGrid replaces the hand-rolled `width: '48.8%'` and home grid math; SidePanel = `layout.sidePanel` + sticky on web + `shadow.raised` only once scrolled.            | home, trip desktop, new trip               |
-
-Not proposed: carousels, tabs inside cards, charts beyond a ring and a bar, colored avatars by default, gradients.
-
-## Consistency fixes
-
-Concrete replacements (file → token/component). Each is mechanical; do them in PR 1 so later PRs build on clean code.
-
-| Where                                                                 | Today                                                       | Becomes                                                       |
-| --------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------- |
-| `features/home/TripCard.tsx` `card`, `trips/new.tsx` `card`/`tile`, home `illustrated` | hand-written card style                                      | `<Card>` (`Card` gains `padding` and `overflow` for Illustrated) |
-| `TripCard.tsx:92` `name`                                              | `sectionTitle` overridden to 24/30                          | `type.sectionTitle` or new `type.stat`; no override           |
-| `trips/new.tsx:261` cover label                                        | `rgba(16,23,37,0.45)`, radius 20, white text at `opacity 0.9` | `colors.overlay`, `radius.inner`, `onPrimary` without opacity |
-| `trips/[tripId]/index.tsx` `back`, `trips/new.tsx` `back`, `Sheet` `close`, `ListTab` `edit` | four round buttons, sizes 44/44/44/36                        | `IconButton`                                                  |
-| `ListTab.tsx` `title`, home `h2`, `ListGroup` `title`                  | three copies                                                | `SectionHeader`                                               |
-| `ListTab.tsx` `addRing` (28/14)                                       | copy of StatusRing geometry                                 | `size.ring.status`                                            |
-| `ItemForm.tsx` input 19px/r20, `Fields.tsx` input 17px/r16, `[itemId].tsx` note 16px/r18 | three field looks                                           | `type.input`, `radius.field`                                  |
-| `ItemForm.tsx` `kindLabel`/`qtyLabel`, `Fields` `label`, `[itemId]` `chipText`, Toast | `fonts.bold` 15 literal (×5)                                 | `type.label`                                                  |
-| `ItemForm` `kindHint` 12/16, `expenses/new` `meta`/`payerName` 13, `Fields` `dateLabel`/`error` 13, `SharePicker` `hint` 13, `GoogleButton` 13 | literals                                                     | `type.micro`                                                  |
-| `SharePicker.tsx:71` `per` 22 extraBold primary                       | literal                                                     | `type.stat`                                                   |
-| `[itemId].tsx` status `chip` (36px, r18)                              | private chip                                                | `Pill`                                                        |
-| `ItemForm` qty row, `ClaimStepper`                                     | two steppers                                                | `Stepper`                                                     |
-| `ItemForm` `{ opacity: 0.35 }`, `ClaimStepper` `0.3`, `PillButton` `0.4` | three disabled opacities                                     | `opacity.disabled` 0.4                                        |
-| `PillButton` `pressed 0.75`, `trips/new` `tilePressed 0.75`, profile/ProfileButton `hover 0.8` | ad hoc                                                       | `opacity.pressed` 0.75, `opacity.hover` 0.85 (Switch already) |
-| `maxWidth: 640` in profile, new trip, trip; 1040/960 desktop           | literals                                                    | `layout.column`, `layout.page`                                |
-| `Sheet` paddings 20/10/12, `top = 64`                                  | literals                                                    | `space[5]`, `space[3]`                                        |
-| `Cover.tsx` grill/zimmer/beach/blank hexes, `TripTile` uses `illo.*`   | ~40 raw hexes                                               | `illustration.<scene>.*` tokens                               |
-| `AVATAR_COLORS` in `@yallist/domain`                                   | colors in the domain package                                | theme `avatar.*` (domain keeps an id, not a hex), see Q2      |
-| README "single-column screens cap at 448"                             | code uses 640                                               | Update README to the `layout.*` names                         |
+v2.1 keeps every v2 rule (blue = tap, orange = brand/progress, flat cards, one floating action) and adds the missing layer. No new hues.
 
 ## Accessibility fixes
 
-Ratios computed from token hex values (WCAG 2.x relative luminance). Text needs 4.5:1 (3:1 at ≥ 24px or ≥ 18.66px bold); graphics and control boundaries need 3:1.
+Text needs 4.5:1 (3:1 at ≥ 24px, or ≥ 18.66px bold); graphics and control edges need 3:1.
 
-| Pair                                                         | Ratio          | Where                                                    | Fix                                                                                                              |
-| ------------------------------------------------------------ | -------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| FilterChip count: `primaryStrong` @ 0.8 on `primaryTint`     | **3.5**        | list filters                                             | Drop the opacity (4.9).                                                                                          |
-| FilterChip count: white @ 0.8 on `primary` (selected)        | **3.9**        | list filters                                             | Drop the opacity (5.2).                                                                                          |
-| `brand` progress fill on `ground` track                      | **2.9**        | Progress bar, the future ring                            | No orange-on-gray pair reaches 3:1 (`line` is worse, 2.2), so make the bar non-essential: always show the count text next to it (ProgressCard does; TripCard and the ring must too). Track = `line` so a 0% bar is visible at all. |
-| `inkFaint` placeholder on `ground` field                     | **2.8**        | every input                                              | Placeholders aren't strictly required at 4.5, but they carry examples ("למשל: קמפינג בכנרת"). Darken `inkFaint` to `#687080` (4.6 on ground, 5.0 on card) or use `inkMuted`. |
-| `inkFaint` arrow icon on card                                | 3.1            | MoneyTab transfer arrow                                   | Passes for a graphic; switch to `inkMuted` with the darkened token anyway.                                        |
-| Switch off track `line` on `card`                            | **1.4**        | ItemForm, profile                                        | 1.4.11: the off switch is barely visible. Off track `inkFaint` (new value, 5.0 on card).      |
-| Fields `ground` on `card`                                    | 1.1            | all fields inside sheets                                 | Boundary isn't the only cue (labels are always shown); accept, but add a 2px `primary` focus border to TextField/Input like DateTile already has. |
-| White caption @ 0.9 over cover overlay on `illo.sun`         | **≈3.5**       | new-trip preview (worst case, over the sun)              | `overlay` 0.55 and no text opacity (white on overlay-over-sun 4.7, over sky 5.9).                                            |
-| Payer avatars @ 0.55 + `inkMuted` 13px name                  | name 7.5, avatar dimmed 2.6 | add expense                                    | Name passes; the dimmed avatar is decorative. Keep, but give the selected one a ring (already) and an accessible "checked" state (already radio). OK. |
-| `primary` on `primaryTint`                                   | 4.4            | home step numerals                                       | Passes as large text (19 extraBold). Keep, documented.                                                           |
-| `brand` on card                                              | 3.1            | done checks, StatusRing                                   | OK for graphics; never text (existing rule).                                                                      |
-| Toast white on `ink`, `inkMuted` on card/ground/tint, `brandStrong` on card | 17.9 / 7.5 / 6.9 / 6.3 / 5.0 | —                                         | Pass. `brandStrong` on `ground` is 4.6: passes, barely; keep "אצלך" on cards.                                      |
+![Contrast before and after: chip counts, placeholder, switch, cover caption, progress track](assets/design-system-v2.1/contrast.png)
 
-Other a11y work:
+| Pair                                    | Before → after | Fix                                                                                       |
+| --------------------------------------- | -------------- | ----------------------------------------------------------------------------------------- |
+| FilterChip count, unselected / selected | 3.5 / 3.9 → 4.9 / 5.2 | Drop `opacity: 0.8`.                                                               |
+| `inkFaint` placeholder on field         | 2.8 → 4.6      | Darken `inkFaint` to `#687080` (5.0 on card). Also fixes MoneyTab's arrow (3.1).          |
+| Switch off track on card                | 1.4 → 5.0      | Off track `line` → `inkFaint`.                                                            |
+| White caption over the cover (sun)      | 3.2 → 4.7      | `overlay` 0.55, no text opacity (5.9 over sky).                                           |
+| `brand` fill vs. track                  | 2.9 → 2.2      | No orange/gray pair reaches 3:1, so the count text always carries the value; track `line` makes 0% visible. |
+| Field `ground` on `card`                | 1.1            | Labels are always shown; add a 2px `primary` focus border, as DateTile has.               |
 
-- **Focus rings on web** for every pressable: PillButton, chips, SegmentedControl, IconButton, TripCard. One `focusRing` style (2px `primary`, offset 2) in theme, used like Switch does today.
-- **AvatarStack** gets an accessible name; `+N` is otherwise silent.
-- **Toast**: `assertive` only for errors; others `polite`, so a celebration doesn't interrupt a screen reader.
-- **Reduced motion**: one hook, used by every animated component; celebrations become copy only.
-- **Touch targets**: ListTab's 36px edit button and the 36px item-status chip go to 44 (or `hitSlop`).
+Already passing, keep: `primary` on `primaryTint` 4.4 (large step numerals only), `brand` on card 3.1 (graphics only), white on `ink` 17.9, `inkMuted` 7.5 on card, `brandStrong` 5.0 on card (4.6 on ground: keep "אצלך" on cards), avatar initials ≥ 13.6.
+
+Also:
+
+- **Focus rings on web** for every pressable (PillButton, chips, SegmentedControl, IconButton, TripCard): one `focusRing` style, 2px `primary`, offset 2.
+- **AvatarStack** gets a spoken name ("דנה, אבי ועוד 2"); `+N` is silent today.
+- **Toast**: `assertive` for errors only, `polite` otherwise.
+- **Reduced motion**: one hook gates every animation; celebrations become copy only.
+- **Touch targets**: the 36px category-edit button and item-status chip go to 44 via `minWidth`/`minHeight` (`hitSlop` does nothing on web).
+
+## Tokens
+
+Each addition goes in `tokens.json` first, then `theme/index.ts`, `theme.ts`, `tokens.css` and a line in DESIGN.md.
+
+![Type scale with the four new styles](assets/design-system-v2.1/type-scale.png)
+
+![Radius: five field radii become four named ones. Elevation: flat cards, new raised, FAB float](assets/design-system-v2.1/radius-elevation.png)
+
+![Avatar, icon and ring sizes; motion durations](assets/design-system-v2.1/sizes-motion.png)
+
+| Group         | Adds                                                                                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Surfaces      | Names for what exists: `ground` (page), `card`, `well` (= ground inside a card), `selected` (= `primaryTint`). New `overlay` `rgba(16,23,37,0.55)` replaces the 0.45 literal; `scrim` stays for modals. |
+| Elevation     | `shadow.raised` `0 4px 16px rgba(16,23,37,0.08)` for things floating over content (Toast, scrolled side panel). `shadow.float` stays the FAB's. Shadow means "above the page", never decoration. |
+| Motion        | `fast` 150, `base` 250, `slow` 400, `celebrate` 1200 ms. `easing.out` cubic-bezier(0.2, 0, 0, 1), `easing.inOut` for sheets. `useReducedMotion()` zeroes all of them.                    |
+| Progress      | `progress.fill` = `brand`, `progress.track` = `line`. Money: "you owe" `ink`, "owed to you" `primaryStrong` (tappable), settled `inkMuted` + done ring. No red/green.                       |
+| Sizes         | `size.ring` 28 / 56 / 72; `size.avatar` xs 24, sm 28, md 32, lg 44, xl 56; `size.icon` 16 / 20 / 24; `size.tile` 40 / 48.                                                              |
+| Radius        | `radius.field` 20 for every input-like box, `radius.inner` 16 for tiles in a card, `radius.chip` = pill. Retire 18 and 22.                                                             |
+| Type          | `stat` 28/32 800, `input` 17/24, `label` 15/20 700, `micro` 13/18. Replace the 12/13/15/19/22 literals.                                                                               |
+| Opacity       | `opacity.disabled` 0.4, `pressed` 0.75, `hover` 0.85 (three disabled values and three press/hover values today).                                                                      |
+| Illustration  | Scene palettes as `illustration.<scene>.*` (camp already is; ~40 raw hexes elsewhere). Cover sizes `band` 88, `card` 390/240, `hero` 320; empty-state spots 120×90.                     |
+| Avatar        | `AVATAR_COLORS` moves from `@yallist/domain` to theme `avatar.*` (Q2); the domain keeps an id.                                                                                       |
+| Layout        | `layout.contentMax` 448 (phone column), `column` 640 (tablet; a literal in 3 screens), `page` 1160, `sidePanel` 340, `gutter` = `space[6]`. No compact density.                       |
+
+## Components
+
+All in `apps/mobile/src/components`, built from Card, tokens and Reanimated. Feature components (ReadinessHero, NextTripCard, Celebration) stay in `features/` and are made of these.
+
+### Summaries: ProgressRing, Stat, Countdown, Pill, AvatarStack
+
+![Trip card before and after: caption lines become a countdown pill, ring, badges and a labeled avatar stack](assets/design-system-v2.1/trip-card.png)
+
+![Progress and filter chips: invisible 0% bar and faded counts, fixed](assets/design-system-v2.1/progress-chips.png)
+
+![ProgressRing states, Countdown, Pill tones, SectionHeader, StatCard, ActivityItem, AvatarStack](assets/design-system-v2.1/summary-components.png)
+
+### Empty, loading, feedback: EmptyState v2, Skeleton, Toast v2, Callout
+
+![Text-only money empty state vs. EmptyState v2 with scene and action, and with suggestion chips and template tiles](assets/design-system-v2.1/empty-states.png)
+
+![Spinner vs. skeleton; Toast tones and undo action; Callout](assets/design-system-v2.1/loading-feedback.png)
+
+### Controls: IconButton, Stepper, fields, danger button
+
+![Item sheet before and after](assets/design-system-v2.1/item-sheet.png)
+
+![Four round-button copies become IconButton; three field looks become one; orange delete becomes ink](assets/design-system-v2.1/fields-buttons.png)
+
+### Wide layouts: CardGrid, SidePanel
+
+![Desktop home: one lonely card vs. a two-column grid with a template side panel](assets/design-system-v2.1/desktop.png)
+
+| Component              | API sketch                                                                    | Notes                                                                                                   | Needed by                                  |
+| ---------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `ProgressRing`         | `{ done, total, size?: 'card' \| 'hero', label? }`                            | Empty (track only), partial, full (check). SVG, animates (`base`), `progressbar` role. Shares math with `Progress`. | readiness hero, NextTripCard     |
+| `Stat` / `StatCard`    | `{ value, label, tone?: 'ink' \| 'brand' \| 'primary', onPress? }`             | Value `type.stat`, label `caption`. Card of 2–3 Stats; pressable = primary + chevron.                     | money summary, home, recap                 |
+| `Countdown`            | `{ startsOn, endsOn, size?: 'hero' \| 'inline' }`                              | Before / tomorrow / today / "יום 1 מתוך 2" / hidden after. Pure formatter in `lib/dates`.                | hero, NextTripCard, TripCard               |
+| `Pill`                 | `{ label, tone: 'neutral' \| 'primary' \| 'brand' \| 'onCover', icon? }`        | Badge, 24–28px, `micro` bold. Not pressable (chips are).                                                 | TripCard, Cover, item status               |
+| `ActivityItem`         | `{ person, text, time, icon? }`                                               | Avatar `sm`, `body` sentence, `micro` time. Grouped ("+2") and mine variants.                            | activity strip, feed                       |
+| `SectionHeader`        | `{ title, aside?, action? }`                                                  | Replaces three header copies; action is a 44px `primary` text link; `header` role.                       | ListGroup, ListTab, home, side panel       |
+| `AvatarStack` (extend) | `+ label?, size?, onPress?`                                                   | Spoken name; pressable opens People.                                                                    | hero, TripCard                             |
+| `EmptyState` v2        | `{ title, text?, scene?, action?, children? }`                                | Text-only, illustrated (scene spot), with tonal action, with children (chips, template tiles).           | home, list, filters, money                 |
+| `Skeleton`             | `Line`, `Circle`, `Card`                                                      | `well` fill, 1.2s pulse (static under reduced motion), one "טוען" label on the container.               | home, trip, profile                        |
+| `Toast` v2             | `showToast(text, { tone?, action?, icon? })`                                  | neutral / success (brand check) / error (alert icon, assertive). Action keeps it 6s. `raised`, slides in. | undo delete, celebrations, saves          |
+| `Callout`              | `{ text, icon?, action?, tone?: 'info' \| 'brand' }`                           | info = tint + `primaryStrong` (4.9); brand = card + `brandStrong`. One per screen.                       | solo-trip nudge, offline, pending invite   |
+| `IconButton`           | `{ icon, label, variant?: 'card' \| 'well' \| 'tint' }`        | Always 44px. Pressed, hover, focus, disabled. Replaces back (×2), Sheet close, category edit.                        | everywhere                                 |
+| `Stepper`              | `{ value, min, max, onChange, label }`                                        | Merges `ClaimStepper` and ItemForm's qty row.                                                           | item sheet, add item                       |
+| `TemplateTile`         | `{ template, selected?, onPress, meta? }`                                     | Extracted from `trips/new.tsx`.                                                                        | new trip, home empty, side panel           |
+| `CardGrid` / `SidePanel` | `CardGrid { columns: { phone, tablet, desktop } }`, `SidePanel { sticky? }` | Replaces `width: '48.8%'` math; SidePanel gets `raised` only once scrolled.                             | home, trip desktop, new trip               |
+
+Not proposed: carousels, tabs inside cards, charts beyond ring and bar, colored avatars by default, gradients.
+
+<details>
+<summary>Audit: issues in today's components</summary>
+
+| Component                          | Issue                                                                                                                              |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `Avatar`                           | 7 pale colors live in `@yallist/domain`, not tokens; README says "one color". Free-form sizes 28/32/44/52.                          |
+| `AvatarStack`                      | `+N` not announced.                                                                                                                |
+| Chips                              | Count at 0.8 opacity fails; no pressed/hover/focus.                                                                                |
+| `SegmentedControl`, `Switch`       | Only Switch has a web focus ring. Switch off track 1.4:1.                                                                          |
+| `Cover`, `TripTile`                | 4 of 5 scenes use ~40 raw hexes; no size tokens (160/220/320, 390/240).                                                             |
+| `PillButton`                       | No hover/focus. `danger` is orange text, against "never orange buttons" (Q3).                                                       |
+| `FloatingAction`                   | `FLOATING_CLEARANCE = 120` is a hidden layout token.                                                                               |
+| `Card` / `ListGroup` / `EmptyState` | TripCard, new trip and home hand-roll the card; ListGroup's header copied twice; EmptyState has no scene or action.                 |
+| `Progress`                         | 2.9:1 fill; invisible at 0%; no animation.                                                                                          |
+| `StatusRing`                       | Hard-coded 28px; ListTab's add ring copies it.                                                                                      |
+| `Sheet`                            | Paddings 20/10/12, `top = 64`, free `titleSize`: literals.                                                                          |
+| `Toast`                            | One tone for success and error; no action, icon or motion; `fontSize: 15`.                                                          |
+| Fields                             | Radius 16/18/20/22/24, text 16/17/19, error state only on AmountField, label is not a `type` style.                                  |
+| `Icon`                             | Sizes 16/18/20/22 ad hoc. Missing: clock, users, wallet, sparkle, arrow-up-right, info, alert.                                        |
+
+Feature-level pieces that are really system parts: `ProgressCard`, the home Steps list, the template grid, the round back button (×2), `ClaimStepper` and the qty stepper.
+
+</details>
+
+## Consistency fixes
+
+Mechanical replacements, all in PR 1 so later PRs build on clean code.
+
+| Where                                                                                 | Today                                  | Becomes                                         |
+| ------------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------- |
+| `TripCard`, `trips/new.tsx` card/tile, home illustrated card                          | hand-written card style                | `<Card>` (gains `padding`, `overflow`)          |
+| `TripCard.tsx:92` name                                                                | `sectionTitle` overridden to 24/30     | `type.sectionTitle` or `type.stat`              |
+| `trips/new.tsx:261` cover label                                                       | 0.45 overlay, radius 20, text at 0.9   | `colors.overlay`, `radius.inner`, full white    |
+| back (trip, new trip), `Sheet` close, `ListTab` edit                                  | four round buttons, 44/44/44/36        | `IconButton`                                    |
+| `ListTab` title, home `h2`, `ListGroup` title                                         | three copies                           | `SectionHeader`                                 |
+| `ListTab` `addRing`                                                                   | copy of StatusRing geometry            | `size.ring.status`                              |
+| `ItemForm` 19/r20, `Fields` 17/r16, `[itemId]` note 16/r18                            | three field looks                      | `type.input`, `radius.field`                    |
+| 15 bold labels (ItemForm ×2, Fields, `[itemId]` chip, Toast)                          | literals                               | `type.label`                                    |
+| 12/13 hints (ItemForm, expenses/new ×2, Fields ×2, SharePicker, GoogleButton)         | literals                               | `type.micro`                                    |
+| `SharePicker.tsx:71` per-person 22                                                    | literal                                | `type.stat`                                     |
+| `[itemId].tsx` status chip (36px, r18)                                                | private chip                           | `Pill`                                          |
+| ItemForm qty row, `ClaimStepper`                                                      | two steppers                           | `Stepper`                                       |
+| disabled 0.35 / 0.3 / 0.4; pressed/hover 0.75 / 0.8                                   | ad hoc                                 | `opacity.*`                                     |
+| `maxWidth: 640` (×3), 1040/960 desktop                                                | literals                               | `layout.column`, `layout.page`                  |
+| `Sheet` 20/10/12                                                                      | literals                               | `space[5]`, `space[3]`                          |
+| `Cover.tsx` scene hexes                                                               | ~40 raw hexes                          | `illustration.<scene>.*`                        |
+| `AVATAR_COLORS` in `@yallist/domain`                                                  | colors in the domain package           | theme `avatar.*` (Q2)                           |
+| README "single-column screens cap at 448"                                             | code uses 640                          | `layout.*` names                                |
 
 ## RTL and motion rules (DESIGN.md additions)
 
-- Directional motion follows reading direction: things enter from the _start_ (right in Hebrew). Use `I18nManager.isRTL` to sign translateX; never hard-code a sign.
-- Rings fill clockwise from 12 o'clock in both directions (a clock isn't mirrored); bars fill from the start edge (already true via flex).
-- Numbers in Hebrew text stay LTR runs ("6/24", "₪120"); wrap them in a `<Text>` so bidi doesn't reorder "6/24" into "24/6". Add a unit test for the ring label.
-- Icons with direction (`back`, `arrowEnd`, chevrons in SectionHeader actions) flip with `transform: [{ scaleX: isRTL ? 1 : -1 }]`; the checkmark and the brand mark never flip.
+![Enter from the right, rings clockwise, bars from the start edge, numbers as LTR runs](assets/design-system-v2.1/rtl-motion.png)
+
+- Directional motion enters from the _start_ (right in Hebrew). Sign translateX from one `isRTL` constant in theme (the app is Hebrew-only); `I18nManager.isRTL` is always false on react-native-web.
+- Rings fill clockwise from 12 in both directions (a clock isn't mirrored); bars fill from the start edge (already true via flex).
+- Numbers in Hebrew text ("6/24", "₪120") must not flip to "24/6". A nested `<Text>` doesn't isolate bidi on Android or web: the formatter wraps mixed runs in LRI/PDI (U+2066/U+2069). Unit-test its output.
+- `Icon.tsx` already draws `back` and `arrowEnd` for RTL, so don't flip them at runtime; new directional glyphs are drawn the same way. The checkmark and the logo never flip.
 
 ## Dev gallery (`/dev/components`)
 
-Today it's one long, unlabeled scroll, only reachable in `__DEV__` (the deployed dev stage redirects to `/`), and it misses Sheet, Toast, DateField, CategoryForm-style rows and every state but the default.
+Today: one unlabeled scroll, `__DEV__` only, missing Sheet, Toast, DateField and every non-default state.
 
-1. **Sections with headers** (`SectionHeader`): Foundations (colors with their contrast pairs, type scale, spacing, radius, elevation, motion demo), Actions, Inputs, Display, Feedback, Layout. A jump list at the top.
-2. **States side by side**: each component in default / pressed / disabled / focused / loading / empty, and long-text + LTR (English name) cases, so RTL bugs show.
-3. **Breakpoint toggle**: phone / tablet / desktop frame widths inside the page (a `View` with fixed width), so CardGrid and SidePanel can be checked on one screen.
-4. **Reduced-motion toggle** that overrides the hook, to see both paths.
-5. **Reachable on the dev stage**: gate on `EXPO_PUBLIC_STAGE !== 'production'` instead of `__DEV__`, so reviewers can open it on the CloudFront dev site. Still no link from the app.
-6. **Contrast check in a unit test**, not just the gallery: a `theme.contrast.test.ts` that asserts the text pairs above stay ≥ 4.5 (and graphic pairs ≥ 3), so a token tweak can't regress them silently.
+1. **Sections** with `SectionHeader`: Foundations (colors with contrast pairs, type, spacing, radius, elevation, motion), Actions, Inputs, Display, Feedback, Layout; a jump list on top.
+2. **States side by side**: default / pressed / disabled / focused / loading / empty, plus long-text and LTR-name cases.
+3. **Breakpoint toggle**: phone / tablet / desktop frames on one page.
+4. **Reduced-motion toggle** overriding the hook.
+5. **On the dev stage**: gate on `EXPO_PUBLIC_STAGE !== 'production'`, not `__DEV__`. No link from the app.
+6. **`theme.contrast.test.ts`** asserts the text pairs above stay ≥ 4.5 and graphic pairs ≥ 3.
 
 ## PR plan
 
-Ordered so agent 1's PRs land on top of the system, not beside it. Each PR updates `tokens.json` → theme → DESIGN.md → gallery together, and runs lint, typecheck, unit tests and the e2e smoke.
+```mermaid
+flowchart LR
+  P1["1 · tokens + consistency fixes"] --> P2["2 · progress + summary"]
+  P1 --> P3["3 · empty, loading, feedback"]
+  P2 --> P4["4 · activity + wide layouts"]
+  P2 --> P5["5 · brand book + gallery"]
+  P3 --> P5
+  P4 --> P5
+```
 
-| PR  | Title                                                        | Scope                                                                                                                                                                                                                         | Unblocks                                        | Size |
-| --- | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ---- |
-| 1   | `refactor(ui): v2.1 tokens and consistency fixes`            | New tokens (surfaces, `overlay`, `shadow.raised`, motion, sizes, radius, `type.label/micro/stat/input`, `layout.*`, opacity, focus ring), the contrast fixes, every row of [consistency fixes](#consistency-fixes) except Cover tokens. `IconButton`, `SectionHeader`. Contrast unit test. No visual change except the fixes. | everything                                      | M    |
-| 2   | `feat(ui): progress and summary components`                  | `ProgressRing`, `Progress` animated + `line` track, `Stat`/`StatCard`, `Countdown` (+ date-phase logic tests), `Pill`, `AvatarStack` label/press, `useReducedMotion`.                                                            | agent 1 PR 1 (readiness hero), PR 2 (home hero) | M    |
-| 3   | `feat(ui): empty, loading and feedback states`               | `EmptyState` v2 with scene + action + children, `Skeleton` (replace 3 ActivityIndicators), `Toast` v2 tones + action, `Callout`, `TemplateTile` extract, Cover scene tokens + spot crops.                                       | agent 1 PR 2 (#7), PR 4; onboarding/content plan | M    |
-| 4   | `feat(ui): activity item and wide layouts`                   | `ActivityItem`, `CardGrid`, `SidePanel`, `Stepper`; migrate home grid and new-trip grid.                                                                                                                                         | agent 1 PR 3 (activity, side panel), #6         | S–M  |
-| 5   | `docs(design): v2.1 brand book and gallery`                  | DESIGN.md v2.1 sections (motion, elevation, data viz, RTL motion), README token table, gallery restructure + stage gating.                                                                                                      | review of all of the above                      | S    |
+Each PR updates `tokens.json` → theme → DESIGN.md → gallery together and runs lint, typecheck, unit tests and the e2e smoke.
 
-PR 1 first; 2 and 3 in parallel; 4 after 2 (uses Pill/Stat). PR 5's DESIGN.md text can ride along in each PR instead if reviewers prefer; the gallery restructure is best done once, early in PR 5 or folded into PR 1.
+| PR  | Title                                             | Scope                                                                                                                                       | Unblocks                                 | Size |
+| --- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- | ---- |
+| 1   | `refactor(ui): v2.1 tokens and consistency fixes` | All new tokens, the contrast fixes, every consistency fix except Cover scenes, `IconButton`, `SectionHeader`, contrast test. No visual change beyond the fixes. | everything                               | M    |
+| 2   | `feat(ui): progress and summary components`       | `ProgressRing`, animated `Progress` on `line`, `Stat`/`StatCard`, `Countdown` (+ date tests), `Pill`, `AvatarStack` label/press, `useReducedMotion`. | home-and-trip PR 1 (readiness), PR 2 (home hero) | M |
+| 3   | `feat(ui): empty, loading and feedback states`    | `EmptyState` v2, `Skeleton`, `Toast` v2, `Callout`, `TemplateTile`, Cover scene tokens + spots.                                             | home-and-trip PR 2, PR 4; onboarding     | M    |
+| 4   | `feat(ui): activity item and wide layouts`        | `ActivityItem`, `CardGrid`, `SidePanel`, `Stepper`; migrate home and new-trip grids.                                                         | home-and-trip PR 3                       | S–M  |
+| 5   | `docs(design): v2.1 brand book and gallery`       | DESIGN.md v2.1 sections, README token table, gallery restructure + stage gating.                                                            | review of all of the above               | S    |
+
+2 and 3 can run in parallel. The DESIGN.md text can ride along in each PR instead; the gallery restructure is best done once, early (PR 5 or folded into PR 1).
 
 ## Open questions
 
-| #   | Question                                                                                     | Recommendation                                                                                                                                                                        |
-| --- | -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Q1  | Add a second shadow (`shadow.raised`) when v2 says "only the FAB has a shadow"?               | **Yes, for floating layers only** (Toast, scrolled side panel). Cards stay flat. It's the minimum to make overlays read as overlays.                                                    |
-| Q2  | Keep the pale per-person avatar colors (profile) or go back to one `primary` avatar?           | **Keep, as tokens.** In an activity feed and avatar stacks, telling people apart is the point; the pale fills with ink initials all pass 13:1. Default new users to one of them, and update the README line. |
-| Q3  | `danger` PillButton is orange text: an exception to "never orange buttons"?                   | **Make it `ink` text with a `trash` icon**; orange stays brand/progress. Destructive confirmation already comes from the sheet copy.                                                    |
-| Q4  | Darken `inkFaint` (changes every placeholder) or switch placeholders to `inkMuted`?          | **Darken to `#687080`.** Placeholders must still look lighter than typed text (`ink`), which `inkMuted` would blur.                                                                   |
-| Q5  | Progress track `line` instead of `ground`? (Fill vs track drops from 2.9 to 2.2.)            | **Yes, with the count always shown.** A 0% bar is invisible today; no orange/gray pair reaches 3:1 anyway, so the text has to carry the value either way.                            |
-| Q6  | Gallery on the deployed dev stage?                                                           | **Yes, non-production stages only.** It's the cheapest way to review components on real devices; it has no data access.                                                               |
-| Q7  | Skeletons or keep spinners?                                                                  | **Skeletons** for home, trip and profile (known shapes); keep the spinner only for the join link, where the shape is unknown until the invite loads.                                   |
-| Q8  | A compact density for desktop?                                                               | **No.** Use width (CardGrid, SidePanel), not smaller type. Revisit if desktop usage grows.                                                                                            |
+| #   | Question                                                         | Recommendation                                                                                                   |
+| --- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Q1  | A second shadow (`raised`) when v2 says "only the FAB"?          | **Yes, floating layers only** (Toast, scrolled side panel). Cards stay flat.                                      |
+| Q2  | Keep the pale per-person avatar colors or go back to one?        | **Keep, as tokens.** Telling people apart is the point of stacks and feeds; all pass 13.6:1. Update the README.  |
+| Q3  | `danger` PillButton is orange: an exception?                     | **No: `ink` + trash icon.** The sheet copy already makes it a confirmation.                                      |
+| Q4  | Darken `inkFaint` or use `inkMuted` for placeholders?            | **Darken to `#687080`.** Placeholders must still look lighter than typed text.                                   |
+| Q5  | Progress track `line` (fill contrast 2.9 → 2.2)?                 | **Yes, with the count always shown.** No orange/gray pair reaches 3:1 anyway; today's 0% bar is invisible.        |
+| Q6  | Gallery on the deployed dev stage?                               | **Yes, non-production only.** Cheapest way to review on real devices; no data access.                             |
+| Q7  | Skeletons or spinners?                                           | **Skeletons** for home, trip, profile; keep the spinner for the join link, whose shape is unknown.                |
+| Q8  | Compact density on desktop?                                      | **No.** Use width (CardGrid, SidePanel). Revisit if desktop use grows.                                            |
