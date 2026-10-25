@@ -80,6 +80,10 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 - **Auth library:** Better Auth, with the anonymous plugin and Google. Users live in our own database. It uses bearer tokens, because the API and the web app are on different domains.
 - **API entry point:** API Gateway HTTP API in front of the Hono Lambda.
 
+## Decided 2026-10-25 (UI tests)
+
+- **UI tests:** Maestro, one set of YAML flows for web, Android and iOS, finding elements by testID. Web runs on every PR against the local API on a fresh database; native runs are planned. Chosen over Playwright + a native tool (every flow written twice), Detox (no web) and Appium (slow, flaky). Maestro's web support is beta. See [plans/ui-tests.md](plans/ui-tests.md).
+
 ## Open decisions
 
 - **Observability platform:** New Relic vs Sentry.

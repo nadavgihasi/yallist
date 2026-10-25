@@ -1,0 +1,19 @@
+# Claim an item from the list, then release it.
+appId: app.yallist
+url: ${WEB_URL}
+tags: [items]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- runFlow:
+    file: ../common/add-item.yaml
+    env:
+      ITEM: Grill
+- tapOn:
+    id: item-claim
+- assertVisible:
+    id: item-release
+- tapOn:
+    id: item-release
+- assertVisible:
+    id: item-claim

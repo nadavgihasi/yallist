@@ -1,0 +1,10 @@
+# Open the profile from home.
+appId: app.yallist
+url: ${WEB_URL}
+tags: [profile]
+---
+- runFlow: ../common/sign-in.yaml
+- tapOn:
+    id: home-profile
+- assertVisible:
+    id: profile-title

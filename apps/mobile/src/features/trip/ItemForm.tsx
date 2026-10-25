@@ -9,6 +9,7 @@ import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { he } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import type { NewItemInput } from '@/state/reducer';
 import { useTrip } from '@/state/trips';
 import { colors, fonts } from '@/theme';
@@ -91,6 +92,7 @@ export function ItemForm({
       footer={
         <PillButton
           label={item ? he.editItem.save : he.addItem.cta(trimmed, list)}
+          {...testId('item-form-save')}
           size="lg"
           wide
           disabled={!valid}
@@ -117,6 +119,7 @@ export function ItemForm({
           returnKeyType="done"
           placeholder={he.addItem.placeholder[list]}
           accessibilityLabel={he.addItem.what}
+          {...testId('item-form-name')}
           autoFocus={!item}
           style={styles.input}
         />

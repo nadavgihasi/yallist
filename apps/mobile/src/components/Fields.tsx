@@ -2,6 +2,7 @@ import { Platform, StyleSheet, Text, TextInput, View, type TextInputProps } from
 
 import { Icon } from '@/components/Icon';
 import { formatShort } from '@/lib/dates';
+import { testId } from '@/lib/testId';
 import { colors, fonts, radius } from '@/theme';
 
 /**
@@ -46,6 +47,7 @@ export function AmountField({
   size = 'md',
   onSubmitEditing,
   error,
+  testID,
 }: {
   label: string;
   value: string;
@@ -54,6 +56,7 @@ export function AmountField({
   onSubmitEditing?: () => void;
   /** Shown under the field, e.g. when the text isn't a valid amount. */
   error?: string;
+  testID?: string;
 }) {
   const sz = AMOUNT_SIZES[size];
   return (
@@ -70,6 +73,7 @@ export function AmountField({
           placeholder="0"
           placeholderTextColor={colors.inkFaint}
           accessibilityLabel={label}
+          {...testId(testID)}
           style={[styles.amountInput, { fontSize: sz.input }]}
         />
       </View>

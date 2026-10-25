@@ -25,6 +25,7 @@ import { VersionLine } from '@/components/VersionLine';
 import { GoogleButton } from '@/features/auth/GoogleButton';
 import { initial } from '@/features/trip/derive';
 import { he } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import { signInWithGoogle } from '@/lib/api';
 import { useProfile, useUpdateProfile, type Profile } from '@/state/profile';
 import { useSession } from '@/state/store';
@@ -74,7 +75,7 @@ export default function ProfileScreen() {
         >
           <Icon name="back" strokeWidth={2.5} />
         </Pressable>
-        <Text style={styles.h1} accessibilityRole="header">
+        <Text style={styles.h1} accessibilityRole="header" {...testId('profile-title')}>
           {he.profile.title}
         </Text>
       </View>

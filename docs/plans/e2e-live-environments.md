@@ -140,6 +140,8 @@ Each step's duration is written to the job summary.
 
 ## 7. Tests
 
+> **Update 2026-10-25:** browser flows are Maestro now, not Playwright's `web` project. The same flows run on web, Android and iOS ([ui-tests.md](ui-tests.md)); against a stage, they get its site as `WEB_URL`.
+
 - **Package:** `e2e/` (`@yallist/e2e`), with Playwright and two projects:
   - `api`: specs through the typed Hono `hc` client and guest bearer tokens.
   - `web`: Chromium, `he-IL`, RTL, two browser contexts for multi-user and realtime flows. It serves `apps/mobile/dist` on `:4173`.

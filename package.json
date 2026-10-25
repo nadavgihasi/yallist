@@ -12,6 +12,7 @@
     "test": "pnpm -r --if-present --reporter-hide-prefix test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "e2e:web": "scripts/e2e-web.sh",
     "sst": "pnpm --filter @yallist/infra sst",
     "deploy:dev": "pnpm --filter @yallist/infra deploy:dev",
     "deploy:prod": "pnpm --filter @yallist/infra deploy:prod",

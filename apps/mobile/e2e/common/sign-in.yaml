@@ -1,0 +1,15 @@
+# A new guest from a clean state, ending on the empty home screen.
+appId: app.yallist
+url: ${WEB_URL}
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: login-guest
+- tapOn:
+    id: login-name
+- inputText: Dana
+- tapOn:
+    id: login-start
+- assertVisible:
+    id: home-new-trip

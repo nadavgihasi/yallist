@@ -1,0 +1,26 @@
+# Add an item, rename it, and see the new name on the trip.
+appId: app.yallist
+url: ${WEB_URL}
+tags: [items]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- runFlow:
+    file: ../common/add-item.yaml
+    env:
+      ITEM: Tent
+- tapOn: Tent
+- tapOn:
+    id: item-edit
+- tapOn:
+    id: item-form-name
+- eraseText
+- inputText: Big tent
+- tapOn:
+    id: item-form-save
+- tapOn:
+    id: sheet-close
+- assertVisible:
+    id: trip-title
+- assertVisible: Big tent
+- assertNotVisible: Tent

@@ -1,0 +1,56 @@
+name: UI tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Maestro flows (apps/mobile/e2e) on the web export, against the local API on a fresh database.
+  # See docs/plans/ui-tests.md.
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U postgres" --health-interval 2s --health-retries 15
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
+      MAESTRO_VERSION: 2.11.0
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Uses the runner's Java 17 and Chrome.
+      - name: Install Maestro
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/maestro.zip" \
+            "https://github.com/mobile-dev-inc/maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
+      - run: scripts/e2e-web.sh
+        env:
+          E2E_OUT: ${{ runner.temp }}/ui-tests
+      - uses: actions/upload-artifact@v7
+        if: failure()
+        with:
+          name: ui-tests-web-${{ github.run_number }}
+          path: ${{ runner.temp }}/ui-tests
+          retention-days: 7

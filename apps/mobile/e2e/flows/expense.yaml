@@ -1,0 +1,21 @@
+# Add an expense from the money tab and see it listed.
+appId: app.yallist
+url: ${WEB_URL}
+tags: [money]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- tapOn:
+    id: trip-tab-money
+- tapOn:
+    id: trip-add
+- tapOn:
+    id: expense-amount
+- inputText: '120'
+- tapOn:
+    id: expense-what
+- inputText: Gas
+- tapOn:
+    id: expense-save
+- assertVisible: Gas
+- assertVisible: .*120.*

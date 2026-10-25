@@ -1,0 +1,12 @@
+# On the trip screen: add ${ITEM} to the current list.
+appId: app.yallist
+url: ${WEB_URL}
+---
+- tapOn:
+    id: trip-add
+- tapOn:
+    id: item-form-name
+- inputText: ${ITEM}
+- tapOn:
+    id: item-form-save
+- assertVisible: ${ITEM}

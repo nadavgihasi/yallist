@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# UI tests (Maestro, apps/mobile/e2e) on web: the static web export against the local API, on a
+# database made for this run and dropped after it. See docs/plans/ui-tests.md.
+#
+#   DATABASE_URL=postgres://postgres:postgres@localhost:55432/postgres scripts/e2e-web.sh [args]
+#
+# DATABASE_URL is only used to create and drop the run's database. Needs psql, Chrome and the
+# Maestro CLI (on PATH, or MAESTRO=/path/to/maestro). Args go to `maestro test` in place of the
+# default, which runs every flow. Logs and Maestro's screenshots go to $E2E_OUT (default: a
+# temp dir).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+: "${DATABASE_URL:?Set DATABASE_URL to a local Postgres (see docs/deploy.md)}"
+API_PORT=${API_PORT:-3100}
+WEB_PORT=${WEB_PORT:-8180}
+OUT=${E2E_OUT:-$(mktemp -d)}
+mkdir -p "$OUT"
+db="e2e_$(date +%s)_$$"
+bin=$PWD/node_modules/.bin
+
+psql "$DATABASE_URL" -qc "create database $db"
+cleanup() {
+  # shellcheck disable=SC2046 # one pid per word
+  kill $(jobs -p) 2>/dev/null || true
+  wait 2>/dev/null || true
+  psql "$DATABASE_URL" -qc "drop database if exists $db with (force)"
+}
+trap cleanup EXIT
+
+# The API migrates its empty database on start.
+(cd apps/api && DATABASE_URL="${DATABASE_URL%/*}/$db" PORT=$API_PORT exec node --import tsx src/dev.ts) \
+  >"$OUT/api.log" 2>&1 &
+
+(cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT "$bin/expo" export -p web) \
+  >"$OUT/export.log" 2>&1
+(cd apps/mobile && exec "$bin/expo" serve --port "$WEB_PORT") >"$OUT/web.log" 2>&1 &
+
+for url in "http://localhost:$API_PORT/health" "http://localhost:$WEB_PORT"; do
+  for _ in $(seq 60); do curl -sf -o /dev/null "$url" && continue 2; sleep 0.5; done
+  echo "$url didn't come up; logs in $OUT" >&2
+  exit 1
+done
+
+(($#)) || set -- apps/mobile/e2e
+# A tall phone-width window: the phone layout, with nothing below the fold (taps don't scroll).
+MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true \
+  "${MAESTRO:-maestro}" test -p web --headless --screen-size 500x1400 \
+  -e WEB_URL="http://localhost:$WEB_PORT" --debug-output "$OUT/maestro" "$@"
