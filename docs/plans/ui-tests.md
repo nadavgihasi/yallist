@@ -2,18 +2,42 @@
 
 **Status:** web flows run on every PR ([ui-tests.yml](../../.github/workflows/ui-tests.yml)). Native runs are planned, not built.
 
-## Choice: Maestro
+## Choice: Maestro, for now
 
-One set of YAML flows in [`apps/mobile/e2e`](../../apps/mobile/e2e) drives the web app (Chrome), the Android app and the iOS app.
+One set of YAML flows in [`apps/mobile/e2e`](../../apps/mobile/e2e) drives the web app (Chrome), the Android app and the iOS app. The table compares the options. "Measured" means on this repo; everything else is from the tools' docs or is our estimate.
 
-| Option               | Web + Android + iOS from one source  | Notes                                                                                                                           |
-| -------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| **Maestro** (chosen) | Yes. Web is beta (Chrome only).      | The E2E tool Expo's docs use. Waits for the UI to settle, so no sleeps. Free CLI, no app instrumentation. Flows are plain YAML. |
-| Playwright + Maestro | No: two suites over the same testIDs | Best web tooling, but every flow is written twice.                                                                              |
-| Detox + Playwright   | No                                   | Detox has no web, needs a custom native build, and is the flakiest to keep running on Expo.                                     |
-| Appium / WebdriverIO | Yes                                  | One API for all three, but slow, heavy setup (Appium server, drivers) and flaky waits.                                          |
+|                     | **Maestro** (chosen)                                                                            | Playwright                                                                                                    | Playwright (web) + Maestro (native)       | Detox                                                   | Appium / WebdriverIO                                 |
+| ------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------- |
+| Web / Android / iOS | Chrome (beta) / yes / yes                                                                       | Chromium, Firefox, **WebKit** / no / no                                                                       | all three                                 | no / yes / yes                                          | browsers / yes / yes                                 |
+| One test source     | Yes                                                                                             | Web only                                                                                                      | No: each flow written twice, same testIDs | No: web needs a second tool                             | Mostly; per-platform capabilities and some branching |
+| Maturity            | Native is mature. **Web is beta** (see below)                                                   | Mature, the web standard                                                                                      | Both mature for their part                | Mature, but tied to RN/Expo versions                    | Mature, many moving parts (server, drivers)          |
+| Speed in CI         | Measured: 5 flows in 2m30s, serial, a new Chrome per flow; the job is about 3.5 min             | Fastest: parallel workers; likely under a minute for these 5 (estimate)                                       | Web as Playwright; native as Maestro      | Native only; fast once built, but needs its own build   | Slowest (WebDriver round trips)                      |
+| Debugging           | Screenshot and view hierarchy of the failing step; Maestro Studio                               | **Best**: trace viewer (DOM, network, console per step), UI mode, codegen                                     | Two toolsets                              | Logs, screenshots, video                                | Logs, screenshots; Appium Inspector                  |
+| RTL / Hebrew        | testIDs avoid it. Web types Hebrew; **Android `inputText` can't type Hebrew**, so we type Latin | Full Unicode text and role/name queries in Hebrew                                                             | As each tool                              | `replaceText` handles Unicode                           | Unicode through the driver's keyboard settings       |
+| Effort to adopt     | Measured: CLI zip plus Java; no app changes beyond testIDs                                      | `pnpm add -D @playwright/test` and a browser download                                                         | Both                                      | Native test build config, a Detox runner per platform   | Appium server plus drivers per platform, WDIO config |
+| Our 5 flows         | Done: about 150 lines of YAML                                                                   | About 150 lines of TS, about half a day; `getByTestId` already works (react-native-web renders `data-testid`) | Playwright port plus the YAML above       | Native port of about 150 lines, plus Playwright for web | About 200 lines of TS, 1–2 days with setup           |
 
-The risk is Maestro's web support being beta. It ran this app reliably (it caught #70 on the first try). If it stops keeping up, the flows' testIDs carry over to Playwright for web unchanged.
+Expo has no test runner of its own. Its docs run Maestro, through EAS Workflows, which is paid, and we don't use EAS (see [tech-decisions.md](../tech-decisions.md)).
+
+**What Maestro web being beta risks:**
+
+- **Chrome only, no Safari.** iPhone users use the web app until the iOS app ships, and nothing here tests WebKit. Playwright does.
+- **Rough edges we hit:**
+  - It doesn't scroll to an element before tapping it, so we use a tall 500×1400 window.
+  - Chrome won't make the window narrower than about 500px, so true 390px phone widths aren't tested.
+  - The `url` + `appId` flow header isn't documented.
+- **It can change between releases.** The CLI is pinned to 2.11.0.
+
+**Why Maestro now:** it's the only option where the five flows are written once for web, Android and iOS. Android is the next platform, and the flows will run there unchanged. It ran this app reliably and reproduced #70 on the first try.
+
+**What would make us switch web to Playwright:**
+
+- We need Safari coverage.
+- Maestro web turns out flaky or breaks on an upgrade.
+- We need two-user or realtime web flows; Playwright opens two browser contexts in one test.
+- The web job outgrows the 5-minute budget.
+
+**Switch cost:** about half a day. The testIDs stay, and Playwright finds them through `data-testid`. `scripts/e2e-web.sh` and the CI job stay; only the runner step changes. Maestro would keep running the native flows, which is the hybrid column above.
 
 ## How tests find elements
 
