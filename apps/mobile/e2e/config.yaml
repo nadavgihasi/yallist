@@ -1,0 +1,3 @@
+# Maestro workspace: the UI tests for web, Android and iOS. See docs/plans/ui-tests.md.
+flows:
+  - flows/*

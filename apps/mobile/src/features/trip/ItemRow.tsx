@@ -6,6 +6,7 @@ import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { StatusRing, type RingState } from '@/components/StatusRing';
 import { he } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
@@ -68,6 +69,7 @@ export function ItemRow({
       <PillButton
         label={item.list === 'buy' ? he.trip.claimBuy : he.trip.claimBring}
         variant="soft"
+        {...testId('item-claim')}
         onPress={() => onClaim(item.quantityNeeded)}
       />
     );
@@ -78,6 +80,7 @@ export function ItemRow({
         variant="quiet"
         size="sm"
         accessibilityLabel={he.trip.releaseLabel}
+        {...testId('item-release')}
         icon={<Icon name="close" size={16} color={colors.inkMuted} />}
         onPress={() => onClaim(0)}
       />

@@ -1,0 +1,16 @@
+# From home: a blank trip (no template items, so the list holds only what the flow adds).
+appId: app.yallist
+url: ${WEB_URL}
+---
+- tapOn:
+    id: home-new-trip
+- tapOn:
+    id: new-trip-template-blank
+- tapOn:
+    id: new-trip-name
+- inputText: E2E trip
+- tapOn:
+    id: new-trip-create
+- assertVisible:
+    id: trip-title
+    text: E2E trip

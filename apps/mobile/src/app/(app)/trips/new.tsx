@@ -21,6 +21,7 @@ import { PillButton } from '@/components/PillButton';
 import { TripTile } from '@/components/TripTile';
 import { he, itemsCount } from '@/i18n/he';
 import { addDays, endAfterMovingStart, formatRange, today } from '@/lib/dates';
+import { testId } from '@/lib/testId';
 import { useCreateTrip } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { useBreakpoint } from '@/theme/breakpoint';
@@ -131,6 +132,7 @@ export default function NewTrip() {
                       key={k}
                       accessibilityRole="radio"
                       accessibilityLabel={he.newTrip.templates[k]}
+                      {...testId(`new-trip-template-${k}`)}
                       accessibilityState={{ checked: selected }}
                       onPress={() => setTemplate(k)}
                       style={({ pressed }) => [
@@ -156,6 +158,7 @@ export default function NewTrip() {
                 value={name}
                 onChangeText={setName}
                 placeholder={he.newTrip.namePlaceholder}
+                {...testId('new-trip-name')}
               />
               <View style={styles.field}>
                 <Text style={fieldStyles.label}>{he.newTrip.when}</Text>
@@ -203,6 +206,7 @@ export default function NewTrip() {
             {wide && (
               <PillButton
                 label={createLabel}
+                {...testId('new-trip-create')}
                 size="lg"
                 wide
                 disabled={createTrip.isPending}
@@ -217,6 +221,7 @@ export default function NewTrip() {
         <View style={[styles.ctaWrap, { bottom: 24 + insets.bottom }]}>
           <PillButton
             label={createLabel}
+            {...testId('new-trip-create')}
             size="lg"
             wide
             float

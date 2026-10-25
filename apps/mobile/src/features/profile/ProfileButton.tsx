@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, type PressableStateCallbackType } from 'react-na
 import { Avatar } from '@/components/Avatar';
 import { initial } from '@/features/trip/derive';
 import { he } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import { useProfile } from '@/state/profile';
 import { useMe } from '@/state/store';
 import { colors, size } from '@/theme';
@@ -19,6 +20,7 @@ export function ProfileButton() {
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={he.profile.open}
+      {...testId('home-profile')}
       onPress={() => router.push('/profile')}
       style={(state: WebState) => [
         styles.button,

@@ -14,6 +14,7 @@ import { deriveTrip } from '@/features/trip/derive';
 import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import { useMe } from '@/state/store';
 import { useTripAction, useTripQuery } from '@/state/trips';
 import type { TripData } from '@/state/types';
@@ -185,12 +186,14 @@ function ItemSheetBody({
           )}
           <PillButton
             label={he.item.edit}
+            {...testId('item-edit')}
             variant="quiet"
             icon={<Icon name="pencil" size={18} color={colors.inkMuted} />}
             onPress={onEdit}
           />
           <PillButton
             label={confirmingDelete ? he.item.confirmDelete : he.item.delete}
+            {...testId('item-delete')}
             variant="danger"
             icon={<Icon name="trash" size={18} color={colors.brandStrong} />}
             onPress={remove}

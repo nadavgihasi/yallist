@@ -26,6 +26,7 @@ import { PeopleTab } from '@/features/trip/PeopleTab';
 import { he, participants } from '@/i18n/he';
 import { formatRange } from '@/lib/dates';
 import { statusOf } from '@/lib/api';
+import { testId } from '@/lib/testId';
 import { useMe } from '@/state/store';
 import { useTripQuery } from '@/state/trips';
 import { colors, size, space, type } from '@/theme';
@@ -131,7 +132,7 @@ export default function TripScreen() {
           />
         </View>
         <View style={styles.titles}>
-          <Text style={styles.title} accessibilityRole="header">
+          <Text style={styles.title} accessibilityRole="header" {...testId('trip-title')}>
             {trip.name}
           </Text>
           <Text style={styles.caption}>
@@ -147,7 +148,7 @@ export default function TripScreen() {
 
         <View style={desktop && styles.columns}>
           <View style={[styles.main, desktop && styles.mainDesktop]}>
-            <SegmentedControl options={tabs} value={tab} onChange={setTab} />
+            <SegmentedControl options={tabs} value={tab} onChange={setTab} testID="trip-tab" />
             {(tab === 'bring' || tab === 'buy') && (
               <ListTab key={tab} list={tab} data={data} view={view} me={me.userId} />
             )}
@@ -177,6 +178,7 @@ export default function TripScreen() {
         <FloatingAction
           label={he.trip.fabShort[tab as 'bring' | 'buy' | 'money']}
           accessibilityLabel={he.trip.fab[tab as 'bring' | 'buy' | 'money']}
+          testID="trip-add"
           onPress={add}
         />
       )}

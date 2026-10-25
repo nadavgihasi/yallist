@@ -14,6 +14,7 @@ import { VersionLine } from '@/components/VersionLine';
 import { GoogleButton } from '@/features/auth/GoogleButton';
 import { he } from '@/i18n/he';
 import { signInAsGuest, signInWithGoogle, type AuthResult } from '@/lib/api';
+import { testId } from '@/lib/testId';
 import { useSession } from '@/state/store';
 import { colors, layout, radius, space, type } from '@/theme';
 
@@ -76,12 +77,14 @@ export default function Login() {
                 onSubmitEditing={start}
                 placeholder={he.login.namePlaceholder}
                 accessibilityLabel={he.login.nameLabel}
+                {...testId('login-name')}
                 autoFocus
                 returnKeyType="go"
                 style={styles.input}
               />
               <PillButton
                 label={busy ? he.login.starting : he.login.start}
+                {...testId('login-start')}
                 size="lg"
                 wide
                 disabled={!name.trim() || busy}
@@ -99,6 +102,7 @@ export default function Login() {
             <>
               <PillButton
                 label={he.login.withName}
+                {...testId('login-guest')}
                 size="lg"
                 wide
                 onPress={() => setAskName(true)}

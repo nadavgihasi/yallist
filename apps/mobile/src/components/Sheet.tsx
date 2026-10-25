@@ -5,6 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
 
 import { he } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import { colors, radius, type } from '@/theme';
 import { useBreakpoint } from '@/theme/breakpoint';
 
@@ -93,6 +94,7 @@ export function Sheet({
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={he.close}
+              {...testId('sheet-close')}
               onPress={() => onClose()}
               style={styles.close}
             >

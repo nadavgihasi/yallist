@@ -14,6 +14,7 @@ import { deriveTrip } from '@/features/trip/derive';
 import { ReceiptField } from '@/features/trip/ReceiptField';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import { useMe } from '@/state/store';
 import { useTrip, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
@@ -62,7 +63,14 @@ function AddExpenseBody({ data }: { data: TripData }) {
       title={he.addExpense.title}
       onClose={close}
       footer={
-        <PillButton label={he.addExpense.save} size="lg" wide disabled={!valid} onPress={save} />
+        <PillButton
+          label={he.addExpense.save}
+          size="lg"
+          wide
+          disabled={!valid}
+          onPress={save}
+          {...testId('expense-save')}
+        />
       }
     >
       <AmountField
@@ -70,6 +78,7 @@ function AddExpenseBody({ data }: { data: TripData }) {
         value={amount}
         onChangeText={setAmount}
         size="lg"
+        testID="expense-amount"
         onSubmitEditing={save}
         error={amount.trim() && agorot === undefined ? he.invalidAmount : undefined}
       />
@@ -83,6 +92,7 @@ function AddExpenseBody({ data }: { data: TripData }) {
             setItemId(undefined);
           }}
           placeholder={he.addExpense.whatPlaceholder}
+          {...testId('expense-what')}
           onSubmitEditing={save}
           returnKeyType="done"
           style={styles.whatInput}

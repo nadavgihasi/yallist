@@ -8,6 +8,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
+import { testId } from '@/lib/testId';
 import { colors, type } from '@/theme';
 
 /** react-native-web adds these to Pressable's state. */
@@ -19,11 +20,14 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   style,
+  testID,
 }: {
   options: { value: T; label: string; accessibilityLabel?: string }[];
   value: T;
   onChange: (value: T) => void;
   style?: StyleProp<ViewStyle>;
+  /** Each segment gets `<testID>-<value>`. */
+  testID?: string;
 }) {
   return (
     <View style={[styles.track, style]} accessibilityRole="tablist">
@@ -35,6 +39,7 @@ export function SegmentedControl<T extends string>({
             accessibilityRole="tab"
             accessibilityLabel={o.accessibilityLabel}
             accessibilityState={{ selected }}
+            {...testId(testID && `${testID}-${o.value}`)}
             onPress={() => onChange(o.value)}
             style={[styles.segment, selected && styles.selected]}
           >

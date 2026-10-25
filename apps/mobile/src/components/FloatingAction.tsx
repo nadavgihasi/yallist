@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
 import { PillButton } from './PillButton';
 
+import { testId } from '@/lib/testId';
 import { colors, space } from '@/theme';
 
 /** The screen's one floating primary action: bottom-centered, `space-6` from the edge, plus icon. */
@@ -13,6 +14,7 @@ export function FloatingAction({
   disabled,
   icon = true,
   accessibilityLabel,
+  testID,
 }: {
   label: string;
   /** When the visible label is short ("פריט חדש") and the name should say more. */
@@ -20,6 +22,7 @@ export function FloatingAction({
   onPress: () => void;
   disabled?: boolean;
   icon?: boolean;
+  testID?: string;
 }) {
   const insets = useSafeAreaInsets();
   return (
@@ -30,6 +33,7 @@ export function FloatingAction({
         float
         disabled={disabled}
         accessibilityLabel={accessibilityLabel}
+        {...testId(testID)}
         icon={icon ? <Icon name="plus" color={colors.onPrimary} strokeWidth={2.5} /> : undefined}
         onPress={onPress}
       />

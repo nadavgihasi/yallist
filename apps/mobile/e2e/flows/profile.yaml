@@ -1,0 +1,15 @@
+# Open the profile from home.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [profile, shard-1]
+---
+- runFlow: ../common/sign-in.yaml
+- tapOn:
+    id: home-profile
+- assertVisible:
+    id: profile-title

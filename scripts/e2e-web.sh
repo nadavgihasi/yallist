@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# UI tests (Maestro, apps/mobile/e2e) on web: the static web export against the local API, on a
+# database made for this run and dropped after it. See docs/plans/ui-tests.md.
+#
+#   DATABASE_URL=postgres://postgres:postgres@localhost:55432/postgres scripts/e2e-web.sh [args]
+#
+# DATABASE_URL is only used to create and drop the run's database. Needs psql and the Maestro
+# CLI (on PATH, or MAESTRO=/path/to/maestro). Args are flow files or folders (default: all).
+# Results go to $E2E_OUT (default: a temp dir): junit.xml, the API and web logs, and per flow
+# under maestro/ a video (startRecording/), screenshots on failure and Maestro's logs.
+#
+# CI splits the flows in two: E2E_SHARD=1 runs the flows tagged shard-1, E2E_SHARD=2 the rest
+# (new flows land there; tag one shard-1 when shard 2 gets longer). E2E_PREBUILT=1 serves an
+# existing apps/mobile/dist, exported with EXPO_PUBLIC_API_URL=http://localhost:$API_PORT.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+: "${DATABASE_URL:?Set DATABASE_URL to a local Postgres (see docs/deploy.md)}"
+API_PORT=${API_PORT:-3100}
+WEB_PORT=${WEB_PORT:-8180}
+OUT=${E2E_OUT:-$(mktemp -d)}
+mkdir -p "$OUT"
+db="e2e_$(date +%s)_$$"
+bin=$PWD/node_modules/.bin
+
+psql "$DATABASE_URL" -qc "create database $db"
+cleanup() {
+  # shellcheck disable=SC2046 # one pid per word
+  kill $(jobs -p) 2>/dev/null || true
+  wait 2>/dev/null || true
+  psql "$DATABASE_URL" -qc "drop database if exists $db with (force)"
+}
+trap cleanup EXIT
+
+# The API migrates its empty database on start.
+(cd apps/api && DATABASE_URL="${DATABASE_URL%/*}/$db" PORT=$API_PORT exec node --import tsx src/dev.ts) \
+  >"$OUT/api.log" 2>&1 &
+
+if [[ -z ${E2E_PREBUILT:-} ]]; then
+  (cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT "$bin/expo" export -p web) \
+    >"$OUT/export.log" 2>&1
+fi
+(cd apps/mobile && exec "$bin/expo" serve --port "$WEB_PORT") >"$OUT/web.log" 2>&1 &
+
+for url in "http://localhost:$API_PORT/health" "http://localhost:$WEB_PORT"; do
+  for _ in $(seq 60); do curl -sf -o /dev/null "$url" && continue 2; sleep 0.5; done
+  echo "$url didn't come up; logs in $OUT" >&2
+  exit 1
+done
+
+(($#)) || set -- apps/mobile/e2e
+case ${E2E_SHARD:-} in
+  '') ;;
+  1) set -- --include-tags shard-1 "$@" ;;
+  2) set -- --exclude-tags shard-1 "$@" ;;
+  *) echo "E2E_SHARD must be 1 or 2" >&2 && exit 1 ;;
+esac
+# Recording needs Chrome DevTools for a Chrome version that Maestro 2.11.0 bundles (145–147).
+# Selenium Manager downloads that Chrome for Testing once (~/.cache/selenium).
+export SE_BROWSER_VERSION=${SE_BROWSER_VERSION:-147}
+# A tall phone-width window: the phone layout, with nothing below the fold (taps don't scroll).
+MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true \
+  "${MAESTRO:-maestro}" test -p web --headless --screen-size 500x1400 \
+  -e WEB_URL="http://localhost:$WEB_PORT" --test-output-dir "$OUT/maestro" \
+  --format junit --output "$OUT/junit.xml" "$@"

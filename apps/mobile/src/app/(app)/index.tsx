@@ -102,6 +102,7 @@ export default function Home() {
       </ScrollView>
       <FloatingAction
         label={empty ? he.firstHome.cta : he.home.newTrip}
+        testID="home-new-trip"
         onPress={() => router.push('/trips/new')}
       />
     </View>
