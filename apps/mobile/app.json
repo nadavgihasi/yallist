@@ -42,6 +42,14 @@
           "forcesRTL": true
         }
       ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Yallist צריכה גישה למצלמה כדי לצלם קבלות של הוצאות.",
+          "photosPermission": "Yallist צריכה גישה לתמונות כדי לצרף קבלות להוצאות.",
+          "microphonePermission": false
+        }
+      ],
       "./plugins/withReleaseSigning",
       "@react-native-community/datetimepicker"
     ],

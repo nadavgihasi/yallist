@@ -57,6 +57,7 @@ export function toExpense(row: typeof expenses.$inferSelect, shares: string[]): 
     amountAgorot: row.amountAgorot,
     paidBy: row.paidBy,
     shares,
+    hasReceipt: row.receiptPath !== null,
   };
 }
 

@@ -50,6 +50,8 @@ export interface Expense {
   paidBy: string;
   /** Participants the expense is split between. */
   shares: string[];
+  /** A receipt photo is attached (fetched separately, as a short-lived link). */
+  hasReceipt?: boolean;
 }
 
 export interface Payment {

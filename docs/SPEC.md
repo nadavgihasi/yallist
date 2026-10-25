@@ -138,7 +138,7 @@ Treat the invite link as a bearer capability and the database as the enforcement
   - `mark_payment(trip_id, to_user, amount)`, `confirm_payment(payment_id)` (receiver only), `remind_payment(...)` (receiver only, rate-limited, e.g. once per 24h).
   - `duplicate_trip(trip_id, starts_on, ends_on)` → copies items (no claims, expenses, or payments) and re-invites the same members.
 - **Invite tokens:** generated server-side with a CSPRNG, never derived from ids. Rotation replaces the token atomically. Rate-limit `join_trip` per IP/user in the Edge layer if abuse appears.
-- **Storage:** receipts bucket is private; object path `trips/{trip_id}/receipts/{expense_id}`; read/write allowed only to active members of that trip.
+- **Storage:** receipts bucket is private (one per stage); object key `trips/{trip_id}/receipts/{expense_id}/{uuid}.{ext}`; images only (JPEG, PNG, WebP, HEIC), at most 10 MB, enforced by the presigned POST policy and checked again before the API attaches it. Only active members of that trip get upload forms or (5-minute) view links; deleting a receipt or its expense takes whoever added or paid it, or an organizer. The app shrinks photos on the device (long edge 2000px, JPEG 0.8) before uploading.
 - **Anonymous users** are real users with full RLS; link Google/Apple to keep their data across devices.
 - **Link previews** (WhatsApp shows OG tags): served by an Edge Function for `/j/{token}`, using only `trip_preview` data.
 - Never put tokens, phone numbers, or other personal data in analytics or logs.

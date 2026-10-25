@@ -23,7 +23,7 @@ interface Session {
   me: Me;
 }
 
-const queryClient = new QueryClient({
+export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       gcTime: WEEK,

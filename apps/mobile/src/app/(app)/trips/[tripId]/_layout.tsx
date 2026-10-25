@@ -18,6 +18,7 @@ export default function TripLayout() {
       <Stack.Screen name="items/new" options={sheet} />
       <Stack.Screen name="items/[itemId]" options={sheet} />
       <Stack.Screen name="expenses/new" options={sheet} />
+      <Stack.Screen name="expenses/[expenseId]/receipt" options={sheet} />
       <Stack.Screen name="categories/new" options={sheet} />
       <Stack.Screen name="categories/[categoryId]" options={sheet} />
     </Stack>

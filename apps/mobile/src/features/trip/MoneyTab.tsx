@@ -1,7 +1,8 @@
 import { useIsMutating } from '@tanstack/react-query';
 import { formatShekel } from '@yallist/domain';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
@@ -9,6 +10,7 @@ import { Card, EmptyState, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, joinNames } from '@/i18n/he';
+import { useReceiptUpload } from '@/state/receipts';
 import { tripKey, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
@@ -168,6 +170,7 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
                 </Text>
               </View>
               <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+              <ReceiptButton tripId={data.trip.id} expense={e} />
               {/* The API also lets whoever added it delete it, but the app doesn't know who that was. */}
               {(e.paidBy === me || organizer) && (
                 <PillButton
@@ -189,8 +192,64 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
   );
 }
 
+/** Opens the expense's receipt, or adds one; shows an upload in flight or failed. */
+function ReceiptButton({
+  tripId,
+  expense,
+}: {
+  tripId: string;
+  expense: TripData['expenses'][number];
+}) {
+  const upload = useReceiptUpload(expense.id);
+  const percent = Math.round((upload?.progress ?? 0) * 100);
+  const label = upload
+    ? upload.failed
+      ? he.receipt.failed
+      : he.receipt.uploading(percent)
+    : expense.hasReceipt
+      ? he.receipt.open
+      : he.receipt.add;
+  const color = upload?.failed
+    ? colors.brandStrong
+    : expense.hasReceipt
+      ? colors.primaryStrong
+      : colors.inkFaint;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={4}
+      onPress={() =>
+        router.push({
+          pathname: '/trips/[tripId]/expenses/[expenseId]/receipt',
+          params: { tripId, expenseId: expense.id },
+        })
+      }
+      style={({ pressed }) => [
+        styles.receipt,
+        expense.hasReceipt && { backgroundColor: colors.primaryTint },
+        pressed && { opacity: 0.75 },
+      ]}
+    >
+      {upload && !upload.failed ? (
+        <Text style={styles.receiptPercent}>{percent}%</Text>
+      ) : (
+        <Icon name="receipt" size={20} color={color} />
+      )}
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   wrap: { gap: space[4] },
+  receipt: {
+    width: space.touch,
+    height: space.touch,
+    borderRadius: space.touch / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  receiptPercent: { ...type.caption, color: colors.primaryStrong },
   heroTitle: { ...type.caption, color: colors.inkMuted },
   heroAmount: { ...type.bigNumber, color: colors.ink },
   heroText: { ...type.caption, color: colors.inkMuted },

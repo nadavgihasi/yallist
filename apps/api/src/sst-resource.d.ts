@@ -11,6 +11,7 @@ declare module 'sst' {
     GithubFeedbackToken: { value: string };
     GoogleClientSecret: { value: string };
     Realtime: { http: string };
+    Receipts: { name: string };
     Web: { url: string };
   }
 }

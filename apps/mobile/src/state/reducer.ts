@@ -31,8 +31,10 @@ export type Action =
   | { type: 'reorderCategories'; list: ListKind; categoryIds: string[] }
   | { type: 'deleteCategory'; categoryId: string }
   | { type: 'setNote'; itemId: string; note: string }
-  | { type: 'addExpense'; expense: NewExpenseInput }
+  // `receipt`: a local photo (`pickReceipt`) to upload once the expense exists.
+  | { type: 'addExpense'; expense: NewExpenseInput; receipt?: string }
   | { type: 'deleteExpense'; expenseId: string }
+  | { type: 'deleteReceipt'; expenseId: string }
   | { type: 'markPayment'; toUser: string; amountAgorot: number }
   | { type: 'deletePayment'; paymentId: string }
   | { type: 'confirmPayment'; paymentId: string }
@@ -114,6 +116,13 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
       };
     case 'deleteExpense':
       return { ...data, expenses: data.expenses.filter((e) => e.id !== action.expenseId) };
+    case 'deleteReceipt':
+      return {
+        ...data,
+        expenses: data.expenses.map((e) =>
+          e.id === action.expenseId ? { ...e, hasReceipt: false } : e,
+        ),
+      };
     case 'deletePayment':
       return { ...data, payments: data.payments.filter((p) => p.id !== action.paymentId) };
     case 'confirmPayment':
