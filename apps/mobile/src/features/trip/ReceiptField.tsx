@@ -6,6 +6,7 @@ import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import { pickReceipt } from '@/state/receipts';
 import { colors, radius, space, type } from '@/theme';
 
@@ -44,6 +45,7 @@ export function ReceiptSources({ onPick }: { onPick: (uri: string) => void }) {
         variant="soft"
         icon={<Icon name="image" size={18} color={colors.primaryStrong} />}
         onPress={() => pick('library')}
+        {...testId('receipt-choose')}
       />
     </View>
   );
@@ -67,6 +69,7 @@ export function ReceiptField({
             style={styles.thumb}
             resizeMode="cover"
             accessibilityLabel={he.receipt.open}
+            {...testId('receipt-thumb')}
           />
           <PillButton
             label={he.receipt.remove}

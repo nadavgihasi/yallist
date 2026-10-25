@@ -16,10 +16,13 @@ const MAX_EDGE = 2000;
 const QUALITY = 0.8;
 
 /**
- * Picks a receipt photo and shrinks it on the device, so uploads stay small (the API takes up to
- * 10 MB). Returns a local image URI, or undefined if the user backed out.
+ * The UI tests' photo (scripts/e2e-web.sh): Maestro can't pick a file in the browser's file
+ * picker, so their build picks this image instead. Unset in every real build.
  */
-export async function pickReceipt(source: 'camera' | 'library'): Promise<string | undefined> {
+const TEST_PHOTO = process.env.EXPO_PUBLIC_E2E_RECEIPT;
+
+async function choosePhoto(source: 'camera' | 'library') {
+  if (TEST_PHOTO) return { uri: TEST_PHOTO, width: 0, height: 0 };
   if (source === 'camera' && !(await ImagePicker.requestCameraPermissionsAsync()).granted) {
     showToast(he.receipt.noCamera);
     return undefined;
@@ -27,8 +30,17 @@ export async function pickReceipt(source: 'camera' | 'library'): Promise<string 
   const launch =
     source === 'camera' ? ImagePicker.launchCameraAsync : ImagePicker.launchImageLibraryAsync;
   const result = await launch({ mediaTypes: ['images'], quality: 1 });
-  if (result.canceled) return undefined;
-  const { uri, width, height } = result.assets[0]!;
+  return result.canceled ? undefined : result.assets[0]!;
+}
+
+/**
+ * Picks a receipt photo and shrinks it on the device, so uploads stay small (the API takes up to
+ * 10 MB). Returns a local image URI, or undefined if the user backed out.
+ */
+export async function pickReceipt(source: 'camera' | 'library'): Promise<string | undefined> {
+  const photo = await choosePhoto(source);
+  if (!photo) return undefined;
+  const { uri, width, height } = photo;
   const image = ImageManipulator.manipulate(uri);
   if (Math.max(width, height) > MAX_EDGE) {
     image.resize(width >= height ? { width: MAX_EDGE } : { height: MAX_EDGE });

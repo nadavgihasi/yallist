@@ -1,4 +1,4 @@
-# Add an expense from the money tab and see it listed.
+# Add an expense from the money tab, without a receipt, and see it listed.
 appId: app.yallist
 url: ${WEB_URL}
 # A video per flow, kept even when it fails (onFlowComplete always runs).
@@ -24,3 +24,8 @@ tags: [money, shard-1]
     id: expense-save
 - assertVisible: Gas
 - assertVisible: .*120.*
+# Without a receipt, its button offers to add one.
+- tapOn:
+    id: expense-receipt
+- assertVisible:
+    id: receipt-choose

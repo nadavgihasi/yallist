@@ -62,15 +62,18 @@ DATABASE_URL=… pnpm e2e:web apps/mobile/e2e/flows/item-delete.yaml
 
 Each flow starts from a clean browser as a new guest with its own blank trip, so flows don't depend on each other.
 
-| Flow          | Covers                                                                |
-| ------------- | --------------------------------------------------------------------- |
-| `item-edit`   | Sign in, create a trip, add an item, rename it.                       |
-| `item-delete` | Delete an item, back on the trip's list. The regression test for #70. |
-| `claim`       | Claim an item, release it.                                            |
-| `expense`     | Add an expense on the money tab, see it listed.                       |
-| `profile`     | Open the profile.                                                     |
+| Flow          | Covers                                                                                 |
+| ------------- | -------------------------------------------------------------------------------------- |
+| `item-edit`   | Sign in, create a trip, add an item, rename it.                                        |
+| `item-delete` | Delete an item, back on the trip's list. The regression test for #70.                  |
+| `claim`       | Claim an item, release it.                                                             |
+| `expense`     | Add an expense without a receipt, see it listed; its receipt button offers to add one. |
+| `profile`     | Open the profile.                                                                      |
+| `receipt`     | Add an expense with a receipt photo, view it, delete it, add one again.                |
 
 Shared steps are in `e2e/common/` (sign in, new trip, add item).
+
+**Receipt photos:** Maestro can't drive the browser's file picker (its web driver has no file upload, and `addMedia` is a no-op on web). So the script (and CI's `build` job) builds the web app with `EXPO_PUBLIC_E2E_RECEIPT` set to [`e2e/fixtures/receipt.jpg`](../../apps/mobile/e2e/fixtures/receipt.jpg) as a data URI, and `pickReceipt` returns it in place of opening the picker. Real builds never set it. Everything after the pick runs for real: the shrink, the presigned-form upload to the API's in-memory receipts store (`/dev/receipts` in `src/dev.ts`), the attach and the viewer. Not covered: the picker itself, and S3 (CORS, the policy). On Android and iOS, `addMedia` can seed the gallery instead.
 
 ## CI
 

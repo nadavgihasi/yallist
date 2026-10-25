@@ -1,0 +1,52 @@
+# Add an expense with a receipt photo, view it, delete it, then add one to the expense again.
+# The web build picks e2e/fixtures/receipt.jpg in place of the file picker (scripts/e2e-web.sh).
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+# Untagged for shard-1, so it runs in shard 2 (scripts/e2e-web.sh), the shorter one.
+tags: [money]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- tapOn:
+    id: trip-tab-money
+- tapOn:
+    id: trip-add
+- tapOn:
+    id: expense-amount
+- inputText: '80'
+- tapOn:
+    id: expense-what
+- inputText: Pizza
+- tapOn:
+    id: receipt-choose
+- assertVisible:
+    id: receipt-thumb
+- tapOn:
+    id: expense-save
+- assertVisible: Pizza
+# The expense saves first, then the photo uploads; the viewer opens once it's attached.
+- tapOn:
+    id: expense-receipt
+- extendedWaitUntil:
+    visible:
+      id: receipt-image
+    timeout: 15000
+# Twice: the second tap confirms.
+- tapOn:
+    id: receipt-delete
+- tapOn:
+    id: receipt-delete
+- assertVisible: Pizza
+- tapOn:
+    id: expense-receipt
+- tapOn:
+    id: receipt-choose
+- extendedWaitUntil:
+    visible:
+      id: receipt-image
+    timeout: 15000
