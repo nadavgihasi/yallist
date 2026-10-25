@@ -40,6 +40,9 @@ const persistOptions = {
   maxAge: WEEK,
   // A new build drops the old cache rather than restoring data in a stale shape.
   buster: cacheBuster(process.env.EXPO_PUBLIC_GIT_SHA),
+  // Queries only. A change still queued offline would be restored without its mutationFn, so it
+  // could never be sent, and it would hold up every later change to its trip (same `scope`).
+  dehydrateOptions: { shouldDehydrateMutation: () => false },
 };
 
 interface SessionContext {

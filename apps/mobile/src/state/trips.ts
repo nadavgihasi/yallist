@@ -147,7 +147,8 @@ async function send(tripId: string, action: Action): Promise<unknown> {
 
 /**
  * Changes to one trip: shown at once where possible (`applyAction`), sent in order, rolled back
- * with a short message if the API refuses. Offline, they wait and go out on reconnect.
+ * with a short message if the API refuses. Offline, they wait and go out on reconnect (while the
+ * app stays open: queued changes aren't persisted).
  */
 export function useTripAction(tripId: string) {
   const me = useMe().userId;
