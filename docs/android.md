@@ -18,8 +18,10 @@ The URLs come from the stage's GitHub environment variables `EXPO_PUBLIC_API_URL
 
 The run's artifact `yallist-android-<stage>-<run>` contains:
 
-- `app-release.aab`: upload to Play Console → Testing → Internal testing.
 - `app-release.apk`: sideload until Play is ready. Download the artifact from the run page and unzip it (or `gh run download <run-id>`), copy the APK to the phone, open it and allow "install unknown apps" for the browser/file manager.
+- `app-release.aab` (`production` only): upload to Play Console → Testing → Internal testing.
+
+To keep runs short, `dev` builds (and the compile check on PRs) target arm64 phones only (`arm64-v8a`, every Android phone from the last ~8 years) and skip lint; their APK won't install on 32-bit phones or x86 emulators. `production` builds every ABI (`armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`) and runs lint, so the Play bundle reaches every device. Compiled C++ is cached with ccache between runs.
 
 `versionCode` is the workflow run number, so every run can be uploaded to Play. `versionName` is the latest release tag (see [releases.md](releases.md)).
 

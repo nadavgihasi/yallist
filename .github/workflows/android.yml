@@ -40,7 +40,16 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+      # Caches ~/.gradle (dependencies, Gradle build cache). Written by main runs only; PRs read it.
       - uses: gradle/actions/setup-gradle@v5
+      # The C++ of React Native and the native modules is most of the build; ccache keeps it across
+      # runs (CMake picks up CMAKE_*_COMPILER_LAUNCHER from the env). Keyed by ABI set, and pruned
+      # to what this run compiled.
+      - uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          key: android-${{ inputs.stage == 'production' && 'all-abis' || 'arm64' }}
+          max-size: 2G
+          evict-old-files: job
       - run: pnpm install --frozen-lockfile
 
       - name: Generate native project
@@ -58,9 +67,16 @@ jobs:
             echo "::warning::No upload key secret; release builds are debug-signed and can't go to Play."
           fi
 
-      - name: Build release AAB and APK
+      - name: Build release
         working-directory: apps/mobile/android
         env:
+          STAGE: ${{ inputs.stage }}
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+          # Precompiled headers are otherwise uncacheable, and the NDK's mtime changes on every
+          # runner, so identify the compiler by content.
+          CCACHE_SLOPPINESS: pch_defines,time_macros,include_file_mtime,include_file_ctime
+          CCACHE_COMPILERCHECK: content
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_VERSION_CODE: ${{ github.run_number }}
@@ -69,7 +85,16 @@ jobs:
           EXPO_PUBLIC_REALTIME_URL: ${{ vars.EXPO_PUBLIC_REALTIME_URL }}
           EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID }}
           EXPO_PUBLIC_GIT_SHA: ${{ github.sha }}
-        run: ./gradlew bundleRelease assembleRelease --no-daemon
+        # Production builds are for Play: an AAB plus APK for every ABI. Dev and PR builds are for
+        # phones: an arm64 APK only, without lint, which is a quarter of the native compilation.
+        run: |
+          sed -i 's/^org.gradle.jvmargs=.*/org.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g/' gradle.properties
+          if [ "$STAGE" = production ]; then
+            args="bundleRelease assembleRelease"
+          else
+            args="assembleRelease -PreactNativeArchitectures=arm64-v8a -x lintVitalRelease"
+          fi
+          ./gradlew $args --build-cache --no-daemon
 
       - uses: actions/upload-artifact@v7
         with:
