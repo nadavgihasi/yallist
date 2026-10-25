@@ -1,6 +1,6 @@
 import { claimCap, linkedExpense, parseShekel, type Expense } from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { AmountField, Input, fieldStyles } from '@/components/Fields';
@@ -8,7 +8,7 @@ import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { ClaimStepper } from '@/features/trip/ClaimStepper';
-import { closeSheet } from '@/features/trip/closeSheet';
+import { useCloseSheet } from '@/features/trip/closeSheet';
 import { ItemForm } from '@/features/trip/ItemForm';
 import { deriveTrip } from '@/features/trip/derive';
 import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
@@ -27,14 +27,8 @@ export default function ItemSheet() {
   const [editing, setEditing] = useState(false);
   // Opened by URL, the trip may still be loading: wait for it before deciding the item is gone.
   const gone = data ? !item : query.isError;
-  // Close exactly once. A modal that's fading out still re-renders; a second back() would also
-  // pop the trip screen (e.g. right after deleting this item).
-  const closed = useRef(false);
-  const close = useCallback(() => {
-    if (closed.current) return;
-    closed.current = true;
-    closeSheet(tripId);
-  }, [tripId]);
+  // Once only: deleting this item closes the sheet, then `gone` would close it again.
+  const close = useCloseSheet(tripId);
   useEffect(() => {
     if (gone) close();
   }, [gone, close]);
@@ -72,7 +66,7 @@ function ItemSheetBody({
 }: {
   tripId: string;
   itemId: string;
-  onClose: () => void;
+  onClose: (then?: () => void) => void;
   onEdit: () => void;
 }) {
   const data = useTrip(tripId)!;
@@ -132,17 +126,18 @@ function ItemSheetBody({
 
   const saveBought = () => {
     if (!amount || shares.length === 0) return;
-    act({
-      type: 'addExpense',
-      expense: {
-        itemId: item.id,
-        description: item.name,
-        amountAgorot: amount,
-        paidBy: me,
-        shares,
-      },
-    });
-    onClose();
+    onClose(() =>
+      act({
+        type: 'addExpense',
+        expense: {
+          itemId: item.id,
+          description: item.name,
+          amountAgorot: amount,
+          paidBy: me,
+          shares,
+        },
+      }),
+    );
   };
 
   // Deleting can't be undone: the first tap asks, the second deletes. The parent closes the

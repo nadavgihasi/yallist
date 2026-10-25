@@ -23,7 +23,8 @@ export function CategoryForm({
   tripId: string;
   list?: ListKind;
   categoryId?: string;
-  onClose: () => void;
+  /** Closes the sheet, first running `then` (the change), once even if tapped twice. */
+  onClose: (then?: () => void) => void;
 }) {
   const data = useTrip(tripId);
   const act = useTripAction(tripId);
@@ -35,11 +36,12 @@ export function CategoryForm({
   const trimmed = name.trim();
   const save = () => {
     if (!trimmed) return;
-    if (!category) act({ type: 'addCategory', list, name: trimmed });
-    else if (trimmed !== category.name) {
-      act({ type: 'renameCategory', categoryId: category.id, name: trimmed });
-    }
-    onClose();
+    onClose(() => {
+      if (!category) act({ type: 'addCategory', list, name: trimmed });
+      else if (trimmed !== category.name) {
+        act({ type: 'renameCategory', categoryId: category.id, name: trimmed });
+      }
+    });
   };
 
   const siblings = category
@@ -61,8 +63,7 @@ export function CategoryForm({
   const remove = () => {
     if (!category) return;
     if (itemCount > 0 && !confirming) return setConfirming(true);
-    act({ type: 'deleteCategory', categoryId: category.id });
-    onClose();
+    onClose(() => act({ type: 'deleteCategory', categoryId: category.id }));
   };
 
   return (
