@@ -7,7 +7,8 @@
   },
   "scripts": {
     "typecheck": "pnpm -r --if-present typecheck",
-    "lint": "eslint .",
+    "lint": "eslint --max-warnings 0 . && knip && pnpm lint:ci",
+    "lint:ci": "uvx --from actionlint-py==1.7.12.25 --with shellcheck-py==0.11.0.1 actionlint && uvx --from shellcheck-py==0.11.0.1 shellcheck scripts/*.sh && uvx zizmor==1.31.1 --offline --min-severity medium --quiet .github",
     "test": "pnpm -r --if-present --reporter-hide-prefix test",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -20,7 +21,9 @@
     "eslint": "^9.39.5",
     "eslint-config-expo": "58.0.4",
     "eslint-config-prettier": "^10.1.8",
+    "knip": "6.43.0",
     "prettier": "^3.9.10",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "typescript-eslint": "8.72.0"
   }
 }

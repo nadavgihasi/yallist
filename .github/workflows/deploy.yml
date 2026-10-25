@@ -7,7 +7,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  id-token: write # GitHub OIDC token, exchanged for the deploy role
+  # GitHub OIDC token, exchanged for the deploy role. Every job but `version` deploys.
+  id-token: write # zizmor: ignore[excessive-permissions]
   contents: read
 
 concurrency:
