@@ -209,7 +209,7 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
         {guest ? (
           <>
             <SettingRow label={he.profile.guest} hint={he.profile.guestHint} />
-            <GoogleButton onIdToken={linkGoogle} />
+            <GoogleButton onIdToken={(idToken) => void linkGoogle(idToken)} />
           </>
         ) : (
           <SettingRow label={he.profile.google} hint={profile.account.email ?? undefined} />
@@ -311,7 +311,7 @@ function SignOut({ guest }: { guest: boolean }) {
           onPress={() => {
             setBusy(true);
             // The (app) layout then redirects to the login screen.
-            signOut();
+            void signOut();
           }}
         />
         <PillButton

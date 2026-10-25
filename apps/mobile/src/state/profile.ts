@@ -28,7 +28,7 @@ export function useUpdateProfile() {
     onMutate: async (changes) => {
       await queryClient.cancelQueries({ queryKey: key });
       const previous = queryClient.getQueryData<Profile>(key);
-      if (previous) queryClient.setQueryData<Profile>(key, { ...previous, ...changes } as Profile);
+      if (previous) queryClient.setQueryData<Profile>(key, { ...previous, ...changes });
       return { previous };
     },
     onError: (_error, _changes, context) => {

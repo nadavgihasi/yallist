@@ -74,9 +74,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    AsyncStorage.getItem(SESSION_KEY)
+    // An unreadable or corrupt session signs out rather than leaving the app blank.
+    void AsyncStorage.getItem(SESSION_KEY)
+      .then((raw) => (raw ? (JSON.parse(raw) as Session) : null))
       .catch(() => null)
-      .then((raw) => activate(raw ? (JSON.parse(raw) as Session) : null));
+      .then(activate);
     // Once, on launch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -37,7 +37,7 @@ export default function Join() {
   });
 
   const open = (tripId: string) => {
-    queryClient.invalidateQueries({ queryKey: tripsKey });
+    void queryClient.invalidateQueries({ queryKey: tripsKey });
     router.replace({ pathname: '/trips/[tripId]', params: { tripId } });
   };
 
@@ -69,7 +69,7 @@ export default function Join() {
   };
   const joinAsGuest = () => {
     const trimmed = name.trim();
-    if (trimmed) join(() => signInAsGuest(trimmed));
+    if (trimmed) void join(() => signInAsGuest(trimmed));
   };
 
   if (invite.isPending) return <ActivityIndicator color={colors.primary} style={styles.center} />;
@@ -81,7 +81,7 @@ export default function Join() {
         title={invalid ? he.join.invalid : he.errors.loadFailed}
         text={invalid ? he.join.invalidText : undefined}
         signedIn={!!me}
-        onRetry={invalid ? undefined : () => invite.refetch()}
+        onRetry={invalid ? undefined : () => void invite.refetch()}
       />
     );
   }
@@ -164,7 +164,7 @@ export default function Join() {
             onPress={joinAsGuest}
           />
           <Text style={styles.note}>{he.join.noAccount}</Text>
-          <GoogleButton onIdToken={(idToken) => join(() => signInWithGoogle(idToken))} />
+          <GoogleButton onIdToken={(idToken) => void join(() => signInWithGoogle(idToken))} />
         </>
       )}
     </ScrollView>

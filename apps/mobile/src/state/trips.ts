@@ -38,7 +38,7 @@ export function useCreateTrip() {
     onSuccess: (data) => {
       // Opens without another round trip; a new trip has nothing to settle.
       queryClient.setQueryData(tripKey(data.trip.id), { ...data, balances: {}, transfers: [] });
-      queryClient.invalidateQueries({ queryKey: tripsKey });
+      void queryClient.invalidateQueries({ queryKey: tripsKey });
     },
     onError: () => showToast(he.errors.failed),
   });

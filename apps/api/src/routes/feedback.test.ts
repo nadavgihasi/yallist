@@ -33,7 +33,11 @@ describe.skipIf(!DATABASE_URL)('POST /feedback', () => {
   const appWith = (githubToken?: string) =>
     testApp(db, undefined, { stage: 'dev', ...(githubToken !== undefined && { githubToken }) });
 
-  const post = (app: ReturnType<typeof testApp>, headers: Record<string, string>, body: unknown) =>
+  const post = async (
+    app: ReturnType<typeof testApp>,
+    headers: Record<string, string>,
+    body: unknown,
+  ) =>
     app.request('/feedback', {
       method: 'POST',
       headers: { ...headers, 'content-type': 'application/json' },
