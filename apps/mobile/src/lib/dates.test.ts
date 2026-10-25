@@ -1,6 +1,78 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { endAfterMovingStart } from './dates';
+import {
+  addDays,
+  countdown,
+  daysBetween,
+  endAfterMovingStart,
+  formatRange,
+  formatShort,
+  monthName,
+} from './dates';
+
+// "This year" is 2026 in every test below.
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(new Date(2026, 9, 24, 12));
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('addDays / daysBetween', () => {
+  it('crosses month and year ends', () => {
+    expect(addDays('2026-10-31', 1)).toBe('2026-11-01');
+    expect(addDays('2026-12-31', 2)).toBe('2027-01-02');
+    expect(addDays('2026-11-01', -1)).toBe('2026-10-31');
+    expect(daysBetween('2026-12-31', '2027-01-02')).toBe(2);
+    expect(daysBetween('2026-11-08', '2026-11-05')).toBe(-3);
+  });
+});
+
+describe('formatRange', () => {
+  it('writes one day', () => {
+    expect(formatRange('2026-11-28', '2026-11-28')).toBe('שבת, 28 בנובמבר');
+  });
+
+  it('shares the month within one month', () => {
+    expect(formatRange('2026-11-13', '2026-11-14')).toBe('שישי–שבת, 13–14 בנובמבר');
+  });
+
+  it('writes both months across a month end', () => {
+    expect(formatRange('2026-10-31', '2026-11-02')).toBe('שבת, 31 באוקטובר – שני, 2 בנובמבר');
+  });
+
+  it('adds the year when the trip is not this year', () => {
+    expect(formatRange('2027-08-05', '2027-08-05')).toBe('חמישי, 5 באוגוסט 2027');
+    expect(formatRange('2026-12-31', '2027-01-02')).toBe(
+      'חמישי, 31 בדצמבר 2026 – שבת, 2 בינואר 2027',
+    );
+  });
+});
+
+describe('formatShort / monthName', () => {
+  it('formats', () => {
+    expect(formatShort('2026-11-13')).toBe('שישי, 13.11');
+    expect(monthName('2026-08-01')).toBe('אוגוסט');
+    expect(monthName('2027-08-05')).toBe('אוגוסט 2027');
+  });
+});
+
+describe('countdown', () => {
+  const now = '2026-10-24';
+
+  it('counts the days to the start', () => {
+    expect(countdown('2026-10-25', '2026-10-26', now)).toBe('מחר');
+    expect(countdown('2026-10-26', '2026-10-27', now)).toBe('בעוד יומיים');
+    expect(countdown('2026-11-15', '2026-11-16', now)).toBe('בעוד 22 ימים');
+  });
+
+  it('says the trip is on from its first day through its last, then ended', () => {
+    expect(countdown('2026-10-24', '2026-10-25', now)).toBe('עכשיו בטיול');
+    expect(countdown('2026-10-22', '2026-10-24', now)).toBe('עכשיו בטיול');
+    expect(countdown('2026-10-20', '2026-10-23', now)).toBe('הסתיים');
+  });
+});
 
 describe('endAfterMovingStart', () => {
   it('keeps the end while the start stays on or before it', () => {
