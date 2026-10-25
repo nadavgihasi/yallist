@@ -42,7 +42,7 @@ Every `sst` command needs `--stage dev` or `--stage production`, including `pnpm
 Two AWS CLI profiles backed by IAM user access keys. Both use the same AWS account for now:
 
 ```sh
-aws configure --profile yallist-dev    # access key, secret, region eu-central-1
+aws configure --profile yallist-dev    # access key and secret; sst.config.ts sets each stage's region
 aws configure --profile yallist-prod   # same keys for now
 ```
 

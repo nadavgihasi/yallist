@@ -2,6 +2,8 @@
 
 SPEC Phase 0, adapted to [tech-decisions.md](../tech-decisions.md): AWS backend instead of Supabase, Android + web first.
 
+**Built (#5–#9), with these changes since:** the SST apps live in [infra/](../../infra) (#18), not a root `sst.config.ts`; the API is behind an API Gateway HTTP API (#14), not a Function URL behind CloudFront; design system v2 (#36, #37) replaced Fredoka with Rubik only and the glass tab bar and FAB with segmented tabs and one floating button. [deploy.md](../deploy.md) and [design/](../design/README.md) describe the current setup.
+
 **Done when:** the app boots on Android and web in RTL with both fonts, component previews match the mockups, and CI is green.
 
 ## PR 1 — `chore: workspace and tooling`

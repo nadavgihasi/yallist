@@ -1,6 +1,6 @@
 /**
  * The API on a local Node server, against plain Postgres, for running the app without AWS:
- *   DATABASE_URL=postgres://postgres:postgres@localhost:55432/postgres pnpm --filter @yallist/api dev
+ *   DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres pnpm --filter @yallist/api dev
  * Migrates the database first. Google sign-in needs GOOGLE_CLIENT_ID (the dev OAuth client).
  */
 import { serve } from '@hono/node-server';

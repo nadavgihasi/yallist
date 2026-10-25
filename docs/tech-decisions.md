@@ -17,7 +17,7 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 | Backend    | Supabase (RLS, triggers, pg_cron, Realtime, Edge Functions) | **Hono on Lambda + Aurora DSQL + SST.** RLS and `SECURITY DEFINER` RPCs become authorization checks and transactional handlers in the API. Activity rows are written in the same transaction as the change. Scheduled jobs (day-before reminder) run on EventBridge. |
 | Cost split | Equal among each expense's participants, with exclusions    | **Same as SPEC.** The earlier "organizer picks equal or by shares" idea is dropped.                                                                                                                                                                                  |
 | Sign-in    | Anonymous join by link + Google + Apple                     | **Anonymous + Google now; Apple added when iOS ships** (App Store rules require it then).                                                                                                                                                                            |
-| Realtime   | Realtime sync on the trip screen                            | **Same as SPEC: realtime in v1.** Transport still open, see below.                                                                                                                                                                                                   |
+| Realtime   | Realtime sync on the trip screen                            | **Same as SPEC: realtime in v1.** Transport: AppSync Events, see below.                                                                                                                                                                                              |
 | Platforms  | iOS, Android and web from Phase 0                           | **Android + web first, iOS later.** iPhone users use the web version until then.                                                                                                                                                                                     |
 
 ## Language
@@ -41,9 +41,9 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 ## Backend
 
 - API: Hono on AWS Lambda.
-- Shared Zod schemas in a monorepo package; optionally Hono's typed RPC client (`hc`).
+- Zod validates requests in the API routes (`apps/api/src/routes`); the app gets request and response types from them through Hono's typed RPC client (`hc`). Domain rules shared by the API and the app (coverage, claim caps, money, phone numbers) live in `@yallist/domain`.
 - Web hosting: static Expo web export on S3 + CloudFront.
-- Infrastructure as code: SST, region eu-central-1 (Frankfurt).
+- Infrastructure as code: SST, in [infra/](../infra) ([deploy.md](deploy.md)). Production in eu-central-1 (Frankfurt), dev in us-east-2.
 
 ## Database
 
