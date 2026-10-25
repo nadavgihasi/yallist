@@ -146,7 +146,9 @@ Every resource has the stage in its name or identifier, so dev and production ne
 - **The CloudFront distribution** has no name; its comment is set to `yallist-<stage>-web`.
 - **The DSQL cluster** has no name; its `Name` tag is `yallist-<stage>-database`.
 - **The AppSync Events API** is named `yallist-<stage>-realtime`.
-- **Tags:** every resource is tagged `app=yallist` and `stage=<stage>`, through the AWS provider's default tags. SST also adds its own `sst:app` and `sst:stage` tags.
+- **Tags:** every resource that supports tags is tagged `app=yallist` and `stage=<stage>` (`stage=global` for `infra/global`), through the AWS provider's default tags. SST also adds its own `sst:app` and `sst:stage` tags. That includes IAM roles, the OIDC provider, the budget and the Lambda log groups, which SST creates explicitly (30-day retention) rather than leaving Lambda to create them untagged.
+  - **Not taggable** (AWS has no tags for them; the stage is in the name or parent): CloudFront functions and key-value stores, API Gateway routes and integrations, Lambda permissions, IAM role policies and attachments, and the S3 bucket policy.
+  - **Not ours to tag:** SST's per-region bootstrap, created by the SST CLI rather than these configs and shared by every stage in the region: the `sst-state-*` and `sst-asset-*` buckets, the `sst-asset` ECR repository and the `/sst/bootstrap` and `/sst/passphrase/*` SSM parameters.
 
 ## Remove dev
 
