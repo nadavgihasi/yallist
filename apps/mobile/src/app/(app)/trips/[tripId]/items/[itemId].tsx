@@ -15,7 +15,8 @@ import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
 import { useMe } from '@/state/store';
-import { useTrip, useTripAction, useTripQuery } from '@/state/trips';
+import { useTripAction, useTripQuery } from '@/state/trips';
+import type { TripData } from '@/state/types';
 import { colors, fonts } from '@/theme';
 
 export default function ItemSheet() {
@@ -51,26 +52,31 @@ export default function ItemSheet() {
     <ItemSheetBody
       key={item.id}
       tripId={tripId}
-      itemId={itemId}
+      data={data}
+      item={item}
       onClose={close}
       onEdit={() => setEditing(true)}
     />
   );
 }
 
+/**
+ * The item as the parent found it: reading the trip here again could see the item already
+ * deleted (this sheet, or someone else) before the parent unmounts this, and crash (#70).
+ */
 function ItemSheetBody({
   tripId,
-  itemId,
+  data,
+  item,
   onClose,
   onEdit,
 }: {
   tripId: string;
-  itemId: string;
+  data: TripData;
+  item: TripData['items'][number];
   onClose: (then?: () => void) => void;
   onEdit: () => void;
 }) {
-  const data = useTrip(tripId)!;
-  const item = data.items.find((i) => i.id === itemId)!;
   const me = useMe().userId;
   const act = useTripAction(tripId);
   const view = deriveTrip(data, me);
@@ -110,7 +116,7 @@ function ItemSheetBody({
     return () => {
       const { note: latest, expense: edited } = edits.current;
       if (latest !== undefined && latest !== original)
-        act({ type: 'setNote', itemId, note: latest });
+        act({ type: 'setNote', itemId: item.id, note: latest });
       if (edited) {
         // Expenses aren't edited in place: the new one replaces the old.
         const { id, ...expense } = edited;
