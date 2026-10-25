@@ -9,6 +9,11 @@ export async function findProfile(tx: Executor, userId: string) {
   return profile;
 }
 
+/** Locks the user's profile row until the transaction ends, serializing that user's writes. */
+export async function lockProfile(tx: Executor, userId: string) {
+  await tx.select({ id: profiles.id }).from(profiles).where(eq(profiles.id, userId)).for('update');
+}
+
 /** Changes the given profile fields; returns the updated profile. */
 export async function updateProfile(
   tx: Executor,
@@ -49,6 +54,7 @@ const USER_COLUMNS = [
   ['payments', 'from_user'],
   ['payments', 'to_user'],
   ['activity', 'actor'],
+  ['feedback', 'user_id'],
 ] as const;
 
 /** Moves everything of user `from` to user `to` and deletes `from`'s profile. */

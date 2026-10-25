@@ -67,6 +67,9 @@ export default $config({
     // deploy workflow sets from GitHub environment secrets (docs/deploy.md#secrets).
     const authSecret = new sst.Secret('BetterAuthSecret');
     const googleClientSecret = new sst.Secret('GoogleClientSecret');
+    // Opens a GitHub issue per feature request from the app (apps/api/src/routes/feedback.ts).
+    // Optional: until the GitHub secret exists, the placeholder makes the API only save requests.
+    const githubFeedbackToken = new sst.Secret('GithubFeedbackToken', 'unset');
     // OAuth client IDs are public; one Google Cloud OAuth client per stage.
     const authEnvironment = { GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage] };
 
@@ -139,7 +142,7 @@ export default $config({
     api.route('$default', {
       handler: '../../apps/api/src/lambda.handler',
       runtime: 'nodejs24.x',
-      link: [database, api, web, authSecret, googleClientSecret, realtime],
+      link: [database, api, web, authSecret, googleClientSecret, githubFeedbackToken, realtime],
       environment: authEnvironment,
     });
 

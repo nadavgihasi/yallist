@@ -7,4 +7,9 @@ import { db, liveAuth } from './runtime';
 
 const publish = appSyncPublisher(Resource.Realtime.http, process.env.AWS_REGION!);
 
-export const handler = handle(createApp(liveAuth(Resource.Web.url), db, publish));
+export const handler = handle(
+  createApp(liveAuth(Resource.Web.url), db, publish, {
+    stage: Resource.App.stage,
+    githubToken: Resource.GithubFeedbackToken.value,
+  }),
+);

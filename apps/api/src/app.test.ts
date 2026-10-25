@@ -77,6 +77,9 @@ describe.skipIf(!DATABASE_URL)('auth', () => {
       insert into trip_members (trip_id, user_id, role, status, display_name)
       values (${trip!.id}, ${guest.id}, 'organizer', 'active', 'guest'),
              (${trip!.id}, ${account.id}, 'member', 'active', 'account')`;
+    await sql`
+      insert into feedback (user_id, title, body, app_version, platform, stage)
+      values (${guest.id}, 'Idea', '', '1.0.0', 'web', 'test')`;
 
     await mergeUser(db, guest.id, account.id);
 
@@ -85,6 +88,7 @@ describe.skipIf(!DATABASE_URL)('auth', () => {
       { user_id: account.id, role: 'organizer' },
     ]);
     expect(await sql`select created_by from trips`).toEqual([{ created_by: account.id }]);
+    expect(await sql`select user_id from feedback`).toEqual([{ user_id: account.id }]);
     expect(await sql`select id from profiles where id = ${guest.id}`).toEqual([]);
   });
 

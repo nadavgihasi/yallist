@@ -352,3 +352,29 @@ export const templateItems = pgTable(
   },
   (t) => [primaryKey({ columns: [t.template, t.list, t.position] })],
 );
+
+export const FEEDBACK_KINDS = ['feature', 'bug'] as const;
+export const PLATFORMS = ['ios', 'android', 'web'] as const;
+
+/** Feature requests and bug reports sent from the app; each is also a GitHub issue when possible. */
+export const feedback = pgTable(
+  'feedback',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: userRef('user_id').notNull(),
+    kind: text('kind', { enum: FEEDBACK_KINDS }).notNull().default('feature'),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    appVersion: text('app_version').notNull(),
+    platform: text('platform', { enum: PLATFORMS }).notNull(),
+    stage: text('stage').notNull(),
+    /** Set once the issue is created; null while the API has no GitHub token, or it failed. */
+    githubIssueNumber: integer('github_issue_number'),
+    createdAt: createdAt(),
+  },
+  (t) => [
+    index('feedback_user_idx').on(t.userId, t.createdAt),
+    oneOf('feedback_kind_check', t.kind, FEEDBACK_KINDS),
+    oneOf('feedback_platform_check', t.platform, PLATFORMS),
+  ],
+);

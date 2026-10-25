@@ -51,6 +51,7 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
       'claims',
       'expense_shares',
       'expenses',
+      'feedback',
       'items',
       'payments',
       'profiles',
