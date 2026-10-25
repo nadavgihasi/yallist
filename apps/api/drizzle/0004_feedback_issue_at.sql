@@ -1,0 +1,1 @@
+ALTER TABLE "feedback" ADD COLUMN "github_issue_at" timestamp with time zone;
