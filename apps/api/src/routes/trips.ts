@@ -25,7 +25,7 @@ import { transact, type Tx } from '../db/tx';
 import { settleUp, toTrip } from '../trip-data';
 
 /** 128 bits from a CSPRNG, URL-safe (SPEC §5): the invite link is a bearer capability. */
-export const newInviteToken = () => randomBytes(16).toString('base64url');
+const newInviteToken = () => randomBytes(16).toString('base64url');
 
 const date = z.iso.date();
 const tripFields = {
