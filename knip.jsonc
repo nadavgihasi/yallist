@@ -1,0 +1,22 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "ignoreExportsUsedInFile": true,
+  "ignore": ["docs/**"],
+  // `pnpm lint:ci` runs the pinned Python-packaged linters through uv.
+  "ignoreBinaries": ["uvx"],
+  "workspaces": {
+    ".": {},
+    "apps/api": {
+      // Lambda handlers, referenced by path from infra/app/sst.config.ts.
+      "entry": ["src/lambda.ts", "src/realtime-authorizer.ts"],
+    },
+    "apps/mobile": {
+      // Knip assumes Expo apps use expo-updates; this one doesn't.
+      "ignoreDependencies": ["expo-updates"],
+    },
+    "infra": {
+      "entry": ["*/sst.config.ts"],
+    },
+    "packages/*": {},
+  },
+}

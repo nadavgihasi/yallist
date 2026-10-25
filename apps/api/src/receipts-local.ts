@@ -28,10 +28,11 @@ export function localReceiptStore(baseURL: string) {
   const routes = new Hono()
     .post('/upload', async (c) => {
       const form = await c.req.formData();
-      const key = String(form.get('key'));
-      const contentType = String(form.get('Content-Type'));
+      const key = form.get('key');
+      const contentType = form.get('Content-Type');
       const file = form.get('file');
-      if (forms.get(key) !== contentType || !(file instanceof Blob)) return c.body(null, 403);
+      if (typeof key !== 'string' || forms.get(key) !== contentType || !(file instanceof Blob))
+        return c.body(null, 403);
       if (file.size < 1 || file.size > RECEIPT_MAX_BYTES) return c.body(null, 400);
       objects.set(key, { contentType, body: file });
       return c.body(null, 204);

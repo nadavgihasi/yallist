@@ -35,6 +35,11 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
+      # uvx runs the pinned workflow and shell linters in `pnpm lint`.
+      - uses: astral-sh/setup-uv@v10.3.2
+        with:
+          enable-cache: true
+          cache-dependency-glob: package.json
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm lint

@@ -22,4 +22,4 @@ pnpm --filter mobile web   # opens the web app at http://localhost:8081, using t
 
 For Google sign-in locally, set `GOOGLE_CLIENT_ID` for the API and `EXPO_PUBLIC_GOOGLE_CLIENT_ID` for the app to the dev OAuth client ID (`infra/app/sst.config.ts`).
 
-Checks: `pnpm typecheck && pnpm lint && pnpm test && pnpm format:check`.
+Checks: `pnpm typecheck && pnpm lint && pnpm test && pnpm format:check`. `pnpm lint` also checks the workflows and shell scripts (actionlint, shellcheck, zizmor) through `uvx`, so it needs [uv](https://docs.astral.sh/uv/).

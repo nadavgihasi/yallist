@@ -8,7 +8,7 @@ const MONTH_NAMES = MONTHS.map((m) => m.slice(1));
 
 export function parseDate(iso: string): Date {
   const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y!, m! - 1, d!);
+  return new Date(y!, m! - 1, d);
 }
 
 export function toISODate(date: Date): string {

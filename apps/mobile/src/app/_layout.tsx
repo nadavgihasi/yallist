@@ -18,7 +18,7 @@ if (Platform.OS !== 'web') {
   I18nManager.forceRTL(true);
 }
 
-SplashScreen.preventAutoHideAsync();
+void SplashScreen.preventAutoHideAsync();
 
 /** react-native-web resolves start/end styles from the nearest `dir`, not from `<html dir>`. */
 const webRtl = Platform.OS === 'web' ? ({ dir: 'rtl' } as object) : {};
@@ -32,7 +32,7 @@ export default function RootLayout() {
   const ready = fontsLoaded || fontError !== null;
 
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync();
+    if (ready) void SplashScreen.hideAsync();
   }, [ready]);
 
   if (!ready) return null;

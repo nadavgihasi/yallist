@@ -106,7 +106,7 @@ export async function backfillCategories(sql: Sql) {
                 from trip_categories where trip_id = ${tripId} and list = ${list}
                 returning id`;
           await tx`
-            update items set category_id = ${category!.id}, category = ''
+            update items set category_id = ${category.id}, category = ''
             where trip_id = ${tripId} and list = ${list} and category = ${name}
               and category_id is null and deleted_at is null`;
         }

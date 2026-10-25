@@ -1,0 +1,6 @@
+rules:
+  # Tags, not commit SHAs: every action here is from a well-known publisher.
+  unpinned-uses:
+    config:
+      policies:
+        '*': ref-pin
