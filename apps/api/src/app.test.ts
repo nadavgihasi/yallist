@@ -118,4 +118,53 @@ describe.skipIf(!DATABASE_URL)('auth', () => {
       { trip_id: b, user_id: account.id, role: 'organizer', status: 'active' },
     ]);
   });
+
+  it('does not make the account organizer from a removed organizer membership', async () => {
+    const guest = await signInAsGuest('guest');
+    const account = await signInAsGuest('account');
+    const [trip] = await sql<{ id: string }[]>`
+      insert into trips (name, starts_on, ends_on, template, invite_token, created_by)
+      values ('C', '2026-11-01', '2026-11-02', 'camp', 'token-c', ${guest.id}) returning id`;
+    await sql`
+      insert into trip_members (trip_id, user_id, role, status, display_name) values
+        (${trip!.id}, ${guest.id}, 'organizer', 'removed', 'guest'),
+        (${trip!.id}, ${account.id}, 'member', 'active', 'account')`;
+
+    await mergeUser(db, guest.id, account.id);
+
+    expect(
+      await sql`select user_id, role, status from trip_members where trip_id = ${trip!.id}`,
+    ).toEqual([{ user_id: account.id, role: 'member', status: 'active' }]);
+  });
+
+  it('adds up both users’ parts of a qty item, and keeps one claim on other items', async () => {
+    const guest = await signInAsGuest('guest');
+    const account = await signInAsGuest('account');
+    const [trip] = await sql<{ id: string }[]>`
+      insert into trips (name, starts_on, ends_on, template, invite_token, created_by)
+      values ('D', '2026-11-01', '2026-11-02', 'camp', 'token-d', ${account.id}) returning id`;
+    const item = async (kind: string, quantityNeeded: number) =>
+      (
+        await sql<{ id: string }[]>`
+          insert into items (trip_id, list, category, position, name, kind, quantity_needed,
+            created_by)
+          values (${trip!.id}, 'bring', '', 0, ${kind}, ${kind}, ${quantityNeeded}, ${account.id})
+          returning id`
+      )[0]!.id;
+    const [tents, towels] = [await item('qty', 5), await item('each', 1)];
+    await sql`
+      insert into claims (item_id, user_id, quantity) values
+        (${tents}, ${guest.id}, 2), (${tents}, ${account.id}, 1),
+        (${towels}, ${guest.id}, 1), (${towels}, ${account.id}, 1)`;
+
+    await mergeUser(db, guest.id, account.id);
+
+    expect(
+      await sql`select item_id, user_id, quantity from claims
+        where item_id in (${tents}, ${towels}) order by item_id = ${towels}`,
+    ).toEqual([
+      { item_id: tents, user_id: account.id, quantity: 3 },
+      { item_id: towels, user_id: account.id, quantity: 1 },
+    ]);
+  });
 });
