@@ -370,6 +370,11 @@ export const feedback = pgTable(
     stage: text('stage').notNull(),
     /** Set once the issue is created; null while the API has no GitHub token, or it failed. */
     githubIssueNumber: integer('github_issue_number'),
+    /**
+     * When opening the issue started: a claim, so only one sender opens it. Set alone while in
+     * flight (or after a crash mid-send), cleared if it failed. The daily issue cap counts these.
+     */
+    githubIssueAt: timestamp('github_issue_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [

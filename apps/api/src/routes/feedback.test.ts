@@ -3,9 +3,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 
 import { createDb, type Db } from '../db/client';
 import { migrate } from '../db/migrate';
+import { ISSUE_LIMIT } from '../feedback-issue';
 import { createTestDatabase, DATABASE_URL, signInAsGuest, testApp } from '../test-db';
 
-import { FEEDBACK_LIMIT, ISSUE_LIMIT } from './feedback';
+import { FEEDBACK_LIMIT } from './feedback';
 
 const request = {
   kind: 'feature',
@@ -140,15 +141,17 @@ describe.skipIf(!DATABASE_URL)('POST /feedback', () => {
     const user = await signInAsGuest(app, 'דנה');
     const other = await signInAsGuest(app, 'רון');
     await sql`
-      insert into feedback (user_id, title, body, app_version, platform, stage, github_issue_number)
-      select ${other.id}, 'Old', '', '1.0.0', 'web', 'dev', n
+      insert into feedback
+        (user_id, title, body, app_version, platform, stage, github_issue_number, github_issue_at)
+      select ${other.id}, 'Old', '', '1.0.0', 'web', 'dev', n, now()
       from generate_series(1, ${ISSUE_LIMIT}) n`;
 
     expect((await post(app, user.headers, request)).status).toBe(201);
     expect(fetch).not.toHaveBeenCalled();
     expect(await rowsOf(user.id)).toMatchObject([{ github_issue_number: null }]);
 
-    await sql`update feedback set created_at = now() - interval '25 hours' where user_id = ${other.id}`;
+    await sql`
+      update feedback set github_issue_at = now() - interval '25 hours' where user_id = ${other.id}`;
     expect((await post(app, user.headers, request)).status).toBe(201);
     expect(fetch).toHaveBeenCalledOnce();
   });

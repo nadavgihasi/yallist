@@ -128,7 +128,7 @@ gh secret set FEEDBACK_GITHUB_TOKEN --env dev          # paste the token
 gh secret set FEEDBACK_GITHUB_TOKEN --env production
 ```
 
-Requests saved before the token existed have `github_issue_number` null; they aren't sent retroactively.
+A request without an issue (`github_issue_number` null: saved before the token existed, GitHub failed, or past the daily cap) is retried on every deploy: after migrations, deploy.yml runs `feedback:retry` ([feedback-retry.ts](../apps/api/src/feedback-retry.ts)), which opens the missing issues oldest first, within the same 50-a-day cap. Each sender claims a request (`github_issue_at`) before calling GitHub, so the API and overlapping runs never open an issue twice; a failed send drops its claim, and a claim left by a crash expires after 10 minutes. Without a token, the API and the retry log a warning and only save.
 
 ## Realtime
 

@@ -60,6 +60,9 @@ jobs:
       # Apply database migrations with the stage's linked resources. The global stack has no database.
       - if: github.job != 'global'
         run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api db:migrate
+      # Open the GitHub issues that saved feedback is missing (docs/deploy.md, Feedback).
+      - if: github.job != 'global'
+        run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api feedback:retry
 
   dev:
     needs: [global, version]
