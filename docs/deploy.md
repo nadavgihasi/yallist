@@ -68,6 +68,7 @@ This bundles the API Lambda, builds `apps/mobile` with `expo export -p web` and 
 
 Aurora DSQL, one cluster per stage (`sst.aws.Dsql('Database')`), available in both stage regions. It is linked to the API Lambda, which connects as `admin` with a short-lived IAM auth token ([client.ts](../apps/api/src/db/client.ts)). There is no password to store.
 
+- **Deletion protection:** on for the production cluster, so it can't be deleted from the console or CLI either. Turn it off in `sst.config.ts` before a deliberate teardown.
 - **Schema:** [schema.ts](../apps/api/src/db/schema.ts), Drizzle, kept to DSQL's SQL subset: no enum types (text plus `CHECK`), no triggers or extensions, UUID keys, money in integer agorot. Foreign keys are enforced; they use `NO ACTION` because cascades count toward the 3,000-rows-per-transaction limit.
 - **Migrations:** after changing the schema, run `pnpm --filter @yallist/api db:generate` and commit the new file in `apps/api/drizzle/`. Never edit a migration that has been deployed.
 - **Runner:** [migrate.ts](../apps/api/src/db/migrate.ts) runs each statement in its own transaction (DSQL allows one DDL per transaction) and records it in `__migrations`, so a failed run resumes where it stopped. For DSQL it rewrites `CREATE INDEX` to `CREATE INDEX ASYNC` and adds `ALTER TABLE` constraints as `NOT VALID`. It then reloads `template_items` from `@yallist/domain` TEMPLATES.
