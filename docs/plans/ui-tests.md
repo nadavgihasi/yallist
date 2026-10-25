@@ -56,7 +56,7 @@ DATABASE_URL=postgres://postgres:postgres@localhost:55432/postgres pnpm e2e:web
 DATABASE_URL=… pnpm e2e:web apps/mobile/e2e/flows/item-delete.yaml
 ```
 
-[scripts/e2e-web.sh](../../scripts/e2e-web.sh) creates a fresh database, starts the API on it (`:3100`), exports the web app against it, serves it (`:8180`), runs the flows in a 500×1400 headless Chrome (phone layout), then drops the database. Results go to `$E2E_OUT`: a video of every flow (`maestro/*/<flow>/startRecording/<flow>.mp4`), `junit.xml`, screenshots on failure, and the API and web logs. In CI they're the `ui-tests-web-<run>-<attempt>` artifact, linked from the job summary along with each flow's result. Recording needs Chrome 145–147, which Maestro 2.11.0 supports, so the script has Selenium download Chrome for Testing 147.
+[scripts/e2e-web.sh](../../scripts/e2e-web.sh) creates a fresh database, starts the API on it (`:3100`), exports the web app against it, serves it (`:8180`), runs the flows in a 500×1400 headless Chrome (phone layout), then drops the database. Results go to `$E2E_OUT`: a video of every flow (`maestro/*/<flow>/startRecording/<flow>.mp4`), `junit.xml`, screenshots on failure, and the API and web logs. In CI each shard uploads them as `ui-tests-web-<run>-<attempt>-shard-<n>`, and the `web` job's summary links them along with each flow's result. Recording needs Chrome 145–147, which Maestro 2.11.0 supports, so the script has Selenium download Chrome for Testing 147.
 
 ## Flows
 
@@ -74,7 +74,7 @@ Shared steps are in `e2e/common/` (sign in, new trip, add item).
 
 ## CI
 
-- **Web, every PR and `main`:** `ui-tests.yml` runs the script against a `postgres:17` service. About 2 minutes of flows plus setup. Not a required check; that's a GitHub setting.
+- **Web, every PR and `main`:** `ui-tests.yml` exports the app once (`build`), then two shards each run the script against their own `postgres:17` service (`E2E_SHARD=1` runs the flows tagged `shard-1`, `2` the rest; `E2E_PREBUILT=1` reuses the export). The `web` job collects both results and fails unless both shards passed, so it's the one check to make required (a GitHub setting).
 - **Android (proposed):** a `ui-tests-android` workflow on `workflow_dispatch`, nightly on `main`, and before promoting to `production`. It builds a debug APK with `EXPO_PUBLIC_API_URL=http://10.0.2.2:3100` (the emulator's host), boots an emulator with `reactivecircus/android-emulator-runner` (KVM on ubuntu), and runs `maestro test apps/mobile/e2e` against the same local API. Expect 15–25 minutes, too slow for every PR. Locally: an emulator, the app installed, then the same command.
 - **iOS (deferred):** iOS isn't built yet. When it is: a macOS runner and a simulator build, run before releases only (macOS minutes cost 10×).
 - **Live AWS stage:** the same flows replace the Playwright `web` project in [e2e-live-environments.md](e2e-live-environments.md), with `WEB_URL` set to the stage's site. When that runs is still its open question Q1.

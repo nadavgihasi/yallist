@@ -8,6 +8,10 @@
 # CLI (on PATH, or MAESTRO=/path/to/maestro). Args are flow files or folders (default: all).
 # Results go to $E2E_OUT (default: a temp dir): junit.xml, the API and web logs, and per flow
 # under maestro/ a video (startRecording/), screenshots on failure and Maestro's logs.
+#
+# CI splits the flows in two: E2E_SHARD=1 runs the flows tagged shard-1, E2E_SHARD=2 the rest
+# (new flows land there; tag one shard-1 when shard 2 gets longer). E2E_PREBUILT=1 serves an
+# existing apps/mobile/dist, exported with EXPO_PUBLIC_API_URL=http://localhost:$API_PORT.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -32,8 +36,10 @@ trap cleanup EXIT
 (cd apps/api && DATABASE_URL="${DATABASE_URL%/*}/$db" PORT=$API_PORT exec node --import tsx src/dev.ts) \
   >"$OUT/api.log" 2>&1 &
 
-(cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT "$bin/expo" export -p web) \
-  >"$OUT/export.log" 2>&1
+if [[ -z ${E2E_PREBUILT:-} ]]; then
+  (cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT "$bin/expo" export -p web) \
+    >"$OUT/export.log" 2>&1
+fi
 (cd apps/mobile && exec "$bin/expo" serve --port "$WEB_PORT") >"$OUT/web.log" 2>&1 &
 
 for url in "http://localhost:$API_PORT/health" "http://localhost:$WEB_PORT"; do
@@ -43,6 +49,12 @@ for url in "http://localhost:$API_PORT/health" "http://localhost:$WEB_PORT"; do
 done
 
 (($#)) || set -- apps/mobile/e2e
+case ${E2E_SHARD:-} in
+  '') ;;
+  1) set -- --include-tags shard-1 "$@" ;;
+  2) set -- --exclude-tags shard-1 "$@" ;;
+  *) echo "E2E_SHARD must be 1 or 2" >&2 && exit 1 ;;
+esac
 # Recording needs Chrome DevTools for a Chrome version that Maestro 2.11.0 bundles (145–147).
 # Selenium Manager downloads that Chrome for Testing once (~/.cache/selenium).
 export SE_BROWSER_VERSION=${SE_BROWSER_VERSION:-147}

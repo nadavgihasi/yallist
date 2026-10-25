@@ -12,12 +12,41 @@ concurrency:
   group: ui-tests-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Maestro flows (apps/mobile/e2e) on the web export, against the local API on a fresh database.
+# One job exports the app, two shards run half the flows each, and `web` reports the result.
+# See docs/plans/ui-tests.md.
 jobs:
-  # Maestro flows (apps/mobile/e2e) on the web export, against the local API on a fresh database.
-  # See docs/plans/ui-tests.md.
-  web:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The API URL every shard serves (scripts/e2e-web.sh API_PORT).
+      - run: pnpm --filter mobile exec expo export -p web
+        env:
+          EXPO_PUBLIC_API_URL: http://localhost:3100
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ui-tests-web-build-${{ github.run_number }}-${{ github.run_attempt }}
+          path: apps/mobile/dist
+          retention-days: 1
+
+  shard:
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     services:
       postgres:
         image: postgres:17
@@ -38,6 +67,10 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - uses: actions/download-artifact@v8
+        with:
+          name: ui-tests-web-build-${{ github.run_number }}-${{ github.run_attempt }}
+          path: apps/mobile/dist
       # Uses the runner's Java 17. Chrome for Testing 147 comes via Selenium (see e2e-web.sh).
       - name: Install Maestro
         run: |
@@ -49,18 +82,37 @@ jobs:
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: scripts/e2e-web.sh
         env:
+          E2E_SHARD: ${{ matrix.shard }}
+          E2E_PREBUILT: 1
           E2E_OUT: ${{ runner.temp }}/ui-tests
       # Videos, JUnit, screenshots on failure, Maestro, API and web logs.
       - uses: actions/upload-artifact@v7
-        id: upload
         if: always()
         with:
-          name: ui-tests-web-${{ github.run_number }}-${{ github.run_attempt }}
+          name: ui-tests-web-${{ github.run_number }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/ui-tests
           retention-days: 14
+
+  # The one check to require: fails unless every shard passed.
+  web:
+    needs: [build, shard]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: ui-tests-web-${{ github.run_number }}-${{ github.run_attempt }}-shard-*
+          path: results
       - name: Summary
-        if: always()
         env:
-          JUNIT: ${{ runner.temp }}/ui-tests/junit.xml
-          ARTIFACTS: '[Videos and logs](${{ steps.upload.outputs.artifact-url }}): one MP4 per flow under `maestro/*/<flow>/startRecording/`.'
-        run: python3 scripts/ui-tests-summary.py "$JUNIT" >> "$GITHUB_STEP_SUMMARY"
+          ARTIFACTS: '[Videos and logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts) (`ui-tests-web-…-shard-N`): one MP4 per flow under `maestro/*/<flow>/startRecording/`.'
+        run: python3 scripts/ui-tests-summary.py results/*/junit.xml >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail unless every shard passed
+        env:
+          BUILD: ${{ needs.build.result }}
+          SHARDS: ${{ needs.shard.result }}
+        run: test "$BUILD" = success && test "$SHARDS" = success
