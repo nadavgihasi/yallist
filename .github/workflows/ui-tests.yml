@@ -45,6 +45,8 @@ jobs:
             "https://github.com/mobile-dev-inc/maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
           unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP"
           echo "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
+      # Ubuntu 24.04's AppArmor blocks the sandbox of a Chrome outside /opt (Chrome for Testing).
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: scripts/e2e-web.sh
         env:
           E2E_OUT: ${{ runner.temp }}/ui-tests
