@@ -15,6 +15,7 @@ export const liveAuth = (webURL?: string) =>
   createAuth(db, {
     baseURL: Resource.Api.url,
     webURL,
+    devServer: Resource.App.stage !== 'production',
     secret: Resource.BetterAuthSecret.value,
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID!,
