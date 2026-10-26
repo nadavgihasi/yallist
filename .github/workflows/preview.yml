@@ -7,7 +7,7 @@ name: Preview
 # Only PRs from this repo's branches, never forks (which get no secrets or OIDC token anyway),
 # and never pull_request_target. Only collaborators can push branches, so there's no allowlist.
 # Jobs run in the `preview` environment, the only one the preview role (AWS_PREVIEW_ROLE_ARN)
-# trusts.
+# trusts, and are skipped until that variable is set (docs/deploy.md#set-up).
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
@@ -30,7 +30,8 @@ jobs:
   deploy:
     if: >-
       github.event_name == 'pull_request' && github.event.action != 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      vars.AWS_PREVIEW_ROLE_ARN != ''
     runs-on: ubuntu-latest
     environment:
       name: preview
@@ -132,7 +133,8 @@ jobs:
   remove:
     if: >-
       github.event_name == 'pull_request' && github.event.action == 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      vars.AWS_PREVIEW_ROLE_ARN != ''
     runs-on: ubuntu-latest
     environment: preview
     timeout-minutes: 20
@@ -161,7 +163,7 @@ jobs:
 
   # Hourly: removes previews 6 hours after their last push, and any a closed PR left behind.
   expire:
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && vars.AWS_PREVIEW_ROLE_ARN != ''
     runs-on: ubuntu-latest
     environment: preview
     timeout-minutes: 60
