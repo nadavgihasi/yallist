@@ -112,7 +112,12 @@ export function ReadinessHero({
             {...testId('trip-hero-share')}
             onPress={() =>
               shareToWhatsApp(
-                missingMessage(trip, missing, Linking.createURL(`/j/${data.inviteToken}`)),
+                missingMessage(
+                  trip,
+                  missing,
+                  // On web, under the site's base path (/pr-<n> on a PR preview).
+                  Linking.createURL(`${process.env.EXPO_BASE_URL ?? ''}/j/${data.inviteToken}`),
+                ),
               )
             }
             style={({ pressed }) => [styles.share, pressed && styles.pressed]}

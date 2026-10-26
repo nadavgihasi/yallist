@@ -14,11 +14,11 @@ import { colors, space, type } from '@/theme';
 
 import { toAvatar, type TripView } from './derive';
 
-// The site invite links point to: this page's own on web; on native, the stage's site (android.yml)
-// or the local Expo web server.
+// The site invite links point to: this page's own on web, under its base path on a PR preview
+// (/pr-<n>); on native, the stage's site (android.yml) or the local Expo web server.
 const WEB_URL =
   Platform.OS === 'web'
-    ? window.location.origin
+    ? `${window.location.origin}${process.env.EXPO_BASE_URL ?? ''}`
     : (process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:8081');
 
 /** Shares the invite link; where the browser can't share, copies it. */
