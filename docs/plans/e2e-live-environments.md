@@ -1,6 +1,6 @@
 # PR preview environments and live e2e tests
 
-**Status:** built in #91 (base path), #93 (infra), #94 (workflows) and the docs PR, but not deployed yet: see the [set-up steps](../deploy.md#set-up). [As built](#as-built) lists where the code differs from this design. Replaces the earlier "fresh AWS stage per run" design (2026-10-25), which created CloudFront, DSQL and AppSync on every run and gave nothing to click on before merging.
+**Status:** built in #91 (base path), #93 (infra), #94 (workflows) and the docs PR, and running since the first preview (pr-108). [Measured](#measured) has the first runs' numbers; [As built](#as-built) lists where the code differs from this design. Replaces the earlier "fresh AWS stage per run" design (2026-10-25), which created CloudFront, DSQL and AppSync on every run and gave nothing to click on before merging.
 
 ## Summary
 
@@ -89,7 +89,7 @@ new sst.aws.StaticSite('Web', { router: { instance: router, path: prefix }, envi
 | `remove` | PR closed                          | `sst unlock`, `sst remove --stage pr-<n>`, delete passphrase and state, fail if `tag:GetResources` still finds `stage=pr-<n>`.                                                                            |
 | `expire` | hourly, dispatch                   | List `yallist-pr-*` Lambdas by tag; for each with `expires-at` in the past (6 h after its last deploy) or whose PR is closed, run the `remove` steps. Fails when it cleaned something, which notifies me. |
 
-Estimated time per push, `ubuntu-latest`, nothing measured yet:
+Estimated time per push, `ubuntu-latest` (the first measurements are in [Measured](#measured)):
 
 | Step                                                   | Estimate    | Notes                                                                                                                                                                                                                               |
 | ------------------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -154,14 +154,14 @@ Moved to [deploy.md, Set up](../deploy.md#set-up), with the exact commands.
 
 ## 11. Decisions
 
-| Topic              | Decision                                                                                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Database           | A DSQL cluster per PR, in the `pr-<n>` stage. Measure create-to-`ACTIVE` in rollout PR 2; if it's slow, fall back to a shared cluster with a schema per PR (8 cap). |
-| Realtime, receipts | Per PR. Seconds to create, no app changes, the PR's authorizer is tested, removed with the stage.                                                                   |
-| Trigger            | Every PR from a branch of this repo. Never forks.                                                                                                                   |
-| URLs and lifetime  | Public, posted as a sticky PR comment, 6-hour TTL after the last push, removed on close.                                                                            |
-| Admin role trust   | Unchanged (`environment:*`). Access is limited by who can push branches; the preview role trusts only the `preview` environment ([§6](#6-security)).                |
-| Shared pieces      | Router, HTTP API, SSM parameter in `preview`; roles, boundary and budget in `global`.                                                                               |
+| Topic              | Decision                                                                                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Database           | A DSQL cluster per PR, in the `pr-<n>` stage. Measured at about 7 s to create, so the schema-per-PR fallback isn't needed.                           |
+| Realtime, receipts | Per PR. Seconds to create, no app changes, the PR's authorizer is tested, removed with the stage.                                                    |
+| Trigger            | Every PR from a branch of this repo. Never forks.                                                                                                    |
+| URLs and lifetime  | Public, posted as a sticky PR comment, 6-hour TTL after the last push, removed on close.                                                             |
+| Admin role trust   | Unchanged (`environment:*`). Access is limited by who can push branches; the preview role trusts only the `preview` environment ([§6](#6-security)). |
+| Shared pieces      | Router, HTTP API, SSM parameter in `preview`; roles, boundary and budget in `global`.                                                                |
 
 **Still open**
 
@@ -176,6 +176,14 @@ Moved to [deploy.md, Set up](../deploy.md#set-up), with the exact commands.
 | 3   | `feat(infra): preview and pr-* stages`; `feat(app): base path`     | `preview` deploys from `main`; a `pr-*` stage deploys and removes cleanly against it; `expo export` under `/pr-<n>` loads and refreshes.                       |
 | 4   | `ci(preview): deploy on PR, remove on close, hourly expiry`        | A PR gets a working URL in a comment; closing removes everything; a stage leaked on purpose is expired. Timings recorded against [§5](#5-workflow-and-timing). |
 | 5   | `test(preview): Maestro flows against the preview`                 | The 5 flows pass on a preview URL over 10 runs.                                                                                                                |
+
+## Measured
+
+From the first real runs:
+
+- **DSQL cluster create: about 7 s.** It's not on the critical path, so a cluster per PR stays; the schema-per-PR fallback ([§4](#4-data-not-resources)) isn't needed.
+- **First full preview (pr-108):** deployed and migrated, then all 8 Maestro flows passed against it in 3 min 40 s.
+- **First-run race:** a PR's preview job that runs while `preview-stage.yml` is still bootstrapping SST in `us-west-2` fails with a 403 creating SST's bucket, because the preview role can't create it. Only the first run can hit it; re-run the job once the bootstrap is done.
 
 ## As built
 

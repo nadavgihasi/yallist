@@ -309,6 +309,8 @@ These steps happen once, in this order. Each step needs the ones before it.
 
 There's no user allowlist, no fork-approval setting and no `actor_id` in the OIDC subject: only collaborators can push branches here, and fork PRs get no secrets or OIDC token. Revisit when adding collaborators.
 
+If the first PR's preview fails with a 403 creating an SST bucket, it raced the one-time `preview-stage.yml` bootstrap of SST in `us-west-2` (the preview role can't create those buckets). Re-run it once that workflow has finished.
+
 When the preview role is denied something, CloudTrail in `us-west-2` names the action. Add it to `GithubPreviewPolicy` in [infra/global/preview.ts](../infra/global/preview.ts), and to the boundary if a PR's Lambda needs it.
 
 ## Remove dev
