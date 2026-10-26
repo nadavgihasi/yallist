@@ -17,7 +17,7 @@ export function initial(name: string): string {
 }
 
 export function toAvatar(member: TripMember): AvatarPerson {
-  return { initial: initial(member.displayName) };
+  return { initial: initial(member.displayName), color: member.color };
 }
 
 /** Everything the trip screens derive from raw trip data, computed once per render. */

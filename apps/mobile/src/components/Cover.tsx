@@ -1,5 +1,11 @@
-import type { ReactNode } from 'react';
-import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import {
+  StyleSheet,
+  View,
+  type LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
 import { colors } from '@/theme';
@@ -9,8 +15,9 @@ const illo = colors.illustration;
 export type Scene = 'camp' | 'grill' | 'zimmer' | 'beach' | 'blank';
 
 /**
- * Flat layered scenes from SPEC Appendix B (viewBox 390×300), cropped like CSS `cover`. The camp
- * scene is the v2 empty-state illustration, in the `illustration` tokens.
+ * Flat layered scenes from SPEC Appendix B (viewBox 390×300), cropped like CSS `cover` around each
+ * scene's focal point, so a thin band still shows the tent. The camp scene is the v2 empty-state
+ * illustration, in the `illustration` tokens.
  */
 const SCENES: Record<Scene, ReactNode> = {
   camp: (
@@ -125,6 +132,30 @@ const SCENES: Record<Scene, ReactNode> = {
   ),
 };
 
+const W = 390;
+const H = 300;
+
+/** What a crop keeps in view (viewBox units): camp the tent, grill the grill, zimmer the house. */
+const FOCUS: Record<Scene, { x: number; y: number }> = {
+  camp: { x: 84, y: 222 },
+  grill: { x: 198, y: 200 },
+  zimmer: { x: 185, y: 185 },
+  beach: { x: 282, y: 200 },
+  blank: { x: 195, y: 123 },
+};
+
+/** The part of the scene a `width`×`height` box shows: CSS `cover`, centered on the focal point. */
+function crop(scene: Scene, width: number, height: number): string {
+  const f = FOCUS[scene];
+  const clamp = (v: number, max: number) => Math.min(Math.max(v, 0), max);
+  if (width / height >= W / H) {
+    const h = (W * height) / width;
+    return `0 ${clamp(f.y - h / 2, H - h)} ${W} ${h}`;
+  }
+  const w = (H * width) / height;
+  return `${clamp(f.x - w / 2, W - w)} 0 ${w} ${H}`;
+}
+
 export function Cover({
   scene,
   style,
@@ -134,13 +165,15 @@ export function Cover({
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 }) {
+  const [box, setBox] = useState<{ width: number; height: number }>();
+  const measure = (e: LayoutChangeEvent) => setBox(e.nativeEvent.layout);
   return (
-    <View style={[styles.wrap, style]}>
+    <View style={[styles.wrap, style]} onLayout={measure}>
       <Svg
         style={StyleSheet.absoluteFill}
         width="100%"
         height="100%"
-        viewBox="0 0 390 300"
+        viewBox={box?.height ? crop(scene, box.width, box.height) : `0 0 ${W} ${H}`}
         preserveAspectRatio="xMidYMid slice"
       >
         {SCENES[scene]}

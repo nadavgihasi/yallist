@@ -66,14 +66,24 @@ export function monthName(iso: string): string {
   return `${MONTH_NAMES[d.getMonth()]}${yearSuffix(d)}`;
 }
 
-/** `מחר` / `בעוד יומיים` / `בעוד 22 ימים`; `עכשיו בטיול` from the first day to the last, then `הסתיים`. */
-export function countdown(startsOn: string, endsOn: string, now = today()): string {
-  const days = daysBetween(now, startsOn);
+export type CountdownPhase = 'before' | 'tomorrow' | 'today' | 'during' | 'after';
+
+/**
+ * Where a trip is in time, and how to say it: `עוד 14 ימים` / `מחר!` / `היום` (a one-day trip) /
+ * `יום 1 מתוך 2` from the first day to the last / `הסתיים`.
+ */
+export function countdown(
+  startsOn: string,
+  endsOn: string,
+  now = today(),
+): { phase: CountdownPhase; label: string } {
   const c = he.countdown;
-  if (days <= 0) return daysBetween(now, endsOn) >= 0 ? c.now : c.ended;
-  if (days === 1) return c.tomorrow;
-  if (days === 2) return c.twoDays;
-  return c.days(days);
+  const days = daysBetween(now, startsOn);
+  if (days > 1) return { phase: 'before', label: days === 2 ? c.twoDays : c.days(days) };
+  if (days === 1) return { phase: 'tomorrow', label: c.tomorrow };
+  if (daysBetween(now, endsOn) < 0) return { phase: 'after', label: c.ended };
+  if (startsOn === endsOn) return { phase: 'today', label: c.today };
+  return { phase: 'during', label: c.day(1 - days, daysBetween(startsOn, endsOn) + 1) };
 }
 
 /** The end date after the start moves to `nextStart`: kept, unless the start passed it; then the trip keeps its length. */

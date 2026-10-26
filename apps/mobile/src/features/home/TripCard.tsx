@@ -2,53 +2,56 @@ import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarStack } from '@/components/Avatar';
-import { Progress } from '@/components/Progress';
+import { Countdown } from '@/components/Countdown';
+import { Cover } from '@/components/Cover';
+import { Pill } from '@/components/Pill';
+import { ProgressRing } from '@/components/ProgressRing';
 import { StatusRing } from '@/components/StatusRing';
 import { TripTile } from '@/components/TripTile';
 import { toAvatar } from '@/features/trip/derive';
-import { he, missingItems, openTransfers, participants } from '@/i18n/he';
-import { countdown, formatRange, monthName } from '@/lib/dates';
+import { he, missingCount, openTransfers, participants, peopleNames } from '@/i18n/he';
+import { formatRange, monthName } from '@/lib/dates';
 import type { TripSummary } from '@/state/types';
 import { colors, radius, space, type } from '@/theme';
 
-/** An upcoming trip (trips.html): tile and name, progress, who's in. */
-export function TripCard({ data }: { data: TripSummary }) {
+/**
+ * An upcoming trip: its scene with the countdown, then name and dates, a ring with what's missing
+ * and what's mine, and who's in. `now` comes from `useToday()`.
+ */
+export function TripCard({ data, now }: { data: TripSummary; now: string }) {
   const { trip, itemCount, doneCount } = data;
   const missing = itemCount - doneCount;
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
       <Pressable style={styles.card} accessibilityRole="link">
-        <View style={styles.head}>
-          <TripTile template={trip.template} />
+        <Cover scene={trip.template} style={styles.cover}>
+          <View style={styles.countdown}>
+            <Countdown startsOn={trip.startsOn} endsOn={trip.endsOn} now={now} />
+          </View>
+        </Cover>
+        <View style={styles.body}>
           <View style={styles.texts}>
             <Text style={styles.name}>{trip.name}</Text>
-            <Text style={styles.caption}>
-              {formatRange(trip.startsOn, trip.endsOn)} · {participants(data.members.length)}
-            </Text>
+            <Text style={styles.caption}>{formatRange(trip.startsOn, trip.endsOn)}</Text>
           </View>
-        </View>
-        {itemCount === 0 ? (
-          <Text style={styles.progressText}>{he.home.noItems}</Text>
-        ) : (
-          <View style={styles.progress}>
-            <View style={styles.progressRow}>
-              <Text style={styles.progressText}>{he.trip.coveredOf(doneCount, itemCount)}</Text>
-              <Text style={styles.caption}>
-                {missing === 0 ? he.trip.allCovered : missingItems(missing)}
-              </Text>
+          {itemCount === 0 ? (
+            <Text style={styles.caption}>{he.home.noItems}</Text>
+          ) : (
+            <View style={styles.row}>
+              <ProgressRing done={doneCount} total={itemCount} />
+              <View style={styles.pills}>
+                <Pill label={missing === 0 ? he.trip.allCovered : missingCount(missing)} />
+                {data.mine.length > 0 && (
+                  <Pill label={he.status.mineQty(data.mine.length)} tone="brand" />
+                )}
+              </View>
             </View>
-            <Progress done={doneCount} total={itemCount} />
-          </View>
-        )}
-        {data.mine.length > 0 && (
-          <Text style={styles.mine}>
-            {he.home.mine}
-            {data.mine.join(', ')}
-          </Text>
-        )}
-        <View style={styles.progressRow}>
-          <AvatarStack people={data.members.map(toAvatar)} />
-          <Text style={styles.caption}>{countdown(trip.startsOn, trip.endsOn)}</Text>
+          )}
+          <AvatarStack
+            people={data.members.map(toAvatar)}
+            max={4}
+            label={peopleNames(data.members.map((m) => m.displayName))}
+          />
         </View>
       </Pressable>
     </Link>
@@ -81,24 +84,21 @@ export function PastTripRow({ data }: { data: TripSummary }) {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    padding: space[5],
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
-    gap: space[4],
-  },
-  head: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  card: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
+  cover: { height: 88 },
+  countdown: { position: 'absolute', top: space[3], start: space[3] },
+  body: { padding: space[5], gap: space[4] },
   texts: { flex: 1, gap: space[1] },
   name: { ...type.sectionTitle, fontSize: 24, lineHeight: 30, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },
-  progress: { gap: space[2] },
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space[3],
-  },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2], flexShrink: 1 },
   progressText: { ...type.itemTitle, color: colors.ink },
   mine: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.brandStrong },
-  past: { flexDirection: 'row', alignItems: 'center' },
+  past: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[4],
+    padding: space[5],
+  },
 });

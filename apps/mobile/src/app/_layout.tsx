@@ -11,17 +11,17 @@ import { I18nManager, Platform, StyleSheet, View } from 'react-native';
 
 import { Toast } from '@/components/Toast';
 import { StoreProvider } from '@/state/store';
-import { colors } from '@/theme';
+import { colors, isRTL } from '@/theme';
 
 if (Platform.OS !== 'web') {
-  I18nManager.allowRTL(true);
-  I18nManager.forceRTL(true);
+  I18nManager.allowRTL(isRTL);
+  I18nManager.forceRTL(isRTL);
 }
 
 void SplashScreen.preventAutoHideAsync();
 
 /** react-native-web resolves start/end styles from the nearest `dir`, not from `<html dir>`. */
-const webRtl = Platform.OS === 'web' ? ({ dir: 'rtl' } as object) : {};
+const webRtl = Platform.OS === 'web' ? ({ dir: isRTL ? 'rtl' : 'ltr' } as object) : {};
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({

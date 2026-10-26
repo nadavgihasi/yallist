@@ -63,11 +63,12 @@ export const he = {
     ],
   },
   countdown: {
-    now: 'עכשיו בטיול',
     ended: 'הסתיים',
-    tomorrow: 'מחר',
-    twoDays: 'בעוד יומיים',
-    days: (n: number) => `בעוד ${n} ימים`,
+    today: 'היום',
+    tomorrow: 'מחר!',
+    twoDays: 'עוד יומיים',
+    days: (n: number) => `עוד ${n} ימים`,
+    day: (n: number, of: number) => `יום ${n} מתוך ${of}`,
   },
   home: {
     title: 'הטיולים שלי',
@@ -411,6 +412,13 @@ export function participants(n: number): string {
 /** `העברה אחת פתוחה` / `2 העברות פתוחות` */
 export function openTransfers(n: number): string {
   return n === 1 ? 'העברה אחת פתוחה' : `${n} העברות פתוחות`;
+}
+
+/** `דנה, אבי ונועה`, then `דנה, אבי ועוד 2` past three. */
+export function peopleNames(names: string[]): string {
+  return names.length <= 3
+    ? joinNames(names)
+    : `${names.slice(0, 2).join(', ')} ${andMore(names.length - 2)}`;
 }
 
 /** `דנה` / `דנה ורון` / `דנה, רון ושירה` */

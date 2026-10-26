@@ -29,6 +29,25 @@
   --size-avatar: 44px;
   --size-button-sm: 44px;
   --size-button-lg: 60px;
+  --size-ring-hero: 72px;
+  --size-ring-card: 56px;
+  --size-ring-status: 28px;
+  --size-spot-width: 160px;
+  --size-spot-height: 120px;
+  --avatar-xs: 24px;
+  --avatar-sm: 28px;
+  --avatar-md: 32px;
+  --avatar-lg: 44px;
+  --avatar-xl: 56px;
+  --avatar-xxl: 96px;
+  --line: #d5d9e2;
+  --progress-fill: var(--brand);
+  --progress-track: var(--line);
+  --motion-fast: 150ms;
+  --motion-base: 250ms;
+  --motion-slow: 400ms;
+  --motion-celebrate: 1200ms;
+  --easing-out: cubic-bezier(0.2, 0, 0, 1);
   --shadow-float: 0 10px 24px rgba(16, 23, 37, 0.18);
 }
 
@@ -40,3 +59,4 @@
 .step-number { font-family: var(--font-sans); font-size: 18px; line-height: 24px; font-weight: 800; }
 .button-lg { font-family: var(--font-sans); font-size: 18px; line-height: 24px; font-weight: 800; }
 .button-sm { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 700; }
+.stat { font-family: var(--font-sans); font-size: 28px; line-height: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }

@@ -23,6 +23,8 @@ const ICONS = {
     'M8 2v4',
     'M3 10h18',
   ],
+  /** Countdowns. Clocks never flip. */
+  clock: ['M12 7v5l3 2'],
   bell: ['M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0'],
   settings: [
     'M4 21v-7',
@@ -80,6 +82,7 @@ const ICONS = {
 
 const CIRCLES: Partial<Record<IconName, { cx: number; cy: number; r: number }[]>> = {
   userPlus: [{ cx: 9, cy: 7.5, r: 3.5 }],
+  clock: [{ cx: 12, cy: 12, r: 9 }],
   sun: [{ cx: 12, cy: 12, r: 4 }],
   camera: [{ cx: 12, cy: 13, r: 3 }],
   image: [{ cx: 9, cy: 9, r: 2 }],
