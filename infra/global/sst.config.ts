@@ -1,17 +1,12 @@
 /// <reference path="./.sst/platform/config.d.ts" />
 
 /**
- * Account-wide AWS resources shared by every stage of the app (SST, eu-central-1):
- * the monthly budget and the role GitHub Actions deploys with. One stage only:
+ * Account-wide AWS resources shared by every stage of the app (SST, eu-central-1). One stage only:
  *   pnpm deploy:global   # sst deploy --stage global (BUDGET_EMAIL must be set)
  * Deployed by CI from main; the very first deploy runs locally to create the CI role.
+ *   sst.config.ts   the account budget and the role GitHub Actions deploys with
+ *   preview.ts      PR previews: their deploy role, workload boundary and budget
  */
-// GitHub issues immutable OIDC subjects for this repo (owner@id/repo@id), which keep matching
-// after a rename and can't be claimed by a new repo reusing the name.
-// See: gh api repos/nadavgihasi/yallist/actions/oidc/customization/sub
-const REPO_SUBJECT = 'repo:nadavgihasi@37207301/yallist@1431912139';
-const GITHUB_OIDC = 'token.actions.githubusercontent.com';
-
 export default $config({
   app(input) {
     if (input?.stage !== 'global') {
@@ -33,6 +28,9 @@ export default $config({
     };
   },
   async run() {
+    const { budgetAlerts, GITHUB_OIDC, REPO_SUBJECT } = await import('./common');
+    const { previewAccess } = await import('./preview');
+
     const email = process.env.BUDGET_EMAIL;
     if (!email) throw new Error('Set BUDGET_EMAIL (GitHub variable) to receive budget alerts.');
 
@@ -42,15 +40,7 @@ export default $config({
       limitAmount: '10',
       limitUnit: 'USD',
       timeUnit: 'MONTHLY',
-      notifications: [
-        { notificationType: 'ACTUAL', threshold: 80 },
-        { notificationType: 'FORECASTED', threshold: 100 },
-      ].map((n) => ({
-        ...n,
-        comparisonOperator: 'GREATER_THAN',
-        thresholdType: 'PERCENTAGE',
-        subscriberEmailAddresses: [email],
-      })),
+      notifications: budgetAlerts(email),
     });
 
     const github = new aws.iam.OpenIdConnectProvider('GithubOidc', {
@@ -83,6 +73,8 @@ export default $config({
       policyArn: 'arn:aws:iam::aws:policy/AdministratorAccess',
     });
 
-    return { deployRoleArn: deployRole.arn };
+    const preview = previewAccess(github.arn, email);
+
+    return { deployRoleArn: deployRole.arn, previewRoleArn: preview.arn };
   },
 });

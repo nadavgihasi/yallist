@@ -11,7 +11,7 @@ export function initSentry(dsn: string | undefined, environment: string) {
   Sentry.init({
     dsn,
     environment,
-    // Set by infra/app/sst.config.ts from the release tag.
+    // Set by infra/app/core.ts from the release tag.
     release: process.env.SENTRY_RELEASE,
     sampleRate: 1,
     tracesSampleRate: 0,

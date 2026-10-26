@@ -7,13 +7,13 @@
   "workspaces": {
     ".": {},
     "apps/api": {
-      // Lambda handlers, referenced by path from infra/app/sst.config.ts.
+      // Lambda handlers, referenced by path from infra/app/core.ts and monitoring.ts.
       "entry": ["src/lambda.ts", "src/realtime-authorizer.ts", "src/alarm-notifier.ts"],
     },
     "apps/mobile": {},
     "infra": {
       "entry": ["*/sst.config.ts"],
-      // sentry-cli, run by the API's postbuild hook in app/sst.config.ts.
+      // sentry-cli, run by the API's postbuild hook in app/core.ts.
       "ignoreDependencies": ["@sentry/cli"],
     },
     "packages/*": {},

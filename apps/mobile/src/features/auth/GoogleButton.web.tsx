@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
 import { View } from 'react-native';
 
-/** Web OAuth client ID for this stage (infra/app/sst.config.ts). */
+/** Web OAuth client ID for this stage (infra/app/core.ts). */
 const CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID;
 
 interface GoogleIdentity {
