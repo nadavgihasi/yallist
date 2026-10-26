@@ -40,7 +40,7 @@ export function useCreateTrip() {
       queryClient.setQueryData(tripKey(data.trip.id), { ...data, balances: {}, transfers: [] });
       void queryClient.invalidateQueries({ queryKey: tripsKey });
     },
-    onError: () => showToast(he.errors.failed),
+    onError: () => showToast(he.errors.failed, 'error'),
   });
 }
 
@@ -119,7 +119,7 @@ async function send(tripId: string, action: Action): Promise<unknown> {
       // Not awaited: the expense is saved either way; the money tab shows progress and retry.
       if (action.receipt) {
         void uploadReceipt(tripId, expense.id, action.receipt).then(
-          (ok) => ok || showToast(he.receipt.failedToast),
+          (ok) => ok || showToast(he.receipt.failedToast, 'error'),
         );
       }
       return expense;
@@ -196,7 +196,7 @@ export function useTripAction(tripId: string) {
             : action.type === 'editItem'
               ? he.errors.itemEditRefused
               : he.errors.failed;
-      showToast(message);
+      showToast(message, 'error');
     },
     // Refetch after the last queued change only; an earlier refetch would undo later ones.
     // Returning the refetch keeps the change pending until the screen shows the server's state.

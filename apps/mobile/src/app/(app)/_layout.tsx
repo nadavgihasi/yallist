@@ -3,6 +3,10 @@ import { Redirect, Stack, useGlobalSearchParams, usePathname, useSegments } from
 import { useSession } from '@/state/store';
 import { colors } from '@/theme';
 
+// A crash in this layout keeps the root (toasts, the session) around the error screen; screens
+// have their own (the root layout's `screenErrorBoundary`).
+export { ErrorBoundary } from '@/components/ErrorBoundary';
+
 export default function AppLayout() {
   const { me } = useSession();
   const href = useHref();

@@ -54,7 +54,7 @@ function AddExpenseBody({ data }: { data: TripData }) {
         receipt,
       });
       // The list shows it only once the API answers, so say it went through.
-      showToast(he.addExpense.saved(formatShekel(agorot)));
+      showToast(he.addExpense.saved(formatShekel(agorot)), 'success');
     });
   };
 

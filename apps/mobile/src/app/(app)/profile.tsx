@@ -15,11 +15,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
-import { Switch } from '@/components/Controls';
+import { Callout } from '@/components/Callout';
+import { EmptyState } from '@/components/EmptyState';
 import { TextField } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
+import { Skeleton } from '@/components/Skeleton';
 import { showToast } from '@/components/Toast';
 import { VersionLine } from '@/components/VersionLine';
 import { GoogleButton } from '@/features/auth/GoogleButton';
@@ -31,8 +33,6 @@ import { useAvatar, useProfile, useUpdateProfile, type Profile } from '@/state/p
 import { useSession } from '@/state/store';
 import { avatarSize, colors, layout, radius, size, space, type } from '@/theme';
 import { useBreakpoint, type Breakpoint } from '@/theme/breakpoint';
-
-const NOTIFY_PREFS = ['notifyUpdates', 'notifyDayBefore', 'notifySettle'] as const;
 
 /** react-native-web adds these to Pressable's state. */
 type WebState = PressableStateCallbackType & { hovered?: boolean; focused?: boolean };
@@ -84,12 +84,26 @@ export default function ProfileScreen() {
         // Keyed: after linking Google it's another user, whose fields start fresh.
         <Settings key={profile.data.id} profile={profile.data} bp={bp} />
       ) : profile.isError ? (
-        <Pressable onPress={() => profile.refetch()} style={styles.status}>
-          <Text style={styles.caption}>{he.errors.loadFailed}</Text>
-          <Text style={styles.retry}>{he.errors.retry}</Text>
-        </Pressable>
+        <EmptyState
+          spot="noSignal"
+          {...he.states.offline}
+          actions={[{ label: he.errors.retry, onPress: () => void profile.refetch() }]}
+        />
       ) : (
-        <ActivityIndicator color={colors.primary} style={styles.status} />
+        <Skeleton style={styles.skeleton}>
+          <Skeleton.Card>
+            <View style={styles.identity}>
+              <Skeleton.Circle size={avatarSize.xxl} />
+              <Skeleton.Line width="40%" />
+            </View>
+            <Skeleton.Line width="25%" />
+            <Skeleton.Line height={size.buttonSm} />
+          </Skeleton.Card>
+          <Skeleton.Card>
+            <Skeleton.Line width="25%" />
+            <Skeleton.Line height={size.buttonSm} />
+          </Skeleton.Card>
+        </Skeleton>
       )}
     </ScrollView>
   );
@@ -122,8 +136,8 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
   const linkGoogle = (idToken: string) =>
     signInWithGoogle(idToken)
       .then(signIn)
-      .then(() => showToast(he.profile.linked))
-      .catch(() => showToast(he.errors.signIn));
+      .then(() => showToast(he.profile.linked, 'success'))
+      .catch(() => showToast(he.errors.signIn, 'error'));
 
   const desktop = bp === 'desktop';
 
@@ -209,20 +223,7 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
         )}
       </ListGroup>
 
-      <ListGroup title={he.profile.notifications} aside={he.profile.soon}>
-        {NOTIFY_PREFS.map((pref) => {
-          const [label, hint] = he.profile.notify[pref];
-          return (
-            <SettingRow key={pref} label={label} hint={hint}>
-              <Switch
-                label={label}
-                value={profile[pref]}
-                onChange={(value) => update.mutate({ [pref]: value })}
-              />
-            </SettingRow>
-          );
-        })}
-      </ListGroup>
+      <Callout {...he.profile.notifications} />
 
       <ListGroup title={he.profile.feedback}>
         <Pressable
@@ -390,8 +391,7 @@ const styles = StyleSheet.create({
   // A ring for keyboard focus on web; the width matches the selected swatch's border.
   focus: { outlineColor: colors.primary, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 2 },
   h1: { ...type.pageTitle, color: colors.ink, flexShrink: 1 },
-  status: { alignItems: 'center', gap: space[2], paddingVertical: 48 },
-  retry: { ...type.buttonSm, color: colors.primary },
+  skeleton: { gap: space[4] },
   identity: { alignItems: 'center', gap: space[2] },
   photoBusy: {
     position: 'absolute',

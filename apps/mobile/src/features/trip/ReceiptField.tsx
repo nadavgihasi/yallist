@@ -22,7 +22,7 @@ export function ReceiptSources({ onPick }: { onPick: (uri: string) => void }) {
       if (uri) onPick(uri);
     } catch (error) {
       console.warn('Receipt pick failed', error);
-      showToast(he.errors.failed);
+      showToast(he.errors.failed, 'error');
     } finally {
       setPreparing(false);
     }

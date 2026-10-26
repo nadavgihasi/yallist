@@ -1,0 +1,27 @@
+# A render crash shows the error screen, not a blank page; "try again" and "back home" both recover.
+# /dev/crash exists in dev and UI-test builds only (EXPO_PUBLIC_E2E).
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [errors]
+---
+- launchApp:
+    clearState: true
+- openLink: ${WEB_URL}/dev/crash
+- tapOn:
+    id: dev-crash
+- assertVisible: משהו השתבש
+- tapOn:
+    id: error-retry
+# The crashed screen renders again from scratch.
+- tapOn:
+    id: dev-crash
+- tapOn:
+    id: error-home
+# Home, which signed out means the login screen.
+- assertVisible:
+    id: login-guest
