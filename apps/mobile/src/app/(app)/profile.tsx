@@ -27,9 +27,9 @@ import { initial } from '@/features/trip/derive';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { signInWithGoogle } from '@/lib/api';
-import { useProfile, useUpdateProfile, type Profile } from '@/state/profile';
+import { useAvatar, useProfile, useUpdateProfile, type Profile } from '@/state/profile';
 import { useSession } from '@/state/store';
-import { colors, layout, radius, size, space, type } from '@/theme';
+import { avatarSize, colors, layout, radius, size, space, type } from '@/theme';
 import { useBreakpoint, type Breakpoint } from '@/theme/breakpoint';
 
 const NOTIFY_PREFS = ['notifyUpdates', 'notifyDayBefore', 'notifySettle'] as const;
@@ -130,14 +130,7 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
   const you = (
     <>
       <Card>
-        <View style={styles.identity}>
-          <Avatar
-            person={{ initial: initial(profile.displayName) }}
-            color={profile.avatarColor}
-            size={96}
-            ring={false}
-          />
-        </View>
+        <Photo profile={profile} />
         <View
           style={styles.swatches}
           accessibilityRole="radiogroup"
@@ -265,6 +258,50 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
   );
 }
 
+/** The avatar, and changing or removing the photo on it. Without a photo, the color shows. */
+function Photo({ profile }: { profile: Profile }) {
+  const { change, remove, busy } = useAvatar();
+  return (
+    <View style={styles.identity}>
+      <View>
+        <Avatar
+          person={{ initial: initial(profile.displayName), photo: profile.avatarUrl ?? undefined }}
+          color={profile.avatarColor}
+          size={avatarSize.xxl}
+          ring={false}
+        />
+        {busy && (
+          <View style={styles.photoBusy}>
+            <ActivityIndicator color={colors.onPrimary} />
+          </View>
+        )}
+      </View>
+      <View style={styles.actions}>
+        <PillButton
+          label={profile.avatarUrl ? he.profile.changePhoto : he.profile.addPhoto}
+          variant="soft"
+          size="sm"
+          icon={<Icon name="image" size={18} color={colors.primaryStrong} />}
+          disabled={busy}
+          onPress={() => change.mutate()}
+          {...testId('profile-photo-change')}
+        />
+        {profile.customAvatar && (
+          <PillButton
+            label={he.profile.removePhoto}
+            variant="quiet"
+            size="sm"
+            disabled={busy}
+            onPress={() => remove.mutate()}
+            {...testId('profile-photo-remove')}
+          />
+        )}
+      </View>
+      <Text style={styles.caption}>{he.profile.photoHint}</Text>
+    </View>
+  );
+}
+
 /** A row in a settings card: label and optional hint at the start, a control at the end. */
 function SettingRow({
   label,
@@ -355,7 +392,15 @@ const styles = StyleSheet.create({
   h1: { ...type.pageTitle, color: colors.ink, flexShrink: 1 },
   status: { alignItems: 'center', gap: space[2], paddingVertical: 48 },
   retry: { ...type.buttonSm, color: colors.primary },
-  identity: { alignItems: 'center' },
+  identity: { alignItems: 'center', gap: space[2] },
+  photoBusy: {
+    position: 'absolute',
+    inset: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: avatarSize.xxl / 2,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+  },
   swatches: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space[2] },
   swatch: {
     width: size.avatar,
