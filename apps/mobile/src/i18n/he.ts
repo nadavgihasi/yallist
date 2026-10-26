@@ -172,6 +172,18 @@ export const he = {
     boughtByMe: (amount: string) => `${amount}, שילמת`,
     forEach: 'לכל אחד',
   },
+  hero: {
+    /** `חסרים 13: אוהלים, קפה, קרח…` */
+    missing: (count: string, names: string[], more: boolean) =>
+      `${count}: ${names.join(', ')}${more ? '…' : ''}`,
+    solo: 'לבד פה בינתיים · הזמנת חברים',
+    share: 'שליחת מה שחסר בוואטסאפ',
+  },
+  share: {
+    missing: (trip: string, dates: string, names: string, link: string) =>
+      `חסרים ל${trip} (${dates}): ${names}. מי מביא? ${link}`,
+    allCovered: (trip: string, link: string) => `הכול מכוסה ל${trip} 🎉 ${link}`,
+  },
   people: {
     inviteTitle: 'עוד חברים מצטרפים?',
     inviteText: 'שולחים את הקישור בוואטסאפ, וכל אחד מצטרף מהדפדפן.',
