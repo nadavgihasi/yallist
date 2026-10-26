@@ -38,6 +38,12 @@ export default $config({
     };
   },
   async run() {
+    // Every Lambda (the API route and the realtime authorizer) on Graviton: ~20% cheaper than
+    // x86_64. The bundles are plain JS; nothing in apps/api ships a native binary.
+    $transform(sst.aws.Function, (args) => {
+      args.architecture ??= 'arm64';
+    });
+
     // Aurora DSQL, one cluster per stage. Linked functions connect with IAM auth tokens
     // (apps/api/src/db/client.ts). Migrations run after deploy (.github/workflows/deploy.yml).
     const database = new sst.aws.Dsql('Database', {
