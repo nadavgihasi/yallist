@@ -1,6 +1,6 @@
 # PR preview environments and live e2e tests
 
-**Status:** design, decided (see [§11](#11-decisions)). Nothing is built. Replaces the earlier "fresh AWS stage per run" design (2026-10-25), which created CloudFront, DSQL and AppSync on every run and gave nothing to click on before merging.
+**Status:** built in #91 (base path), #93 (infra), #94 (workflows) and the docs PR, but not deployed yet: see the [set-up steps](../deploy.md#set-up). [As built](#as-built) lists where the code differs from this design. Replaces the earlier "fresh AWS stage per run" design (2026-10-25), which created CloudFront, DSQL and AppSync on every run and gave nothing to click on before merging.
 
 ## Summary
 
@@ -149,10 +149,7 @@ Later speed-ups if wanted: poll for the cluster by tag and migrate while the sit
 
 ## 10. What you must do
 
-1. Set the repo variable `PREVIEW_ALLOWED_ACTORS` (`["nadavgihasi"]`) and note your `actor_id` (`gh api user -q .id`) for the role's trust.
-2. Set the OIDC subject template: `gh api -X PUT repos/nadavgihasi/yallist/actions/oidc/customization/sub -F use_default=false -f 'include_claim_keys[]=repo' -f 'include_claim_keys[]=context' -f 'include_claim_keys[]=actor_id'`, **after** rollout PR 2 has deployed the preview role (its trust must exist first; the admin role keeps matching).
-3. Repo settings: Actions → "Require approval for all external contributors". Create the `preview` GitHub environment: no branch restriction, secret `BETTER_AUTH_SECRET`.
-4. Deploy `global` from `main` (rollout PR 2) and `gh variable set AWS_PREVIEW_ROLE_ARN` from its output. Bootstrap SST in `us-west-2` once with admin credentials (the `sst-state-*` and `sst-asset-*` buckets); the preview role can't create them.
+Moved to [deploy.md, Set up](../deploy.md#set-up), with the exact commands.
 
 ## 11. Decisions
 
@@ -179,3 +176,16 @@ Later speed-ups if wanted: poll for the cluster by tag and migrate while the sit
 | 3   | `feat(infra): preview and pr-* stages`; `feat(app): base path`     | `preview` deploys from `main`; a `pr-*` stage deploys and removes cleanly against it; `expo export` under `/pr-<n>` loads and refreshes.                                    |
 | 4   | `ci(preview): deploy on PR, remove on close, hourly expiry`        | A PR gets a working URL in a comment; closing removes everything; a stage leaked on purpose is expired. Timings recorded against [§5](#5-workflow-and-timing).              |
 | 5   | `test(preview): Maestro flows against the preview`                 | The 5 flows pass on a preview URL over 10 runs.                                                                                                                             |
+
+## As built
+
+Where the code differs from the sections above:
+
+- **`preview` has no `$default` Lambda or cluster.** It holds only the Router, the HTTP API and the SSM parameter. Nothing answers outside a PR's prefix, and it leaves all 20 DSQL clusters for PRs. The smoke checks are per PR.
+- **`preview` deploys from its own workflow**, [preview-stage.yml](../../.github/workflows/preview-stage.yml), with the admin role in the `global` environment. It runs when `infra/app/sst.config.ts` changes on `main`. `deploy.yml` is unchanged, and the first run bootstraps SST in `us-west-2`, so no laptop step is needed.
+- **The API's prefix comes from its URL.** `withBasePath` mounts the app under the path of `Resource.Api.url`, so there's no `BASE_PATH` on the Lambda. `createAuth` always passes `<api>/api/auth` as Better Auth's `baseURL`. The web export reads `BASE_PATH`, not `EXPO_PUBLIC_BASE_PATH`.
+- **`expires-at` is a tag on the PR's API Lambda only**, not a default tag. That way a deploy doesn't retag every resource, and `expire` lists only those Lambdas.
+- **`expire` fails only for a stage a closed PR left behind.** A 6-hour expiry is routine, and failing on it would notify on every PR.
+- **The stage's SST state is left to `sst remove`.** The script deletes only the passphrase. Check `sst-state-*` after the first removal.
+- **Each PR invalidates only `/pr-<n>/*`**, not the whole Router.
+- **Known gaps:** web invite links drop the `/pr-<n>` prefix (they're built from the origin), and `public/index.html` links the apple-touch icon at `/`.
