@@ -7,7 +7,8 @@ onFlowStart:
   - startRecording: ${MAESTRO_FILENAME}
 onFlowComplete:
   - stopRecording
-tags: [errors]
+# test-route: PR previews skip it (preview.yml), their build has no /dev/crash.
+tags: [errors, test-route]
 ---
 - launchApp:
     clearState: true
