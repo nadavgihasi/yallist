@@ -2,8 +2,17 @@
 
 Infrastructure is [SST](https://sst.dev), in two SST apps. Both live in the `@yallist/infra` workspace package under [infra/](../infra), which owns the `sst` dependency and the deploy scripts; the root `pnpm deploy:*` and `pnpm sst` scripts delegate to it.
 
-- **App** ([infra/app/sst.config.ts](../infra/app/sst.config.ts)): the API, its database and the Expo web export. Stages `dev` and `production`, plus the PR preview stages `preview` and `pr-<n>` ([PR previews](#pr-previews)).
-- **Global** ([infra/global/sst.config.ts](../infra/global/sst.config.ts)): account-wide resources in `eu-central-1`. These are the $10/month budget, which emails `BUDGET_EMAIL` at 80% actual and 100% forecasted spend, and the IAM role GitHub Actions deploys with. It also holds the preview role, its permissions boundary and a $5/month `us-west-2` budget. One stage, `global`, protected.
+- **App** ([infra/app](../infra/app)): the API, its database and the Expo web export. Stages `dev` and `production`, plus the PR preview stages `preview` and `pr-<n>` ([PR previews](#pr-previews)). [sst.config.ts](../infra/app/sst.config.ts) picks each stage's region and credentials, then runs one file per kind of stage:
+
+  | Stage               | File                                                              | What it creates                                                                                                                                                        |
+  | ------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `dev`, `production` | [stacks/app.ts](../infra/app/stacks/app.ts)                       | The app, with an HTTP API of its own.                                                                                                                                  |
+  | `preview`           | [stacks/preview-shared.ts](../infra/app/stacks/preview-shared.ts) | What every PR preview shares: the CloudFront Router, the HTTP API and the SSM parameter with their ids.                                                                |
+  | `pr-<n>`            | [stacks/preview-pr.ts](../infra/app/stacks/preview-pr.ts)         | One PR's copy of the app: its API Lambda with a route and integration on the shared API, its site on the Router, the permissions boundary on its roles and its expiry. |
+
+  The app's parts (database, secrets, realtime, site, receipts, API Lambda) are in [core.ts](../infra/app/core.ts), shared by `app.ts` and `preview-pr.ts`, so a preview is built like `dev`.
+
+- **Global** ([infra/global](../infra/global)): account-wide resources in `eu-central-1`. [sst.config.ts](../infra/global/sst.config.ts) has the $10/month budget, which emails `BUDGET_EMAIL` at 80% actual and 100% forecasted spend, and the IAM role GitHub Actions deploys with. [preview.ts](../infra/global/preview.ts) has the preview role, its permissions boundary and a $5/month `us-west-2` budget. One stage, `global`, protected.
 
 ## Deploys come from `main`
 
@@ -61,7 +70,7 @@ This bundles the API Lambda, builds `apps/mobile` with `expo export -p web` and 
 
 ## API
 
-[apps/api](../apps/api) is a [Hono](https://hono.dev) app. One Lambda serves every path behind an API Gateway HTTP API (`$default` route). All Lambdas run on arm64 (a `$transform` in `sst.config.ts`).
+[apps/api](../apps/api) is a [Hono](https://hono.dev) app. One Lambda serves every path behind an API Gateway HTTP API (`$default` route). All Lambdas run on arm64 (a `$transform` in [core.ts](../infra/app/core.ts)).
 
 - **URL:** the `api` output of `sst deploy`. The web build gets it as `EXPO_PUBLIC_API_URL` ([src/lib/api.ts](../apps/mobile/src/lib/api.ts)).
 - **Health check:** `curl $API/health` returns `{"ok":true}`.
@@ -72,7 +81,7 @@ This bundles the API Lambda, builds `apps/mobile` with `expo export -p web` and 
 Aurora DSQL, one cluster per stage (`sst.aws.Dsql('Database')`), available in both stage regions. It is linked to the API Lambda, which connects as `admin` with a short-lived IAM auth token ([client.ts](../apps/api/src/db/client.ts)). There is no password to store.
 
 - **Backups:** production only, through AWS Backup (`backup` on `sst.aws.Dsql`): a daily snapshot at 05:00 UTC, kept 7 days, in a vault SST creates beside the cluster. Restore from the AWS Backup console into a new cluster.
-- **Deletion protection:** on for the production cluster, so it can't be deleted from the console or CLI either. Turn it off in `sst.config.ts` before a deliberate teardown.
+- **Deletion protection:** on for the production cluster, so it can't be deleted from the console or CLI either. Turn it off in [core.ts](../infra/app/core.ts) before a deliberate teardown.
 - **Schema:** [schema.ts](../apps/api/src/db/schema.ts), Drizzle, kept to DSQL's SQL subset: no enum types (text plus `CHECK`), no triggers or extensions, UUID keys, money in integer agorot. Foreign keys are enforced; they use `NO ACTION` because cascades count toward the 3,000-rows-per-transaction limit.
 - **Migrations:** after changing the schema, run `pnpm --filter @yallist/api db:generate` and commit the new file in `apps/api/drizzle/`. Never edit a migration that has been deployed.
 - **Runner:** [migrate.ts](../apps/api/src/db/migrate.ts) runs each statement in its own transaction (DSQL allows one DDL per transaction) and records it in `__migrations`, so a failed run resumes where it stopped. For DSQL it rewrites `CREATE INDEX` to `CREATE INDEX ASYNC` and adds `ALTER TABLE` constraints as `NOT VALID`. It then reloads `template_items` from `@yallist/domain` TEMPLATES.
@@ -92,7 +101,7 @@ pnpm test
 - **Sign-in:** as a guest (`POST /api/auth/sign-in/anonymous` with `{ "name": "…" }`) or with Google. A guest who later signs in with Google keeps their trips: they move to the Google user, and the guest user is deleted.
 - **Tokens:** clients send the session token as `Authorization: Bearer <token>`, not as a cookie. The API and the web app are on different domains, and Android has no cookie jar. Sign-in responses return the token.
 - **Profiles:** every new user gets a `profiles` row, named after their Google name or the name given for guest sign-in. `GET /me` returns it.
-- **Google OAuth clients:** one per stage, in Google Cloud Console. The client IDs are public and set in [infra/app/sst.config.ts](../infra/app/sst.config.ts). Each client needs the redirect URI `<api>/api/auth/callback/google`, where `<api>` is that stage's `api` output.
+- **Google OAuth clients:** one per stage, in Google Cloud Console. The client IDs are public and set in [infra/app/core.ts](../infra/app/core.ts). Each client needs the redirect URI `<api>/api/auth/callback/google`, where `<api>` is that stage's `api` output.
 
 ### Secrets
 
@@ -275,7 +284,7 @@ Every PR from this repo by a user in `PREVIEW_ALLOWED_ACTORS` gets a live enviro
 - **`pr-<n>` stage** ([preview.yml](../.github/workflows/preview.yml), on every push, preview role): the API Lambda behind `ANY /pr-<n>/{proxy+}` on the shared API, the web export under `/pr-<n>` on the Router (`BASE_PATH`, [app.config.ts](../apps/mobile/app.config.ts)), and its own DSQL cluster, realtime API and receipts bucket. The API serves itself under the path of its URL ([app.ts](../apps/api/src/app.ts) `withBasePath`). Guests only: no Google client.
 - **After the deploy:** migrations, a `/health` and site smoke check, the sticky comment, then the Maestro flows against the URL (`E2E_WEB_URL`, [e2e-web.sh](../scripts/e2e-web.sh)). To run them yourself: `E2E_WEB_URL=https://<router>/pr-<n>/ scripts/e2e-web.sh`.
 - **Removal** ([preview-remove.sh](../scripts/preview-remove.sh)): `sst remove --stage pr-<n>`, which is the whole teardown, then the stage's SST passphrase is deleted. The job fails if anything tagged `stage=pr-<n>` is left. Hourly, it also removes stages past their Lambda's `expires-at` tag, and fails on any stage a closed PR left behind.
-- **Preview role** (`yallist-global-github-preview`): only `preview`-environment jobs of the users in `PREVIEW_ACTOR_IDS` ([infra/global](../infra/global/sst.config.ts)) can assume it, and only in `us-west-2`. It can only touch `yallist-pr-*` resources. Every role a PR stage creates gets the `yallist-preview-workload-boundary`, which limits it to its own stage. The admin deploy role is unchanged.
+- **Preview role** (`yallist-global-github-preview`): only `preview`-environment jobs of the users in `PREVIEW_ACTOR_IDS` ([infra/global/preview.ts](../infra/global/preview.ts)) can assume it, and only in `us-west-2`. It can only touch `yallist-pr-*` resources. Every role a PR stage creates gets the `yallist-preview-workload-boundary`, which limits it to its own stage. The admin deploy role is unchanged.
 - **Locally:** `E2E_BASE_PATH=/pr-123 scripts/e2e-web.sh` runs the flows against a build served under a prefix, as a preview is.
 
 ### Set up
@@ -287,7 +296,7 @@ These steps happen once, in this order. Each step needs the ones before it.
    gh variable set AWS_PREVIEW_ROLE_ARN -R nadavgihasi/yallist \
      --body arn:aws:iam::007742375034:role/yallist-global-github-preview
    ```
-2. **Allowlist users** for the workflow. Logins go here; their numeric ids (`gh api users/<login> -q .id`) go in `PREVIEW_ACTOR_IDS` in infra/global.
+2. **Allowlist users** for the workflow. Logins go here; their numeric ids (`gh api users/<login> -q .id`) go in `PREVIEW_ACTOR_IDS` in [infra/global/preview.ts](../infra/global/preview.ts).
    ```sh
    gh variable set PREVIEW_ALLOWED_ACTORS -R nadavgihasi/yallist --body '["nadavgihasi"]'
    ```
@@ -315,7 +324,7 @@ These steps happen once, in this order. Each step needs the ones before it.
    ```
 7. **Push to any PR.** Its preview comment appears after about 5 minutes.
 
-When the preview role is denied something, CloudTrail in `us-west-2` names the action. Add it to `GithubPreviewPolicy` in infra/global, and to the boundary if a PR's Lambda needs it.
+When the preview role is denied something, CloudTrail in `us-west-2` names the action. Add it to `GithubPreviewPolicy` in [infra/global/preview.ts](../infra/global/preview.ts), and to the boundary if a PR's Lambda needs it.
 
 ## Remove dev
 
