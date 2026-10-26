@@ -106,6 +106,9 @@ jobs:
           path: ${{ runner.temp }}/ui-tests
           retention-days: 14
           overwrite: true
+      - name: TEMP fail shard 2 on the first attempt
+        if: github.run_attempt == 1 && matrix.shard == 2
+        run: exit 1
 
   # The one check to require: fails unless every shard passed.
   web:
