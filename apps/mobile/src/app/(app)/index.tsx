@@ -19,13 +19,15 @@ import { VersionLine } from '@/components/VersionLine';
 import { PastTripRow, TripCard } from '@/features/home/TripCard';
 import { ProfileButton } from '@/features/profile/ProfileButton';
 import { he } from '@/i18n/he';
-import { daysBetween, today } from '@/lib/dates';
+import { daysBetween } from '@/lib/dates';
+import { useToday } from '@/lib/useToday';
 import { useTrips } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
 export default function Home() {
   const trips = useTrips();
+  const now = useToday();
   const insets = useSafeAreaInsets();
   const bp = useBreakpoint();
   const wide = bp !== 'phone';
@@ -45,7 +47,6 @@ export default function Home() {
 
   // The API sorts them by start date.
   const all = trips.data?.trips ?? [];
-  const now = today();
   const upcoming = all.filter((t) => daysBetween(now, t.trip.endsOn) >= 0);
   const past = all.filter((t) => daysBetween(now, t.trip.endsOn) < 0).reverse();
   const empty = trips.isSuccess && all.length === 0;
@@ -83,7 +84,7 @@ export default function Home() {
             <View style={[styles.grid, { gap }]} onLayout={measure}>
               {upcoming.map((t) => (
                 <View key={t.trip.id} style={cell}>
-                  <TripCard data={t} />
+                  <TripCard data={t} now={now} />
                 </View>
               ))}
             </View>

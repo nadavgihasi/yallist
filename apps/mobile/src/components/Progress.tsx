@@ -1,8 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 
-import { colors } from '@/theme';
+import { progress } from '@/theme';
 
-/** Brand-orange progress bar on a `ground` track. */
+/** Brand-orange progress bar on a `line` track. */
 export function Progress({ done, total }: { done: number; total: number }) {
   if (total === 0) return null;
   return (
@@ -17,6 +17,6 @@ export function Progress({ done, total }: { done: number; total: number }) {
 }
 
 const styles = StyleSheet.create({
-  track: { height: 8, borderRadius: 4, backgroundColor: colors.ground, overflow: 'hidden' },
-  fill: { height: 8, borderRadius: 4, backgroundColor: colors.brand },
+  track: { height: 8, borderRadius: 4, backgroundColor: progress.track, overflow: 'hidden' },
+  fill: { height: 8, borderRadius: 4, backgroundColor: progress.fill },
 });

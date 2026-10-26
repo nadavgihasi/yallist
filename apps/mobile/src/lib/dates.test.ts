@@ -60,17 +60,22 @@ describe('formatShort / monthName', () => {
 
 describe('countdown', () => {
   const now = '2026-10-24';
+  const at = (startsOn: string, endsOn: string) => countdown(startsOn, endsOn, now);
 
   it('counts the days to the start', () => {
-    expect(countdown('2026-10-25', '2026-10-26', now)).toBe('מחר');
-    expect(countdown('2026-10-26', '2026-10-27', now)).toBe('בעוד יומיים');
-    expect(countdown('2026-11-15', '2026-11-16', now)).toBe('בעוד 22 ימים');
+    expect(at('2026-10-25', '2026-10-26')).toEqual({ phase: 'tomorrow', label: 'מחר!' });
+    expect(at('2026-10-26', '2026-10-27')).toEqual({ phase: 'before', label: 'עוד יומיים' });
+    expect(at('2026-11-15', '2026-11-16')).toEqual({ phase: 'before', label: 'עוד 22 ימים' });
   });
 
-  it('says the trip is on from its first day through its last, then ended', () => {
-    expect(countdown('2026-10-24', '2026-10-25', now)).toBe('עכשיו בטיול');
-    expect(countdown('2026-10-22', '2026-10-24', now)).toBe('עכשיו בטיול');
-    expect(countdown('2026-10-20', '2026-10-23', now)).toBe('הסתיים');
+  it('says which day of the trip it is, or today for a one-day trip', () => {
+    expect(at('2026-10-24', '2026-10-25')).toEqual({ phase: 'during', label: 'יום 1 מתוך 2' });
+    expect(at('2026-10-22', '2026-10-24')).toEqual({ phase: 'during', label: 'יום 3 מתוך 3' });
+    expect(at('2026-10-24', '2026-10-24')).toEqual({ phase: 'today', label: 'היום' });
+  });
+
+  it('says the trip ended after its last day', () => {
+    expect(at('2026-10-20', '2026-10-23')).toEqual({ phase: 'after', label: 'הסתיים' });
   });
 });
 

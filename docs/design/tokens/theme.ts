@@ -42,7 +42,23 @@ export const size = {
   avatar: 44,
   buttonSm: 44,
   buttonLg: 60,
+  ring: { hero: 72, card: 56, status: 28 },
+  spot: { width: 160, height: 120 },
 } as const;
+
+export const avatarSize = { xs: 24, sm: 28, md: 32, lg: 44, xl: 56, xxl: 96 } as const;
+
+export const progress = { fill: colors.brand, track: '#D5D9E2' } as const;
+
+export const motion = {
+  fast: 150,
+  base: 250,
+  slow: 400,
+  celebrate: 1200,
+  easing: { out: [0.2, 0, 0, 1] },
+} as const;
+
+export const isRTL = true;
 
 export const fontFamily = {
   regular: 'Rubik_400Regular',
@@ -59,6 +75,7 @@ export const typography = {
   stepNumber: { fontFamily: fontFamily.extraBold, fontWeight: '800', fontSize: 18, lineHeight: 24 },
   buttonLg: { fontFamily: fontFamily.extraBold, fontWeight: '800', fontSize: 18, lineHeight: 24 },
   buttonSm: { fontFamily: fontFamily.bold, fontWeight: '700', fontSize: 15, lineHeight: 20 },
+  stat: { fontFamily: fontFamily.extraBold, fontWeight: '800', fontSize: 28, lineHeight: 32, fontVariant: ['tabular-nums'] },
 } as const;
 
 export const shadow = {
@@ -78,6 +95,10 @@ export const theme = {
   layout,
   radius,
   size,
+  avatarSize,
+  progress,
+  motion,
+  isRTL,
   fontFamily,
   typography,
   shadow,
