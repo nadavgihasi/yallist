@@ -1,6 +1,6 @@
 name: Deploy
 
-# main is the only way changes reach AWS: global (account-wide), then dev, then production.
+# main is the only way changes reach AWS: CI, then global (account-wide), dev and production.
 on:
   push:
     branches: [main]
@@ -16,8 +16,15 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # The same checks as pull requests (ci.yml). Nothing is released or deployed unless they pass.
+  ci:
+    uses: ./.github/workflows/ci.yml
+    permissions:
+      contents: read
+
   # Tags main with the next version from commit titles and creates a GitHub release (docs/releases.md).
   version:
+    needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
@@ -34,6 +41,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
   global:
+    needs: ci
     runs-on: ubuntu-latest
     environment: global
     # Deploys take minutes; CloudFront updates can take ~15. Don't let a hung one hold the queue for 6 hours.
