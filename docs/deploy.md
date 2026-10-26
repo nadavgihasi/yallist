@@ -59,7 +59,7 @@ This bundles the API Lambda, builds `apps/mobile` with `expo export -p web` and 
 
 ## API
 
-[apps/api](../apps/api) is a [Hono](https://hono.dev) app. One Lambda serves every path behind an API Gateway HTTP API (`$default` route).
+[apps/api](../apps/api) is a [Hono](https://hono.dev) app. One Lambda serves every path behind an API Gateway HTTP API (`$default` route). All Lambdas run on arm64 (a `$transform` in `sst.config.ts`).
 
 - **URL:** the `api` output of `sst deploy`. The web build gets it as `EXPO_PUBLIC_API_URL` ([src/lib/api.ts](../apps/mobile/src/lib/api.ts)).
 - **Health check:** `curl $API/health` returns `{"ok":true}`.
