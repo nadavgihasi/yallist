@@ -13,12 +13,17 @@
 # (new flows land there; tag one shard-1 when shard 2 gets longer). E2E_PREBUILT=1 serves an
 # existing apps/mobile/dist, exported with EXPO_PUBLIC_API_URL=http://localhost:$API_PORT
 # and EXPO_PUBLIC_E2E_RECEIPT as below.
+#
+# E2E_BASE_PATH=/pr-123 serves the API and the web app under that path, as a PR preview does
+# (docs/plans/e2e-live-environments.md): the export uses it as its base URL and the web server
+# falls back to its index.html, like the preview's CloudFront Router.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 : "${DATABASE_URL:?Set DATABASE_URL to a local Postgres (see docs/deploy.md)}"
 API_PORT=${API_PORT:-3100}
 WEB_PORT=${WEB_PORT:-8180}
+BASE=${E2E_BASE_PATH:-}
 OUT=${E2E_OUT:-$(mktemp -d)}
 mkdir -p "$OUT"
 db="e2e_$(date +%s)_$$"
@@ -34,20 +39,41 @@ cleanup() {
 trap cleanup EXIT
 
 # The API migrates its empty database on start.
-(cd apps/api && DATABASE_URL="${DATABASE_URL%/*}/$db" PORT=$API_PORT exec node --import tsx src/dev.ts) \
-  >"$OUT/api.log" 2>&1 &
+(cd apps/api && DATABASE_URL="${DATABASE_URL%/*}/$db" PORT=$API_PORT BASE_PATH=$BASE \
+  exec node --import tsx src/dev.ts) >"$OUT/api.log" 2>&1 &
 
 if [[ -z ${E2E_PREBUILT:-} ]]; then
   # Maestro can't use the browser's file picker, so this build picks the fixture photo instead
   # (pickAvatar in src/state/avatar.ts; CI's build job sets the same). The API keeps photos in
   # memory (src/dev.ts).
   receipt="data:image/jpeg;base64,$(base64 <apps/mobile/e2e/fixtures/receipt.jpg | tr -d '\n')"
-  (cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT \
+  (cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT$BASE BASE_PATH=$BASE \
     EXPO_PUBLIC_E2E_RECEIPT=$receipt "$bin/expo" export -p web) >"$OUT/export.log" 2>&1
 fi
-(cd apps/mobile && exec "$bin/expo" serve --port "$WEB_PORT") >"$OUT/web.log" 2>&1 &
+if [[ -z $BASE ]]; then
+  (cd apps/mobile && exec "$bin/expo" serve --port "$WEB_PORT") >"$OUT/web.log" 2>&1 &
+else
+  # expo serve ignores the base URL.
+  # shellcheck disable=SC2016 # JavaScript template literals, not shell
+  DIST=apps/mobile/dist BASE=$BASE PORT=$WEB_PORT node --input-type=module -e '
+    import { readFile } from "node:fs/promises";
+    import { createServer } from "node:http";
+    import { extname, join, normalize } from "node:path";
+    const { DIST, BASE, PORT } = process.env;
+    const types = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json",
+      ".css": "text/css", ".png": "image/png", ".ico": "image/x-icon", ".ttf": "font/ttf" };
+    createServer(async (req, res) => {
+      const path = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+      if (!path.startsWith(`${BASE}/`)) return res.writeHead(404).end();
+      const file = join(DIST, normalize(path.slice(BASE.length)));
+      const body = await readFile(file).catch(() => undefined);
+      res.writeHead(200, { "content-type": (body && types[extname(file)]) || "text/html" });
+      res.end(body ?? (await readFile(join(DIST, "index.html"))));
+    }).listen(PORT);
+  ' >"$OUT/web.log" 2>&1 &
+fi
 
-for url in "http://localhost:$API_PORT/health" "http://localhost:$WEB_PORT"; do
+for url in "http://localhost:$API_PORT$BASE/health" "http://localhost:$WEB_PORT$BASE/"; do
   for _ in $(seq 60); do curl -sf -o /dev/null "$url" && continue 2; sleep 0.5; done
   echo "$url didn't come up; logs in $OUT" >&2
   exit 1
@@ -66,5 +92,5 @@ export SE_BROWSER_VERSION=${SE_BROWSER_VERSION:-147}
 # A tall phone-width window: the phone layout, with nothing below the fold (taps don't scroll).
 MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true \
   "${MAESTRO:-maestro}" test -p web --headless --screen-size 500x1400 \
-  -e WEB_URL="http://localhost:$WEB_PORT" --test-output-dir "$OUT/maestro" \
+  -e WEB_URL="http://localhost:$WEB_PORT${BASE:+$BASE/}" --test-output-dir "$OUT/maestro" \
   --format junit --output "$OUT/junit.xml" "$@"

@@ -59,5 +59,14 @@ export function createApp(
     .route('/invites', inviteRoutes(auth, db, notify));
 }
 
+/**
+ * Serves `app` under the path of the API's public URL: a PR preview shares an HTTP API with
+ * other PRs and gets `/pr-123/*` (infra/app/sst.config.ts). Elsewhere the URL has no path.
+ */
+export function withBasePath(app: Hono, apiURL: string) {
+  const basePath = new URL(apiURL).pathname.replace(/\/$/, '');
+  return basePath ? new Hono().route(basePath, app) : app;
+}
+
 /** For the typed `hc` client in the app. */
 export type AppType = ReturnType<typeof createApp>;

@@ -13,9 +13,15 @@ import { deleteReceipt, type ReceiptStore } from './receipts';
 export { mergeUser };
 
 export interface AuthConfig {
-  /** The API's public URL; Better Auth is served under `/api/auth`. */
+  /**
+   * The API's public URL, with the path it's served under if any (a PR preview's `/pr-123`).
+   * Better Auth is served under `<baseURL>/api/auth`.
+   */
   baseURL: string;
-  /** The web app, trusted as an origin. Not needed where sessions are only looked up. */
+  /**
+   * The web app, whose origin is trusted. Not needed where sessions are only looked up. A PR
+   * preview's site is under a path; origins never have one.
+   */
   webURL?: string;
   /** Trust the local Expo dev server (http://localhost:8081), for running it against a deployed API. */
   devServer?: boolean;
@@ -32,11 +38,12 @@ export interface AuthConfig {
  */
 export function createAuth(db: Db, config: AuthConfig) {
   return betterAuth({
-    baseURL: config.baseURL,
+    // A path in `baseURL` replaces Better Auth's `basePath`, so it must end in its `/api/auth`.
+    baseURL: `${config.baseURL}/api/auth`,
     secret: config.secret,
     // The web app, the Expo dev server, and the native app's deep links (OAuth redirects back).
     trustedOrigins: [
-      ...(config.webURL ? [config.webURL] : []),
+      ...(config.webURL ? [new URL(config.webURL).origin] : []),
       ...(config.devServer ? ['http://localhost:8081'] : []),
       'yallist://',
     ],
