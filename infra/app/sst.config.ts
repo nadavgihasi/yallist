@@ -41,6 +41,8 @@ export default $config({
     // Aurora DSQL, one cluster per stage. Linked functions connect with IAM auth tokens
     // (apps/api/src/db/client.ts). Migrations run after deploy (.github/workflows/deploy.yml).
     const database = new sst.aws.Dsql('Database', {
+      // AWS Backup: a vault, plan and selection beside the cluster (daily at 05:00 UTC, kept 7 days).
+      backup: $app.stage === 'production',
       transform: {
         // A cluster has no name, only an identifier; put the stage in its Name tag.
         cluster: {

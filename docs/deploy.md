@@ -69,6 +69,7 @@ This bundles the API Lambda, builds `apps/mobile` with `expo export -p web` and 
 
 Aurora DSQL, one cluster per stage (`sst.aws.Dsql('Database')`), available in both stage regions. It is linked to the API Lambda, which connects as `admin` with a short-lived IAM auth token ([client.ts](../apps/api/src/db/client.ts)). There is no password to store.
 
+- **Backups:** production only, through AWS Backup (`backup` on `sst.aws.Dsql`): a daily snapshot at 05:00 UTC, kept 7 days, in a vault SST creates beside the cluster. Restore from the AWS Backup console into a new cluster.
 - **Deletion protection:** on for the production cluster, so it can't be deleted from the console or CLI either. Turn it off in `sst.config.ts` before a deliberate teardown.
 - **Schema:** [schema.ts](../apps/api/src/db/schema.ts), Drizzle, kept to DSQL's SQL subset: no enum types (text plus `CHECK`), no triggers or extensions, UUID keys, money in integer agorot. Foreign keys are enforced; they use `NO ACTION` because cascades count toward the 3,000-rows-per-transaction limit.
 - **Migrations:** after changing the schema, run `pnpm --filter @yallist/api db:generate` and commit the new file in `apps/api/drizzle/`. Never edit a migration that has been deployed.
