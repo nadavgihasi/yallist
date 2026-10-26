@@ -196,5 +196,5 @@ Where the code differs from the sections above:
 - **`expire` fails only for a stage a closed PR left behind.** A 6-hour expiry is routine, and failing on it would notify on every PR.
 - **The stage's SST state is left to `sst remove`.** The script deletes only the passphrase. Check `sst-state-*` after the first removal.
 - **Each PR invalidates only `/pr-<n>/*`**, not the whole Router.
-- **The UI tests skip flows tagged `test-photo`** (profile-photo): they need a build that picks a fixture photo in place of the file picker, which a preview people use shouldn't be.
-- **Known gaps:** web invite links drop the `/pr-<n>` prefix (they're built from the origin), and `public/index.html` links the apple-touch icon at `/`.
+- **Preview-only UI tests** (Playwright, [ui-tests.md](ui-tests.md#preview-only-tests-playwright)) run after the Maestro flows: photos to the PR's S3 bucket, two sessions (invite link, approval, AppSync Events) and CORS on the real API. `pr-<n>` stages output `realtime`, the AppSync HTTP host, for them.
+- **Known gaps:** `public/index.html` links the apple-touch icon at `/`. (Web invite links used to drop the `/pr-<n>` prefix; the preview-only join test caught it.)

@@ -11,8 +11,8 @@
 #
 # CI splits the flows in two: E2E_SHARD=1 runs the flows tagged shard-1, E2E_SHARD=2 the rest
 # (new flows land there; tag one shard-1 when shard 2 gets longer). E2E_PREBUILT=1 serves an
-# existing apps/mobile/dist, exported with EXPO_PUBLIC_API_URL=http://localhost:$API_PORT,
-# EXPO_PUBLIC_E2E and EXPO_PUBLIC_E2E_RECEIPT as below.
+# existing apps/mobile/dist, exported with EXPO_PUBLIC_API_URL=http://localhost:$API_PORT and
+# EXPO_PUBLIC_E2E as below.
 #
 # E2E_BASE_PATH=/pr-123 serves the API and the web app under that path, as a PR preview does
 # (docs/plans/e2e-live-environments.md): the export uses it as its base URL and the web server
@@ -72,12 +72,9 @@ trap cleanup EXIT
   exec node --import tsx src/dev.ts) >"$OUT/api.log" 2>&1 &
 
 if [[ -z ${E2E_PREBUILT:-} ]]; then
-  # Maestro can't use the browser's file picker, so this build picks the fixture photo instead
-  # (pickAvatar in src/state/avatar.ts; CI's build job sets the same). The API keeps photos in
-  # memory (src/dev.ts). EXPO_PUBLIC_E2E opens the test-only routes (src/app/dev/crash.tsx).
-  receipt="data:image/jpeg;base64,$(base64 <apps/mobile/e2e/fixtures/receipt.jpg | tr -d '\n')"
+  # EXPO_PUBLIC_E2E opens the test-only routes (src/app/dev/crash.tsx).
   (cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT$BASE BASE_PATH=$BASE \
-    EXPO_PUBLIC_E2E=1 EXPO_PUBLIC_E2E_RECEIPT=$receipt "$bin/expo" export -p web) >"$OUT/export.log" 2>&1
+    EXPO_PUBLIC_E2E=1 "$bin/expo" export -p web) >"$OUT/export.log" 2>&1
 fi
 if [[ -z $BASE ]]; then
   # expo serve has no single-page fallback: the deep links the flows open get the app's page.

@@ -12,6 +12,7 @@ import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, joinNames } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import { useReceiptUpload } from '@/state/receipts';
 import { tripKey, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
@@ -254,6 +255,7 @@ function ReceiptButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={4}
+      {...testId('expense-receipt')}
       onPress={() =>
         router.push({
           pathname: '/trips/[tripId]/expenses/[expenseId]/receipt',

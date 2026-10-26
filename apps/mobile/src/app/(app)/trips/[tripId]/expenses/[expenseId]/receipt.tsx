@@ -13,6 +13,7 @@ import { useCloseSheet } from '@/features/trip/closeSheet';
 import { ReceiptSources } from '@/features/trip/ReceiptField';
 import { he } from '@/i18n/he';
 import { api } from '@/lib/api';
+import { testId } from '@/lib/testId';
 import { uploadReceipt, useReceiptUpload } from '@/state/receipts';
 import { useMe } from '@/state/store';
 import { useTrip, useTripAction } from '@/state/trips';
@@ -130,6 +131,7 @@ function Viewer({ data, expense }: { data: TripData; expense: Expense }) {
             style={styles.flex}
             resizeMode="contain"
             accessibilityLabel={he.receipt.open}
+            {...testId('receipt-image')}
           />
         ) : (
           isError && <Text style={styles.error}>{he.receipt.loadFailed}</Text>
@@ -142,6 +144,7 @@ function Viewer({ data, expense }: { data: TripData; expense: Expense }) {
             variant={confirm ? 'card' : 'quiet'}
             size="sm"
             icon={<Icon name="trash" size={18} color={confirm ? colors.ink : colors.inkMuted} />}
+            {...testId('receipt-delete')}
             onPress={() => {
               if (!confirm) return setConfirm(true);
               close(() => act({ type: 'deleteReceipt', expenseId: expense.id }));

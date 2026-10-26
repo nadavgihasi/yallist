@@ -1,6 +1,6 @@
 # UI tests: Maestro on web, Android and iOS
 
-**Status:** web flows run on every PR ([ui-tests.yml](../../.github/workflows/ui-tests.yml)). Native runs are planned, not built.
+**Status:** web flows run on every PR ([ui-tests.yml](../../.github/workflows/ui-tests.yml)) and against its preview, plus a few [preview-only Playwright tests](#preview-only-tests-playwright) for what Maestro can't drive. Native runs are planned, not built.
 
 ## Choice: Maestro, for now
 
@@ -34,7 +34,7 @@ Expo has no test runner of its own. Its docs run Maestro, through EAS Workflows,
 
 - We need Safari coverage.
 - Maestro web turns out flaky or breaks on an upgrade.
-- We need two-user or realtime web flows; Playwright opens two browser contexts in one test.
+- We need two-user or realtime web flows; Playwright opens two browser contexts in one test. (We did, for the preview only: see [Preview-only tests](#preview-only-tests-playwright).)
 - The web job outgrows the 5-minute budget.
 
 **Switch cost:** about half a day. The testIDs stay, and Playwright finds them through `data-testid`. `scripts/e2e-web.sh` and the CI job stay; only the runner step changes. Maestro would keep running the native flows, which is the hybrid column above.
@@ -62,28 +62,59 @@ DATABASE_URL=… pnpm e2e:web apps/mobile/e2e/flows/item-delete.yaml
 
 Each flow starts from a clean browser as a new guest with its own blank trip, so flows don't depend on each other.
 
-| Flow            | Covers                                                                |
-| --------------- | --------------------------------------------------------------------- |
-| `item-edit`     | Sign in, create a trip, add an item, rename it.                       |
-| `item-delete`   | Delete an item, back on the trip's list. The regression test for #70. |
-| `claim`         | Claim an item, release it.                                            |
-| `expense`       | Add an expense on the money tab, see it listed.                       |
-| `profile`       | Open the profile.                                                     |
-| `profile-photo` | Add a profile photo, remove it.                                       |
+| Flow          | Covers                                                                |
+| ------------- | --------------------------------------------------------------------- |
+| `item-edit`   | Sign in, create a trip, add an item, rename it.                       |
+| `item-delete` | Delete an item, back on the trip's list. The regression test for #70. |
+| `claim`       | Claim an item, release it.                                            |
+| `expense`     | Add an expense on the money tab, see it listed.                       |
+| `profile`     | Open the profile.                                                     |
 
 Shared steps are in `e2e/common/` (sign in, new trip, add item).
 
-**Photos:** Maestro can't drive the browser's file picker, so the script (and CI's `build` job) builds the web app with `EXPO_PUBLIC_E2E_RECEIPT` set to [`e2e/fixtures/receipt.jpg`](../../apps/mobile/e2e/fixtures/receipt.jpg) as a data URI, and `pickAvatar` returns it in place of opening the picker. Real builds never set it. Everything after the pick runs for real: the crop and shrink, the presigned-form upload to the API's in-memory photo store (`/dev/receipts` in `src/dev.ts`) and the attach. Not covered: the picker itself, and S3 (CORS, the policy).
+Photos (receipts, profile photos) aren't here: Maestro can't pick a file on web. The preview-only tests cover them, through the real file input.
+
+## Preview-only tests (Playwright)
+
+Some things only a deployed preview has, or Maestro web can't drive. [`e2e/preview`](../../apps/mobile/e2e/preview) tests them with Playwright (pinned, `@playwright/test` 1.64.1), against each PR's preview only.
+
+**Why Playwright for these.** Maestro 2.11.0's web driver can't pick a file: it has no file upload (Selenium's `sendKeys` with a path, `setInputFiles`), `addMedia` does nothing on web, and it has no command that runs JavaScript in the page. `runScript` and `evalScript` run in Maestro's own JS engine, not the browser. The only way into the page is that `launchApp` arguments are pasted into a script unescaped, which is a bug to rely on. Maestro also drives one browser per flow, so two people would need two Maestro processes coordinated through shared files. Playwright picks files through the browser's real file chooser (`filechooser` + `setFiles`), opens two isolated sessions in one test (`browser.newContext`), and records a video of each. The Maestro flows stay the cross-platform suite; these are web-only and preview-only.
+
+| Test                       | Covers                                                                                                                                                                                                                                                               |
+| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `receipts`                 | A 3000×4000 photo through the receipt's file input, shrunk on the device to 1500×2000, a presigned POST to the PR's S3 bucket (its CORS), attached, shown through a presigned GET, deleted, then added again from the expense's receipt sheet.                       |
+| `profile-photo`            | A photo through the profile's file input, cropped to 512×512, uploaded to S3, shown from it, removed.                                                                                                                                                                |
+| `two-members` (join, hero) | Dana's trip requires approval; she copies the invite link from the people tab (`/pr-<n>/j/<token>`; `expo serve` 404s on it locally); Noa opens it in a second session, asks to join; Dana approves; Noa lands on the trip; Dana's hero now offers the missing list. |
+| `two-members` (realtime)   | As above, then Dana's page subscribes to the trip's AppSync Events channel with her session, Noa claims the Tent, and the event arrives. The app itself doesn't subscribe yet, so the check that Dana's list updates without a reload is marked `test.fail`.         |
+| `auth`                     | Guest sign-in and an authorized call (`/me`, with its preflight) from the CloudFront origin to the real API Gateway, with CORS headers.                                                                                                                              |
+
+Each test signs in its own new guests, so they share the preview's database and run in parallel (4 workers). Every page records a video (two per test for two people) and a failed test keeps a trace (DOM, network and console per step, `playwright show-trace`).
+
+Run them against any preview (`E2E_API_URL` and `E2E_REALTIME_HOST` are the stage's `api` and `realtime` outputs; without them the two-member tests skip):
+
+```sh
+cd apps/mobile && pnpm exec playwright install chromium-headless-shell ffmpeg
+E2E_WEB_URL=https://<router>/pr-<n>/ E2E_API_URL=https://<api>/pr-<n> E2E_REALTIME_HOST=<host> \
+  pnpm exec playwright test
+```
+
+**Where each test runs:**
+
+| Tests                                               | Local (`pnpm e2e:web`) and `ui-tests.yml` | PR preview (`preview.yml`) |
+| --------------------------------------------------- | ----------------------------------------- | -------------------------- |
+| Maestro flows (`e2e/flows`)                         | Yes                                       | Yes                        |
+| Maestro flows tagged `test-route` (`crash`)         | Yes                                       | No: test-only routes       |
+| Playwright `e2e/preview` (photos, two people, CORS) | No                                        | Yes (`preview-only` job)   |
 
 ## CI
 
 - **Web, every PR and `main`:** `ui-tests.yml` exports the app once (`build`), then two shards each run the script against their own `postgres:17` service (`E2E_SHARD=1` runs the flows tagged `shard-1`, `2` the rest; `E2E_PREBUILT=1` reuses the export). The `web` job collects both results and fails unless both shards passed, so it's the one check to make required (a GitHub setting).
 - **Android (proposed):** a `ui-tests-android` workflow on `workflow_dispatch`, nightly on `main`, and before promoting to `production`. It builds a debug APK with `EXPO_PUBLIC_API_URL=http://10.0.2.2:3100` (the emulator's host), boots an emulator with `reactivecircus/android-emulator-runner` (KVM on ubuntu), and runs `maestro test apps/mobile/e2e` against the same local API. Expect 15–25 minutes, too slow for every PR. Locally: an emulator, the app installed, then the same command.
 - **iOS (deferred):** iOS isn't built yet. When it is: a macOS runner and a simulator build, run before releases only (macOS minutes cost 10×).
-- **PR previews:** the same flows run against each PR's live preview (`WEB_URL=https://<router>/pr-<n>/`), see [e2e-live-environments.md](e2e-live-environments.md).
+- **PR previews:** the same flows run against each PR's live preview (`WEB_URL=https://<router>/pr-<n>/`), see [e2e-live-environments.md](e2e-live-environments.md). Then the `preview-only` job runs the Playwright tests against it (no AWS role), caching the browser per Playwright version, and uploads `preview-only-tests-<run>-<attempt>`: JUnit, a video per page and a trace per failure.
 
 ## Deferred
 
 - Native runs (above). The flows haven't been run on a device yet; expect small fixes (keyboard covering buttons: `hideKeyboard`).
-- Two-user and realtime flows (invite and join, live claims). Maestro drives one device per flow, so the second user would act through the API (`runScript` + `http`).
+- Realtime in the app: the client never subscribes to AppSync Events (`EXPO_PUBLIC_REALTIME_URL` is unused), so another member's change shows only after a refetch. The realtime test's last check expects that to fail; drop its `test.fail` when the app subscribes.
 - Desktop and tablet layouts on web; only the phone layout runs.

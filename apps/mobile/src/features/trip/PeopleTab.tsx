@@ -8,6 +8,7 @@ import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, participants } from '@/i18n/he';
 import { inviteUrl } from '@/lib/invite';
+import { testId } from '@/lib/testId';
 import { useTripAction } from '@/state/trips';
 import type { TripData, TripMember } from '@/state/types';
 import { colors, space, type } from '@/theme';
@@ -91,6 +92,7 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
           variant="soft"
           wide
           icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
+          {...testId('people-share')}
           onPress={() => shareLink(inviteUrl(WEB_URL, data.inviteToken))}
         />
       </Card>
@@ -104,6 +106,7 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
               <PillButton
                 label={he.people.approve}
                 size="sm"
+                {...testId('people-approve')}
                 onPress={() => act({ type: 'approveMember', userId: m.userId })}
               />
               {confirmButton('decline', m.userId, he.people.decline, he.people.confirmDecline, () =>
