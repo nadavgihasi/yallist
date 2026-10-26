@@ -3,7 +3,7 @@ import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createTestDatabase, DATABASE_URL } from '../test-db';
-import { backfillCategories, migrate, toDsql } from './migrate';
+import { apply, backfillCategories, migrate, toDsql } from './migrate';
 
 describe('toDsql', () => {
   it('builds indexes asynchronously, without USING', () => {
@@ -25,6 +25,74 @@ describe('toDsql', () => {
     expect(toDsql('CREATE TABLE "a" ("id" uuid PRIMARY KEY)')).toBe(
       'CREATE TABLE "a" ("id" uuid PRIMARY KEY)',
     );
+  });
+});
+
+/**
+ * A stand-in for a DSQL connection: `begin` runs the DDL (`ddl` returns its rows or throws), and
+ * each other query is answered by the first entry of `answers` whose key it contains.
+ */
+function fakeDsql(ddl: () => unknown[], answers: Record<string, unknown[]>) {
+  const queries: string[] = [];
+  const sql = (strings: TemplateStringsArray, ...values: unknown[]) => {
+    const query = strings.reduce((q, s, i) => q + (i ? String(values[i - 1]) : '') + s, '');
+    queries.push(query.replace(/\s+/g, ' ').trim());
+    const key = Object.keys(answers).find((k) => query.includes(k));
+    return Promise.resolve(key ? answers[key] : []);
+  };
+  sql.begin = (fn: (tx: { unsafe: (q: string) => unknown }) => unknown) =>
+    Promise.resolve().then(() => fn({ unsafe: () => ddl() }));
+  return { sql: sql as unknown as Sql, queries };
+}
+
+const exists = () => {
+  throw Object.assign(new Error('relation "a_idx" already exists'), { code: '42P07' });
+};
+
+describe('apply on DSQL', () => {
+  const index = 'CREATE UNIQUE INDEX "a_idx" ON "a" USING btree ("x");';
+
+  it('waits for an index build', async () => {
+    const { sql, queries } = fakeDsql(() => [{ job_id: 'j1' }], { wait_for_job: [{ ok: true }] });
+    await apply(sql, index, true);
+    expect(queries).toEqual(['select sys.wait_for_job(j1) as ok']);
+  });
+
+  it('fails when the index build fails', async () => {
+    const { sql } = fakeDsql(() => [{ job_id: 'j1' }], {
+      wait_for_job: [{ ok: false }],
+      'from sys.jobs': [{ status: 'failed', details: 'Found duplicate key' }],
+    });
+    await expect(apply(sql, index, true)).rejects.toThrow(
+      'DSQL job j1 did not complete: failed Found duplicate key',
+    );
+  });
+
+  it('accepts an index an earlier run built', async () => {
+    const { sql } = fakeDsql(exists, { pg_index: [{ valid: true }] });
+    await apply(sql, index, true);
+  });
+
+  it('waits for an index an earlier run is still building', async () => {
+    const { sql, queries } = fakeDsql(exists, {
+      pg_index: [{ valid: false }],
+      'from sys.jobs': [{ jobId: 'j2' }],
+      wait_for_job: [{ ok: true }],
+    });
+    await apply(sql, index, true);
+    expect(queries.at(-1)).toBe('select sys.wait_for_job(j2) as ok');
+  });
+
+  it('fails on an index whose earlier build failed', async () => {
+    const { sql } = fakeDsql(exists, { pg_index: [{ valid: false }] });
+    await expect(apply(sql, index, true)).rejects.toThrow('Index a_idx is invalid');
+  });
+
+  it('rethrows other errors', async () => {
+    const { sql } = fakeDsql(() => {
+      throw Object.assign(new Error('syntax error'), { code: '42601' });
+    }, {});
+    await expect(apply(sql, 'CREATE TABLE "a" (', true)).rejects.toThrow('syntax error');
   });
 });
 
@@ -67,6 +135,20 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
     const [seeded] = await sql<{ count: number }[]>`
       select count(*)::int as count from template_items`;
     expect(seeded!.count).toBe(Object.values(TEMPLATES).flat().length);
+  });
+
+  it('treats statements that committed but were not recorded as applied', async () => {
+    await migrate(sql, { dsql: false });
+    const [{ count }] = await sql<[{ count: number }]>`
+      select count(*)::int as count from __migrations`;
+    // A crash after each DDL committed, before its row was written.
+    await sql`delete from __migrations`;
+
+    await migrate(sql, { dsql: false });
+
+    const [after] = await sql<[{ count: number }]>`
+      select count(*)::int as count from __migrations`;
+    expect(after.count).toBe(count);
   });
 
   it('moves free-text item categories into trip categories', async () => {

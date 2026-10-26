@@ -13,7 +13,9 @@ const DIR = new URL('../../drizzle/', import.meta.url);
  * Applies drizzle-kit's migrations in drizzle/, reloads the template seed, then moves free-text
  * item categories into trip_categories.
  * DSQL allows one DDL statement per transaction, so each statement runs and is recorded on its
- * own; a failed deploy resumes from the statement that failed.
+ * own; a failed deploy resumes from the statement that failed. A statement can commit without
+ * being recorded (a crash in between), so on the next run its "already exists" error means it
+ * was applied.
  */
 export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
   await sql`create table if not exists __migrations (
@@ -38,13 +40,66 @@ export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
       .filter(Boolean);
     for (const [i, statement] of statements.entries()) {
       if (applied.has(`${tag}#${i}`)) continue;
-      await sql.begin((tx) => tx.unsafe(dsql ? toDsql(statement) : statement));
+      await apply(sql, statement, dsql);
       await sql`insert into __migrations (tag, statement) values (${tag}, ${i})`;
     }
   }
 
   await seedTemplates(sql);
   await backfillCategories(sql);
+}
+
+/** SQLSTATEs of re-running a CREATE TABLE/INDEX, ADD COLUMN or ADD CONSTRAINT that committed. */
+const ALREADY_EXISTS = new Set([
+  '42P07', // duplicate_table: tables, indexes
+  '42701', // duplicate_column
+  '42710', // duplicate_object: constraints
+]);
+
+/**
+ * Runs one migration statement. On DSQL an index is built by a background job: wait for it, and
+ * fail if it fails, so an index that was never built (e.g. a unique index over duplicates) isn't
+ * recorded as applied. An index left over from an earlier run must be built too.
+ */
+export async function apply(sql: Sql, statement: string, dsql: boolean) {
+  let jobId: string | undefined;
+  try {
+    const rows = await sql.begin((tx) => tx.unsafe(dsql ? toDsql(statement) : statement));
+    jobId = (rows as { job_id?: string }[])[0]?.job_id;
+  } catch (error) {
+    if (!ALREADY_EXISTS.has((error as { code?: string }).code ?? '')) throw error;
+    const index = /^CREATE (?:UNIQUE )?INDEX "([^"]+)"/.exec(statement)?.[1];
+    if (dsql && index) await awaitExistingIndex(sql, index);
+    return;
+  }
+  if (jobId) await waitForJob(sql, jobId);
+}
+
+/** Blocks until a DSQL job finishes; throws with its details unless it completed. */
+async function waitForJob(sql: Sql, jobId: string) {
+  const [{ ok }] = await sql<[{ ok: boolean }]>`select sys.wait_for_job(${jobId}) as ok`;
+  if (ok) return;
+  const [job] = await sql<{ status: string; details: string | null }[]>`
+    select status, details from sys.jobs where job_id = ${jobId}`;
+  throw new Error(
+    `DSQL job ${jobId} did not complete: ${job ? `${job.status} ${job.details ?? ''}` : 'unknown'}`,
+  );
+}
+
+/**
+ * An index created by an earlier run: valid, still being built (wait for its job), or its build
+ * failed, which DSQL leaves as an invalid index that has to be dropped before it can be rebuilt.
+ */
+async function awaitExistingIndex(sql: Sql, name: string) {
+  const [index] = await sql<{ valid: boolean }[]>`
+    select i.indisvalid as valid from pg_index i join pg_class c on c.oid = i.indexrelid
+    where c.relname = ${name}`;
+  if (index?.valid) return;
+  const [job] = await sql<{ jobId: string }[]>`
+    select job_id as "jobId" from sys.jobs
+    where object_name = ${`public.${name}`} and status in ('submitted', 'processing')`;
+  if (!job) throw new Error(`Index ${name} is invalid (its build failed): drop it and redeploy`);
+  await waitForJob(sql, job.jobId);
 }
 
 /**
