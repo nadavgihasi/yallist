@@ -25,6 +25,8 @@ const ICONS = {
   ],
   /** Countdowns. Clocks never flip. */
   clock: ['M12 7v5l3 2'],
+  /** Upload-style share: a box with an arrow out of it. */
+  share: ['M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7', 'M16 6l-4-4-4 4', 'M12 2v13'],
   bell: ['M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9', 'M10.3 21a1.94 1.94 0 0 0 3.4 0'],
   settings: [
     'M4 21v-7',
