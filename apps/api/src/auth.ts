@@ -16,6 +16,8 @@ export interface AuthConfig {
   baseURL: string;
   /** The web app, trusted as an origin. Not needed where sessions are only looked up. */
   webURL?: string;
+  /** Trust the local Expo dev server (http://localhost:8081), for running it against a deployed API. */
+  devServer?: boolean;
   secret: string;
   google: { clientId: string; clientSecret: string };
 }
@@ -32,7 +34,7 @@ export function createAuth(db: Db, config: AuthConfig) {
     // The web app, the Expo dev server, and the native app's deep links (OAuth redirects back).
     trustedOrigins: [
       ...(config.webURL ? [config.webURL] : []),
-      'http://localhost:8081',
+      ...(config.devServer ? ['http://localhost:8081'] : []),
       'yallist://',
     ],
     database: drizzleAdapter(db, { provider: 'pg', schema, usePlural: true }),
