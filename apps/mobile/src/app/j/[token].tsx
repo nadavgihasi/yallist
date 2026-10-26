@@ -1,10 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Callout } from '@/components/Callout';
 import { Cover } from '@/components/Cover';
+import { EmptyState, StateScreen } from '@/components/EmptyState';
 import { TextField } from '@/components/Fields';
+import { Loader } from '@/components/Loader';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { GoogleButton } from '@/features/auth/GoogleButton';
@@ -56,7 +59,7 @@ export default function Join() {
       if (signingIn) await signIn(await signingIn());
     } catch {
       setBusy(false);
-      return showToast(he.errors.signIn);
+      return showToast(he.errors.signIn, 'error');
     }
     try {
       const result = await joinTrip(token);
@@ -66,7 +69,7 @@ export default function Join() {
       const status = statusOf(error);
       if (status === 403) setState('removed');
       // 401: the session expired; the store says so and this page asks for a name again.
-      else if (status !== 401) showToast(he.errors.failed);
+      else if (status !== 401) showToast(he.errors.failed, 'error');
     }
     setBusy(false);
   };
@@ -75,23 +78,58 @@ export default function Join() {
     if (trimmed) void join(() => signInAsGuest(trimmed));
   };
 
-  if (invite.isPending) return <ActivityIndicator color={colors.primary} style={styles.center} />;
+  if (invite.isPending) return <Loader line={he.states.joinLoading} />;
 
+  const leave = {
+    label: me ? he.join.toTrips : he.join.toStart,
+    onPress: () => router.replace('/'),
+  };
   if (!invite.data) {
-    const invalid = (statusOf(invite.error) ?? 500) < 500;
-    return (
-      <Message
-        title={invalid ? he.join.invalid : he.errors.loadFailed}
-        text={invalid ? he.join.invalidText : undefined}
-        signedIn={!!me}
-        onRetry={invalid ? undefined : () => void invite.refetch()}
+    return (statusOf(invite.error) ?? 500) < 500 ? (
+      <StateScreen
+        spot="signpost"
+        title={he.join.invalid}
+        text={he.join.invalidText}
+        actions={[leave]}
+      />
+    ) : (
+      <StateScreen
+        spot="noSignal"
+        {...he.states.offline}
+        actions={[{ label: he.errors.retry, onPress: () => void invite.refetch() }, leave]}
       />
     );
   }
   if (state === 'removed' || statusOf(recheck.error) === 403)
-    return <Message title={he.join.removed} signedIn={!!me} />;
+    return (
+      <StateScreen
+        spot="signpost"
+        title={he.join.removed}
+        text={he.join.removedText}
+        actions={[leave]}
+      />
+    );
 
   const trip = invite.data;
+  if (state === 'pending')
+    return (
+      <View style={styles.screen} accessibilityLiveRegion="polite">
+        <EmptyState
+          spot="tentDoor"
+          title={he.join.pendingTitle}
+          text={he.join.pendingText(trip.name)}
+          actions={[
+            {
+              label: recheck.isFetching ? he.join.checking : he.join.checkNow,
+              onPress: () => void recheck.refetch(),
+            },
+            leave,
+          ]}
+        />
+        <Callout title={he.states.tip} text={he.join.pendingTip} />
+      </View>
+    );
+
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <Text style={styles.kicker}>{he.join.invited}</Text>
@@ -116,28 +154,7 @@ export default function Join() {
         )}
       </View>
 
-      {state === 'pending' ? (
-        <>
-          <View style={styles.card} accessibilityLiveRegion="polite">
-            <Text style={styles.strong}>{he.join.pendingTitle}</Text>
-            <Text style={styles.meta}>{he.join.pendingText}</Text>
-          </View>
-          <PillButton
-            label={recheck.isFetching ? he.join.checking : he.join.checkNow}
-            variant="soft"
-            size="lg"
-            wide
-            disabled={recheck.isFetching}
-            onPress={() => recheck.refetch()}
-          />
-          <PillButton
-            label={he.join.toTrips}
-            variant="quiet"
-            wide
-            onPress={() => router.replace('/')}
-          />
-        </>
-      ) : me ? (
+      {me ? (
         <>
           <PillButton
             label={busy ? he.join.joining : he.join.join}
@@ -175,36 +192,7 @@ export default function Join() {
   );
 }
 
-function Message({
-  title,
-  text,
-  signedIn,
-  onRetry,
-}: {
-  title: string;
-  text?: string;
-  signedIn: boolean;
-  onRetry?: () => void;
-}) {
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.title} accessibilityRole="header">
-        {title}
-      </Text>
-      {text && <Text style={styles.meta}>{text}</Text>}
-      {onRetry && <PillButton label={he.errors.retry} size="lg" onPress={onRetry} />}
-      <PillButton
-        label={signedIn ? he.join.toTrips : he.join.toStart}
-        variant={onRetry ? 'quiet' : 'solid'}
-        size="lg"
-        onPress={() => router.replace('/')}
-      />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
-  center: { flex: 1 },
   // One column, centered on wide screens.
   screen: {
     width: '100%',
@@ -214,7 +202,6 @@ const styles = StyleSheet.create({
     paddingTop: 64,
     gap: space[4],
   },
-  title: { ...type.sectionTitle, color: colors.ink },
   kicker: { ...type.buttonSm, color: colors.inkMuted },
   card: {
     padding: space[5],
@@ -229,6 +216,5 @@ const styles = StyleSheet.create({
   meta: { ...type.caption, color: colors.inkMuted },
   missing: { gap: space[1], marginTop: space[2] },
   missingTitle: { ...type.itemTitle, color: colors.ink },
-  strong: { ...type.itemTitle, color: colors.ink },
   note: { ...type.caption, color: colors.inkMuted, textAlign: 'center' },
 });

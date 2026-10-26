@@ -49,16 +49,6 @@ export function ListGroup({
   );
 }
 
-/** Text card: a title, then one line of explanation. */
-export function EmptyState({ title, text }: { title: string; text: string }) {
-  return (
-    <Card gap={space[1]}>
-      <Text style={styles.emptyTitle}>{title}</Text>
-      <Text style={styles.emptyText}>{text}</Text>
-    </Card>
-  );
-}
-
 const styles = StyleSheet.create({
   card: { padding: space[5], borderRadius: radius.card, backgroundColor: colors.card },
   header: {
@@ -69,6 +59,4 @@ const styles = StyleSheet.create({
   },
   title: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.inkMuted },
   aside: { ...type.caption, color: colors.inkMuted },
-  emptyTitle: { ...type.itemTitle, color: colors.ink },
-  emptyText: { ...type.caption, color: colors.inkMuted },
 });

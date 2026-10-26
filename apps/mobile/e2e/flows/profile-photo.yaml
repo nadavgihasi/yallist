@@ -14,6 +14,10 @@ tags: [profile, test-photo]
 - runFlow: ../common/sign-in.yaml
 - tapOn:
     id: home-profile
+- extendedWaitUntil:
+    notVisible:
+      id: loading
+    timeout: 10000
 - assertNotVisible:
     id: profile-photo-remove
 - tapOn:

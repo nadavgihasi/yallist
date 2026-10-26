@@ -1,4 +1,4 @@
-# A new guest from a clean state, ending on the empty home screen.
+# A new guest from a clean state, ending on the empty home screen once its trips have loaded.
 appId: app.yallist
 url: ${WEB_URL}
 ---
@@ -13,3 +13,7 @@ url: ${WEB_URL}
     id: login-start
 - assertVisible:
     id: home-new-trip
+- extendedWaitUntil:
+    notVisible:
+      id: loading
+    timeout: 10000

@@ -115,9 +115,10 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/maestro-web
         id: maestro
-      # Not the flows tagged test-photo: they need a build that picks the fixture photo in place of
-      # the file picker (EXPO_PUBLIC_E2E_RECEIPT), which a preview people use mustn't be.
-      - run: scripts/e2e-web.sh --exclude-tags=test-photo apps/mobile/e2e
+      # Not the flows tagged test-photo or test-route: they need a build that picks the fixture
+      # photo in place of the file picker (EXPO_PUBLIC_E2E_RECEIPT) or opens the test-only routes
+      # (EXPO_PUBLIC_E2E), which a preview people use mustn't be.
+      - run: scripts/e2e-web.sh --exclude-tags=test-photo,test-route apps/mobile/e2e
         env:
           MAESTRO: ${{ steps.maestro.outputs.maestro }}
           E2E_WEB_URL: ${{ needs.deploy.outputs.url }}

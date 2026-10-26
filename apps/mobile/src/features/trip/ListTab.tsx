@@ -1,10 +1,11 @@
-import { filterItems, type ListFilter, type ListKind } from '@yallist/domain';
+import { QUICK_SUGGESTIONS, filterItems, type ListFilter, type ListKind } from '@yallist/domain';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { FilterChip } from '@/components/Chips';
+import { FilterChip, SuggestionChip } from '@/components/Chips';
+import { EmptyState } from '@/components/EmptyState';
 import { Icon } from '@/components/Icon';
-import { Card, EmptyState } from '@/components/ListGroup';
+import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { he } from '@/i18n/he';
 import { useTripAction } from '@/state/trips';
@@ -86,9 +87,39 @@ export function ListTab({
           />
         ))}
       </ScrollView>
-      {groups.length === 0 && (
-        <EmptyState {...he.trip.empty[filter === 'mine' && list === 'buy' ? 'mineBuy' : filter]} />
-      )}
+      {groups.length === 0 &&
+        (filter === 'all' ? (
+          // A new blank list: one tap adds a common item.
+          <EmptyState {...he.trip.empty.all}>
+            <View style={styles.chips}>
+              {QUICK_SUGGESTIONS[list].map((name) => (
+                <SuggestionChip
+                  key={name}
+                  label={name}
+                  onPress={() =>
+                    act({
+                      type: 'addItem',
+                      item: { list, name, kind: 'single', quantityNeeded: 1, categoryId: null },
+                      claim: 0,
+                    })
+                  }
+                />
+              ))}
+            </View>
+          </EmptyState>
+        ) : filter === 'mine' ? (
+          <EmptyState
+            spot={data.trip.cover}
+            {...he.trip.empty[list === 'buy' ? 'mineBuy' : 'mine']}
+            actions={
+              view.missingIn(list) > 0
+                ? [{ label: he.trip.empty.toMissing, onPress: () => onFilter('missing') }]
+                : undefined
+            }
+          />
+        ) : (
+          <EmptyState {...he.trip.empty.missing} />
+        ))}
       {groups.map(({ category, total, missing, items }) => (
         <Card key={category?.id ?? 'none'} gap={space[3]}>
           {/* The card's small muted title (trip.html "ציוד"), with ✎ for the category sheet. */}
@@ -158,6 +189,7 @@ export function ListTab({
 const styles = StyleSheet.create({
   wrap: { gap: space[4] },
   filters: { gap: space[2] },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space[2] },
   header: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 36 },
   title: {
     ...type.caption,
