@@ -77,7 +77,7 @@ Shared steps are in `e2e/common/` (sign in, new trip, add item).
 - **Web, every PR and `main`:** `ui-tests.yml` exports the app once (`build`), then two shards each run the script against their own `postgres:17` service (`E2E_SHARD=1` runs the flows tagged `shard-1`, `2` the rest; `E2E_PREBUILT=1` reuses the export). The `web` job collects both results and fails unless both shards passed, so it's the one check to make required (a GitHub setting).
 - **Android (proposed):** a `ui-tests-android` workflow on `workflow_dispatch`, nightly on `main`, and before promoting to `production`. It builds a debug APK with `EXPO_PUBLIC_API_URL=http://10.0.2.2:3100` (the emulator's host), boots an emulator with `reactivecircus/android-emulator-runner` (KVM on ubuntu), and runs `maestro test apps/mobile/e2e` against the same local API. Expect 15–25 minutes, too slow for every PR. Locally: an emulator, the app installed, then the same command.
 - **iOS (deferred):** iOS isn't built yet. When it is: a macOS runner and a simulator build, run before releases only (macOS minutes cost 10×).
-- **Live AWS stage:** the same flows replace the Playwright `web` project in [e2e-live-environments.md](e2e-live-environments.md), with `WEB_URL` set to the stage's site. When that runs is still its open question Q1.
+- **PR previews:** the same flows run against each PR's live preview (`WEB_URL=https://<router>/pr-<n>/`), see [e2e-live-environments.md](e2e-live-environments.md).
 
 ## Deferred
 

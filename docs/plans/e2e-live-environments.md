@@ -1,205 +1,173 @@
-# Live end-to-end tests on a fresh AWS stage per run
+# PR preview environments and live e2e tests
 
-**Status:** design only. Nothing here is built yet. See [Rollout](#10-rollout).
+**Status:** design only, nothing is built. Replaces the earlier "fresh AWS stage per run" design (2026-10-25): a brand-new stage per run paid for CloudFront, DSQL and AppSync creation on every run and gave nothing to click on before merging.
 
 ## Summary
 
-- **Every run gets a brand-new SST stage**, `e2e-<run_id>`, in **`us-west-2`**. It's created for the run and destroyed after it. Nothing is reused between runs. Tests are live against real Lambda, API Gateway, Aurora DSQL and AppSync Events, with no mocks or emulators. Concurrent runs share nothing but the account, the region and the SST bootstrap.
-- **Realistic time:** about **4.5–5.5 minutes**, from the e2e job being queued to the results being reported, with teardown excluded. The best case is about 3.5 minutes. A slow deploy (IAM propagation retries, AppSync) can take it to about 6. All of these are estimates. [Rollout](#10-rollout) PR 4 measures them.
-- **The biggest costs:** creating the stage (`sst deploy`, 75–150 s), the Playwright suite (60–75 s), and setup (install and caches, about 60–90 s).
-- **How it's fast:**
-  - One runner does the deploy, the web build and the Playwright install at the same time.
-  - pnpm, SST providers, Playwright and Metro are all cached.
-  - The DB schema is created from one baseline SQL file as soon as the cluster exists, while the rest of the stage is still deploying.
-  - The web app is built before the API URL is known.
-  - Teardown runs in its own job, off the critical path.
-- **Cleanup is guaranteed** by a teardown job that always runs, a janitor every 3 hours, and a `us-west-2` budget.
-- **Recorded decisions:** build e2e only after the backend and the app's switch to the API land. No long-lived or reused e2e environments. When e2e runs (triggers) is still open ([Q1](#11-open-questions)). The pipeline works with any trigger.
+- Every PR gets a **live environment on real AWS** at `https://<preview-cdn>/pr-<n>/` with its own API Lambda, realtime API, receipts bucket and database schema. It's created on open, updated on every push, removed on close or after **6 hours** without a push.
+- The slow, shared pieces (DSQL cluster, CloudFront, API Gateway) are created **once** by a `preview` SST stage. A PR's `pr-<n>` SST stage only adds fast resources to them, so a push is live in **about 4–5 minutes** and `sst remove --stage pr-<n>` is the whole teardown.
+- **Every AWS resource is in `infra/app/sst.config.ts`** (stage-conditional), nothing is created by hand or by CLI. The two things that aren't AWS resources, the PR's **database schema** and the stage's **SST passphrase**, are handled by `db:migrate` and the cleanup job ([§4](#4-data-not-resources)).
+- The Maestro web flows ([ui-tests.md](ui-tests.md)) run against the preview with `WEB_URL`, which replaces the Playwright plan.
+- A separate **least-privilege OIDC role** deploys previews; the admin deploy role stays `main`-only ([§6](#6-security)).
 
-## 1. Flow
+## 1. Shape
 
 ```mermaid
 flowchart LR
-  Q[e2e job queued] --> S[checkout, pnpm install, restore caches]
-  S --> O[OIDC → e2e role]
-  O --> D[sst deploy --stage e2e-RUNID]
-  O --> M[wait for DSQL cluster → apply baseline schema + seed]
-  O --> W[expo export web with URL placeholders, or cached dist]
-  O --> B[Playwright chromium + deps]
-  D --> U[put API and realtime URLs into dist, serve on :4173]
-  W --> U
-  M --> T[Playwright: api + web projects, 4 workers]
-  U --> T
-  B --> T
-  T --> R[report: summary, artifacts and Lambda logs on failure]
-  R -.->|off the critical path| X[teardown job, always: sst unlock, sst remove, verify by tag]
-  J[janitor, every 3h] -.->|tag e2e=true, created-at older than 2h| X2[sst remove → delete by tag → report]
+  subgraph shared["preview stage · us-west-2 · deployed from main"]
+    R[Router: CloudFront + KV store]
+    G[HTTP API: $default → preview Lambda]
+    D[(DSQL cluster)]
+    P[SSM /yallist/preview/outputs]
+  end
+  subgraph pr["pr-123 stage · deployed from the PR"]
+    S[StaticSite /pr-123 → own S3 bucket]
+    L[API Lambda]
+    RT[AppSync Events + authorizer]
+    B[receipts bucket]
+  end
+  R -- "/pr-123/*" --> S
+  G -- "ANY /pr-123/{proxy+}" --> L
+  L -- "search_path = pr_123" --> D
+  P -. ids and URLs .-> pr
 ```
 
-## 2. Stage lifecycle
+- **Web:** `https://<router>/pr-123/`. The site is an SST `StaticSite` with `router: { instance: sst.aws.Router.get(...), path: '/pr-123' }`: it uploads to its own bucket and registers the prefix in the Router's KV store. SST's Router is one CloudFront behavior plus a CloudFront Function that routes by KV lookup, so a PR adds **KV entries, not cache behaviors** ([Router](https://sst.dev/docs/component/aws/router/)). The SPA fallback goes to `/pr-123/index.html` (SST's `custom404` with a route `base`).
+- **API:** `https://<preview-api>/pr-123/<route>`. The PR stage adds an `aws.apigatewayv2.Integration`, a `Route` (`ANY /pr-123/{proxy+}`) and a `lambda.Permission` to the shared HTTP API; SST has no `ApiGatewayV2.get`, so these are plain Pulumi resources in the same file. The Hono app is mounted under `/pr-123`. Routes and integrations are separate AWS resources, so the `pr-123` state owns only its own; the `$default` route stays with `preview`.
+- **Realtime and receipts** are per PR, created in seconds, removed with the stage. A per-PR AppSync Events API means the PR's authorizer code is what gets tested, with no namespace or token tricks. A per-PR bucket means `receipts.ts` is unchanged.
+- **Database:** one shared cluster; the PR connects as `admin` with `search_path = pr_123` ([§4](#4-data-not-resources)).
 
-- **Name:** `e2e-<github.run_id>`, for example `e2e-18234567890` (15 characters).
-  - `run_id` is unique across workflows, so concurrent PR and `main` runs never collide.
-  - A re-run attempt starts only after the earlier attempt's teardown has finished, so it can safely reuse the name.
-  - In `infra/app/stages.ts` (pure, covered by Vitest), the rule is `/^e2e-\d{1,12}$/`: `{ region: 'us-west-2', removal: 'remove', protect: false, e2e: true }`. Running it locally is refused unless `CI` is set. `dev` and `production` are unchanged.
-  - **16-character cap:** SST's `prefixName` (`.sst/platform/src/components/naming.ts`, verified) shortens the app name when `app + stage + logical name` gets too long. Up to 16 characters keeps the `yallist-e2e-` prefix that IAM name scoping relies on.
-- **What the stage has:**
-  - the API Lambda and HTTP API;
-  - a DSQL cluster, with deletion protection off;
-  - the AppSync Events API and its authorizer;
-  - IAM roles under the e2e permission boundary ([§5](#5-security));
-  - log groups with 1-day retention.
+## 2. Shared or per PR
 
-  It has no `StaticSite` and no CloudFront, because CloudFront takes minutes to create and delete and needs global IAM rights. The runner serves the web export on `localhost:4173`, and that origin is passed in as Better Auth's `webURL`. CloudFront stays covered by `dev`'s real deploy and a `curl` smoke check after it, for the SPA fallback and `/health`.
+| Resource              | Owner     | Why                                                                                          |
+| --------------------- | --------- | -------------------------------------------------------------------------------------------- |
+| DSQL cluster          | `preview` | Per-PR schema. Capped at 10 schemas per database, see [§7](#7-limits-found).                 |
+| CloudFront (`Router`) | `preview` | Takes minutes to create. Per-PR path via KV store, shared across stages with `Router.get`.   |
+| HTTP API              | `preview` | Per-PR route and integration, 300 each per API.                                              |
+| SSM outputs parameter | `preview` | One JSON parameter with the API id/URL, cluster id/endpoint, Router distribution id.         |
+| Budget, IAM roles     | `global`  | The preview role, its workload boundary, a `us-west-2` budget.                               |
+| API Lambda + role     | `pr-<n>`  | `yallist-pr-123-ApiFunction-…`; the stage prefix is what IAM scoping keys on.                |
+| Route + integration   | `pr-<n>`  | Plain `aws.apigatewayv2.*` resources on the shared API.                                      |
+| StaticSite + bucket   | `pr-<n>`  | Expo export with `experiments.baseUrl: '/pr-123'`, uploaded by SST.                          |
+| AppSync Events + auth | `pr-<n>`  | Same code as `dev`; 50 Event APIs per region.                                                |
+| Receipts bucket       | `pr-<n>`  | `removal: 'remove'` empties it on `sst remove`.                                              |
+| Secrets               | `pr-<n>`  | `BetterAuthSecret` from the `preview` GitHub environment. No Google client, no GitHub token. |
 
-- **Tags:** `app`, `stage`, `e2e=true`, `e2e-run`, `e2e-sha` and `created-at`, all from env vars set once at the start of the job.
-- **Concurrency:** for PRs, `group: e2e-pr-<n>` with `cancel-in-progress: true`. A cancelled run's teardown still runs, and the new run uses a different stage, so it never waits on the old one's state lock.
+## 3. `sst.config.ts`
 
-## 3. Time budget (critical path, teardown excluded)
+One file, three kinds of stage: `dev`/`production` (unchanged), `preview`, and `/^pr-\d+$/`. The per-PR branch is today's config minus the DSQL cluster, the HTTP API and the CDN:
 
-The clock starts when the e2e job is queued and stops when the check conclusion and job summary are posted. Runner: standard `ubuntu-latest`, which has 4 vCPU and 16 GB on public repos and is free. All numbers are **estimates, not measured**.
+```ts
+const outputs = aws.ssm.getParameterOutput({ name: '/yallist/preview/outputs' }).value.apply(JSON.parse);
+const database = sst.aws.Dsql.get('Database', { id: outputs.clusterId });
+const router = sst.aws.Router.get('Router', outputs.distributionId);
+const prefix = `/${$app.stage}`; // "/pr-123"
+const api = new sst.Linkable('Api', { properties: { url: $interpolate`${outputs.apiUrl}${prefix}` } });
+const fn = new sst.aws.Function('ApiFunction', { handler: '../../apps/api/src/lambda.handler', link: [database, api, …], environment: { BASE_PATH: prefix } });
+new aws.apigatewayv2.Integration('ApiIntegration', { apiId: outputs.apiId, integrationType: 'AWS_PROXY', integrationUri: fn.arn, payloadFormatVersion: '2.0' });
+new aws.apigatewayv2.Route('ApiRoute', { apiId: outputs.apiId, routeKey: `ANY ${prefix}/{proxy+}`, target: $interpolate`integrations/${integration.id}` });
+new sst.aws.StaticSite('Web', { router: { instance: router, path: prefix }, environment: { EXPO_PUBLIC_BASE_PATH: prefix, … } });
+```
 
-| #   | Step                                                                                                                            | Budget        | Notes                                                                                                                                                                                        |
-| --- | ------------------------------------------------------------------------------------------------------------------------------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Runner pickup                                                                                                                   | 10–20 s       | Starting the trigger with an `if:` on the job, not a separate "decide" job, avoids a second runner.                                                                                          |
-| 2   | Checkout, Node, `pnpm install --frozen-lockfile` with the store cached                                                          | 35–50 s       |                                                                                                                                                                                              |
-| 3   | Restore caches: SST CLI home, `infra/app/.sst/platform`, `~/.cache/ms-playwright`, Metro cache, `dist`                          | 15–25 s       | SST's aws provider plugin alone is 801 MB (measured locally).                                                                                                                                |
-| 4   | OIDC, plus a random `BetterAuthSecret`                                                                                          | ~5 s          |                                                                                                                                                                                              |
-| 5   | **In parallel** (background processes, logs to files, printed in `::group::`s):                                                 | **75–150 s**  | The deploy is the longest branch.                                                                                                                                                            |
-|     | a. `sst deploy --stage e2e-<id>` (create everything)                                                                            | 75–150 s      | Startup, platform eval and esbuild take 15–25 s. Then the longest dependency chain: IAM role → (propagation) Lambda → integration → route. AppSync Events and DSQL are created alongside it. |
-|     | b. Wait for the DSQL cluster to be `ACTIVE`, then apply the baseline schema and seed                                            | 20–45 s total | Hidden behind (a) ([§4](#4-schema-setup)).                                                                                                                                                   |
-|     | c. `expo export -p web` with URL placeholders, or reuse `dist` cached by a hash of `apps/mobile`, `packages/*` and the lockfile | 0–90 s        | It doesn't wait for the deploy.                                                                                                                                                              |
-|     | d. `playwright install --with-deps chromium` (browsers cached, apt deps still install)                                          | 20–40 s       |                                                                                                                                                                                              |
-| 6   | Put the URLs into `dist`, `serve -s dist`, call `/health` to warm the Lambda                                                    | 5–10 s        |                                                                                                                                                                                              |
-| 7   | Playwright: `api` and `web` projects, `workers: 4`                                                                              | 60–75 s       | A hard budget: only the P0 flows run in the browser ([§7](#7-tests)). The first requests from each worker pay for a Lambda cold start.                                                       |
-| 8   | Report: summary, plus artifacts and a Lambda log tail on failure                                                                | 5–15 s        |                                                                                                                                                                                              |
-|     | **Total**                                                                                                                       | **3.5–6 min** | **About 4.5–5.5 min is realistic.** The deploy in step 5a decides it. Measuring will show whether 5 minutes holds.                                                                           |
-| —   | Teardown job: `sst remove` (DSQL, roles, AppSync, Lambda, API)                                                                  | 2–5 min       | Off the critical path.                                                                                                                                                                       |
+- `preview` is deployed by `deploy.yml` after `global` (it has no migrations of its own; its `$default` Lambda is the API on the `public` schema, which doubles as a smoke target). It writes the SSM parameter and returns its URLs.
+- `pr-*` stages: `removal: 'remove'`, `protect: false`, `region: 'us-west-2'`, refused unless `CI` is set, `$transform(aws.iam.Role)` adds the workload boundary, default tags add `expires-at`.
+- SST keeps **one state file and lock per stage**, so PR stages deploy concurrently and never wait on each other or on `preview` ([CLI](https://sst.dev/docs/reference/cli/)). Reading the SSM parameter is a lookup, not a lock.
+- App changes: `app.config.ts` sets `experiments.baseUrl` from `EXPO_PUBLIC_BASE_PATH` ([Expo](https://docs.expo.dev/guides/publishing-websites/)); `lambda.ts` mounts the app under `BASE_PATH`; `createAuth` passes `baseURL: <api>/pr-123/api/auth`, because a path in Better Auth's `baseURL` sets its `basePath` ([options](https://www.better-auth.com/docs/reference/options)); `trustedOrigins` compares origins only, so the Router origin covers every PR.
 
-Each step's duration is written to the job summary.
+## 4. Data, not resources
 
-### Speed-ups and how sure they are
+| What                     | Create                                                                                                              | Remove                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Schema `pr_123`          | `db:migrate` under `sst shell --stage pr-123`: `CREATE SCHEMA IF NOT EXISTS`, then the usual one-DDL-per-tx replay. | Cleanup job: drop each table, then `DROP SCHEMA`, under `sst shell --stage preview`. |
+| `search_path`            | `client.ts` derives the schema from `Resource.App.stage` and sets it on every connection.                           | —                                                                                    |
+| SST passphrase and state | Created by `sst deploy`.                                                                                            | Cleanup deletes `/sst/passphrase/yallist/pr-123` and the stage's state objects.      |
 
-| Technique                                                                                                    | Saves         | Status                                                                                                                                                                                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| One job with background processes, not separate deploy/build/test jobs                                       | 60–80 s       | Separate jobs would cost a second runner pickup, a second install and an artifact hand-off.                                                                                                                                                                                                     |
-| Web build with placeholders (`EXPO_PUBLIC_API_URL=__E2E_API_URL__`), replaced in `dist/**/*.js` after deploy | 45–90 s       | Expo inlines `EXPO_PUBLIC_*` at build time, so the export can't otherwise start before the deploy. The `sed` is safe as long as the placeholder is a unique literal. A Vitest test asserts it appears in the bundle.                                                                            |
-| `dist` cache keyed on the app's inputs                                                                       | 45–90 s       | Hits whenever the PR doesn't touch the app.                                                                                                                                                                                                                                                     |
-| Cache SST's home and `.sst/platform` (key: sst version + `provider-lock.json`)                               | 15–40 s       | The Linux path `~/.config/sst/{bin,plugins}` is **inferred** from Go's `os.UserConfigDir`. On macOS it's `~/Library/Application Support/sst/{bin,plugins}` (verified locally).                                                                                                                  |
-| `SST_SKIP_DEPENDENCY_CHECK=true`                                                                             | a few seconds | The variable exists in the sst 4.17.2 binary (verified with `strings`). It skips SST's provider and dependency check on start. Safe only when the cache is restored for the exact `provider-lock.json`. Its exact effect is **not verified**.                                                   |
-| No refresh                                                                                                   | —             | `sst deploy` has no refresh flag. Refresh is a separate `sst refresh` command ([CLI docs](https://sst.dev/docs/reference/cli)), and a fresh stage has no state to refresh anyway. There's no flag for Pulumi parallelism either, and Pulumi already creates independent resources in parallel.  |
-| Keep the dependency graph shallow                                                                            | 10–30 s       | Nothing waits on resources it doesn't need. In e2e there's no `StaticSite` link. The Lambda depends on the cluster only for its endpoint, and DSQL now creates in seconds ([AWS, Dec 2025](https://aws.amazon.com/about-aws/whats-new/2025/12/amazon-aurora-dsql-cluster-creation-in-seconds)). |
-| `SST_BUILD_CONCURRENCY_FUNCTION`                                                                             | ~0            | It defaults to 4 already, and there are only 2 functions (API and authorizer).                                                                                                                                                                                                                  |
-| Teardown in its own job                                                                                      | 2–5 min       | It doesn't count against the run time.                                                                                                                                                                                                                                                          |
-| Rejected: larger runners, the Playwright container image (about 1.5 GB pull), sharding across jobs           | —             | Larger runners cost money. The pull and the extra job setup cost more than they save.                                                                                                                                                                                                           |
+- DSQL supports `CREATE SCHEMA`, schema-level `GRANT`s and `SET search_path`; after DDL, "run `SET search_path` again to refresh the catalog cache" ([considerations](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/considerations.html)). `DROP SCHEMA` isn't in the supported-DDL table but the same page describes errors "after dropping a schema"; **verify in rollout PR 2**, with per-table drops as the fallback.
+- The migration runs in parallel with `sst deploy`: the cluster endpoint is known from the SSM parameter, so `SST_RESOURCE_Database` can be set by hand before the stage exists (the `sst` SDK reads `SST_RESOURCE_*`). Each push replays only new migrations.
+- The same `migrate.ts` serves `dev` and `production` with `search_path = public`, so the DSQL migration path is exercised on every PR, not only on `main`.
 
-## 4. Schema setup
+## 5. Workflow and timing
 
-- **The problem:** the migration runner (#15) replays every statement one transaction at a time, because DSQL allows one DDL statement per transaction. It also records each statement in `__migrations`. Today that's 43 DDL statements (14 tables, 8 indexes, 21 `ALTER TABLE … ADD CONSTRAINT`) and 43 bookkeeping inserts, and the count grows with every feature. At an estimated 0.5–1 s per DDL statement (**not verified**), that's 45–90 s.
-- **Baseline schema for e2e:** `pnpm --filter @yallist/api db:baseline` writes one SQL file from the current `schema.ts`, for example with `drizzle-kit export`. **The `export` command is not verified for 0.31.**
-  - Foreign keys and checks go inline in `CREATE TABLE`, which removes the 21 `ALTER`s. Indexes go through `toDsql()` and become `ASYNC`.
-  - That's about 22 statements and no bookkeeping. The seed reloads `template_items`.
-  - It's generated in CI, not committed, so it always matches the PR's `schema.ts`.
-- **Start early:** a background step polls `aws dsql list-clusters` for the stage's `Name` tag. As soon as the cluster is `ACTIVE`, it runs the baseline. The migrate CLI gets `SST_RESOURCE_Database='{"endpoint":…,"region":"us-west-2"}'`, because the `sst` SDK reads `SST_RESOURCE_*` env vars (`node_modules/sst/dist/resource/shared.js`, verified). So it doesn't wait for `sst deploy` to finish.
-- **Trade-off:** the baseline doesn't test the real migration files on DSQL. Three things keep that covered:
-  1. **Replay mode:** runs on `main` (the run before production) and on PRs that touch `apps/api/drizzle/**` replay every migration with the real runner. This adds about 30–60 s, partly hidden behind the deploy.
-  2. **Equivalence check** in `ci.yml` against the existing Postgres service: apply every migration to one database and the baseline to another, then compare `information_schema` (tables, columns, constraints, indexes). It catches drift between the two in seconds.
-  3. **The incremental path** on real DSQL is still tested by `dev`'s deploy on every `main` push.
-- **Async indexes** build on empty tables, and the tests don't wait for them.
+`preview.yml`: `pull_request` (`opened`, `synchronize`, `reopened`, `closed`), `schedule` hourly, `workflow_dispatch`. Concurrency group `preview-pr-<n>`, cancel in progress.
 
-## 5. Security
+| Job      | When                               | Steps                                                                                                                                                                                                     |
+| -------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `deploy` | open, push; head repo is this repo | OIDC → preview role; `sst deploy --stage pr-<n>` and `db:migrate` in parallel; `/health` and site smoke; sticky PR comment with the URLs; Maestro flows with `WEB_URL=https://<router>/pr-<n>/`.          |
+| `remove` | PR closed                          | `sst unlock`, `sst remove --stage pr-<n>`, drop the schema, delete passphrase and state, fail if `tag:GetResources` still finds `stage=pr-<n>`.                                                           |
+| `expire` | hourly, dispatch                   | List `yallist-pr-*` Lambdas by tag; for each with `expires-at` in the past (6 h after its last deploy) or whose PR is closed, run the `remove` steps. Fails when it cleaned something, which notifies me. |
 
-- **Fork PRs never get credentials.** GitHub doesn't give fork PRs an OIDC token, the job's `if:` requires the PR's head repo to be this repo, and we never use `pull_request_target`.
-- **The e2e role, `yallist-global-github-e2e`, in `infra/global`:**
-  - Trust: only `…:environment:e2e`, with a 1-hour session.
-  - A region-lock deny outside `us-west-2`, except IAM and STS.
-  - `lambda` and `logs` access scoped to `yallist-e2e-*`. `apigateway`, `appsync` and `dsql` limited by the region lock.
-  - `iam:CreateRole` only on `role/yallist-e2e-*`, and only with the permission boundary `yallist-e2e-workload-boundary`. `$transform(aws.iam.Role)` adds the boundary in e2e stages.
-  - Guardrail denies on the boundary, the OIDC provider, `yallist-{global,dev,production}-*`, `budgets` and `organizations`.
-  - S3 limited to the two `us-west-2` SST bootstrap buckets. SSM limited to `/sst/passphrase/yallist/e2e-*` plus read on `/sst/bootstrap`.
+Estimated time per push, `ubuntu-latest`, nothing measured yet:
 
-  The bootstrap is created once by hand with admin credentials. The first runs will surface missing actions. Iterate with CloudTrail AccessDenied events.
+| Step                                                   | Estimate    | Notes                                                                                                                                                                                 |
+| ------------------------------------------------------ | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Runner, checkout, `pnpm install`, SST and Metro caches | 60–90 s     | Same as [ui-tests.yml](../../.github/workflows/ui-tests.yml) today.                                                                                                                   |
+| `sst deploy --stage pr-<n>`                            | 2.5–3.5 min | Startup and esbuild 20 s; IAM role → Lambda → route 30–45 s and AppSync 15 s in parallel; then `expo export` 60–90 s, upload and KV route 15 s. The export waits for the AppSync URL. |
+| `db:migrate` (schema + ~45 DDL)                        | 45–90 s     | Hidden behind the deploy.                                                                                                                                                             |
+| Smoke and PR comment                                   | 10 s        | **Preview is usable here: about 4–5 min after the push.**                                                                                                                             |
+| Maestro web flows                                      | ~2.5 min    | 5 flows, serial, as measured locally; shard later if it grows.                                                                                                                        |
+| Teardown (`sst remove`, off the critical path)         | 1–2 min     |                                                                                                                                                                                       |
 
-- **Dependency: the admin deploy role's trust.** Today the deploy role trusts `…:environment:*`, so a job in any GitHub environment open to PR branches could assume the **admin** role. You **declined narrowing it for now.** So:
-  - Until it's narrowed to `global`, `dev` and `production`, the `e2e` environment must accept only `main` (deployment branch rule). That allows e2e on `main` and `workflow_dispatch` from `main`.
-  - Running e2e on PRs requires narrowing that trust first.
-- **Auth in e2e:** `BetterAuthSecret` is random per run, through `SST_SECRET_BetterAuthSecret`. There's no Google client. Every user is a Better Auth anonymous guest. There's no test-only sign-in.
+A first push and a later push cost the same: nothing slow is ever created. Later speed-up if wanted: serve the realtime host from `GET /config` instead of inlining it, so the export no longer waits for AppSync and runs beside the deploy (saves about a minute).
 
-## 6. Cleanup guarantees
+## 6. Security
 
-1. **Teardown job:** `needs: e2e`, `if: always()`, so it also runs after a cancel. It runs on its own runner with a 20-minute timeout and gets the stage name from the job outputs. Steps:
-   - `sst unlock`, then `sst remove`, retried twice for IAM and DSQL eventual consistency.
-   - Delete the stage's passphrase and state objects.
-   - Fail if `tag:GetResources` still finds `stage=<stage>`.
-2. **Janitor** (`e2e-janitor.yml`, every 3 hours, plus `workflow_dispatch`):
-   - Finds stages tagged `e2e=true` whose `created-at` is more than 2 hours old, plus `yallist-e2e-*` roles and passphrases that have no stage.
-   - Runs `sst remove`, then deletes by tag in dependency order if the state is broken.
-   - Fails whenever it cleaned something up, which notifies me.
-3. **Budget:** `yallist-global-e2e-monthly`, filtered to `us-west-2`, $3, with alerts at 80% actual and 100% forecast.
-4. **Quota:** at most 20 single-Region DSQL clusters per region ([quotas](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/CHAP_quotas.html)). That's plenty for concurrent runs plus leaks waiting for the janitor.
+- **Fork PRs never get credentials.** GitHub issues no OIDC token to `pull_request` runs from forks and passes no secrets; the job also has `if: github.event.pull_request.head.repo.full_name == github.repository`, and `pull_request_target` is never used ([events](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows)). Only collaborators can push branches here.
+- **Preview role `yallist-global-github-preview`** (in `infra/global`), trusting only `…:environment:preview`, 1-hour sessions. The `preview` GitHub environment allows all branches (it has to: PR branches deploy) and holds one secret, `BETTER_AUTH_SECRET`. Permissions: a region-lock deny outside `us-west-2` (except IAM, STS, CloudFront and the global SSM read); `lambda`, `logs`, `s3`, `ssm` scoped to `yallist-pr-*` names, SST's `us-west-2` state and asset buckets, `/sst/passphrase/yallist/pr-*`; `iam:CreateRole`/`PassRole` only on `role/yallist-pr-*` and only with the `yallist-preview-workload-boundary`; `apigateway` only on `/apis/<preview api id>/*`; `cloudfront-keyvaluestore` and `CreateInvalidation` only on the preview Router; `dsql:DbConnectAdmin` only on the preview cluster; `appsync` region-locked; `tag:GetResources`. The first runs will surface missing actions, iterate with CloudTrail.
+- **Narrow the admin deploy role's trust** from `environment:*` to `global`, `dev`, `production`. This is a prerequisite: today a job in any environment could assume the admin role.
+- **Workload boundary** on every `pr-*` role: `dsql:DbConnectAdmin` on the preview cluster, `appsync:EventPublish`, `s3` on its own bucket, `logs`. A PR Lambda can't touch `dev`, `production` or other PRs' buckets.
+- **Shared database, shared admin.** A PR Lambda connects as `admin`, so a malicious PR could read another PR's schema. All of it is throwaway test data from collaborators. Hardening later: a DB role per schema mapped to the PR's Lambda role (`AWS IAM GRANT`), which DSQL supports.
+- **Previews are public URLs** with guest sign-in. No PII, 6-hour life, no Google client, no GitHub feedback token.
 
-## 7. Tests
+## 7. Limits found
 
-> **Update 2026-10-25:** browser flows are Maestro now, not Playwright's `web` project. The same flows run on web, Android and iOS ([ui-tests.md](ui-tests.md)); against a stage, they get its site as `WEB_URL`.
+| Limit                                       | Value                                             | Effect                                                                                                                                                                                                                                                                                                                                                                                   |
+| ------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DSQL schemas per database                   | **10, not adjustable**; 1 database per cluster    | **The real cap: at most about 8 live previews** (`public` and system schemas count against it, exactly which is unverified). The deploy job fails early with a clear message when the cluster is full; the hourly expiry and PR-close cleanup keep it low. Fallback in [§11 Q1](#11-open-questions). [Quotas](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/CHAP_quotas.html) |
+| DSQL clusters per region                    | 20, adjustable                                    | Room for the per-PR-cluster fallback.                                                                                                                                                                                                                                                                                                                                                    |
+| DSQL DDL                                    | 1 DDL per transaction, 3,000 rows per transaction | Same as today; `migrate.ts` already complies. `CREATE SCHEMA` is supported; `DROP SCHEMA` unverified.                                                                                                                                                                                                                                                                                    |
+| HTTP API routes / integrations per API      | 300 / 300 (integrations not adjustable)           | Far above the schema cap. [HTTP API quotas](https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-quotas.html)                                                                                                                                                                                                                                                           |
+| API Gateway control plane                   | 10 requests/s per account                         | Each PR deploy makes a handful of calls; fine.                                                                                                                                                                                                                                                                                                                                           |
+| CloudFront cache behaviors per distribution | 75 (default), adjustable                          | Not hit: the Router routes by KV store. [CloudFront quotas](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/cloudfront-limits.html)                                                                                                                                                                                                                                   |
+| CloudFront KV store                         | 5 MB, 1 KB per value, functions ≤ 10 KB           | SST stores a few entries per site ("only top-level assets get individual entries"); thousands of PRs would fit.                                                                                                                                                                                                                                                                          |
+| CloudFront invalidations                    | 1,000 paths/month free, then $0.005 per path      | SST invalidates `/pr-<n>/*` once per deploy (one path).                                                                                                                                                                                                                                                                                                                                  |
+| AppSync Event APIs per region               | 50, adjustable                                    | One per PR plus `preview`. [AppSync quotas](https://docs.aws.amazon.com/general/latest/gr/appsync.html)                                                                                                                                                                                                                                                                                  |
+| Lambda concurrency                          | 1,000, lower on new accounts                      | Previews and `preview` share it with nothing else in `us-west-2`.                                                                                                                                                                                                                                                                                                                        |
+| Expo `experiments.baseUrl`                  | Export only, ignored by the dev server            | Fine: previews are exports. A refresh-drops-the-prefix bug was fixed in Dec 2024 ([expo#33400](https://github.com/expo/expo/issues/33400)); re-check on the current SDK.                                                                                                                                                                                                                 |
+| GitHub environment branch rules             | Matched against `GITHUB_REF`                      | `preview` uses "No restriction"; `pull_request` runs would otherwise need a `refs/pull/*/merge` rule.                                                                                                                                                                                                                                                                                    |
 
-- **Package:** `e2e/` (`@yallist/e2e`), with Playwright and two projects:
-  - `api`: specs through the typed Hono `hc` client and guest bearer tokens.
-  - `web`: Chromium, `he-IL`, RTL, two browser contexts for multi-user and realtime flows. It serves `apps/mobile/dist` on `:4173`.
+## 8. Cost
 
-  Selectors use roles and accessible names, with strings imported from `apps/mobile/src/i18n/he.ts`. No fixed sleeps. Realtime checks use `expect(…).toHaveText(…, { timeout: 15_000 })`.
+- **Idle:** about $0. DSQL bills DPUs on use and storage ($0.33/GB-month), with 100,000 DPUs and 1 GB free per month ([pricing](https://aws.amazon.com/rds/aurora/dsql/pricing/)); CloudFront, API Gateway, Lambda, AppSync and S3 have no per-resource charge and generous free tiers. The shared `preview` Lambda and cluster cost nothing between runs.
+- **Per push:** under $0.02 (a few hundred Lambda invocations, a few thousand DSQL DPUs, one invalidation). About 170 pushes a month stays within $1–5. The `us-west-2` budget is set to $5 with alerts at 80% actual and 100% forecast.
 
-- **Keeping it under 75 s:**
-  - Business rules are tested in `api` specs. The browser suite holds only the P0 flows.
-  - Every test creates its own trip, so tests are parallel-safe.
-  - Users sign in once per worker and reuse the token or `storageState`. That also stays under Better Auth's per-IP sign-in limits (**defaults not verified**).
-  - `retries: 1`. A test that passes on retry is reported as flaky.
+## 9. Not covered by previews
 
-| P   | Project | Scenario                                                                                                                                                                                               |
-| --- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| P0  | api     | `/health`. Guest sign-in, then `/me`. Templates are seeded.                                                                                                                                            |
-| P0  | web     | A guest creates a "camp" trip from the template and sees the bring and buy items with the missing count.                                                                                               |
-| P0  | web     | Invite and join: B opens `/j/<token>`, sees the preview and joins. A's People tab shows B.                                                                                                             |
-| P0  | web     | Claim with realtime: B claims, and A's open screen updates without reloading. On a `qty` item, A and B fill the cap.                                                                                   |
-| P1  | api     | Over-claim rejected, including two concurrent claims for the last unit where exactly one wins. Non-member and pending reads are rejected. Rotated token rejected. The last organizer can't be removed. |
-| P1  | api     | An expense split three ways gives the expected balances and transfers. Marking a payment and confirming it works.                                                                                      |
-| P2  | web     | Add item seen live. Approval flow. Deep link reload keeps the session. These go in only if the 75 s budget allows.                                                                                     |
+- **Changes to the shared stage** (`preview`'s cluster, HTTP API and its CORS, Router, SSM parameter) and to `infra/global`: a PR only deploys `pr-<n>`. Fallback: a `sst diff --stage preview` check in the PR when `infra/**` changes (read-only, the preview role can do it), and the `dev` deploy on merge, as today.
+- **CloudFront settings** of the real sites (security headers policy, SPA error responses) since previews ride on the Router. Covered by the `dev` smoke check after merge.
+- Google sign-in, GitHub feedback issues, Android and iOS, `production`'s region and deletion protection.
+- Migrations against a non-empty database: each PR schema starts empty. Covered by the `dev` deploy.
 
-- **On failure:** trace on the first retry, screenshots and video kept for failures, the Playwright report, and the last 10 minutes of the Lambda logs. Uploaded as artifacts kept for 7 days.
+## 10. What you must do
 
-## 8. Region: `us-west-2`
-
-It isn't `us-east-2` (dev), `eu-central-1` (production) or `us-east-1` (global services), so a region lock separates e2e cleanly. It's also close to GitHub's runners. DSQL is available there ([region table](https://docs.aws.amazon.com/aurora-dsql/latest/userguide/what-is-aurora-dsql.html#region-availability)). AppSync Events availability there is inferred from AppSync's and should be **re-checked in the realtime PR**.
-
-## 9. Cost
-
-- **Per run:** Lambda, API Gateway and AppSync are under $0.01. DSQL is about $0.01–0.05. CloudWatch Logs, SSM and S3 state are negligible. GitHub minutes are free on this public repo.
-- **Per month:** about $1–10 at roughly 170 runs. A leaked stage costs almost nothing while idle, so leaks show up as quota pressure, and the janitor handles them.
-
-## 10. Rollout
-
-| #   | PR                                                              | Depends on                              | Acceptance                                                                                                                                                                                                                                         |
-| --- | --------------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `docs(plans): design live e2e tests` (this)                     | —                                       | Reviewed and merged.                                                                                                                                                                                                                               |
-| 2   | `feat(infra): e2e role, workload boundary, us-west-2 budget`    | #18                                     | The policy simulator denies other regions and roles without the boundary. Manual steps: bootstrap `us-west-2`, create the `e2e` environment limited to `main` ([§5](#5-security)), set `AWS_E2E_ROLE_ARN`.                                         |
-| 3   | `feat(infra): e2e stages` and `feat(api): baseline schema`      | #14, #15, #19 and the app on the API    | `stages.ts` has Vitest coverage. Every role gets the boundary, there's no StaticSite, and the tags are in place. `db:baseline` exists, and the migrations-versus-baseline equivalence test runs in `ci.yml`.                                       |
-| 4   | `ci(e2e): fresh stage, parallel setup, smoke, teardown, timing` | 2, 3                                    | A dispatched run creates the stage, passes the P0 smoke and removes everything. A cancelled run is still cleaned up. **Each step's timing is recorded. Compare it with [§3](#3-time-budget-critical-path-teardown-excluded) and trim from there.** |
-| 5   | `ci(e2e): janitor`                                              | 4                                       | A stage leaked on purpose is removed and reported.                                                                                                                                                                                                 |
-| 6   | `test(e2e): API specs`                                          | 4, trips and expenses APIs              | The P0 and P1 `api` specs pass.                                                                                                                                                                                                                    |
-| 7   | `test(e2e): web flows with two users and realtime`              | 6, realtime, app on the API             | The P0 web flows pass, and the timing is recorded over 10 runs.                                                                                                                                                                                    |
-| 8   | `ci(e2e): triggers and gating`                                  | 7, [Q1](#11-open-questions), Q2 for PRs | Wires up whatever triggers are chosen. It can make `production` wait for e2e and make e2e a required PR check.                                                                                                                                     |
+1. Create the `preview` GitHub environment: no branch restriction, secret `BETTER_AUTH_SECRET`.
+2. Deploy `global` (from `main`, via `deploy.yml`) once rollout PR 2 lands: it creates the preview role and boundary, narrows the admin role's trust, and outputs `previewRoleArn`. Then `gh variable set AWS_PREVIEW_ROLE_ARN`.
+3. Bootstrap SST in `us-west-2` once with admin credentials (the `sst-state-*` and `sst-asset-*` buckets); the preview role can't create them.
+4. Pick the limit behaviour in [Q1](#11-open-questions) and whether previews run on every PR or on a label ([Q3](#11-open-questions)).
 
 ## 11. Open questions
 
-1. **When does e2e run?** Every code PR, PRs with an `e2e` label, `main` before `production`, or a combination. Nothing is decided yet. _Recommendation: start with `main` before `production`, which needs no trust change. Add a PR label once Q2 is done._
-2. **Narrow the admin deploy role's trust** to `global`, `dev` and `production`? You declined this for now. It's required before e2e can run on PR branches. _Recommendation: do it in the PR that enables PR triggers._
-3. **Baseline schema on PRs, with the real migration replay on `main` and on migration PRs?** It saves about 30–60 s, but most PR runs don't test the migration files on DSQL. _Recommendation: yes, together with the equivalence test._
-4. **Over 5 minutes: warn or fail?** _Recommendation: warn in the summary._ The realistic total is close to 5 minutes, and failing a correct change over AWS latency adds noise.
-5. **Separate AWS account for e2e later?** _Recommendation: not now._ Revisit when production has real users or a second contributor joins.
+1. **10 schemas per database.** Keep the schema-per-PR design with an 8-preview cap, or give each PR its own cluster in its stage? Clusters create "in seconds" since Dec 2025 ([AWS](https://aws.amazon.com/about-aws/whats-new/2025/12/amazon-aurora-dsql-cluster-creation-in-seconds/)), it's still all SST, and it needs no `search_path` code. _Recommendation: build schema-per-PR as designed, but measure a cluster's create-to-ACTIVE time in PR 2; if it's under 30 s, switch to a cluster per PR and drop §4's schema code._
+2. **AppSync and receipts per PR, not shared.** This deviates from "shared everything" on purpose ([§1](#1-shape)). _Recommendation: keep per PR; they cost seconds and remove two cleanup steps and a token hack._
+3. **Trigger.** Every PR, or only PRs with a `preview` label? _Recommendation: every PR from this repo while traffic is low; move to a label if the schema cap bites._
+4. **Flows in the preview job or in `ui-tests.yml`?** _Recommendation: in the preview job, after the smoke, and keep the local-Postgres `ui-tests.yml` as the fast required check; make the preview flows required later, once they're stable._
+5. **Preview URL secrecy.** Public guest access is fine for now. _Recommendation: revisit when someone outside the repo needs to see previews._
 
-## Not verified
+## 12. Rollout
 
-- Every timing in [§3](#3-time-budget-critical-path-teardown-excluded). PR 4 measures them.
-- DSQL's per-statement DDL latency, and whether the DSQL free tier is per account or per region.
-- Whether `drizzle-kit export` works on 0.31, and exactly what `SST_SKIP_DEPENDENCY_CHECK` does.
-- The SST CLI home on Linux (`~/.config/sst`), which is inferred.
-- AppSync Events in `us-west-2`, Better Auth's default rate limits, and the exact IAM actions SST and Pulumi need.
+| #   | PR                                                                                               | Acceptance                                                                                                                                                     |
+| --- | ------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `docs(plans): design PR preview environments` (this)                                             | Reviewed and merged.                                                                                                                                           |
+| 2   | `feat(infra): preview role, boundary, budget, us-west-2 bootstrap`; `feat(api): schema-aware db` | Policy simulator denies other regions and unbounded roles. `DB_SCHEMA` migrate and drop verified on real DSQL, `DROP SCHEMA` and cluster create time measured. |
+| 3   | `feat(infra): preview and pr-* stages`                                                           | `preview` deploys from `main`; a `pr-*` stage deploys and removes cleanly against it; `expo export` under `/pr-<n>` loads and refreshes.                       |
+| 4   | `ci(preview): deploy on PR, remove on close, hourly expiry`                                      | A PR gets a working URL in a comment; closing removes everything; a stage leaked on purpose is expired. Timings recorded against [§5](#5-workflow-and-timing). |
+| 5   | `test(preview): Maestro flows against the preview`                                               | The 5 flows pass on a preview URL over 10 runs.                                                                                                                |
