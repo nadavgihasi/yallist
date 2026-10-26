@@ -7,8 +7,11 @@ name: Preview stage
 on:
   push:
     branches: [main]
+    # The preview stage's code (infra/app/stacks/preview-shared.ts) and what it uses.
     paths:
       - infra/app/sst.config.ts
+      - infra/app/core.ts
+      - infra/app/stacks/preview-shared.ts
       - .github/workflows/preview-stage.yml
   workflow_dispatch:
 

@@ -7,7 +7,7 @@
 #   scripts/preview-remove.sh --expired
 #
 # --expired removes every stage whose API Lambda's expires-at tag (6 h after its last deploy,
-# infra/app/sst.config.ts) has passed, or whose PR is closed. It fails after removing a stage of a
+# infra/app/stacks/preview-pr.ts) has passed, or whose PR is closed. It fails after removing a stage of a
 # closed PR: closing should have removed it, so something leaked.
 set -euo pipefail
 cd "$(dirname "$0")/.."
