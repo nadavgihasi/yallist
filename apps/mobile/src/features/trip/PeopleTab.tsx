@@ -1,6 +1,5 @@
-import * as Linking from 'expo-linking';
 import { useState } from 'react';
-import { Share, StyleSheet, Text, View } from 'react-native';
+import { Platform, Share, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
@@ -8,11 +7,19 @@ import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, participants } from '@/i18n/he';
+import { inviteUrl } from '@/lib/invite';
 import { useTripAction } from '@/state/trips';
 import type { TripData, TripMember } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
 import { toAvatar, type TripView } from './derive';
+
+// The site invite links point to: this page's own on web; on native, the stage's site (android.yml)
+// or the local Expo web server.
+const WEB_URL =
+  Platform.OS === 'web'
+    ? window.location.origin
+    : (process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:8081');
 
 /** Shares the invite link; where the browser can't share, copies it. */
 async function shareLink(url: string) {
@@ -84,7 +91,7 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
           variant="soft"
           wide
           icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
-          onPress={() => shareLink(Linking.createURL(`/j/${data.inviteToken}`))}
+          onPress={() => shareLink(inviteUrl(WEB_URL, data.inviteToken))}
         />
       </Card>
 

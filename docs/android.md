@@ -14,7 +14,12 @@ Creates a PKCS12 upload key, stores it and its generated password as the GitHub 
 
 Actions → **Android build** → **Run workflow** on `main`, pick the stage (`dev` or `production`) whose backend the app should use. Or: `gh workflow run android.yml --ref main -f stage=dev`.
 
-The URLs come from the stage's GitHub environment variables `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_REALTIME_URL` and `EXPO_PUBLIC_GOOGLE_CLIENT_ID` (the same values the web build gets from SST); update them if a stage's API is recreated.
+The URLs come from the stage's GitHub environment variables `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_REALTIME_URL`, `EXPO_PUBLIC_GOOGLE_CLIENT_ID` and `EXPO_PUBLIC_WEB_URL` (the same values the web build gets from SST; the web URL is the stage's `url` output, where shared invite links `https://<site>/j/<token>` point); update them if a stage's API or site is recreated. A manual build fails if any is missing. To set the web URL:
+
+```sh
+gh variable set EXPO_PUBLIC_WEB_URL --env dev --body https://d14dyw021evejd.cloudfront.net
+gh variable set EXPO_PUBLIC_WEB_URL --env production --body https://dbnrgj1er7zss.cloudfront.net
+```
 
 The run's artifact `yallist-android-<stage>-<run>` contains:
 
