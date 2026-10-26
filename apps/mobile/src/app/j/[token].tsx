@@ -42,9 +42,11 @@ export default function Join() {
   };
 
   const approvedTrip = recheck.data?.status === 'active' ? recheck.data.tripId : undefined;
+  // Once, when an organizer approves.
   useEffect(() => {
     if (approvedTrip) open(approvedTrip);
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `open` is new every render
+  }, [approvedTrip]);
 
   const join = async (signingIn?: () => Promise<AuthResult>) => {
     if (busy) return;

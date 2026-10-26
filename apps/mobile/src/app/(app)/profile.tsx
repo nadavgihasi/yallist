@@ -169,8 +169,8 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
           hint={he.profile.nameHint}
           value={name}
           onChangeText={setName}
+          // Enter blurs the field, so this also saves on submit (once).
           onBlur={saveName}
-          onSubmitEditing={saveName}
           maxLength={50}
           returnKeyType="done"
         />
@@ -185,7 +185,6 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
             setPhoneError(false);
           }}
           onBlur={savePhone}
-          onSubmitEditing={savePhone}
           placeholder={he.profile.phonePlaceholder}
           inputMode="tel"
           autoComplete="tel"
