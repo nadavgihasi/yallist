@@ -3,7 +3,7 @@ import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createTestDatabase, DATABASE_URL } from '../test-db';
-import { apply, backfillCategories, migrate, toDsql } from './migrate';
+import { apply, backfillCategories, backfillCovers, migrate, toDsql } from './migrate';
 
 describe('toDsql', () => {
   it('builds indexes asynchronously, without USING', () => {
@@ -203,5 +203,35 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
       { name: 'לינה0', category: '', categoryName: 'לינה' },
       { name: 'לינה0', category: '', categoryName: 'לינה' },
     ]);
+  });
+
+  it("gives trips without a cover their template's, and keeps picked ones", async () => {
+    await migrate(sql, { dsql: false });
+    const [user] = await sql<{ id: string }[]>`
+      insert into users (name, email) values ('c', 'c@example.com') returning id`;
+    await sql`insert into profiles (id, display_name, avatar_color) values (${user!.id}, 'c', '#000')`;
+    const trip = (template: string, cover: string | null) => sql`
+      insert into trips (name, starts_on, ends_on, template, cover, invite_token, created_by)
+      values (${template}, '2026-11-05', '2026-11-07', ${template}, ${cover},
+        ${`cover-${template}`}, ${user!.id})`;
+    await trip('camp', null);
+    await trip('grill', null);
+    await trip('blank', null);
+    await trip('zimmer', 'city');
+
+    await backfillCovers(sql);
+    await backfillCovers(sql);
+
+    const covers = await sql<{ template: string; cover: string }[]>`
+      select template, cover from trips where created_by = ${user!.id} order by template`;
+    expect(covers).toEqual([
+      { template: 'blank', cover: 'trail' },
+      { template: 'camp', cover: 'camp' },
+      { template: 'grill', cover: 'picnic' },
+      { template: 'zimmer', cover: 'city' },
+    ]);
+    const [{ count }] = await sql<[{ count: number }]>`
+      select count(*)::int as count from trips where cover is null`;
+    expect(count).toBe(0);
   });
 });

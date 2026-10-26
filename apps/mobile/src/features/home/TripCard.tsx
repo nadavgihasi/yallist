@@ -24,7 +24,7 @@ export function TripCard({ data, now }: { data: TripSummary; now: string }) {
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
       <Pressable style={styles.card} accessibilityRole="link">
-        <Cover scene={trip.template} style={styles.cover}>
+        <Cover scene={trip.cover} style={styles.cover} testID={`trip-card-cover-${trip.cover}`}>
           <View style={styles.countdown}>
             <Countdown startsOn={trip.startsOn} endsOn={trip.endsOn} now={now} />
           </View>

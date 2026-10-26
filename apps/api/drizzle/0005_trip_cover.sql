@@ -1,0 +1,2 @@
+ALTER TABLE "trips" ADD COLUMN "cover" text;--> statement-breakpoint
+ALTER TABLE "trips" ADD CONSTRAINT "trips_cover_check" CHECK ("trips"."cover" in ('camp', 'beach', 'desert', 'forest', 'zimmer', 'trail', 'city', 'picnic', 'winter', 'flight'));

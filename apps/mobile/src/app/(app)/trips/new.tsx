@@ -1,4 +1,4 @@
-import { TEMPLATES, type TemplateId } from '@yallist/domain';
+import { coverFor, TEMPLATES, type CoverId, type TemplateId } from '@yallist/domain';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Cover } from '@/components/Cover';
+import { CoverPicker } from '@/components/CoverPicker';
 import { DateField } from '@/components/DateField';
 import { TextField, fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
@@ -50,10 +51,11 @@ export default function NewTrip() {
   const [startsOn, setStartsOn] = useState(() => addDays(today(), 14));
   const [endsOn, setEndsOn] = useState(() => addDays(today(), 15));
 
+  // Follows the template until one is picked.
+  const [pickedCover, setCover] = useState<CoverId>();
+  const cover = pickedCover ?? coverFor(template);
+
   const shownName = name.trim() || he.newTrip.fallbackName;
-  // The blank cover is pale all over: ink text without the dark panel (as on the trip screen).
-  const blank = template === 'blank';
-  const inkText = blank && { color: colors.ink };
 
   const setStart = (iso: string) => {
     setStartsOn(iso);
@@ -69,6 +71,7 @@ export default function NewTrip() {
         endsOn: endsOn < startsOn ? startsOn : endsOn,
         placeText: place.trim() || undefined,
         template,
+        cover,
       },
       {
         onSuccess: ({ trip }) =>
@@ -103,12 +106,12 @@ export default function NewTrip() {
 
         <View style={[styles.body, desktop && styles.columns]}>
           <View style={desktop && [styles.coverCol, sticky]}>
-            <Cover scene={template} style={[styles.cover, desktop && styles.coverDesktop]}>
-              <View style={[styles.coverLabel, blank ? styles.coverLabelPlain : coverLabelBlur]}>
-                <Text style={[styles.coverName, inkText]} numberOfLines={2}>
+            <Cover scene={cover} style={[styles.cover, desktop && styles.coverDesktop]}>
+              <View style={[styles.coverLabel, coverLabelBlur]}>
+                <Text style={styles.coverName} numberOfLines={2}>
                   {shownName}
                 </Text>
-                <Text style={[styles.coverDates, inkText]}>{formatRange(startsOn, endsOn)}</Text>
+                <Text style={styles.coverDates}>{formatRange(startsOn, endsOn)}</Text>
               </View>
             </Cover>
           </View>
@@ -150,6 +153,14 @@ export default function NewTrip() {
                   );
                 })}
               </View>
+            </View>
+
+            <View style={styles.section}>
+              <View style={styles.sectionHead}>
+                <Text style={styles.h2}>{he.cover.title}</Text>
+                <Text style={styles.hint}>{he.cover.hint}</Text>
+              </View>
+              <CoverPicker value={cover} onChange={setCover} />
             </View>
 
             <Card>
@@ -267,7 +278,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(16,23,37,0.55)',
     gap: 2,
   },
-  coverLabelPlain: { backgroundColor: 'transparent' },
   coverName: { ...type.sectionTitle, color: colors.onPrimary },
   coverDates: { ...type.caption, color: colors.onPrimary },
   section: { gap: space[3] },

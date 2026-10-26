@@ -304,6 +304,25 @@ export const he = {
     loadFailed: 'לא הצלחנו לטעון את הקבלה',
     noCamera: 'צריך הרשאה למצלמה כדי לצלם קבלה',
   },
+  cover: {
+    title: 'תמונת כיסוי',
+    hint: 'מה שכולם יראו בכרטיס הטיול',
+    change: 'החלפת תמונת הכיסוי',
+    changeShort: 'כיסוי',
+    /** Each cover's accessible name (a short description of its scene). */
+    names: {
+      camp: 'קמפינג ליד המים',
+      beach: 'חוף הים',
+      desert: 'מדבר ונגב',
+      forest: 'צפון, גליל וגולן',
+      zimmer: 'צימר',
+      trail: 'מסלול הליכה',
+      city: 'ירושלים והעיר',
+      picnic: 'פיקניק ופסטיבל',
+      winter: 'חורף וגשם',
+      flight: 'טיסה לחו״ל',
+    },
+  },
   join: {
     invited: 'הוזמנת לטיול',
     missing: 'מה עוד חסר',

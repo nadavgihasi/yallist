@@ -1,4 +1,4 @@
-import { claimCap, type ItemKind, type ListKind } from '@yallist/domain';
+import { claimCap, type CoverId, type ItemKind, type ListKind } from '@yallist/domain';
 
 import type { TripData } from './types';
 
@@ -39,7 +39,8 @@ export type Action =
   | { type: 'markPayment'; toUser: string; amountAgorot: number; fromUser?: string }
   | { type: 'deletePayment'; paymentId: string }
   | { type: 'confirmPayment'; paymentId: string }
-  | { type: 'approveMember' | 'declineMember' | 'removeMember'; userId: string };
+  | { type: 'approveMember' | 'declineMember' | 'removeMember'; userId: string }
+  | { type: 'setCover'; cover: CoverId };
 
 /**
  * The trip as it will be once the API accepts `action`, shown right away (optimistic update).
@@ -148,6 +149,8 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
         claims: data.claims.filter((c) => type !== 'removeMember' || c.userId !== userId),
       };
     }
+    case 'setCover':
+      return { ...data, trip: { ...data.trip, cover: action.cover } };
     default:
       return data;
   }

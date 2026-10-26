@@ -30,6 +30,7 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
         name: data.trip.name,
         startsOn: data.trip.startsOn,
         endsOn: data.trip.endsOn,
+        cover: data.trip.cover,
         memberCount: activeIds.length,
         missingCount: missing.length,
         missingItems: missing.slice(0, 6).map((i) => i.name),

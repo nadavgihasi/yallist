@@ -1,6 +1,7 @@
 import {
   activeMemberIds,
   balances,
+  coverFor,
   suggestTransfers,
   type Category,
   type Expense,
@@ -24,6 +25,8 @@ export function toTrip(row: typeof trips.$inferSelect) {
     endsOn: row.endsOn,
     placeText: opt(row.placeText),
     template: row.template,
+    // Absent only on a trip the previous API version wrote mid-deploy, until the backfill.
+    cover: row.cover ?? coverFor(row.template),
     status: row.status,
     requireApproval: row.requireApproval,
     createdAt: row.createdAt.toISOString(),

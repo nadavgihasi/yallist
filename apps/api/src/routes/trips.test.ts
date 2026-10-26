@@ -1,4 +1,4 @@
-import { TEMPLATES } from '@yallist/domain';
+import { TEMPLATES, type CoverId, type TemplateId } from '@yallist/domain';
 import { testClient } from 'hono/testing';
 import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -26,7 +26,10 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
   const guest = (name: string) => signInAsGuest(app, name);
   const as = (user: Guest) => ({ headers: user.headers });
 
-  async function createTrip(user: Guest, extra: { requireApproval?: boolean } = {}) {
+  async function createTrip(
+    user: Guest,
+    extra: { requireApproval?: boolean; template?: TemplateId; cover?: CoverId } = {},
+  ) {
     const res = await client.trips.$post(
       {
         json: {
@@ -72,7 +75,12 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       const dana = await guest('דנה');
       const data = await createTrip(dana);
 
-      expect(data.trip).toMatchObject({ name: 'צפון', template: 'camp', status: 'planning' });
+      expect(data.trip).toMatchObject({
+        name: 'צפון',
+        template: 'camp',
+        cover: 'camp',
+        status: 'planning',
+      });
       expect(data.inviteToken).toMatch(/^[\w-]{22}$/);
       expect(data.members).toEqual([
         expect.objectContaining({ userId: dana.id, role: 'organizer', status: 'active' }),
@@ -140,6 +148,47 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       expect(res.status).toBe(200);
       expect(await res.json()).toMatchObject({ name: 'דרום', endsOn: '2026-11-07' });
     });
+
+    it("covers a trip with its template's cover unless one is picked", async () => {
+      const dana = await guest('דנה');
+      expect((await createTrip(dana, { template: 'grill' })).trip.cover).toBe('picnic');
+      expect((await createTrip(dana, { template: 'blank' })).trip.cover).toBe('trail');
+      const picked = await createTrip(dana, { template: 'camp', cover: 'desert' });
+      expect(picked.trip.cover).toBe('desert');
+      expect((await (await detail(dana, picked.trip.id)).json()).trip.cover).toBe('desert');
+    });
+
+    it('changes the cover, and only to one of the covers', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const patch = (user: Guest, cover: string) =>
+        client.trips[':tripId'].$patch(
+          { param: { tripId }, json: { cover: cover as CoverId } },
+          as(user),
+        );
+
+      expect((await patch(member, 'city')).status).toBe(403);
+      expect((await patch(organizer, 'mars')).status).toBe(400);
+      const res = await patch(organizer, 'city');
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ cover: 'city', template: 'camp' });
+      const { trips } = await (await client.trips.$get({}, as(member))).json();
+      expect(trips[0]!.trip.cover).toBe('city');
+
+      const bad = await client.trips.$post(
+        {
+          json: {
+            name: 'x',
+            startsOn: '2026-11-05',
+            endsOn: '2026-11-05',
+            template: 'camp',
+            cover: 'mars' as CoverId,
+          },
+        },
+        as(organizer),
+      );
+      expect(bad.status).toBe(400);
+    });
   });
 
   describe('invites', () => {
@@ -149,6 +198,7 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       expect(res.status).toBe(200);
       const preview = await res.json();
       expect(Object.keys(preview).sort()).toEqual([
+        'cover',
         'endsOn',
         'memberCount',
         'missingCount',
@@ -156,7 +206,11 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         'name',
         'startsOn',
       ]);
-      expect(preview).toMatchObject({ memberCount: 2, missingCount: data.items.length });
+      expect(preview).toMatchObject({
+        cover: 'camp',
+        memberCount: 2,
+        missingCount: data.items.length,
+      });
       expect(preview.missingItems).toEqual(data.items.slice(0, 6).map((i) => i.name));
     });
 

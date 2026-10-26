@@ -1,4 +1,11 @@
-import type { ItemKind, ListKind, MemberRole, MemberStatus, TemplateId } from '@yallist/domain';
+import {
+  COVER_IDS,
+  type ItemKind,
+  type ListKind,
+  type MemberRole,
+  type MemberStatus,
+  type TemplateId,
+} from '@yallist/domain';
 import { sql } from 'drizzle-orm';
 import {
   boolean,
@@ -148,6 +155,11 @@ export const trips = pgTable(
     endsOn: date('ends_on').notNull(),
     placeText: text('place_text'),
     template: text('template', { enum: TEMPLATE_IDS }).notNull(),
+    /**
+     * Nullable only because DSQL can't add a column with a default: the API always sets it,
+     * and `migrate` backfills older trips from their template.
+     */
+    cover: text('cover', { enum: COVER_IDS }),
     currency: text('currency').notNull().default('ILS'),
     requireApproval: boolean('require_approval').notNull().default(false),
     inviteToken: text('invite_token').notNull().unique(),
@@ -159,6 +171,7 @@ export const trips = pgTable(
   (t) => [
     oneOf('trips_template_check', t.template, TEMPLATE_IDS),
     oneOf('trips_status_check', t.status, TRIP_STATUSES),
+    oneOf('trips_cover_check', t.cover, COVER_IDS),
   ],
 );
 

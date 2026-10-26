@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { TEMPLATES, type TemplateId } from '@yallist/domain';
+import { coverFor, TEMPLATES, type TemplateId } from '@yallist/domain';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import type { Sql } from 'postgres';
 
@@ -11,7 +11,7 @@ const DIR = new URL('../../drizzle/', import.meta.url);
 
 /**
  * Applies drizzle-kit's migrations in drizzle/, reloads the template seed, then moves free-text
- * item categories into trip_categories.
+ * item categories into trip_categories and gives trips without a cover their template's.
  * DSQL allows one DDL statement per transaction, so each statement runs and is recorded on its
  * own; a failed deploy resumes from the statement that failed. A statement can commit without
  * being recorded (a crash in between), so on the next run its "already exists" error means it
@@ -47,6 +47,7 @@ export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
 
   await seedTemplates(sql);
   await backfillCategories(sql);
+  await backfillCovers(sql);
 }
 
 /** SQLSTATEs of re-running a CREATE TABLE/INDEX, ADD COLUMN or ADD CONSTRAINT that committed. */
@@ -164,6 +165,27 @@ export async function backfillCategories(sql: Sql) {
             update items set category_id = ${category.id}, category = ''
             where trip_id = ${tripId} and list = ${list} and category = ${name}
               and category_id is null and deleted_at is null`;
+        }
+      }),
+    );
+  }
+}
+
+/**
+ * Data step for trips.cover (0005): trips created before it, or by the previous API version
+ * mid-deploy, get their template's cover. Runs on every deploy; 1,000 trips per transaction
+ * keeps each under DSQL's 3,000-row limit.
+ */
+export async function backfillCovers(sql: Sql) {
+  for (;;) {
+    const trips = await sql<{ id: string; template: TemplateId }[]>`
+      select id, template from trips where cover is null limit 1000`;
+    if (trips.length === 0) return;
+    await withRetry(() =>
+      sql.begin(async (tx) => {
+        for (const template of new Set(trips.map((t) => t.template))) {
+          const ids = trips.filter((t) => t.template === template).map((t) => t.id);
+          await tx`update trips set cover = ${coverFor(template)} where id in ${tx(ids)}`;
         }
       }),
     );
