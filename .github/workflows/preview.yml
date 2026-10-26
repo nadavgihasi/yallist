@@ -115,8 +115,10 @@ jobs:
       - run: echo "$HOME/.maestro-cli/maestro/bin" >> "$GITHUB_PATH"
       # Ubuntu 24.04's AppArmor blocks the sandbox of a Chrome outside /opt (Chrome for Testing).
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      # Not the flows tagged test-photo: they need a build that picks the fixture photo in place of
+      # the file picker (EXPO_PUBLIC_E2E_RECEIPT), which a preview people use mustn't be.
       - name: UI tests
-        run: scripts/e2e-web.sh
+        run: scripts/e2e-web.sh --exclude-tags=test-photo apps/mobile/e2e
         env:
           E2E_WEB_URL: ${{ steps.deploy.outputs.url }}
           E2E_OUT: ${{ runner.temp }}/ui-tests

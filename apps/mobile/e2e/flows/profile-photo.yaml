@@ -7,8 +7,9 @@ onFlowStart:
   - startRecording: ${MAESTRO_FILENAME}
 onFlowComplete:
   - stopRecording
-# Untagged for shard-1, so it runs in shard 2 (scripts/e2e-web.sh), the shorter one.
-tags: [profile]
+# Untagged for shard-1, so it runs in shard 2 (scripts/e2e-web.sh), the shorter one. test-photo:
+# PR previews skip it (preview.yml), their build has no fixture photo.
+tags: [profile, test-photo]
 ---
 - runFlow: ../common/sign-in.yaml
 - tapOn:
