@@ -116,6 +116,22 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
               <Text style={[styles.amount, t.from === me && { color: colors.brandStrong }]}>
                 {formatShekel(t.amountAgorot)}
               </Text>
+              {/* Someone who left can't mark their payment, so the receiver records it. */}
+              {t.to === me && view.memberById.get(t.from)?.status === 'removed' && (
+                <PillButton
+                  label={he.money.confirmReceived}
+                  size="sm"
+                  disabled={saving}
+                  onPress={() =>
+                    act({
+                      type: 'markPayment',
+                      fromUser: t.from,
+                      toUser: me,
+                      amountAgorot: t.amountAgorot,
+                    })
+                  }
+                />
+              )}
             </View>
           ))}
         </ListGroup>

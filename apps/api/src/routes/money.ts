@@ -6,7 +6,7 @@ import { requireUser, type Auth } from '../auth';
 import { logActivity } from '../dal/activity';
 import { deleteExpense, findExpense, findPurchase, insertExpense } from '../dal/expenses';
 import { findItem } from '../dal/items';
-import { activeUserIds, requireMember } from '../dal/members';
+import { activeUserIds, findMember, requireMember } from '../dal/members';
 import { confirmPayment, deletePayment, insertPayment, lockPayment } from '../dal/payments';
 import type { Db } from '../db/client';
 import type { expenses, tripMembers } from '../db/schema';
@@ -105,31 +105,49 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
       return c.body(null, 204);
     })
 
-    // I paid someone back.
+    // I paid someone back, or (only for someone no longer in the trip) they paid me.
+    // The counterparty can be a former member: removal leaves their balance to settle. A former
+    // member can't use the trip, so the receiver records their payment, already confirmed.
     .post(
       '/:tripId/payments',
       validate('param', tripParam),
-      validate('json', z.object({ toUser: z.uuid(), amountAgorot: agorot })),
+      validate(
+        'json',
+        z.object({ toUser: z.uuid(), amountAgorot: agorot, fromUser: z.uuid().optional() }),
+      ),
       async (c) => {
         const { tripId } = c.req.valid('param');
-        const { toUser, amountAgorot } = c.req.valid('json');
         const me = c.var.user.id;
-        if (toUser === me) throw fail(400, 'Cannot pay yourself');
+        const { toUser, amountAgorot, fromUser = me } = c.req.valid('json');
+        if (toUser === fromUser) throw fail(400, 'Cannot pay yourself');
+        if (fromUser !== me && toUser !== me) throw fail(400, 'Only your own payments');
+        const received = fromUser !== me;
         const payment = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
-          if (!(await activeUserIds(tx, tripId)).has(toUser)) {
-            throw fail(400, 'toUser is not an active member');
+          const other = await findMember(tx, tripId, received ? fromUser : toUser);
+          if (other?.status !== 'active' && other?.status !== 'removed') {
+            throw fail(400, 'Not a member of the trip');
           }
-          const created = await insertPayment(tx, { tripId, fromUser: me, toUser, amountAgorot });
+          if (received && other.status !== 'removed') {
+            throw fail(400, 'Members mark their own payments');
+          }
+          const created = await insertPayment(tx, {
+            tripId,
+            fromUser,
+            toUser,
+            amountAgorot,
+            ...(received && { status: 'confirmed', confirmedAt: new Date() }),
+          });
           await logActivity(tx, tripId, me, 'payment_marked', {
             paymentId: created.id,
+            fromUser,
             toUser,
             amountAgorot,
           });
           return created;
         });
         return c.json(
-          { id: payment.id, fromUser: me, toUser, amountAgorot, status: payment.status },
+          { id: payment.id, fromUser, toUser, amountAgorot, status: payment.status },
           201,
         );
       },
