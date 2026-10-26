@@ -22,6 +22,7 @@ import { insertTrip, loadTrips, lockTrip, setTrip } from '../dal/trips';
 import type { Db } from '../db/client';
 import { ROLES, TEMPLATE_IDS, tripMembers, TRIP_STATUSES } from '../db/schema';
 import { transact, type Tx } from '../db/tx';
+import type { ReceiptStore } from '../receipts';
 import { settleUp, toTrip } from '../trip-data';
 
 /** 128 bits from a CSPRNG, URL-safe (SPEC §5): the invite link is a bearer capability. */
@@ -75,7 +76,7 @@ async function assertNotLastOrganizer(tx: Tx, member: typeof tripMembers.$inferS
 }
 
 /** Trips, their settings and invite link, and membership management. All need a session. */
-export const tripRoutes = (auth: Auth, db: Db) =>
+export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
   new Hono()
     .use(requireUser(auth))
 
@@ -100,7 +101,7 @@ export const tripRoutes = (auth: Auth, db: Db) =>
         });
         await seedItems(tx, tripId, user.id, template);
         await logActivity(tx, tripId, user.id, 'trip_created', { template });
-        return (await loadTrips(tx, [tripId]))[0]!;
+        return (await loadTrips(tx, [tripId], photos))[0]!;
       });
       return c.json(data, 201);
     })
@@ -108,16 +109,21 @@ export const tripRoutes = (auth: Auth, db: Db) =>
     // My trips, with what the home screen shows for each.
     .get('/', async (c) => {
       const me = c.var.user.id;
-      const all = await transact(db, async (tx) => loadTrips(tx, await activeTripIds(tx, me)));
+      const all = await transact(db, async (tx) =>
+        loadTrips(tx, await activeTripIds(tx, me), photos),
+      );
       const summaries = all
         .sort((a, b) => a.trip.startsOn.localeCompare(b.trip.startsOn))
         .map((d) => {
           const activeIds = activeMemberIds(d.members);
+          const missing = d.items.filter((i) => !isDone(i, d.claims, d.expenses, activeIds));
           return {
             trip: d.trip,
             members: d.members.filter((m) => m.status === 'active'),
             itemCount: d.items.length,
-            doneCount: d.items.filter((i) => isDone(i, d.claims, d.expenses, activeIds)).length,
+            doneCount: d.items.length - missing.length,
+            /** The first few still missing, in list order: what the next trip's card names. */
+            missingNames: missing.slice(0, 3).map((i) => i.name),
             mine: d.items
               .filter((i) => claimsFor(i.id, d.claims).some((cl) => cl.userId === me))
               .map((i) => i.name),
@@ -133,7 +139,7 @@ export const tripRoutes = (auth: Auth, db: Db) =>
       const { tripId } = c.req.valid('param');
       const data = await transact(db, async (tx) => {
         await requireMember(tx, tripId, c.var.user.id);
-        return (await loadTrips(tx, [tripId]))[0]!;
+        return (await loadTrips(tx, [tripId], photos))[0]!;
       });
       return c.json({ ...data, ...settleUp(data) });
     })

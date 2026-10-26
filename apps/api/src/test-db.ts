@@ -7,6 +7,7 @@ import { createAuth } from './auth';
 import type { Db } from './db/client';
 import type { Publish } from './realtime';
 import type { FeedbackConfig } from './routes/feedback';
+import type { ReceiptStore } from './receipts';
 import { localReceiptStore } from './receipts-local';
 
 /** Postgres server for DB tests; CI provides one. Tests that need it skip without it. */
@@ -31,8 +32,9 @@ export async function createTestDatabase() {
 }
 
 /** Better Auth with test config. */
-export const testAuth = (db: Db) =>
+export const testAuth = (db: Db, photos?: ReceiptStore) =>
   createAuth(db, {
+    photos,
     baseURL: 'http://localhost:3000',
     webURL: 'http://localhost:8081',
     secret: 'test-secret-at-least-32-characters-long',
@@ -48,7 +50,7 @@ export const testApp = (
   publish: Publish = async () => {},
   feedback: FeedbackConfig = { stage: 'test' },
   receipts = testReceipts().store,
-) => createApp(testAuth(db), db, publish, feedback, receipts);
+) => createApp(testAuth(db, receipts), db, publish, feedback, receipts);
 
 /** A new guest user, with the headers that authenticate as them. */
 export async function signInAsGuest(app: ReturnType<typeof testApp>, name: string) {

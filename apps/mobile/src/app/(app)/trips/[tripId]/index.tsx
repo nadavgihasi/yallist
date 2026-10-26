@@ -1,6 +1,6 @@
-import { formatShekel } from '@yallist/domain';
+import { formatShekel, type ListFilter } from '@yallist/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Platform,
@@ -13,21 +13,22 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AvatarStack } from '@/components/Avatar';
 import { SegmentedControl } from '@/components/Controls';
 import { Cover } from '@/components/Cover';
 import { FLOATING_CLEARANCE, FloatingAction } from '@/components/FloatingAction';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
-import { toAvatar, deriveTrip } from '@/features/trip/derive';
+import { deriveTrip } from '@/features/trip/derive';
 import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
 import { PeopleTab } from '@/features/trip/PeopleTab';
+import { ReadinessHero } from '@/features/trip/ReadinessHero';
 import { he, participants } from '@/i18n/he';
 import { formatRange } from '@/lib/dates';
 import { statusOf } from '@/lib/api';
 import { testId } from '@/lib/testId';
+import { useToday } from '@/lib/useToday';
 import { useMe } from '@/state/store';
 import { useTripQuery } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
@@ -58,6 +59,13 @@ export default function TripScreen() {
   // The tab lives in the URL (`?tab=buy`) so reload and Back keep it.
   const tab: Tab = TABS.find((t) => t === params.tab) ?? 'bring';
   const setTab = (next: Tab) => router.setParams({ tab: next });
+  // Lifted from ListTab, so the hero's "missing" button can open a list already filtered.
+  const [filter, setFilter] = useState<ListFilter>('all');
+  const pickTab = (next: Tab) => {
+    setTab(next);
+    setFilter('all');
+  };
+  const now = useToday();
   // A sheet opened by URL hands its params to this screen underneath it. Clear them once this
   // screen is focused again: `router.setParams` targets the focused route, not necessarily this one.
   useFocusEffect(
@@ -99,6 +107,21 @@ export default function TripScreen() {
     { value: 'money' as const, label: he.trip.tabs.money },
   ];
 
+  // Phone and tablet: above the tabs. Desktop: at the top of the side panel.
+  const hero = (
+    <ReadinessHero
+      data={data}
+      view={view}
+      me={me.userId}
+      now={now}
+      onMissing={() => {
+        setTab(view.missingIn('bring') >= view.missingIn('buy') ? 'bring' : 'buy');
+        setFilter('missing');
+      }}
+      onInvite={() => pickTab('people')}
+    />
+  );
+
   const add =
     tab === 'people'
       ? null
@@ -129,7 +152,7 @@ export default function TripScreen() {
             label={he.trip.invite}
             variant="soft"
             icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
-            onPress={() => setTab('people')}
+            onPress={() => pickTab('people')}
           />
         </View>
         <Cover
@@ -165,21 +188,27 @@ export default function TripScreen() {
           </Text>
         </View>
 
+        {!desktop && hero}
         <View style={desktop && styles.columns}>
           <View style={[styles.main, desktop && styles.mainDesktop]}>
-            <SegmentedControl options={tabs} value={tab} onChange={setTab} testID="trip-tab" />
+            <SegmentedControl options={tabs} value={tab} onChange={pickTab} testID="trip-tab" />
             {(tab === 'bring' || tab === 'buy') && (
-              <ListTab key={tab} list={tab} data={data} view={view} me={me.userId} />
+              <ListTab
+                key={tab}
+                list={tab}
+                data={data}
+                view={view}
+                me={me.userId}
+                filter={filter}
+                onFilter={setFilter}
+              />
             )}
             {tab === 'people' && <PeopleTab data={data} view={view} me={me.userId} />}
             {tab === 'money' && <MoneyTab data={data} view={view} me={me.userId} />}
           </View>
           {desktop && (
             <View style={[styles.side, sticky]}>
-              <Card gap={space[3]}>
-                <Text style={styles.sideTitle}>{participants(view.activeIds.length)}</Text>
-                <AvatarStack people={view.active.map(toAvatar)} max={8} />
-              </Card>
+              {hero}
               {view.totalSpent > 0 && tab !== 'money' && (
                 <Card gap={space[1]}>
                   <Text style={styles.sideTitle}>{he.trip.tabs.money}</Text>

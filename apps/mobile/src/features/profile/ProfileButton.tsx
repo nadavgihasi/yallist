@@ -12,7 +12,7 @@ import { colors, size } from '@/theme';
 /** react-native-web adds these to Pressable's state. */
 type WebState = PressableStateCallbackType & { hovered?: boolean; focused?: boolean };
 
-/** The header avatar: the user's initial in their color; opens the profile. */
+/** The header avatar: the user's photo, or initial in their color; opens the profile. */
 export function ProfileButton() {
   const me = useMe();
   const profile = useProfile().data;
@@ -29,7 +29,10 @@ export function ProfileButton() {
       ]}
     >
       <Avatar
-        person={{ initial: initial(profile?.displayName ?? me.name) }}
+        person={{
+          initial: initial(profile?.displayName ?? me.name),
+          photo: profile?.avatarUrl ?? undefined,
+        }}
         color={profile?.avatarColor}
         size={size.avatar}
         ring={false}

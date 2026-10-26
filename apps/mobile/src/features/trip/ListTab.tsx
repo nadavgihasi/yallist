@@ -1,6 +1,5 @@
 import { filterItems, type ListFilter, type ListKind } from '@yallist/domain';
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FilterChip } from '@/components/Chips';
@@ -15,24 +14,27 @@ import { colors, space, type } from '@/theme';
 import type { TripView } from './derive';
 import { ItemRow } from './ItemRow';
 import { groupSummary } from './labels';
-import { ProgressCard } from './ProgressCard';
 
 const FILTERS: ListFilter[] = ['all', 'missing', 'mine'];
 
+/** One list (bring or buy) by category. The trip screen owns `filter`, so the hero can set it. */
 export function ListTab({
   list,
   data,
   view,
   me,
+  filter,
+  onFilter,
 }: {
   list: ListKind;
   data: TripData;
   view: TripView;
   me: string;
+  filter: ListFilter;
+  onFilter: (filter: ListFilter) => void;
 }) {
   const tripId = data.trip.id;
   const act = useTripAction(tripId);
-  const [filter, setFilter] = useState<ListFilter>('all');
   const listItems = view.items.filter((i) => i.list === list);
   const shown = (f: ListFilter) =>
     filterItems(listItems, f, data.claims, data.expenses, view.activeIds, me);
@@ -68,7 +70,6 @@ export function ListTab({
 
   return (
     <View style={styles.wrap}>
-      <ProgressCard done={listItems.filter(view.done).length} total={listItems.length} />
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -81,7 +82,7 @@ export function ListTab({
             label={he.trip.filters[f]}
             count={shown(f).length}
             selected={filter === f}
-            onPress={() => setFilter(f)}
+            onPress={() => onFilter(f)}
           />
         ))}
       </ScrollView>

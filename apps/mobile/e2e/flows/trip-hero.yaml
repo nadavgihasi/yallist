@@ -1,0 +1,22 @@
+# The trip opens on its readiness hero: a share button, and while alone, the invite nudge.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [trip]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- runFlow:
+    file: ../common/add-item.yaml
+    env:
+      ITEM: Tent
+- assertVisible:
+    id: trip-hero-share
+- tapOn:
+    id: trip-hero-invite
+# The people tab, with the invite link.
+- assertVisible: שיתוף הקישור

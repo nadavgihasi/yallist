@@ -8,6 +8,7 @@ import { createMiddleware } from 'hono/factory';
 import { insertProfile, mergeUser } from './dal/profiles';
 import type { Db } from './db/client';
 import * as schema from './db/schema';
+import { deleteReceipt, type ReceiptStore } from './receipts';
 
 export { mergeUser };
 
@@ -20,6 +21,8 @@ export interface AuthConfig {
   devServer?: boolean;
   secret: string;
   google: { clientId: string; clientSecret: string };
+  /** The photos bucket, for deleting a guest's photo the account replaces. Where accounts are linked. */
+  photos?: ReceiptStore;
 }
 
 /**
@@ -61,8 +64,10 @@ export function createAuth(db: Db, config: AuthConfig) {
           return typeof name === 'string' && name.trim() ? name.trim().slice(0, 50) : 'אורח';
         },
         // A guest who signs in with Google keeps their trips; the guest user is then deleted.
-        onLinkAccount: ({ anonymousUser, newUser }) =>
-          mergeUser(db, anonymousUser.user.id, newUser.user.id),
+        onLinkAccount: async ({ anonymousUser, newUser }) => {
+          const replaced = await mergeUser(db, anonymousUser.user.id, newUser.user.id);
+          if (replaced && config.photos) await deleteReceipt(config.photos, replaced);
+        },
       }),
       bearer(),
     ],

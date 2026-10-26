@@ -76,6 +76,13 @@ export const he = {
     past: 'טיולים שהיו',
     mine: 'אצלך: ',
     noItems: 'עוד אין פריטים',
+    startFrom: 'מתחילים מ…',
+    oneTap: 'לחיצה אחת, רשימה מלאה',
+    openTrip: 'פותחים טיול חדש',
+    invite: {
+      title: 'טיול של אחד? מזמינים חברים',
+      text: 'שולחים קישור בוואטסאפ ורואים מי מביא מה.',
+    },
   },
   firstHome: {
     emptyTitle: 'עוד אין טיולים',
@@ -171,6 +178,18 @@ export const he = {
     boughtBy: (amount: string, name: string) => `${amount}, ${name}`,
     boughtByMe: (amount: string) => `${amount}, שילמת`,
     forEach: 'לכל אחד',
+  },
+  hero: {
+    /** `חסרים 13: אוהלים, קפה, קרח…` */
+    missing: (count: string, names: string[], more: boolean) =>
+      `${count}: ${names.join(', ')}${more ? '…' : ''}`,
+    solo: 'לבד פה בינתיים · הזמנת חברים',
+    share: 'שליחת מה שחסר בוואטסאפ',
+  },
+  share: {
+    missing: (trip: string, dates: string, names: string, link: string) =>
+      `חסרים ל${trip} (${dates}): ${names}. מי מביא? ${link}`,
+    allCovered: (trip: string, link: string) => `הכול מכוסה ל${trip} 🎉 ${link}`,
   },
   people: {
     inviteTitle: 'עוד חברים מצטרפים?',
@@ -346,6 +365,12 @@ export const he = {
     back: 'חזרה',
     color: 'צבע',
     colorOption: (n: number) => `צבע ${n}`,
+    photo: 'תמונת הפרופיל',
+    addPhoto: 'הוספת תמונה',
+    changePhoto: 'החלפת תמונה',
+    removePhoto: 'הסרת התמונה',
+    photoHint: 'רק מי שבטיולים שלך יראו אותה',
+    photoFailed: 'העלאת התמונה נכשלה, נסו שוב',
     name: 'שם',
     nameHint: 'כך יראו אותך בטיולים חדשים',
     payments: 'תשלומים',
@@ -431,6 +456,12 @@ export function participants(n: number): string {
 /** `העברה אחת פתוחה` / `2 העברות פתוחות` */
 export function openTransfers(n: number): string {
   return n === 1 ? 'העברה אחת פתוחה' : `${n} העברות פתוחות`;
+}
+
+/** `אוהלים, קפה, קרח ועוד 10`: the first missing names out of `missing`. */
+export function missingNames(names: string[], missing: number): string {
+  const more = missing - names.length;
+  return more > 0 ? `${names.join(', ')} ${andMore(more)}` : names.join(', ');
 }
 
 /** `דנה, אבי ונועה`, then `דנה, אבי ועוד 2` past three. */
