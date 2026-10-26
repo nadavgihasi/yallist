@@ -4,9 +4,10 @@ name: Preview
 # /pr-<n> by the shared `preview` stage (preview-stage.yml). Deployed on every push, removed when
 # the PR closes or 6 hours after its last push. See docs/plans/e2e-live-environments.md.
 #
-# Only PRs from this repo (never forks, never pull_request_target) whose author and actor are in
-# the repo variable PREVIEW_ALLOWED_ACTORS, a JSON array of logins. Jobs run in the `preview`
-# environment with the preview role (AWS_PREVIEW_ROLE_ARN), which also checks the actor.
+# Only PRs from this repo's branches, never forks (which get no secrets or OIDC token anyway),
+# and never pull_request_target. Only collaborators can push branches, so there's no allowlist.
+# Jobs run in the `preview` environment, the only one the preview role (AWS_PREVIEW_ROLE_ARN)
+# trusts.
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
@@ -29,9 +30,7 @@ jobs:
   deploy:
     if: >-
       github.event_name == 'pull_request' && github.event.action != 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(fromJSON(vars.PREVIEW_ALLOWED_ACTORS || '[]'), github.event.pull_request.user.login) &&
-      contains(fromJSON(vars.PREVIEW_ALLOWED_ACTORS || '[]'), github.actor)
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     environment:
       name: preview
@@ -131,8 +130,7 @@ jobs:
   remove:
     if: >-
       github.event_name == 'pull_request' && github.event.action == 'closed' &&
-      github.event.pull_request.head.repo.full_name == github.repository &&
-      contains(fromJSON(vars.PREVIEW_ALLOWED_ACTORS || '[]'), github.actor)
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     environment: preview
     timeout-minutes: 20
@@ -161,9 +159,7 @@ jobs:
 
   # Hourly: removes previews 6 hours after their last push, and any a closed PR left behind.
   expire:
-    if: >-
-      github.event_name != 'pull_request' &&
-      contains(fromJSON(vars.PREVIEW_ALLOWED_ACTORS || '[]'), github.actor)
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     environment: preview
     timeout-minutes: 60
