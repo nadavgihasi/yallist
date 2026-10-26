@@ -22,23 +22,21 @@ jobs:
     permissions:
       contents: read
 
-  # Tags main with the next version from commit titles and creates a GitHub release (docs/releases.md).
+  # The next version from commit titles (docs/releases.md), for the builds. `release` tags it.
   version:
     needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
-      contents: write
+      contents: read
     outputs:
-      version: ${{ steps.release.outputs.version }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - id: release
+      - id: version
         run: scripts/release.sh
-        env:
-          GH_TOKEN: ${{ github.token }}
 
   global:
     needs: ci
@@ -53,27 +51,34 @@ jobs:
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - uses: aws-actions/configure-aws-credentials@v6
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
       # deploy:global, deploy:dev or deploy:prod
-      - run: pnpm deploy:${{ github.job == 'production' && 'prod' || github.job }}
+      - name: Deploy ${{ github.job }}
+        run: pnpm deploy:${{ github.job == 'production' && 'prod' || github.job }}
         env:
           BUDGET_EMAIL: ${{ vars.BUDGET_EMAIL }}
       # Show the stage's outputs (web and API URLs) on the run's summary page.
-      - run: |
+      - name: Summarize ${{ github.job }} outputs
+        run: |
           echo "### ${{ github.job }}" >> "$GITHUB_STEP_SUMMARY"
           jq -r 'to_entries[] | "- \(.key): \(.value)"' infra/${{ github.job == 'global' && 'global' || 'app' }}/.sst/outputs.json >> "$GITHUB_STEP_SUMMARY"
       # Apply database migrations with the stage's linked resources. The global stack has no database.
-      - if: github.job != 'global'
+      - name: Migrate ${{ github.job }} database
+        if: github.job != 'global'
         run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api db:migrate
       # Open the GitHub issues that saved feedback is missing (docs/deploy.md, Feedback).
-      - if: github.job != 'global'
+      - name: Retry ${{ github.job }} feedback issues
+        if: github.job != 'global'
         run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api feedback:retry
       # Smoke check: the API Lambda boots and the web app is served, so a broken dev stops production.
-      - if: github.job != 'global'
+      - name: Smoke check ${{ github.job }}
+        if: github.job != 'global'
         run: |
           curl -fsS --retry 5 --retry-all-errors "$(jq -r .api infra/app/.sst/outputs.json)/health"
           curl -fsS --retry 5 --retry-all-errors -o /dev/null "$(jq -r .url infra/app/.sst/outputs.json)"
@@ -107,3 +112,18 @@ jobs:
       SST_SECRET_GoogleClientSecret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       SST_SECRET_GithubFeedbackToken: ${{ secrets.FEEDBACK_GITHUB_TOKEN }} # optional
     steps: *deploy
+
+  # Tags main and creates the GitHub release only once production has it (docs/releases.md).
+  release:
+    needs: [production]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - run: scripts/release.sh --publish
+        env:
+          GH_TOKEN: ${{ github.token }}
