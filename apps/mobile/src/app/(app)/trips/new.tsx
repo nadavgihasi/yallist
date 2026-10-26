@@ -1,5 +1,5 @@
-import { TEMPLATES, type TemplateId } from '@yallist/domain';
-import { router } from 'expo-router';
+import type { TemplateId } from '@yallist/domain';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import {
   Platform,
@@ -18,8 +18,8 @@ import { TextField, fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
-import { TripTile } from '@/components/TripTile';
-import { he, itemsCount } from '@/i18n/he';
+import { TemplateTile } from '@/components/TemplateTile';
+import { he } from '@/i18n/he';
 import { addDays, endAfterMovingStart, formatRange, today } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useCreateTrip } from '@/state/trips';
@@ -44,7 +44,11 @@ export default function NewTrip() {
   // Tablet: a centered column with an inline button. Desktop: cover preview beside the form.
   const wide = bp !== 'phone';
   const desktop = bp === 'desktop';
-  const [template, setTemplate] = useState<TemplateId>('camp');
+  // `?template=` from a home tile preselects it.
+  const params = useLocalSearchParams<{ template?: string }>();
+  const [template, setTemplate] = useState<TemplateId>(
+    () => KINDS.find((k) => k === params.template) ?? 'camp',
+  );
   const [name, setName] = useState('');
   const [place, setPlace] = useState('');
   const [startsOn, setStartsOn] = useState(() => addDays(today(), 14));
@@ -124,31 +128,17 @@ export default function NewTrip() {
                 accessibilityRole="radiogroup"
                 accessibilityLabel={he.newTrip.kind}
               >
-                {KINDS.map((k) => {
-                  const selected = k === template;
-                  const count = TEMPLATES[k].length;
-                  return (
-                    <Pressable
-                      key={k}
-                      accessibilityRole="radio"
-                      accessibilityLabel={he.newTrip.templates[k]}
-                      {...testId(`new-trip-template-${k}`)}
-                      accessibilityState={{ checked: selected }}
+                {KINDS.map((k) => (
+                  <View key={k} style={styles.tile}>
+                    <TemplateTile
+                      template={k}
+                      role="radio"
+                      selected={k === template}
+                      testID={`new-trip-template-${k}`}
                       onPress={() => setTemplate(k)}
-                      style={({ pressed }) => [
-                        styles.tile,
-                        selected && styles.tileOn,
-                        pressed && styles.tilePressed,
-                      ]}
-                    >
-                      <TripTile template={k} size={44} />
-                      <Text style={styles.tileName}>{he.newTrip.templates[k]}</Text>
-                      <Text style={styles.tileMeta}>
-                        {count ? itemsCount(count) : he.newTrip.blankHint}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                    />
+                  </View>
+                ))}
               </View>
             </View>
 
@@ -277,18 +267,7 @@ const styles = StyleSheet.create({
   hint: { ...type.caption, color: colors.inkMuted },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   // Strict two columns, so a lone last tile stays half width (NewTripV2 grid).
-  tile: {
-    width: '48.8%',
-    minHeight: 120,
-    padding: space[4],
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
-    gap: space[2],
-  },
-  tileOn: { backgroundColor: colors.primaryTint },
-  tilePressed: { opacity: 0.75 },
-  tileName: { ...type.itemTitle, color: colors.ink },
-  tileMeta: { ...type.caption, color: colors.inkMuted },
+  tile: { width: '48.8%' },
   card: {
     padding: space[5],
     borderRadius: radius.card,

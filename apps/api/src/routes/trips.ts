@@ -109,11 +109,14 @@ export const tripRoutes = (auth: Auth, db: Db) =>
         .sort((a, b) => a.trip.startsOn.localeCompare(b.trip.startsOn))
         .map((d) => {
           const activeIds = activeMemberIds(d.members);
+          const missing = d.items.filter((i) => !isDone(i, d.claims, d.expenses, activeIds));
           return {
             trip: d.trip,
             members: d.members.filter((m) => m.status === 'active'),
             itemCount: d.items.length,
-            doneCount: d.items.filter((i) => isDone(i, d.claims, d.expenses, activeIds)).length,
+            doneCount: d.items.length - missing.length,
+            /** The first few still missing, in list order: what the next trip's card names. */
+            missingNames: missing.slice(0, 3).map((i) => i.name),
             mine: d.items
               .filter((i) => claimsFor(i.id, d.claims).some((cl) => cl.userId === me))
               .map((i) => i.name),
