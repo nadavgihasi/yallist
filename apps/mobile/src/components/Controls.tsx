@@ -96,8 +96,10 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: colors.card,
   },
+  // Grow from each label's own width, so a long label ("להביא • 10") isn't cut at 390px.
   segment: {
-    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
     minHeight: 44,
     paddingHorizontal: 8,
     borderRadius: 999,
