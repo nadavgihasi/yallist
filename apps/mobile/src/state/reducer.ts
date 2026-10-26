@@ -35,7 +35,8 @@ export type Action =
   | { type: 'addExpense'; expense: NewExpenseInput; receipt?: string }
   | { type: 'deleteExpense'; expenseId: string }
   | { type: 'deleteReceipt'; expenseId: string }
-  | { type: 'markPayment'; toUser: string; amountAgorot: number }
+  /** `fromUser` (default: me) is for a former member's payment, which the receiver records. */
+  | { type: 'markPayment'; toUser: string; amountAgorot: number; fromUser?: string }
   | { type: 'deletePayment'; paymentId: string }
   | { type: 'confirmPayment'; paymentId: string }
   | { type: 'approveMember' | 'declineMember' | 'removeMember'; userId: string };

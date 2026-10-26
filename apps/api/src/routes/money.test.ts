@@ -192,4 +192,58 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
     expect((await payments.$delete(secondParam, as(c))).status).toBe(204);
     expect((await detail(c, tripId)).payments).toHaveLength(1);
   });
+
+  const remove = (organizer: Guest, tripId: string, userId: string) =>
+    client.trips[':tripId'].members[':userId'].$delete(
+      { param: { tripId, userId } },
+      as(organizer),
+    );
+  const receive = (user: Guest, tripId: string, fromUser: string, amountAgorot: number) =>
+    client.trips[':tripId'].payments.$post(
+      { param: { tripId }, json: { fromUser, toUser: user.id, amountAgorot } },
+      as(user),
+    );
+
+  it('pays a removed member back', async () => {
+    const { a, b, c, tripId } = await trip();
+    await addExpense(c, tripId, { amountAgorot: 900, shares: [a.id, b.id, c.id] });
+    expect((await remove(a, tripId, c.id)).status).toBe(200);
+    // Still owed after leaving.
+    expect((await detail(a, tripId)).balances[c.id]).toBe(600);
+
+    const res = await pay(a, tripId, c.id, 300);
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({ fromUser: a.id, toUser: c.id, status: 'marked' });
+    const after = await detail(b, tripId);
+    expect(after.balances[c.id]).toBe(300);
+    expect(after.transfers).toEqual([{ from: b.id, to: c.id, amountAgorot: 300 }]);
+  });
+
+  it('records a removed member paying, by the receiver, already confirmed', async () => {
+    const { a, b, c, tripId } = await trip();
+    await addExpense(a, tripId, { amountAgorot: 900, shares: [a.id, b.id, c.id] });
+    await remove(a, tripId, c.id);
+    expect((await pay(c, tripId, a.id, 300)).status).toBe(404);
+    // Only the receiver records it, and only for someone who left.
+    const thirdParty = client.trips[':tripId'].payments.$post(
+      { param: { tripId }, json: { fromUser: c.id, toUser: a.id, amountAgorot: 300 } },
+      as(b),
+    );
+    expect((await thirdParty).status).toBe(400);
+    expect((await receive(a, tripId, b.id, 300)).status).toBe(400);
+
+    const res = await receive(a, tripId, c.id, 300);
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({ fromUser: c.id, toUser: a.id, status: 'confirmed' });
+    const after = await detail(b, tripId);
+    expect(after.balances[c.id]).toBe(0);
+    expect(after.transfers).toEqual([{ from: b.id, to: a.id, amountAgorot: 300 }]);
+  });
+
+  it('rejects payments with someone who was never a member', async () => {
+    const { a, tripId } = await trip();
+    const stranger = await signInAsGuest(app, 'stranger');
+    expect((await pay(a, tripId, stranger.id, 300)).status).toBe(400);
+    expect((await receive(a, tripId, stranger.id, 300)).status).toBe(400);
+  });
 });

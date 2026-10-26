@@ -135,8 +135,10 @@ async function send(tripId: string, action: Action): Promise<unknown> {
         }),
       );
     case 'markPayment': {
-      const { toUser, amountAgorot } = action;
-      return parseResponse(trip.payments.$post({ param, json: { toUser, amountAgorot } }));
+      const { toUser, amountAgorot, fromUser } = action;
+      return parseResponse(
+        trip.payments.$post({ param, json: { toUser, amountAgorot, fromUser } }),
+      );
     }
     case 'deletePayment':
       return parseResponse(
