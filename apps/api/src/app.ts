@@ -13,7 +13,9 @@ import { itemRoutes } from './routes/items';
 import { meRoutes } from './routes/me';
 import { moneyRoutes } from './routes/money';
 import { receiptRoutes } from './routes/receipts';
+import { sentryWebhookRoutes, type SentryWebhookConfig } from './routes/sentry-webhook';
 import { tripRoutes } from './routes/trips';
+import { reportError } from './sentry';
 
 export function createApp(
   auth: Auth,
@@ -21,6 +23,7 @@ export function createApp(
   publish: Publish,
   feedback: FeedbackConfig,
   receipts: ReceiptStore,
+  sentryWebhook: SentryWebhookConfig = { secret: null, telegram: null },
 ) {
   // Realtime is best effort: a failed publish is logged, the write has already succeeded.
   const notify = (tripId: string) =>
@@ -31,14 +34,16 @@ export function createApp(
   // locally, they're the ones the browser sees.
   return new Hono()
     .use(cors())
-    .onError((err, c) => {
+    .onError(async (err, c) => {
       if (err instanceof HTTPException) return c.json({ error: err.message }, err.status);
       // Not `err` itself: Drizzle's message lists the query parameters (invite tokens, names).
       console.error(err.cause ?? err);
+      await reportError(err.cause ?? err, `${c.req.method} ${c.req.routePath}`);
       return c.json({ error: 'Internal error' }, 500);
     })
     .get('/health', (c) => c.json({ ok: true }))
     .on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
+    .route('/webhooks/sentry', sentryWebhookRoutes(sentryWebhook))
     .route('/me', meRoutes(auth, db, receipts))
     .route('/feedback', feedbackRoutes(auth, db, feedback))
     .use('/trips/:tripId/*', async (c, next) => {

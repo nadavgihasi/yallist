@@ -10,6 +10,7 @@ import { useEffect } from 'react';
 import { I18nManager, Platform, StyleSheet, View } from 'react-native';
 
 import { Toast } from '@/components/Toast';
+import { withSentry } from '@/lib/sentry';
 import { StoreProvider } from '@/state/store';
 import { colors, isRTL } from '@/theme';
 
@@ -23,7 +24,9 @@ void SplashScreen.preventAutoHideAsync();
 /** react-native-web resolves start/end styles from the nearest `dir`, not from `<html dir>`. */
 const webRtl = Platform.OS === 'web' ? ({ dir: isRTL ? 'rtl' : 'ltr' } as object) : {};
 
-export default function RootLayout() {
+export default withSentry(RootLayout);
+
+function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Rubik_400Regular,
     Rubik_700Bold,

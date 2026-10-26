@@ -9,6 +9,7 @@
     "deploy:global": "cd global && sst deploy --stage global"
   },
   "devDependencies": {
+    "@sentry/cli": "3.8.0",
     "sst": "4.17.2"
   }
 }

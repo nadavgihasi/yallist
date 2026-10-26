@@ -12,6 +12,8 @@ declare module 'sst' {
     GoogleClientSecret: { value: string };
     Realtime: { http: string };
     Receipts: { name: string };
+    SentryDsn: { value: string };
+    SentryWebhookSecret: { value: string };
     TelegramBotToken: { value: string };
     TelegramChatId: { value: string };
     Web: { url: string };
