@@ -1,10 +1,7 @@
 import { budgetAlerts, GITHUB_OIDC, REPO_SUBJECT } from './common';
 
-// PR previews (docs/plans/e2e-live-environments.md): their region, and the GitHub users (numeric
-// ids, `gh api users/<login> -q .id`) whose workflow runs may assume the preview role. Keep in
-// sync with the repo variable PREVIEW_ALLOWED_ACTORS (logins), which preview.yml checks first.
+// PR previews (docs/plans/e2e-live-environments.md) run in their own region.
 const PREVIEW_REGION = 'us-west-2';
-const PREVIEW_ACTOR_IDS = ['37207301']; // nadavgihasi
 
 /**
  * What PR previews need from the account: the role preview.yml deploys and removes `pr-<n>`
@@ -64,8 +61,8 @@ export function previewAccess(githubOidcArn: $util.Output<string>, email: string
   const role = new aws.iam.Role('GithubPreviewRole', {
     name: 'yallist-global-github-preview',
     maxSessionDuration: 3600,
-    // Only jobs in the `preview` environment, started by an allowed user. Needs the repo's OIDC
-    // subject template to include actor_id (docs/deploy.md#pr-previews).
+    // Only jobs in this repo's `preview` environment. Only collaborators can push branches here
+    // and fork PRs get no OIDC token, so no per-user condition (revisit when adding collaborators).
     assumeRolePolicy: $jsonStringify({
       Version: '2012-10-17',
       Statement: [
@@ -76,9 +73,7 @@ export function previewAccess(githubOidcArn: $util.Output<string>, email: string
           Condition: {
             StringEquals: {
               [`${GITHUB_OIDC}:aud`]: 'sts.amazonaws.com',
-              [`${GITHUB_OIDC}:sub`]: PREVIEW_ACTOR_IDS.map(
-                (id) => `${REPO_SUBJECT}:environment:preview:actor_id:${id}`,
-              ),
+              [`${GITHUB_OIDC}:sub`]: `${REPO_SUBJECT}:environment:preview`,
             },
           },
         },
