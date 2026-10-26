@@ -1,6 +1,6 @@
 rules:
-  # Tags, not commit SHAs: every action here is from a well-known publisher.
+  # Every action pinned by commit SHA (with a `# vX.Y.Z` comment); Dependabot keeps them current.
   unpinned-uses:
     config:
       policies:
-        '*': ref-pin
+        '*': hash-pin

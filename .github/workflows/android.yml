@@ -26,29 +26,30 @@ jobs:
     # compile check, with no environment (environments accept main only) and so no backend.
     environment: ${{ inputs.stage }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0 # tags, for the version
       # versionName is the latest release (see docs/releases.md); versionCode is the run number.
       - name: Version from the latest release tag
         run: |
           tag=$(git describe --tags --abbrev=0 --match 'v[0-9]*' || echo v0.0.0)
           echo "APP_VERSION=${tag#v}" >> "$GITHUB_ENV"
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version-file: .nvmrc
           cache: pnpm
-      - uses: actions/setup-java@v6
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
           java-version: 17
       # Caches ~/.gradle (dependencies, Gradle build cache). Written by main runs only; PRs read it.
-      - uses: gradle/actions/setup-gradle@v5
+      - uses: gradle/actions/setup-gradle@0723195856401067f7a2779048b490ace7a47d7c # v5.0.2
       # The C++ of React Native and the native modules is most of the build; ccache keeps it across
       # runs (CMake picks up CMAKE_*_COMPILER_LAUNCHER from the env). Keyed by ABI set, and pruned
       # to what this run compiled.
-      - uses: hendrikmuhs/ccache-action@v1.2.24
+      - uses: hendrikmuhs/ccache-action@f09c25b45002a07be2955cbe52e8cee55643f89d # v1.2.24
         with:
           key: android-${{ inputs.stage == 'production' && 'all-abis' || 'arm64' }}
           max-size: 2G
@@ -100,7 +101,7 @@ jobs:
           # shellcheck disable=SC2086 # $args is a list of Gradle arguments
           ./gradlew $args --build-cache --no-daemon
 
-      - uses: actions/upload-artifact@v7
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: yallist-android-${{ inputs.stage || 'pr' }}-${{ github.run_number }}
           path: |

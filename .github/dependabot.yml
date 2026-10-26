@@ -1,0 +1,15 @@
+# Keeps the SHA-pinned actions in .github/workflows current (and their `# vX.Y.Z` comments).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    # Let a release settle a week before adopting it.
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci
