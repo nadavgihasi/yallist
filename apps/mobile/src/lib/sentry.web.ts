@@ -14,8 +14,8 @@ const SDK = {
   integrity: 'sha384-AdV+5nN4aDcSUItKfAdih4x8MmTcxBD9wJBwRW8ueHYNdNK4Hme81F9hYxEnRska',
 };
 
-// Loaded after the app, only with a DSN; errors in the first moments are missed. Uncaught render
-// errors reach it through the window's error event, so the root needs no wrapper.
+// Loaded after the app, only with a DSN; errors in the first moments are missed. Uncaught errors
+// reach it through the window's error event; the ones an error boundary catches, `reportError`.
 if (dsn) {
   const script = document.createElement('script');
   Object.assign(script, { src: SDK.src, integrity: SDK.integrity, crossOrigin: 'anonymous' });
@@ -27,3 +27,7 @@ if (dsn) {
 }
 
 export const withSentry = <P extends object>(root: ComponentType<P>) => root;
+
+/** Reports an error a boundary caught; a no-op until the SDK has loaded (never without a DSN). */
+export const reportError = (error: unknown) =>
+  void (window as { Sentry?: typeof SentryBrowser }).Sentry?.captureException(error);

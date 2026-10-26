@@ -10,8 +10,10 @@ import {
 import Svg from 'react-native-svg';
 
 import { FOCUS, SCENES } from './coverScenes';
+import { STATE_SPOTS, type SpotId } from './stateSpots';
 
 import { testId } from '@/lib/testId';
+import { radius, size } from '@/theme';
 
 const W = 390;
 const H = 300;
@@ -61,6 +63,23 @@ export function Cover({
   );
 }
 
+/** An `EmptyState` picture (`size.spot`): a state spot, or a 4:3 crop of a cover scene. */
+export function Spot({ id }: { id: SpotId | CoverId }) {
+  // Decorative: the title next to it says it all.
+  return id in STATE_SPOTS ? (
+    <View style={[styles.wrap, styles.spot]} aria-hidden>
+      <Svg width="100%" height="100%" viewBox="0 0 160 120">
+        {STATE_SPOTS[id as SpotId]}
+      </Svg>
+    </View>
+  ) : (
+    <View aria-hidden>
+      <Cover scene={id as CoverId} style={styles.spot} />
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   wrap: { overflow: 'hidden', position: 'relative' },
+  spot: { ...size.spot, borderRadius: radius.card - 4 },
 });

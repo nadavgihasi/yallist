@@ -1,5 +1,14 @@
-import { Redirect } from 'expo-router';
+import { router } from 'expo-router';
+
+import { StateScreen } from '@/components/EmptyState';
+import { he } from '@/i18n/he';
 
 export default function NotFound() {
-  return <Redirect href="/" />;
+  return (
+    <StateScreen
+      spot="signpost"
+      {...he.states.notFound}
+      actions={[{ label: he.states.toTrips, onPress: () => router.replace('/') }]}
+    />
+  );
 }

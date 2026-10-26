@@ -15,6 +15,10 @@ const ICONS = {
   plus: ['M12 5v14', 'M5 12h14'],
   minus: ['M5 12h14'],
   check: ['M5 12.5l4.5 4.5L19 7'],
+  /** In a circle: Callout tips. */
+  info: ['M12 16v-4.5', 'M12 8h.01'],
+  /** In a circle: error toasts. */
+  alert: ['M12 7.5V13', 'M12 16.5h.01'],
   close: ['M18 6 6 18', 'M6 6l12 12'],
   pencil: ['M12 20h9', 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'],
   calendar: [
@@ -85,6 +89,8 @@ const ICONS = {
 const CIRCLES: Partial<Record<IconName, { cx: number; cy: number; r: number }[]>> = {
   userPlus: [{ cx: 9, cy: 7.5, r: 3.5 }],
   clock: [{ cx: 12, cy: 12, r: 9 }],
+  info: [{ cx: 12, cy: 12, r: 9 }],
+  alert: [{ cx: 12, cy: 12, r: 9 }],
   sun: [{ cx: 12, cy: 12, r: 4 }],
   camera: [{ cx: 12, cy: 13, r: 3 }],
   image: [{ cx: 9, cy: 9, r: 2 }],

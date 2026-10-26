@@ -4,6 +4,7 @@ import { QueryClient } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
+import { Loader } from '@/components/Loader';
 import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
 import { setAuth, signOut as endSession, statusOf, type AuthResult } from '@/lib/api';
@@ -96,7 +97,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     forget();
   };
 
-  if (session === undefined) return null;
+  if (session === undefined) return <Loader line={he.states.boot} />;
   return (
     <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
       <Context.Provider value={{ me: session?.me, signIn, signOut }}>{children}</Context.Provider>

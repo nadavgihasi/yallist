@@ -21,7 +21,7 @@ const QUALITY = 0.8;
  */
 export async function pickReceipt(source: 'camera' | 'library'): Promise<string | undefined> {
   if (source === 'camera' && !(await ImagePicker.requestCameraPermissionsAsync()).granted) {
-    showToast(he.receipt.noCamera);
+    showToast(he.receipt.noCamera, 'error');
     return undefined;
   }
   const launch =

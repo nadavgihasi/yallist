@@ -18,6 +18,7 @@ import { DateField } from '@/components/DateField';
 import { TextField, fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
+import { Callout } from '@/components/Callout';
 import { PillButton } from '@/components/PillButton';
 import { TemplateTile } from '@/components/TemplateTile';
 import { he } from '@/i18n/he';
@@ -204,6 +205,7 @@ export default function NewTrip() {
                 </>
               )}
             </View>
+            <Callout title={he.states.tip} text={he.newTrip.tip} />
             {wide && (
               <PillButton
                 label={createLabel}

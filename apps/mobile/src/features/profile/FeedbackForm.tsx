@@ -35,11 +35,11 @@ export function FeedbackForm({ onClose }: { onClose: () => void }) {
         }),
       ),
     onSuccess: () => {
-      showToast(he.feedback.thanks);
+      showToast(he.feedback.thanks, 'success');
       onClose();
     },
     onError: (error) =>
-      showToast(statusOf(error) === 429 ? he.feedback.tooMany : he.feedback.failed),
+      showToast(statusOf(error) === 429 ? he.feedback.tooMany : he.feedback.failed, 'error'),
   });
   // The API's limits: title 3–120 characters.
   const ready = title.trim().length >= 3 && !send.isPending;

@@ -35,7 +35,7 @@ export function useUpdateProfile() {
     },
     onError: (_error, _changes, context) => {
       if (context?.previous) queryClient.setQueryData(key, context.previous);
-      showToast(he.errors.failed);
+      showToast(he.errors.failed, 'error');
     },
     onSuccess: (profile) => queryClient.setQueryData(key, profile),
   });
@@ -60,12 +60,12 @@ export function useAvatar() {
       return uri ? uploadAvatar(uri) : undefined;
     },
     onSuccess,
-    onError: () => showToast(he.profile.photoFailed),
+    onError: () => showToast(he.profile.photoFailed, 'error'),
   });
   const remove = useMutation({
     mutationFn: () => parseResponse(api.me.avatar.$delete()),
     onSuccess,
-    onError: () => showToast(he.errors.failed),
+    onError: () => showToast(he.errors.failed, 'error'),
   });
   return { change, remove, busy: change.isPending || remove.isPending };
 }
