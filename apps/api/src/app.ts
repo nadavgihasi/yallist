@@ -39,14 +39,14 @@ export function createApp(
     })
     .get('/health', (c) => c.json({ ok: true }))
     .on(['GET', 'POST'], '/api/auth/*', (c) => auth.handler(c.req.raw))
-    .route('/me', meRoutes(auth, db))
+    .route('/me', meRoutes(auth, db, receipts))
     .route('/feedback', feedbackRoutes(auth, db, feedback))
     .use('/trips/:tripId/*', async (c, next) => {
       await next();
       // After every successful write to a trip, so after its transaction committed.
       if (c.req.method !== 'GET' && c.res.ok) await notify(c.req.param('tripId'));
     })
-    .route('/trips', tripRoutes(auth, db))
+    .route('/trips', tripRoutes(auth, db, receipts))
     .route('/trips', categoryRoutes(auth, db))
     .route('/trips', itemRoutes(auth, db))
     .route('/trips', moneyRoutes(auth, db, receipts))

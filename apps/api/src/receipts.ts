@@ -32,14 +32,22 @@ export interface UploadForm {
   fields: Record<string, string>;
 }
 
-/** The private receipts bucket. A fake stands in for it in tests and the local dev server. */
+/**
+ * The private photos bucket: receipts, and profile photos (src/avatars.ts). A fake stands in for
+ * it in tests and the local dev server.
+ */
 export interface ReceiptStore {
-  /** A short-lived upload of exactly `key`, of type `contentType`, no larger than the limit. */
-  uploadForm(key: string, contentType: ReceiptType): Promise<UploadForm>;
+  /** A short-lived upload of exactly `key`, of type `contentType`, at most `maxBytes`. */
+  uploadForm(key: string, contentType: ReceiptType, maxBytes: number): Promise<UploadForm>;
   /** The stored object's size and type, or undefined if there's none. */
   head(key: string): Promise<{ size: number; contentType: string } | undefined>;
   /** A short-lived link to view it. */
   viewUrl(key: string): Promise<string>;
+  /**
+   * A link to view it that stays the same for up to an hour, so browsers cache the photo, and
+   * works for at least an hour after it's handed out. For photos shown on every load (avatars).
+   */
+  cachedViewUrl(key: string): Promise<string>;
   delete(key: string): Promise<void>;
 }
 
@@ -50,10 +58,19 @@ export const deleteReceipt = (store: ReceiptStore, key: string) =>
 /** Upload forms and view links expire after this many seconds. */
 const EXPIRES = 300;
 
+const HOUR = 3600;
+
+/**
+ * When a cached view link is signed: the start of the current hour, so every link to an object
+ * signed within that hour is the same URL. Valid for two hours from then.
+ */
+export const signingHour = (now: Date) =>
+  new Date(Math.floor(now.getTime() / 1000 / HOUR) * HOUR * 1000);
+
 export function s3ReceiptStore(bucket: string): ReceiptStore {
   const s3 = new S3Client({});
   return {
-    async uploadForm(key, contentType) {
+    async uploadForm(key, contentType, maxBytes) {
       return createPresignedPost(s3, {
         Bucket: bucket,
         Key: key,
@@ -61,7 +78,7 @@ export function s3ReceiptStore(bucket: string): ReceiptStore {
         // The policy pins the key and type and caps the size; S3 refuses anything else.
         Conditions: [
           ['eq', '$Content-Type', contentType],
-          ['content-length-range', 1, RECEIPT_MAX_BYTES],
+          ['content-length-range', 1, maxBytes],
         ],
         Expires: EXPIRES,
       });
@@ -77,6 +94,18 @@ export function s3ReceiptStore(bucket: string): ReceiptStore {
     },
     viewUrl: (key) =>
       getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), { expiresIn: EXPIRES }),
+    cachedViewUrl: (key) =>
+      getSignedUrl(
+        s3,
+        // Keys are never overwritten (a new photo gets a new key), so the response may be cached
+        // as long as the link works.
+        new GetObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          ResponseCacheControl: `private, max-age=${HOUR}`,
+        }),
+        { signingDate: signingHour(new Date()), expiresIn: 2 * HOUR },
+      ),
     async delete(key) {
       await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
     },

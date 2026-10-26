@@ -158,10 +158,11 @@ export default $config({
       },
     });
 
-    // Receipt photos (apps/api/src/receipts.ts), one private bucket per stage (SST blocks public
-    // access by default), keyed trips/<tripId>/receipts/<expenseId>/<uuid>.<ext>. The app uploads
-    // with a presigned POST and views through short-lived presigned GETs, so browsers need CORS
-    // for the upload from the web app and the local Expo web server.
+    // Receipt and profile photos (apps/api/src/receipts.ts, avatars.ts), one private bucket per
+    // stage (SST blocks public access by default), keyed trips/<tripId>/receipts/<expenseId>/
+    // <uuid>.<ext> and avatars/<userId>/<uuid>.<ext>. The app uploads with a presigned POST and
+    // views through short-lived presigned GETs (the API hands avatar links only to trip-mates),
+    // so browsers need CORS for the upload from the web app and the local Expo web server.
     const receipts = new sst.aws.Bucket('Receipts', {
       cors: {
         allowOrigins: [web.url, 'http://localhost:8081'],

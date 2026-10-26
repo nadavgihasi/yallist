@@ -130,6 +130,8 @@ export const profiles = pgTable('profiles', {
     .references(() => users.id),
   displayName: text('display_name').notNull(),
   avatarColor: text('avatar_color').notNull(),
+  /** Their uploaded photo in the photos bucket (src/avatars.ts); without one, their Google picture. */
+  avatarKey: text('avatar_key'),
   /** Shown to trip-mates so they can pay via Bit/PayBox. */
   paymentPhone: text('payment_phone'),
   notifyUpdates: boolean('notify_updates').notNull().default(true),

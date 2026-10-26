@@ -36,6 +36,13 @@
       "when": 1792949918335,
       "tag": "0004_feedback_issue_at",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793040818238,
+      "tag": "0005_avatar_key",
+      "breakpoints": true
     }
   ]
 }
