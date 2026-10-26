@@ -6,7 +6,7 @@ import type { Db } from './db/client';
 
 /**
  * Realtime is AppSync Events: one channel per trip, `/trips/<tripId>`, in the `trips` namespace
- * (infra/app/sst.config.ts). Events say only that the trip changed; clients refetch through the
+ * (infra/app/core.ts). Events say only that the trip changed; clients refetch through the
  * API, which applies the usual access checks. So an event carries no personal data.
  */
 const tripChannel = (tripId: string) => `/trips/${tripId}`;

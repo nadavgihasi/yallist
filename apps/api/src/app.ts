@@ -30,7 +30,7 @@ export function createApp(
     publish(tripId).catch((err: unknown) => console.error('Realtime publish failed', err));
 
   // Answers CORS preflights with a 2xx: API Gateway's `$default` route forwards them to this
-  // Lambda. Deployed, API Gateway replaces these headers with its own (infra/app/sst.config.ts);
+  // Lambda. Deployed, API Gateway replaces these headers with its own (infra/app/core.ts);
   // locally, they're the ones the browser sees.
   return new Hono()
     .use(cors())
@@ -61,7 +61,7 @@ export function createApp(
 
 /**
  * Serves `app` under the path of the API's public URL: a PR preview shares an HTTP API with
- * other PRs and gets `/pr-123/*` (infra/app/sst.config.ts). Elsewhere the URL has no path.
+ * other PRs and gets `/pr-123/*` (infra/app/stacks/preview-pr.ts). Elsewhere the URL has no path.
  */
 export function withBasePath(app: Hono, apiURL: string) {
   const basePath = new URL(apiURL).pathname.replace(/\/$/, '');
