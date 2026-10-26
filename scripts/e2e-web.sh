@@ -17,15 +17,44 @@
 # E2E_BASE_PATH=/pr-123 serves the API and the web app under that path, as a PR preview does
 # (docs/plans/e2e-live-environments.md): the export uses it as its base URL and the web server
 # falls back to its index.html, like the preview's CloudFront Router.
+#
+# E2E_WEB_URL=https://<router>/pr-123/ runs the flows against a deployed PR preview instead
+# (.github/workflows/preview.yml); then nothing is started locally and DATABASE_URL isn't needed.
 set -euo pipefail
 cd "$(dirname "$0")/.."
+
+# Runs the Maestro flows against the web app at $1; the other args are flow files or folders.
+run_flows() {
+  local url=$1
+  shift
+  (($#)) || set -- apps/mobile/e2e
+  case ${E2E_SHARD:-} in
+    '') ;;
+    1) set -- --include-tags shard-1 "$@" ;;
+    2) set -- --exclude-tags shard-1 "$@" ;;
+    *) echo "E2E_SHARD must be 1 or 2" >&2 && exit 1 ;;
+  esac
+  # Recording needs Chrome DevTools for a Chrome version that Maestro 2.11.0 bundles (145–147).
+  # Selenium Manager downloads that Chrome for Testing once (~/.cache/selenium).
+  export SE_BROWSER_VERSION=${SE_BROWSER_VERSION:-147}
+  # A tall phone-width window: the phone layout, with nothing below the fold (taps don't scroll).
+  MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true \
+    "${MAESTRO:-maestro}" test -p web --headless --screen-size 500x1400 \
+    -e WEB_URL="$url" --test-output-dir "$OUT/maestro" \
+    --format junit --output "$OUT/junit.xml" "$@"
+}
+
+OUT=${E2E_OUT:-$(mktemp -d)}
+mkdir -p "$OUT"
+if [[ -n ${E2E_WEB_URL:-} ]]; then
+  run_flows "$E2E_WEB_URL" "$@"
+  exit
+fi
 
 : "${DATABASE_URL:?Set DATABASE_URL to a local Postgres (see docs/deploy.md)}"
 API_PORT=${API_PORT:-3100}
 WEB_PORT=${WEB_PORT:-8180}
 BASE=${E2E_BASE_PATH:-}
-OUT=${E2E_OUT:-$(mktemp -d)}
-mkdir -p "$OUT"
 db="e2e_$(date +%s)_$$"
 bin=$PWD/node_modules/.bin
 
@@ -79,18 +108,4 @@ for url in "http://localhost:$API_PORT$BASE/health" "http://localhost:$WEB_PORT$
   exit 1
 done
 
-(($#)) || set -- apps/mobile/e2e
-case ${E2E_SHARD:-} in
-  '') ;;
-  1) set -- --include-tags shard-1 "$@" ;;
-  2) set -- --exclude-tags shard-1 "$@" ;;
-  *) echo "E2E_SHARD must be 1 or 2" >&2 && exit 1 ;;
-esac
-# Recording needs Chrome DevTools for a Chrome version that Maestro 2.11.0 bundles (145–147).
-# Selenium Manager downloads that Chrome for Testing once (~/.cache/selenium).
-export SE_BROWSER_VERSION=${SE_BROWSER_VERSION:-147}
-# A tall phone-width window: the phone layout, with nothing below the fold (taps don't scroll).
-MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true \
-  "${MAESTRO:-maestro}" test -p web --headless --screen-size 500x1400 \
-  -e WEB_URL="http://localhost:$WEB_PORT${BASE:+$BASE/}" --test-output-dir "$OUT/maestro" \
-  --format junit --output "$OUT/junit.xml" "$@"
+run_flows "http://localhost:$WEB_PORT${BASE:+$BASE/}" "$@"
