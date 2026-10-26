@@ -17,6 +17,7 @@
     "@aws-sdk/s3-presigned-post": "^3.1156.0",
     "@aws-sdk/s3-request-presigner": "^3.1156.0",
     "@hono/zod-validator": "^0.9.1",
+    "@sentry/node-core": "10.75.2",
     "@yallist/domain": "workspace:*",
     "aws4fetch": "^1.0.20",
     "better-auth": "^1.7.12",

@@ -107,6 +107,17 @@ jobs:
           EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID }}
           EXPO_PUBLIC_WEB_URL: ${{ vars.EXPO_PUBLIC_WEB_URL }} # invite links
           EXPO_PUBLIC_GIT_SHA: ${{ github.sha }}
+          EXPO_PUBLIC_STAGE: ${{ inputs.stage }}
+          EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
+          # Source maps to Sentry, as the release and dist the app reports (src/lib/sentryOptions.ts).
+          # Only manual runs have the token (an environment secret); PR builds skip the upload.
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_DISABLE_AUTO_UPLOAD: ${{ secrets.SENTRY_AUTH_TOKEN == '' }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: yallist-app
+          SENTRY_URL: https://sentry.io/
+          SENTRY_RELEASE: yallist@${{ env.APP_VERSION }}
+          SENTRY_DIST: ${{ github.sha }}
         # Production builds are for Play: an AAB plus APK for every ABI. Dev and PR builds are for
         # phones: an arm64 APK only, without lint, which is a quarter of the native compilation.
         run: |

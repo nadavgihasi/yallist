@@ -98,6 +98,12 @@ jobs:
       SST_SECRET_GithubFeedbackToken: ${{ secrets.FEEDBACK_GITHUB_TOKEN }} # optional
       SST_SECRET_TelegramBotToken: ${{ secrets.TELEGRAM_BOT_TOKEN }} # optional, alerts
       SST_SECRET_TelegramChatId: ${{ secrets.TELEGRAM_CHAT_ID }} # optional, alerts
+      SST_SECRET_SentryDsn: ${{ secrets.SENTRY_DSN }} # optional, API errors
+      SST_SECRET_SentryWebhookSecret: ${{ secrets.SENTRY_WEBHOOK_SECRET }} # optional
+      EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }} # optional, app errors
+      # Source map uploads (web export and API bundle); skipped without the token.
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
     steps: *deploy
 
   production:
@@ -115,6 +121,12 @@ jobs:
       SST_SECRET_GithubFeedbackToken: ${{ secrets.FEEDBACK_GITHUB_TOKEN }} # optional
       SST_SECRET_TelegramBotToken: ${{ secrets.TELEGRAM_BOT_TOKEN }} # optional, alerts
       SST_SECRET_TelegramChatId: ${{ secrets.TELEGRAM_CHAT_ID }} # optional, alerts
+      SST_SECRET_SentryDsn: ${{ secrets.SENTRY_DSN }} # optional, API errors
+      SST_SECRET_SentryWebhookSecret: ${{ secrets.SENTRY_WEBHOOK_SECRET }} # optional
+      EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }} # optional, app errors
+      # Source map uploads (web export and API bundle); skipped without the token.
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
     steps: *deploy
 
   # Tags main and creates the GitHub release only once production has it (docs/releases.md).

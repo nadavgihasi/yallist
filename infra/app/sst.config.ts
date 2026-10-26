@@ -89,6 +89,11 @@ export default $config({
     // value empty or the `unset` placeholder, nothing is sent and the notifier logs a warning.
     const telegramBotToken = new sst.Secret('TelegramBotToken', 'unset');
     const telegramChatId = new sst.Secret('TelegramChatId', 'unset');
+    // Sentry (docs/deploy.md, Monitoring): the API project's DSN, and the internal integration's
+    // client secret that signs its webhook. Optional: unset, the API reports nothing and the
+    // webhook answers 404.
+    const sentryDsn = new sst.Secret('SentryDsn', 'unset');
+    const sentryWebhookSecret = new sst.Secret('SentryWebhookSecret', 'unset');
     // OAuth client IDs are public; one Google Cloud OAuth client per stage.
     const authEnvironment = { GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage] };
 
@@ -141,7 +146,8 @@ export default $config({
     // so deep links like /trips/:id load the app.
     const web = new sst.aws.StaticSite('Web', {
       path: '../../apps/mobile',
-      build: { command: 'pnpm export:web', output: 'dist' },
+      // With SENTRY_AUTH_TOKEN (deploy.yml), uploads the source maps to Sentry; never deploys them.
+      build: { command: 'pnpm export:web:release', output: 'dist' },
       environment: {
         EXPO_PUBLIC_API_URL: api.url,
         EXPO_PUBLIC_REALTIME_URL: realtimeApi.dns.apply((dns) => dns.REALTIME!),
@@ -183,6 +189,7 @@ export default $config({
       handler: '../../apps/api/src/lambda.handler',
       runtime: 'nodejs24.x',
       timeout: `${API_TIMEOUT_SECONDS} seconds`,
+      hook: { postbuild: uploadSourceMaps('yallist-api') },
       link: [
         database,
         api,
@@ -192,8 +199,15 @@ export default $config({
         githubFeedbackToken,
         realtime,
         receipts,
+        sentryDsn,
+        sentryWebhookSecret,
+        telegramBotToken,
+        telegramChatId,
       ],
-      environment: authEnvironment,
+      environment: {
+        ...authEnvironment,
+        ...(process.env.APP_VERSION && { SENTRY_RELEASE: `yallist@${process.env.APP_VERSION}` }),
+      },
     });
 
     // Alerts: CloudWatch alarms publish to this topic on ALARM and OK (CloudWatch only notifies
@@ -266,3 +280,19 @@ export default $config({
     return { url: web.url, api: api.url };
   },
 });
+
+/**
+ * A Function `postbuild` hook that, with SENTRY_AUTH_TOKEN (deploy.yml), gives the bundle a
+ * debug ID and uploads its source map to the Sentry project. SST builds the source map but
+ * leaves it out of the deployed zip.
+ */
+function uploadSourceMaps(project: string) {
+  return async (dir: string) => {
+    if (!process.env.SENTRY_AUTH_TOKEN) return;
+    const { execFileSync } = await import('node:child_process');
+    const cli = (...args: string[]) =>
+      execFileSync('pnpm', ['exec', 'sentry-cli', ...args], { stdio: 'inherit' });
+    cli('sourcemaps', 'inject', dir);
+    cli('sourcemaps', 'upload', '--project', project, dir);
+  };
+}

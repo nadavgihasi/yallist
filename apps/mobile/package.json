@@ -6,6 +6,7 @@
     "@expo-google-fonts/rubik": "^0.4.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-community/datetimepicker": "9.2.1",
+    "@sentry/react-native": "~8.28.0",
     "@tanstack/query-async-storage-persister": "^5.104.5",
     "@tanstack/react-query": "^5.104.5",
     "@tanstack/react-query-persist-client": "^5.104.5",
@@ -34,6 +35,7 @@
     "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
+    "@sentry/browser": "10.75.2",
     "@types/react": "~19.3.0",
     "@yallist/api": "workspace:*",
     "typescript": "~6.0.3",
@@ -45,6 +47,7 @@
     "android": "expo start --android",
     "typecheck": "tsc --noEmit",
     "export:web": "expo export -p web",
+    "export:web:release": "expo export -p web --source-maps && ([ -z \"$SENTRY_AUTH_TOKEN\" ] || SENTRY_PROJECT=yallist-app SENTRY_URL=https://sentry.io/ sentry-expo-upload-sourcemaps dist) && rm dist/_expo/static/js/web/*.map",
     "test": "vitest run"
   },
   "private": true
