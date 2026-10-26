@@ -20,6 +20,9 @@ const port = Number(process.env.PORT ?? 3000);
 const sql = connect();
 await migrate(sql, { dsql: false });
 const db = createDb(sql);
+// No realtime locally: publishing is a no-op. Receipts and profile photos stay in memory, served
+// by this server. No GitHub token locally: feedback is only saved.
+const receipts = localReceiptStore(`http://localhost:${port}/dev/receipts`);
 const auth = createAuth(db, {
   baseURL: `http://localhost:${port}`,
   webURL: 'http://localhost:8081',
@@ -28,11 +31,9 @@ const auth = createAuth(db, {
     clientId: process.env.GOOGLE_CLIENT_ID ?? 'unset',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? 'unset',
   },
+  photos: receipts.store,
 });
 
-// No realtime locally: publishing is a no-op. Receipts stay in memory, served by this server.
-// No GitHub token locally: feedback is only saved.
-const receipts = localReceiptStore(`http://localhost:${port}/dev/receipts`);
 const app = new Hono()
   .use('/dev/receipts/*', cors())
   .route('/dev/receipts', receipts.routes)

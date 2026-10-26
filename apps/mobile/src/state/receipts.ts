@@ -69,8 +69,8 @@ export const useReceiptUpload = (expenseId: string) =>
     () => uploads.get(expenseId),
   );
 
-/** Posts the presigned form to the bucket, reporting progress (fetch can't). */
-function postForm(
+/** Posts a presigned form and a JPEG to the photos bucket, reporting progress (fetch can't). */
+export function postForm(
   form: { url: string; fields: Record<string, string> },
   file: Blob,
   uri: string,
@@ -80,7 +80,7 @@ function postForm(
     const body = new FormData();
     for (const [name, value] of Object.entries(form.fields)) body.append(name, value);
     // React Native sends a file by URI; the web sends the blob.
-    const nativeFile = { uri, name: 'receipt.jpg', type: 'image/jpeg' } as unknown as Blob;
+    const nativeFile = { uri, name: 'photo.jpg', type: 'image/jpeg' } as unknown as Blob;
     body.append('file', Platform.OS === 'web' ? file : nativeFile);
     const xhr = new XMLHttpRequest();
     xhr.open('POST', form.url);

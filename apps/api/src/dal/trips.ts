@@ -2,6 +2,7 @@ import type { Claim, Payment } from '@yallist/domain';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { fail } from '../access';
+import { avatarUrl } from '../avatars';
 import {
   claims,
   expenseShares,
@@ -11,8 +12,10 @@ import {
   profiles,
   tripMembers,
   trips,
+  users,
 } from '../db/schema';
 import type { Executor, Tx } from '../db/tx';
+import type { ReceiptStore } from '../receipts';
 import { toCategory, toExpense, toItem, toTrip } from '../trip-data';
 import { listCategories } from './categories';
 
@@ -48,8 +51,12 @@ export async function tripByToken(tx: Executor, token: string) {
   return trip;
 }
 
-/** Everything about the given trips that the app's trip screens need, in one snapshot. */
-export async function loadTrips(tx: Executor, tripIds: string[]) {
+/**
+ * Everything about the given trips that the app's trip screens need, in one snapshot. With
+ * `photos`, for a caller who is an active member of every one of them, active members come with
+ * their avatar's URL: only trip-mates see someone's photo.
+ */
+export async function loadTrips(tx: Executor, tripIds: string[], photos?: ReceiptStore) {
   if (tripIds.length === 0) return [];
   const [
     tripRows,
@@ -70,9 +77,12 @@ export async function loadTrips(tx: Executor, tripIds: string[]) {
         role: tripMembers.role,
         status: tripMembers.status,
         color: profiles.avatarColor,
+        avatarKey: profiles.avatarKey,
+        image: users.image,
       })
       .from(tripMembers)
       .innerJoin(profiles, eq(profiles.id, tripMembers.userId))
+      .innerJoin(users, eq(users.id, tripMembers.userId))
       .where(inArray(tripMembers.tripId, tripIds))
       .orderBy(asc(tripMembers.joinedAt)),
     listCategories(tx, tripIds),
@@ -103,13 +113,31 @@ export async function loadTrips(tx: Executor, tripIds: string[]) {
       .orderBy(asc(payments.markedAt)),
   ]);
 
+  const avatars = new Map<string, string | undefined>();
+  if (photos) {
+    const active = memberRows.filter((m) => m.status === 'active');
+    const urls = await Promise.all(active.map((m) => avatarUrl(photos, m)));
+    active.forEach((m, i) => avatars.set(m.userId, urls[i]));
+  }
   const liveItems = new Set(itemRows.map((i) => i.id));
   return tripRows.map((trip) => ({
     trip: toTrip(trip),
     inviteToken: trip.inviteToken,
     members: memberRows
       .filter((m) => m.tripId === trip.id)
-      .map(({ tripId: _, ...member }) => member),
+      .map(
+        ({
+          tripId: _,
+          avatarKey: _k,
+          image: _i,
+          ...member
+        }): typeof member & {
+          avatarUrl?: string;
+        } => ({
+          ...member,
+          avatarUrl: member.status === 'active' ? avatars.get(member.userId) : undefined,
+        }),
+      ),
     categories: categoryRows.filter((c) => c.tripId === trip.id).map(toCategory),
     items: itemRows.filter((i) => i.tripId === trip.id).map(toItem),
     claims: claimRows

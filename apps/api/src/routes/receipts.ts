@@ -56,7 +56,7 @@ export const receiptRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           await findExpense(tx, tripId, expenseId);
         });
         const key = newReceiptKey(tripId, expenseId, contentType);
-        return c.json({ key, ...(await receipts.uploadForm(key, contentType)) });
+        return c.json({ key, ...(await receipts.uploadForm(key, contentType, RECEIPT_MAX_BYTES)) });
       },
     )
 

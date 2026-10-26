@@ -57,10 +57,14 @@ const USER_COLUMNS = [
   ['feedback', 'user_id'],
 ] as const;
 
-/** Moves everything of user `from` to user `to` and deletes `from`'s profile. */
+/**
+ * Moves everything of user `from` to user `to` and deletes `from`'s profile. `to` keeps its own
+ * photo, else takes `from`'s. Returns the key of `from`'s photo if `to` kept its own, for the
+ * caller to delete once this has committed.
+ */
 export async function mergeUser(db: Db, from: string, to: string) {
   const id = sql.identifier;
-  await transact(db, async (tx) => {
+  return transact(db, async (tx) => {
     // Where both are in a trip, the account keeps the stronger membership, so a trip never
     // loses its organizer: an active organizer beats member, and active beats pending beats
     // removed. A removed organizer's role doesn't carry over.
@@ -92,6 +96,10 @@ export async function mergeUser(db: Db, from: string, to: string) {
         sql`update ${id(table)} set ${id(column)} = ${to} where ${id(column)} = ${from}`,
       );
     }
+    const [guest, account] = await Promise.all([findProfile(tx, from), findProfile(tx, to)]);
+    const photo = guest?.avatarKey;
+    if (photo && !account?.avatarKey) await updateProfile(tx, to, { avatarKey: photo });
     await tx.delete(profiles).where(eq(profiles.id, from));
+    return account?.avatarKey ? (photo ?? undefined) : undefined;
   });
 }

@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import { avatarSize, colors, fonts, type } from '@/theme';
 
@@ -6,11 +7,14 @@ export interface AvatarPerson {
   initial: string;
   /** Their pale avatar color (AVATAR_COLORS); without one, the `primary` badge. */
   color?: string;
+  /** Their profile photo's URL, shown over the initial (which shows while it loads, or if it fails). */
+  photo?: string;
 }
 
 /**
  * Initial badge: `primary` fill, `onPrimary` letter. `dimmed` for someone left out (share picker).
  * A pale avatar color (`color`, else the person's unless dimmed) fills it instead, with an `ink` letter.
+ * A profile photo covers it, inside the ring.
  */
 export function Avatar({
   person,
@@ -26,6 +30,8 @@ export function Avatar({
   color?: string;
 }) {
   const fill = color ?? (dimmed ? undefined : person.color);
+  const [failed, setFailed] = useState<string>();
+  const photo = person.photo !== failed ? person.photo : undefined;
   return (
     <View
       style={[
@@ -49,6 +55,14 @@ export function Avatar({
       >
         {person.initial}
       </Text>
+      {photo && (
+        <Image
+          source={{ uri: photo }}
+          style={[StyleSheet.absoluteFill, { borderRadius: size / 2 }, dimmed && styles.dimmed]}
+          resizeMode="cover"
+          onError={() => setFailed(photo)}
+        />
+      )}
     </View>
   );
 }
@@ -105,6 +119,7 @@ const styles = StyleSheet.create({
     borderColor: colors.card,
   },
   initial: { fontFamily: fonts.extraBold },
+  dimmed: { opacity: 0.45 },
   stack: { flexDirection: 'row', alignItems: 'center' },
   overlap: { marginStart: -8 },
   more: { backgroundColor: colors.primaryTint, borderWidth: 2 },

@@ -34,6 +34,8 @@ describe.skipIf(!DATABASE_URL)('GET and PATCH /me', () => {
       displayName: 'דנה',
       avatarColor: expect.stringMatching(/^#[0-9A-F]{6}$/),
       paymentPhone: null,
+      avatarUrl: null,
+      customAvatar: false,
       notifyUpdates: true,
       notifyDayBefore: true,
       notifySettle: true,

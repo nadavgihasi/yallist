@@ -167,4 +167,29 @@ describe.skipIf(!DATABASE_URL)('auth', () => {
       { item_id: towels, user_id: account.id, quantity: 1 },
     ]);
   });
+
+  it('keeps the account’s photo, else takes the guest’s; returns the one left over', async () => {
+    const photo = async (name: string, key: string | null) => {
+      const user = await signInAsGuest(name);
+      await sql`update profiles set avatar_key = ${key} where id = ${user.id}`;
+      return user;
+    };
+    const keyOf = async (id: string) =>
+      (await sql<{ k: string | null }[]>`select avatar_key k from profiles where id = ${id}`)[0]!.k;
+
+    const [guest1, account1] = [await photo('g1', 'avatars/g1/a.jpg'), await photo('a1', null)];
+    expect(await mergeUser(db, guest1.id, account1.id)).toBeUndefined();
+    expect(await keyOf(account1.id)).toBe('avatars/g1/a.jpg');
+
+    const [guest2, account2] = [
+      await photo('g2', 'avatars/g2/a.jpg'),
+      await photo('a2', 'avatars/a2/a.jpg'),
+    ];
+    expect(await mergeUser(db, guest2.id, account2.id)).toBe('avatars/g2/a.jpg');
+    expect(await keyOf(account2.id)).toBe('avatars/a2/a.jpg');
+
+    const [guest3, account3] = [await photo('g3', null), await photo('a3', 'avatars/a3/a.jpg')];
+    expect(await mergeUser(db, guest3.id, account3.id)).toBeUndefined();
+    expect(await keyOf(account3.id)).toBe('avatars/a3/a.jpg');
+  });
 });
