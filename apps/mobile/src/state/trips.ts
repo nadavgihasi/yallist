@@ -159,6 +159,8 @@ async function send(tripId: string, action: Action): Promise<unknown> {
       if (action.type === 'declineMember') return parseResponse(member.decline.$post(memberParam));
       return parseResponse(member.$delete(memberParam));
     }
+    case 'setCover':
+      return parseResponse(trip.$patch({ param, json: { cover: action.cover } }));
   }
 }
 

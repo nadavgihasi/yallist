@@ -14,6 +14,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SegmentedControl } from '@/components/Controls';
+import { Cover } from '@/components/Cover';
 import { FLOATING_CLEARANCE, FloatingAction } from '@/components/FloatingAction';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
@@ -30,7 +31,7 @@ import { testId } from '@/lib/testId';
 import { useToday } from '@/lib/useToday';
 import { useMe } from '@/state/store';
 import { useTripQuery } from '@/state/trips';
-import { colors, size, space, type } from '@/theme';
+import { colors, radius, size, space, type } from '@/theme';
 import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
 const TABS = ['bring', 'buy', 'people', 'money'] as const;
@@ -154,6 +155,24 @@ export default function TripScreen() {
             onPress={() => pickTab('people')}
           />
         </View>
+        <Cover
+          scene={trip.cover}
+          style={[styles.cover, desktop && styles.coverDesktop]}
+          testID={`trip-hero-cover-${trip.cover}`}
+        >
+          {view.memberById.get(me.userId)?.role === 'organizer' && (
+            <PillButton
+              label={he.cover.changeShort}
+              accessibilityLabel={he.cover.change}
+              variant="card"
+              size="sm"
+              icon={<Icon name="image" size={16} color={colors.ink} />}
+              {...testId('trip-cover-edit')}
+              onPress={() => router.push({ pathname: '/trips/[tripId]/cover', params: { tripId } })}
+              style={styles.coverEdit}
+            />
+          )}
+        </Cover>
         <View style={styles.titles}>
           <Text style={styles.title} accessibilityRole="header" {...testId('trip-title')}>
             {trip.name}
@@ -243,6 +262,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cover: { height: 120, borderRadius: radius.card },
+  coverDesktop: { height: 220 },
+  coverEdit: { position: 'absolute', bottom: space[3], end: space[3] },
   titles: { gap: space[1] },
   // Long unbroken words wrap at the column's width instead of overflowing it.
   title: { ...type.pageTitle, color: colors.ink },

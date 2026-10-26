@@ -39,6 +39,7 @@ function trip(overrides: Partial<TripData> = {}): TripData {
       endsOn: '2026-11-14',
       placeText: undefined,
       template: 'camp',
+      cover: 'camp',
       status: 'planning',
       requireApproval: false,
       createdAt: '2026-10-24T00:00:00.000Z',
@@ -178,6 +179,14 @@ describe('payments', () => {
       'me',
     );
     expect(next.payments).toEqual([{ ...payment, status: 'confirmed' }]);
+  });
+});
+
+describe('trip', () => {
+  it('changes the cover at once', () => {
+    expect(applyAction(trip(), { type: 'setCover', cover: 'winter' }, 'me').trip.cover).toBe(
+      'winter',
+    );
   });
 });
 

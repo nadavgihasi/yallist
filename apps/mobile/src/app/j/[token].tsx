@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { Cover } from '@/components/Cover';
 import { TextField } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
@@ -94,7 +95,8 @@ export default function Join() {
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <Text style={styles.kicker}>{he.join.invited}</Text>
-      <View style={styles.card}>
+      <View style={[styles.card, styles.invite]}>
+        <Cover scene={trip.cover} style={styles.cover} testID={`join-cover-${trip.cover}`} />
         <Text style={styles.name} accessibilityRole="header">
           {trip.name}
         </Text>
@@ -220,6 +222,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.card,
     gap: space[2],
   },
+  // The cover runs edge to edge across the card's top.
+  invite: { overflow: 'hidden' },
+  cover: { height: 120, margin: -space[5], marginBottom: space[2] },
   name: { ...type.pageTitle, color: colors.ink },
   meta: { ...type.caption, color: colors.inkMuted },
   missing: { gap: space[1], marginTop: space[2] },

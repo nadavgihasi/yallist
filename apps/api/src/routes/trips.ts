@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
-import { activeMemberIds, claimsFor, isDone } from '@yallist/domain';
+import { activeMemberIds, claimsFor, COVER_IDS, coverFor, isDone } from '@yallist/domain';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -35,6 +35,7 @@ const tripFields = {
   endsOn: date,
   placeText: z.string().trim().max(120).nullable(),
   requireApproval: z.boolean(),
+  cover: z.enum(COVER_IDS),
 };
 const datesInOrder = (t: { startsOn?: string; endsOn?: string }) =>
   !t.startsOn || !t.endsOn || t.startsOn <= t.endsOn;
@@ -45,6 +46,8 @@ const createTrip = z
     ...tripFields,
     placeText: tripFields.placeText.optional(),
     requireApproval: tripFields.requireApproval.optional(),
+    // Defaults to the template's.
+    cover: tripFields.cover.optional(),
     template: z.enum(TEMPLATE_IDS),
   })
   .refine(datesInOrder, datesMessage);
@@ -79,12 +82,13 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
 
     // Create a trip from a template: the caller is its organizer.
     .post('/', validate('json', createTrip), async (c) => {
-      const { template, ...input } = c.req.valid('json');
+      const { template, cover, ...input } = c.req.valid('json');
       const user = c.var.user;
       const data = await transact(db, async (tx) => {
         const { id: tripId } = await insertTrip(tx, {
           ...input,
           template,
+          cover: cover ?? coverFor(template),
           inviteToken: newInviteToken(),
           createdBy: user.id,
         });

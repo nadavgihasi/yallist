@@ -1,0 +1,38 @@
+# Pick a cover for a new trip, see it on the trip and its card, then change it from the trip.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [trips]
+---
+- runFlow: ../common/sign-in.yaml
+- tapOn:
+    id: home-new-trip
+- tapOn:
+    id: new-trip-name
+- inputText: E2E cover
+- assertVisible:
+    id: trip-cover-picker
+- tapOn:
+    id: trip-cover-desert
+- tapOn:
+    id: new-trip-create
+- assertVisible:
+    id: trip-title
+    text: E2E cover
+- assertVisible:
+    id: trip-hero-cover-desert
+# Organizers change it from the trip.
+- tapOn:
+    id: trip-cover-edit
+- tapOn:
+    id: trip-cover-winter
+- assertVisible:
+    id: trip-hero-cover-winter
+# And home's card shows it.
+- openLink: ${WEB_URL}
+- assertVisible:
+    id: trip-card-cover-winter

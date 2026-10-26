@@ -2,13 +2,14 @@ import { Redirect } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AVATAR_COLORS } from '@yallist/domain';
+import { AVATAR_COLORS, type CoverId, type TemplateId } from '@yallist/domain';
 
 import { AvatarStack, type AvatarPerson } from '@/components/Avatar';
 import { FilterChip, PersonChip, SuggestionChip } from '@/components/Chips';
 import { SegmentedControl, Switch } from '@/components/Controls';
 import { Countdown } from '@/components/Countdown';
-import { Cover, type Scene } from '@/components/Cover';
+import { Cover } from '@/components/Cover';
+import { CoverPicker } from '@/components/CoverPicker';
 import { AmountField, TextField } from '@/components/Fields';
 import { FloatingAction } from '@/components/FloatingAction';
 import { Icon } from '@/components/Icon';
@@ -36,7 +37,7 @@ const PHASES: [string, string][] = [
   [NOW, NOW],
   [NOW, addDays(NOW, 1)],
 ];
-const SCENES: Scene[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
+const TEMPLATES: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
 
 /** Dev-only gallery of the design-system components. */
 export default function ComponentsPreview() {
@@ -44,6 +45,7 @@ export default function ComponentsPreview() {
   const [list, setList] = useState<'bring' | 'buy'>('bring');
   const [on, setOn] = useState(true);
   const [amount, setAmount] = useState('120');
+  const [cover, setCover] = useState<CoverId>('camp');
 
   if (!__DEV__) return <Redirect href="/" />;
 
@@ -54,12 +56,13 @@ export default function ComponentsPreview() {
         <Text style={styles.h1}>רכיבים</Text>
 
         <View style={styles.row}>
-          {SCENES.map((s) => (
+          {TEMPLATES.map((s) => (
             <TripTile key={s} template={s} />
           ))}
         </View>
-        <Cover scene="camp" style={styles.cover} />
-        <Cover scene="camp" style={styles.band}>
+        <Cover scene={cover} style={styles.cover} />
+        <CoverPicker value={cover} onChange={setCover} />
+        <Cover scene={cover} style={styles.band}>
           <View style={[styles.row, styles.onCover]}>
             {PHASES.map(([startsOn, endsOn]) => (
               <Countdown key={startsOn + endsOn} startsOn={startsOn} endsOn={endsOn} now={NOW} />
