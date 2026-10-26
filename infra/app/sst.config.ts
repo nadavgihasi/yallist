@@ -8,6 +8,9 @@
  */
 const STAGES = ['dev', 'production'];
 
+/** The API Lambda's timeout; API Gateway gives up at 30 seconds anyway. */
+const API_TIMEOUT_SECONDS = 20;
+
 const GOOGLE_CLIENT_IDS: Record<string, string> = {
   dev: '320057100250-1lskqsmic04ek446i2rqlcdb82q315hd.apps.googleusercontent.com',
   production: '320057100250-skj1935jdjo5ttlf6khunvrcvktqj0il.apps.googleusercontent.com',
@@ -82,6 +85,10 @@ export default $config({
     // Opens a GitHub issue per feature request from the app (apps/api/src/routes/feedback.ts).
     // Optional: until the GitHub secret exists, the placeholder makes the API only save requests.
     const githubFeedbackToken = new sst.Secret('GithubFeedbackToken', 'unset');
+    // Telegram bot that alerts post to (apps/api/src/notify/telegram.ts). Optional: with either
+    // value empty or the `unset` placeholder, nothing is sent and the notifier logs a warning.
+    const telegramBotToken = new sst.Secret('TelegramBotToken', 'unset');
+    const telegramChatId = new sst.Secret('TelegramChatId', 'unset');
     // OAuth client IDs are public; one Google Cloud OAuth client per stage.
     const authEnvironment = { GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage] };
 
@@ -171,9 +178,10 @@ export default $config({
       },
     });
 
-    api.route('$default', {
+    const apiRoute = api.route('$default', {
       handler: '../../apps/api/src/lambda.handler',
       runtime: 'nodejs24.x',
+      timeout: `${API_TIMEOUT_SECONDS} seconds`,
       link: [
         database,
         api,
@@ -186,6 +194,73 @@ export default $config({
       ],
       environment: authEnvironment,
     });
+
+    // Alerts: CloudWatch alarms publish to this topic on ALARM and OK (CloudWatch only notifies
+    // on a state change, never repeats), and the notifier posts each to Telegram
+    // (apps/api/src/alarm-notifier.ts). Production only; dev has the topic, no alarms.
+    const alerts = new sst.aws.SnsTopic('Alerts');
+    alerts.subscribe('AlertsNotifier', {
+      handler: '../../apps/api/src/alarm-notifier.handler',
+      runtime: 'nodejs24.x',
+      link: [telegramBotToken, telegramChatId],
+    });
+    if ($app.stage === 'production') {
+      const apiFunction = apiRoute.nodes.function.name;
+      const lambda = (fn: $util.Input<string>, metricName: string) => ({
+        namespace: 'AWS/Lambda',
+        metricName,
+        dimensions: { FunctionName: fn },
+      });
+      alarm('ApiErrors', 'API Lambda invocations failed (crash, timeout or out of memory)', {
+        ...lambda(apiFunction, 'Errors'),
+        threshold: 3,
+      });
+      alarm('ApiThrottles', 'API Lambda invocations throttled (concurrency limit)', {
+        ...lambda(apiFunction, 'Throttles'),
+        threshold: 1,
+      });
+      alarm('ApiDuration', `API Lambda took over 80% of its ${API_TIMEOUT_SECONDS}s timeout`, {
+        ...lambda(apiFunction, 'Duration'),
+        statistic: 'Maximum',
+        threshold: API_TIMEOUT_SECONDS * 1000 * 0.8,
+      });
+      alarm('Api5xx', 'API Gateway answered 5xx (unhandled errors in the API)', {
+        namespace: 'AWS/ApiGateway',
+        metricName: '5xx',
+        dimensions: { ApiId: api.nodes.api.id },
+        threshold: 5,
+      });
+      alarm('RealtimeAuthorizerErrors', 'Realtime authorizer failed: clients cannot subscribe', {
+        ...lambda(realtimeAuthorizer.name, 'Errors'),
+        threshold: 3,
+      });
+    }
+
+    /**
+     * A 5-minute alarm on `metric` reaching `threshold` (summed unless `statistic` says otherwise)
+     * that notifies the Alerts topic on ALARM and on OK. No data (no traffic) counts as healthy.
+     */
+    function alarm(
+      name: string,
+      description: string,
+      metric: Pick<
+        aws.cloudwatch.MetricAlarmArgs,
+        'namespace' | 'metricName' | 'dimensions' | 'threshold' | 'statistic'
+      >,
+    ) {
+      new aws.cloudwatch.MetricAlarm(`Alarm${name}`, {
+        name: `${$app.name}-${$app.stage}-${name}`,
+        alarmDescription: description,
+        statistic: 'Sum',
+        ...metric,
+        period: 300,
+        evaluationPeriods: 1,
+        comparisonOperator: 'GreaterThanOrEqualToThreshold',
+        treatMissingData: 'notBreaching',
+        alarmActions: [alerts.arn],
+        okActions: [alerts.arn],
+      });
+    }
 
     return { url: web.url, api: api.url };
   },
