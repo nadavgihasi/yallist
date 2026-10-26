@@ -16,7 +16,7 @@ Requires Node 24+ (`nvm use` reads `.nvmrc`) and pnpm 10.
 ```sh
 pnpm install
 # The API on http://localhost:3000, against a local Postgres (migrated on start):
-DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres pnpm --filter @yallist/api dev
+DATABASE_URL=postgres://postgres:postgres@localhost:55432/postgres pnpm --filter @yallist/api dev
 pnpm --filter mobile web   # opens the web app at http://localhost:8081, using that API
 ```
 

@@ -7,6 +7,7 @@
 | [design/](design/README.md)            | Design system v2 (tokens, brand, reference screens) and the superseded v1 mockups.          |
 | [plans/](plans/README.md)              | Implementation plans, one per phase.                                                        |
 | [releases.md](releases.md)             | Versioning: release tags made from commit titles on every push to main.                     |
+| [fix-list.md](fix-list.md)             | Review findings awaiting a decision; ticked items become PRs.                               |
 
 ## Which one wins
 

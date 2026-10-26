@@ -77,8 +77,8 @@ Aurora DSQL, one cluster per stage (`sst.aws.Dsql('Database')`), available in bo
 - **Local and tests:** with `DATABASE_URL` set, everything uses plain Postgres instead (DSQL has no emulator). The API tests migrate a throwaway database and skip without `DATABASE_URL`; CI provides a `postgres:17` service.
 
 ```sh
-docker run -d --rm --name yallist-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:17
-export DATABASE_URL=postgres://postgres:postgres@localhost:5432/postgres
+docker run -d --rm --name yallist-pg -e POSTGRES_PASSWORD=postgres -p 55432:5432 postgres:17
+export DATABASE_URL=postgres://postgres:postgres@localhost:55432/postgres
 pnpm test
 ```
 
