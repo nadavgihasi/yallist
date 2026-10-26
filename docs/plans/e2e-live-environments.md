@@ -1,14 +1,14 @@
 # PR preview environments and live e2e tests
 
-**Status:** design, decided (see [§11](#11-decisions)). Nothing is built. Replaces the earlier "fresh AWS stage per run" design (2026-10-25), which created CloudFront, DSQL and AppSync on every run and gave nothing to click on before merging.
+**Status:** built in #91 (base path), #93 (infra), #94 (workflows) and the docs PR, and running since the first preview (pr-108). [Measured](#measured) has the first runs' numbers; [As built](#as-built) lists where the code differs from this design. Replaces the earlier "fresh AWS stage per run" design (2026-10-25), which created CloudFront, DSQL and AppSync on every run and gave nothing to click on before merging.
 
 ## Summary
 
 - Every PR from this repo gets a **live environment on real AWS** at `https://<preview-cdn>/pr-<n>/`, with its own API Lambda, DSQL cluster, realtime API and receipts bucket. It's created on open, updated on every push, posted as a sticky PR comment, and removed on close or **6 hours** after the last push.
 - The slow, shared pieces (CloudFront, API Gateway) are created **once** by a `preview` SST stage. A PR's `pr-<n>` SST stage only adds fast resources, so a push is live in **about 4–5 minutes** and `sst remove --stage pr-<n>` is the whole teardown.
-- **Every AWS resource is in `infra/app/sst.config.ts`** (stage-conditional); nothing is created by hand or by CLI. The one thing that isn't an AWS resource, the stage's **SST passphrase and state**, is deleted by the cleanup job.
+- **Every AWS resource is in the app's SST code** (`infra/app`, one file per kind of stage, §3); nothing is created by hand or by CLI. The one thing that isn't an AWS resource, the stage's **SST passphrase and state**, is deleted by the cleanup job.
 - The Maestro web flows ([ui-tests.md](ui-tests.md)) run against the preview with `WEB_URL`, which replaces the Playwright plan.
-- Previews deploy with a **least-privilege OIDC role** that only an allowlist of GitHub users can assume; the admin deploy role keeps its current trust ([§6](#6-security)).
+- Previews deploy with a **least-privilege OIDC role** that only this repo's `preview`-environment jobs can assume; the admin deploy role keeps its current trust ([§6](#6-security)).
 
 ## 1. Shape
 
@@ -52,9 +52,9 @@ flowchart LR
 | Receipts bucket       | `pr-<n>`  | `removal: 'remove'` empties it on `sst remove`.                                              |
 | Secrets               | `pr-<n>`  | `BetterAuthSecret` from the `preview` GitHub environment. No Google client, no GitHub token. |
 
-## 3. `sst.config.ts`
+## 3. SST code
 
-One file, three kinds of stage: `dev`/`production` (unchanged), `preview`, and `/^pr-\d+$/`. The per-PR branch is today's config minus the HTTP API and the CDN:
+One SST app, three kinds of stage, one file each: `dev`/`production` (unchanged) in `stacks/app.ts`, `preview` in `stacks/preview-shared.ts` and `/^pr-\d+$/` in `stacks/preview-pr.ts`; `sst.config.ts` picks the region and dispatches. `app.ts` and `preview-pr.ts` build the app from the same parts (`core.ts`). A separate SST app for `preview` was considered: it would only split the state and deploy command, while the SSM contract and the API's CORS would be shared across apps. A PR stage is the app minus the HTTP API and the CDN:
 
 ```ts
 const outputs = aws.ssm.getParameterOutput({ name: '/yallist/preview/outputs' }).value.apply(JSON.parse);
@@ -83,13 +83,13 @@ new sst.aws.StaticSite('Web', { router: { instance: router, path: prefix }, envi
 
 `preview.yml`: `pull_request` (`opened`, `synchronize`, `reopened`, `closed`), `schedule` hourly, `workflow_dispatch`. Concurrency group `preview-pr-<n>`, cancel in progress.
 
-| Job      | When                                                  | Steps                                                                                                                                                                                                                                                                                                  |
-| -------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `deploy` | open, push; head repo is this repo; actor allowlisted | OIDC → preview role; `sst deploy --stage pr-<n>`; `db:migrate`; `/health` and site smoke; sticky PR comment with the URLs. Then two `ui-shard` jobs (no AWS role) run the Maestro flows with `WEB_URL=https://<router>/pr-<n>/`, as ui-tests.yml shards them, and `ui-tests` fails unless both passed. |
-| `remove` | PR closed                                             | `sst unlock`, `sst remove --stage pr-<n>`, delete passphrase and state, fail if `tag:GetResources` still finds `stage=pr-<n>`.                                                                                                                                                                         |
-| `expire` | hourly, dispatch                                      | List `yallist-pr-*` Lambdas by tag; for each with `expires-at` in the past (6 h after its last deploy) or whose PR is closed, run the `remove` steps. Fails when it cleaned something, which notifies me.                                                                                              |
+| Job      | When                               | Steps                                                                                                                                                                                                                                                                                                  |
+| -------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `deploy` | open, push; head repo is this repo | OIDC → preview role; `sst deploy --stage pr-<n>`; `db:migrate`; `/health` and site smoke; sticky PR comment with the URLs. Then two `ui-shard` jobs (no AWS role) run the Maestro flows with `WEB_URL=https://<router>/pr-<n>/`, as ui-tests.yml shards them, and `ui-tests` fails unless both passed. |
+| `remove` | PR closed                          | `sst unlock`, `sst remove --stage pr-<n>`, delete passphrase and state, fail if `tag:GetResources` still finds `stage=pr-<n>`.                                                                                                                                                                         |
+| `expire` | hourly, dispatch                   | List `yallist-pr-*` Lambdas by tag; for each with `expires-at` in the past (6 h after its last deploy) or whose PR is closed, run the `remove` steps. Fails when it cleaned something, which notifies me.                                                                                              |
 
-Estimated time per push, `ubuntu-latest`, nothing measured yet:
+Estimated time per push, `ubuntu-latest` (the first measurements are in [Measured](#measured)):
 
 | Step                                                   | Estimate    | Notes                                                                                                                                                                                                                               |
 | ------------------------------------------------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -104,17 +104,19 @@ Later speed-ups if wanted: poll for the cluster by tag and migrate while the sit
 
 ## 6. Security
 
-**Decision:** the admin deploy role keeps trusting `…:environment:*`. Instead, who can trigger previews is restricted to an allowlist of GitHub users, on three layers.
+**Decision:** the admin deploy role keeps trusting `…:environment:*`. Who can trigger previews is whoever can push a branch here, which today is only the owner.
 
-1. **Workflow guard.** The `deploy` job runs only if `github.event.pull_request.head.repo.full_name == github.repository` and both the PR author and `github.actor` are in the repo variable `PREVIEW_ALLOWED_ACTORS` (a JSON array, checked with `contains(fromJSON(vars.PREVIEW_ALLOWED_ACTORS), …)`). `pull_request_target` is never used. Fork PRs get no OIDC token and no secrets anyway ([events](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows)).
-2. **AWS-level guard on the preview role.** The repo's OIDC subject template is set to `["repo", "context", "actor_id"]` (`PUT /repos/{owner}/{repo}/actions/oidc/customization/sub`, [REST](https://docs.github.com/en/rest/actions/oidc)), so every token's `sub` becomes `repo:nadavgihasi@37207301/yallist@1431912139:environment:preview:actor_id:<id>`. `actor_id` is in the provider's `claims_supported` and never changes on a rename; the docs' examples don't show it, so **verify the PUT accepts it** in rollout PR 2. The preview role's trust uses `StringEquals` on the full `sub` for each allowed `actor_id`. The template changes the `sub` of **every** token from this repo, but the admin role's existing `StringLike …:environment:*` still matches because `*` swallows the appended `:actor_id:…`; GitHub recommends having trust conditions in place before switching the template ([reference](https://docs.github.com/en/actions/reference/security/oidc)).
-3. **Repo settings.** "Require approval for all external contributors" for fork workflows; only collaborators can push branches; the `preview` environment allows all branches (it must, PR branches deploy) and holds one secret, `BETTER_AUTH_SECRET`.
+1. **Workflow guard.** The jobs run only if `github.event.pull_request.head.repo.full_name == github.repository`. `pull_request_target` is never used. Fork PRs get no OIDC token and no secrets anyway ([events](https://docs.github.com/en/actions/writing-workflows/choosing-when-your-workflow-runs/events-that-trigger-workflows)).
+2. **Preview role trust.** `StringEquals` on the `sub` `repo:nadavgihasi@37207301/yallist@1431912139:environment:preview`, so only `preview`-environment jobs of this repo can assume it.
+3. **The `preview` environment** allows all branches (it must, PR branches deploy) and holds one secret, `BETTER_AUTH_SECRET`.
+
+An earlier version of this design added a user allowlist (a `PREVIEW_ALLOWED_ACTORS` variable in the workflow, `actor_id` in the OIDC subject template and in the preview role's trust) and the "require approval for all external contributors" setting. They were dropped: only collaborators can push branches and fork PRs get no secrets or OIDC token, so with a single collaborator they added setup without adding protection. Revisit when adding collaborators.
 
 **Preview role `yallist-global-github-preview`** (in `infra/global`): 1-hour sessions; a region-lock deny outside `us-west-2` (except IAM, STS, CloudFront and the global SSM read); `lambda`, `logs`, `s3`, `ssm`, `dsql` scoped to `yallist-pr-*` names and tags, SST's `us-west-2` state and asset buckets, `/sst/passphrase/yallist/pr-*`; `iam:CreateRole`/`PassRole` only on `role/yallist-pr-*` and only with the `yallist-preview-workload-boundary`; `apigateway` only on `/apis/<preview api id>/*`; `cloudfront-keyvaluestore` and `CreateInvalidation` only on the preview Router; `appsync` region-locked; `tag:GetResources`. The boundary limits every `pr-*` Lambda role to its own cluster, bucket, realtime API and logs. The first runs will surface missing actions; iterate with CloudTrail.
 
-**Why keep the limited role when the admin role stays broad:** it's what the preview workflow runs with, so a bug in `sst.config.ts` or the workflow can only touch `yallist-pr-*` resources in `us-west-2`, never `dev`, `production` or `global`. It doesn't stop a deliberate attacker.
+**Why keep the limited role when the admin role stays broad:** it's what the preview workflow runs with, so a bug in the app's SST code or the workflow can only touch `yallist-pr-*` resources in `us-west-2`, never `dev`, `production` or `global`. It doesn't stop a deliberate attacker.
 
-**Residual risk, accepted:** any allowlisted user (or anyone holding their GitHub session or laptop) can push a branch whose workflow sets `environment: preview` and assumes the admin role, since it trusts every environment. The allowlist and the "all external contributors need approval" setting are the controls; the admin role's trust is not. Revisit if a second contributor joins.
+**Residual risk, accepted:** any collaborator (or anyone holding their GitHub session or laptop) can push a branch whose workflow sets `environment: preview` and assumes the admin role, since it trusts every environment. Who can push is the control; the admin role's trust is not. Revisit if a second contributor joins.
 
 **Previews are public URLs** with guest sign-in. No PII, 6-hour life, no Google client, no GitHub feedback token.
 
@@ -133,7 +135,6 @@ Later speed-ups if wanted: poll for the cluster by tag and migrate while the sit
 | AppSync Event APIs per region               | 50, adjustable                               | One per PR plus `preview`. [AppSync quotas](https://docs.aws.amazon.com/general/latest/gr/appsync.html)                                                          |
 | Lambda concurrency                          | 1,000, lower on new accounts                 | Previews and `preview` share it with nothing else in `us-west-2`.                                                                                                |
 | Expo `experiments.baseUrl`                  | Export only, ignored by the dev server       | Fine: previews are exports. A refresh-drops-the-prefix bug was fixed in Dec 2024 ([expo#33400](https://github.com/expo/expo/issues/33400)); re-check on the SDK. |
-| GitHub OIDC `sub` customization             | One template per repo, all tokens            | Appending `actor_id` keeps the admin role's `environment:*` match ([§6](#6-security)).                                                                           |
 
 ## 8. Cost
 
@@ -149,33 +150,52 @@ Later speed-ups if wanted: poll for the cluster by tag and migrate while the sit
 
 ## 10. What you must do
 
-1. Set the repo variable `PREVIEW_ALLOWED_ACTORS` (`["nadavgihasi"]`) and note your `actor_id` (`gh api user -q .id`) for the role's trust.
-2. Set the OIDC subject template: `gh api -X PUT repos/nadavgihasi/yallist/actions/oidc/customization/sub -F use_default=false -f 'include_claim_keys[]=repo' -f 'include_claim_keys[]=context' -f 'include_claim_keys[]=actor_id'`, **after** rollout PR 2 has deployed the preview role (its trust must exist first; the admin role keeps matching).
-3. Repo settings: Actions → "Require approval for all external contributors". Create the `preview` GitHub environment: no branch restriction, secret `BETTER_AUTH_SECRET`.
-4. Deploy `global` from `main` (rollout PR 2) and `gh variable set AWS_PREVIEW_ROLE_ARN` from its output. Bootstrap SST in `us-west-2` once with admin credentials (the `sst-state-*` and `sst-asset-*` buckets); the preview role can't create them.
+Moved to [deploy.md, Set up](../deploy.md#set-up), with the exact commands.
 
 ## 11. Decisions
 
-| Topic              | Decision                                                                                                                                                            |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Database           | A DSQL cluster per PR, in the `pr-<n>` stage. Measure create-to-`ACTIVE` in rollout PR 2; if it's slow, fall back to a shared cluster with a schema per PR (8 cap). |
-| Realtime, receipts | Per PR. Seconds to create, no app changes, the PR's authorizer is tested, removed with the stage.                                                                   |
-| Trigger            | Every PR from this repo by an allowlisted user. Never forks.                                                                                                        |
-| URLs and lifetime  | Public, posted as a sticky PR comment, 6-hour TTL after the last push, removed on close.                                                                            |
-| Admin role trust   | Unchanged (`environment:*`). Access is limited by the actor allowlist in the workflow and in the preview role's trust ([§6](#6-security)).                          |
-| Shared pieces      | Router, HTTP API, SSM parameter in `preview`; roles, boundary and budget in `global`.                                                                               |
+| Topic              | Decision                                                                                                                                             |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Database           | A DSQL cluster per PR, in the `pr-<n>` stage. Measured at about 7 s to create, so the schema-per-PR fallback isn't needed.                           |
+| Realtime, receipts | Per PR. Seconds to create, no app changes, the PR's authorizer is tested, removed with the stage.                                                    |
+| Trigger            | Every PR from a branch of this repo. Never forks.                                                                                                    |
+| URLs and lifetime  | Public, posted as a sticky PR comment, 6-hour TTL after the last push, removed on close.                                                             |
+| Admin role trust   | Unchanged (`environment:*`). Access is limited by who can push branches; the preview role trusts only the `preview` environment ([§6](#6-security)). |
+| Shared pieces      | Router, HTTP API, SSM parameter in `preview`; roles, boundary and budget in `global`.                                                                |
 
 **Still open**
 
 1. **Where the flows run:** in the preview job after the smoke, or in `ui-tests.yml`? _Recommendation: the preview job; keep the local-Postgres `ui-tests.yml` as the fast required check and make the preview flows required once stable._
-2. **`actor_id` in the subject template:** supported per `claims_supported`, unverified against the PUT endpoint. If rejected, use `actor` (a rename would then lock you out until the trust is updated).
 
 ## 12. Rollout
 
-| #   | PR                                                                 | Acceptance                                                                                                                                                                  |
-| --- | ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | `docs(plans): design PR preview environments` (this)               | Reviewed and merged.                                                                                                                                                        |
-| 2   | `feat(infra): preview role, boundary, budget, us-west-2 bootstrap` | Policy simulator denies other regions and unbounded roles. The subject template is set and a `preview`-environment job assumes the role; DSQL cluster create time measured. |
-| 3   | `feat(infra): preview and pr-* stages`; `feat(app): base path`     | `preview` deploys from `main`; a `pr-*` stage deploys and removes cleanly against it; `expo export` under `/pr-<n>` loads and refreshes.                                    |
-| 4   | `ci(preview): deploy on PR, remove on close, hourly expiry`        | A PR gets a working URL in a comment; closing removes everything; a stage leaked on purpose is expired. Timings recorded against [§5](#5-workflow-and-timing).              |
-| 5   | `test(preview): Maestro flows against the preview`                 | The 5 flows pass on a preview URL over 10 runs.                                                                                                                             |
+| #   | PR                                                                 | Acceptance                                                                                                                                                     |
+| --- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | `docs(plans): design PR preview environments` (this)               | Reviewed and merged.                                                                                                                                           |
+| 2   | `feat(infra): preview role, boundary, budget, us-west-2 bootstrap` | Policy simulator denies other regions and unbounded roles. A `preview`-environment job assumes the role; DSQL cluster create time measured.                    |
+| 3   | `feat(infra): preview and pr-* stages`; `feat(app): base path`     | `preview` deploys from `main`; a `pr-*` stage deploys and removes cleanly against it; `expo export` under `/pr-<n>` loads and refreshes.                       |
+| 4   | `ci(preview): deploy on PR, remove on close, hourly expiry`        | A PR gets a working URL in a comment; closing removes everything; a stage leaked on purpose is expired. Timings recorded against [§5](#5-workflow-and-timing). |
+| 5   | `test(preview): Maestro flows against the preview`                 | The 5 flows pass on a preview URL over 10 runs.                                                                                                                |
+
+## Measured
+
+From the first real runs:
+
+- **DSQL cluster create: about 7 s.** It's not on the critical path, so a cluster per PR stays; the schema-per-PR fallback ([§4](#4-data-not-resources)) isn't needed.
+- **First full preview (pr-108):** deployed and migrated, then all 8 Maestro flows passed against it in 3 min 40 s.
+- **Two workers (pr-111):** the same 8 flows in two `ui-shard` jobs took 2 min 44 s from deploy to both shards done (1 min 47 s and 2 min 42 s per job).
+- **First-run race:** a PR's preview job that runs while `preview-stage.yml` is still bootstrapping SST in `us-west-2` fails with a 403 creating SST's bucket, because the preview role can't create it. Only the first run can hit it; re-run the job once the bootstrap is done.
+
+## As built
+
+Where the code differs from the sections above:
+
+- **`preview` has no `$default` Lambda or cluster.** It holds only the Router, the HTTP API and the SSM parameter. Nothing answers outside a PR's prefix, and it leaves all 20 DSQL clusters for PRs. The smoke checks are per PR.
+- **`preview` deploys from its own workflow**, [preview-stage.yml](../../.github/workflows/preview-stage.yml), with the admin role in the `global` environment. It runs when the preview stage's code (`infra/app/sst.config.ts`, `core.ts`, `stacks/preview-shared.ts`) changes on `main`. `deploy.yml` is unchanged, and the first run bootstraps SST in `us-west-2`, so no laptop step is needed.
+- **The API's prefix comes from its URL.** `withBasePath` mounts the app under the path of `Resource.Api.url`, so there's no `BASE_PATH` on the Lambda. `createAuth` always passes `<api>/api/auth` as Better Auth's `baseURL`. The web export reads `BASE_PATH`, not `EXPO_PUBLIC_BASE_PATH`.
+- **`expires-at` is a tag on the PR's API Lambda only**, not a default tag. That way a deploy doesn't retag every resource, and `expire` lists only those Lambdas.
+- **`expire` fails only for a stage a closed PR left behind.** A 6-hour expiry is routine, and failing on it would notify on every PR.
+- **The stage's SST state is left to `sst remove`.** The script deletes only the passphrase. Check `sst-state-*` after the first removal.
+- **Each PR invalidates only `/pr-<n>/*`**, not the whole Router.
+- **The UI tests skip flows tagged `test-photo`** (profile-photo): they need a build that picks a fixture photo in place of the file picker, which a preview people use shouldn't be.
+- **Known gaps:** web invite links drop the `/pr-<n>` prefix (they're built from the origin), and `public/index.html` links the apple-touch icon at `/`.
