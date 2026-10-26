@@ -53,6 +53,24 @@ jobs:
           key: android-${{ inputs.stage == 'production' && 'all-abis' || 'arm64' }}
           max-size: 2G
           evict-old-files: job
+      # A manual build without its stage's URLs would ship an app that can't reach the backend or
+      # shares broken invite links (docs/android.md).
+      - name: Check the stage's variables
+        if: inputs.stage
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_REALTIME_URL: ${{ vars.EXPO_PUBLIC_REALTIME_URL }}
+          EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID }}
+          EXPO_PUBLIC_WEB_URL: ${{ vars.EXPO_PUBLIC_WEB_URL }}
+        run: |
+          missing=0
+          for name in EXPO_PUBLIC_API_URL EXPO_PUBLIC_REALTIME_URL EXPO_PUBLIC_GOOGLE_CLIENT_ID EXPO_PUBLIC_WEB_URL; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Variable $name is not set on the ${{ inputs.stage }} environment (docs/android.md)."
+              missing=1
+            fi
+          done
+          exit "$missing"
       - run: pnpm install --frozen-lockfile
 
       - name: Generate native project
@@ -87,6 +105,7 @@ jobs:
           EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
           EXPO_PUBLIC_REALTIME_URL: ${{ vars.EXPO_PUBLIC_REALTIME_URL }}
           EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID }}
+          EXPO_PUBLIC_WEB_URL: ${{ vars.EXPO_PUBLIC_WEB_URL }} # invite links
           EXPO_PUBLIC_GIT_SHA: ${{ github.sha }}
         # Production builds are for Play: an AAB plus APK for every ABI. Dev and PR builds are for
         # phones: an arm64 APK only, without lint, which is a quarter of the native compilation.
