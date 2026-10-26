@@ -1,0 +1,49 @@
+name: Preview stage
+
+# The `preview` SST stage (us-west-2): the CloudFront Router and HTTP API that every PR preview
+# shares (preview.yml, docs/plans/e2e-live-environments.md). Deployed from main with the admin
+# deploy role, because the preview role can't create them. The first run also bootstraps SST in
+# us-west-2.
+on:
+  push:
+    branches: [main]
+    paths:
+      - infra/app/sst.config.ts
+      - .github/workflows/preview-stage.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-stage
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    # Accepts only main, like every environment the admin role is used from.
+    environment: global
+    # A new CloudFront distribution can take ~15 minutes.
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: us-west-2
+      - run: pnpm sst deploy --stage preview
+      - run: |
+          echo "### preview" >> "$GITHUB_STEP_SUMMARY"
+          jq -r 'to_entries[] | "- \(.key): \(.value)"' infra/app/.sst/outputs.json >> "$GITHUB_STEP_SUMMARY"
