@@ -7,7 +7,7 @@
   "workspaces": {
     ".": {},
     "apps/api": {
-      // Lambda handlers, referenced by path from infra/app/core.ts and stacks/app.ts.
+      // Lambda handlers, referenced by path from infra/app/core.ts and monitoring.ts.
       "entry": ["src/lambda.ts", "src/realtime-authorizer.ts", "src/alarm-notifier.ts"],
     },
     "apps/mobile": {},

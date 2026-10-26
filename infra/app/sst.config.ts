@@ -3,7 +3,7 @@
 /**
  * AWS infrastructure (SST). One app, three kinds of stage, each defined in its own file
  * (docs/plans/e2e-live-environments.md):
- *   dev, production   stacks/app.ts             the app and its alerts; us-east-2 and eu-central-1
+ *   dev, production   stacks/app.ts             the app + monitoring.ts; us-east-2 and eu-central-1
  *                       pnpm deploy:dev    # sst deploy --stage dev         (AWS profile yallist-dev)
  *                       pnpm deploy:prod   # sst deploy --stage production  (AWS profile yallist-prod)
  *   preview           stacks/preview-shared.ts  what every PR shares: the CloudFront Router and HTTP
