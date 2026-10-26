@@ -140,6 +140,119 @@ An [AppSync Events](https://docs.aws.amazon.com/appsync/latest/eventapi/event-ap
 - **Subscribe:** clients connect to `wss://<realtime host>/event/realtime` with their session token as the authorization. The web build gets the host as `EXPO_PUBLIC_REALTIME_URL`. The `host` in the connection's auth header is the matching HTTP host: `appsync-realtime-api` replaced by `appsync-api`.
 - **Authorizer:** a Lambda ([realtime-authorizer.ts](../apps/api/src/realtime-authorizer.ts)) checks the token with Better Auth on connect, and active membership of the trip on subscribe. Clients can't publish. Results aren't cached, so a removed member can't subscribe again; an open subscription keeps getting "changed" events, but the refetch fails.
 
+## Monitoring
+
+Problems in production reach one Telegram chat, never email: CloudWatch alarms for the AWS side and Sentry alerts for errors in the app and the API. Both post through the same bot ([notify/telegram.ts](../apps/api/src/notify/telegram.ts)), which later features can reuse. Everything is optional: until the secrets below exist, nothing is sent and the senders log a warning.
+
+### Alarms (CloudWatch)
+
+Production only ([sst.config.ts](../infra/app/sst.config.ts)); dev has the topic and notifier but no alarms. Each alarm looks at one 5-minute window, treats no data (no traffic) as healthy, and notifies the `Alerts` SNS topic when it goes to ALARM and when it goes back to OK. CloudWatch never repeats a notification while an alarm stays in ALARM. The `AlertsNotifier` Lambda ([alarm-notifier.ts](../apps/api/src/alarm-notifier.ts)) posts each change with the stage, state, reason and a CloudWatch console link.
+
+| Alarm                                         | Metric                             | Fires at                               |
+| --------------------------------------------- | ---------------------------------- | -------------------------------------- |
+| `yallist-production-ApiErrors`                | API Lambda `Errors` (sum)          | 3 or more in 5 minutes                 |
+| `yallist-production-ApiThrottles`             | API Lambda `Throttles` (sum)       | 1 or more in 5 minutes                 |
+| `yallist-production-ApiDuration`              | API Lambda `Duration` (maximum)    | 16 s or more (80% of the 20 s timeout) |
+| `yallist-production-Api5xx`                   | API Gateway `5xx` (sum)            | 5 or more in 5 minutes                 |
+| `yallist-production-RealtimeAuthorizerErrors` | Realtime authorizer `Errors` (sum) | 3 or more in 5 minutes                 |
+
+Cost: about $0.50 a month (5 standard alarms at $0.10); SNS and the notifier stay in the free tier.
+
+### Errors (Sentry)
+
+Two Sentry projects, both on the free plan: `yallist-app` (web and Android, [src/lib/sentry.ts](../apps/mobile/src/lib/sentry.ts)) and `yallist-api` ([src/sentry.ts](../apps/api/src/sentry.ts)).
+
+- **Releases:** release `yallist@<version>` (the release tag), dist the git SHA, environment the stage (`dev`, `production`).
+- **Sampling:** every error; 5% of app traces; no API traces (the duration alarm covers latency).
+- **Personal data:** none is sent. `sendDefaultPii` is off, and every event and breadcrumb goes through [scrubEvent](../packages/domain/src/scrub.ts), which drops the user, cookies and headers and replaces tokens, emails, Israeli phone numbers and all Hebrew text (names, trip and item titles) in every string except stack traces.
+- **Inert without a DSN:** local dev, unit tests and the UI tests build without one, so Sentry never loads.
+- **Web:** loads Sentry's prebuilt browser bundle (`browser.sentry-cdn.com`, pinned by version and SHA-384) after the app starts, so the app's own bundle grows by about 1 KB gzipped. Errors in the first moments, before it loads, are missed.
+- **API:** the light Node SDK (no OpenTelemetry): unhandled errors, tagged with the route pattern, are sent before the Lambda answers 500.
+- **Source maps:** uploaded only when `SENTRY_AUTH_TOKEN` is set. deploy.yml uploads the web export's (`export:web:release`, which deletes them before the site is deployed) and the API bundle's (a `postbuild` hook in `sst.config.ts`); android.yml uploads the APK's (Sentry's Gradle step, for manual runs only).
+- **Alerts:** Sentry calls `POST <api>/webhooks/sentry` ([sentry-webhook.ts](../apps/api/src/routes/sentry-webhook.ts)) when an alert rule fires. The API checks the `Sentry-Hook-Signature` HMAC with the integration's client secret and forwards issue alerts (`event_alert`) and metric alerts (`metric_alert`) to Telegram; it ignores other webhooks. Without the secret the endpoint answers 404.
+
+### Muting
+
+- **For a while:** mute the chat in Telegram (1 hour, 8 hours, …). Alerts keep arriving silently.
+- **One Sentry alert:** edit or disable the alert rule in Sentry, or archive (ignore) the issue.
+- **One CloudWatch alarm, for good:** change its threshold in `sst.config.ts`, or remove it. Don't edit alarms in the console: the next deploy would undo it, and everything in AWS is defined in SST.
+- **Emergency:** `aws cloudwatch disable-alarm-actions --alarm-names <name> --profile yallist-prod --region eu-central-1` silences one alarm until `enable-alarm-actions`. It's drift from the SST code, so turn it back on soon.
+- **Everything:** delete the `TELEGRAM_CHAT_ID` secret; the next deploy stops all messages.
+
+### Setup checklist
+
+Secret values go only into the `gh secret set` prompts (they read from stdin, so nothing lands in shell history); never paste them in chat, issues or commits. Each step takes effect on the next deploy from `main`.
+
+| GitHub (environment `production`, and `dev` if wanted) | Kind     | Becomes                          |
+| ------------------------------------------------------ | -------- | -------------------------------- |
+| `TELEGRAM_BOT_TOKEN`                                   | secret   | SST secret `TelegramBotToken`    |
+| `TELEGRAM_CHAT_ID`                                     | secret   | SST secret `TelegramChatId`      |
+| `SENTRY_DSN` (the `yallist-api` DSN)                   | secret   | SST secret `SentryDsn`           |
+| `SENTRY_WEBHOOK_SECRET`                                | secret   | SST secret `SentryWebhookSecret` |
+| `SENTRY_AUTH_TOKEN`                                    | secret   | source map uploads               |
+| `EXPO_PUBLIC_SENTRY_DSN` (the `yallist-app` DSN)       | variable | the web and Android builds       |
+| `SENTRY_ORG` (repository variable)                     | variable | source map uploads               |
+
+1. **Telegram bot.** In Telegram, message [@BotFather](https://t.me/BotFather), send `/newbot`, pick a name and a username ending in `bot`. It replies with the bot token.
+2. **Chat id.** Send your new bot any message (or add it to a group and post there). Then, locally:
+
+   ```sh
+   read -rs TOKEN   # paste the bot token; it isn't echoed
+   curl -s "https://api.telegram.org/bot$TOKEN/getUpdates" | jq '.result[].message.chat | {id, type, title}'
+   unset TOKEN
+   ```
+
+   The `id` is the chat id (negative for groups).
+
+3. **Telegram secrets:**
+
+   ```sh
+   gh secret set TELEGRAM_BOT_TOKEN --env production   # paste the token at the prompt
+   gh secret set TELEGRAM_CHAT_ID --env production     # paste the chat id
+   # optional, for dev's notifier and webhook: the same two with --env dev
+   ```
+
+4. **Sentry org and projects.** Sign up at [sentry.io](https://sentry.io) (Developer plan, free) and create an organization. Create two projects: `yallist-app` (platform React Native) and `yallist-api` (platform Node.js). Skip the setup wizards; the code is in place. Each project's DSN is under **Project Settings → Client Keys (DSN)**.
+
+   ```sh
+   gh variable set SENTRY_ORG --body <org slug>                                # the org's URL name
+   gh variable set EXPO_PUBLIC_SENTRY_DSN --env production --body '<yallist-app DSN>'   # public: it ships in the app
+   gh secret set SENTRY_DSN --env production                                   # paste the yallist-api DSN
+   # optional, to see dev's errors too: the same EXPO_PUBLIC_SENTRY_DSN and SENTRY_DSN with --env dev
+   ```
+
+5. **Auth token for source maps.** **Settings → Developer Settings → Organization Tokens → Create New Token** (organization tokens can only upload source maps and releases).
+
+   ```sh
+   gh secret set SENTRY_AUTH_TOKEN --env production   # paste the token
+   gh secret set SENTRY_AUTH_TOKEN --env dev          # dev deploys upload too, and android.yml runs in either
+   ```
+
+6. **Webhook to Telegram.** **Settings → Developer Settings → Custom Integrations → Create New Integration → Internal Integration**:
+   - Name: `Telegram`.
+   - Webhook URL: production's `api` output plus `/webhooks/sentry`, e.g. `https://<id>.execute-api.eu-central-1.amazonaws.com/webhooks/sentry` (the URL is on the summary of the last Deploy run).
+   - **Alert Rule Action:** on. Permissions: leave all at No Access. Webhooks: subscribe to none.
+   - Save, then copy the **Client Secret**:
+
+   ```sh
+   gh secret set SENTRY_WEBHOOK_SECRET --env production   # paste the client secret
+   ```
+
+7. **Alert rules.** After the deploy with `SENTRY_WEBHOOK_SECRET`, in each project, **Alerts → Create Alert → Issues**, three rules, each with environment `production`, action **Send a notification via Telegram** (the integration) and action interval **1 day**:
+   - **New issue:** when "A new issue is created".
+   - **Regression:** when "The issue changes state from resolved to unresolved".
+   - **Spike:** when "Number of events in an issue is more than 50 in 1 hour".
+
+   Use **Send Test Notification** in the rule editor to check the chain. Then turn off Sentry's email: delete the default "high priority issues" rule each project was created with, and under **User Settings → Notifications** set issue alerts and workflow to off (or to Slack/none).
+
+8. **Check the alarms.** After the next production deploy, send one alarm through the chain; CloudWatch puts it back to OK within 5 minutes, so you get both messages:
+
+   ```sh
+   aws cloudwatch set-alarm-state --alarm-name yallist-production-ApiThrottles \
+     --state-value ALARM --state-reason 'Testing the Telegram alerts' \
+     --profile yallist-prod --region eu-central-1
+   ```
+
 ## Naming and tags
 
 Every resource has the stage in its name or identifier, so dev and production never collide and are easy to tell apart in the console:
