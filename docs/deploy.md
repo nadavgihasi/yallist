@@ -7,7 +7,7 @@ Infrastructure is [SST](https://sst.dev), in two SST apps. Both live in the `@ya
 
 ## Deploys come from `main`
 
-[deploy.yml](../.github/workflows/deploy.yml) runs on every push to `main`. It deploys `global`, then `dev`, then `production`, each in the GitHub environment of the same name. Those environments only accept the `main` branch.
+[deploy.yml](../.github/workflows/deploy.yml) runs on every push to `main`. It first runs CI ([ci.yml](../.github/workflows/ci.yml), the same checks as pull requests) and stops if it fails. Then it tags the release and deploys `global`, then `dev`, then `production`, each in the GitHub environment of the same name. Those environments only accept the `main` branch.
 
 - **Credentials:** jobs get them through GitHub OIDC. They assume the role in the repo variable `AWS_DEPLOY_ROLE_ARN`, so no AWS keys are stored in GitHub.
 - **Checks:** after each stage deploys and migrates, the job fetches the API's `/health` and the web app's URL. If dev fails, production doesn't deploy.

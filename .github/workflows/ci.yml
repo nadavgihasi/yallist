@@ -1,14 +1,15 @@
 name: CI
 
+# Pull requests run it directly (`check` is the required status for main). Pushes to main run it
+# from deploy.yml, which deploys only after it passes.
 on:
   pull_request:
-  push:
-    branches: [main]
+  workflow_call:
 
 permissions:
   contents: read
 
-# A new push to a PR supersedes its running check; main runs every commit.
+# A new push to a PR supersedes its running check; main (via deploy.yml) runs every commit.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
