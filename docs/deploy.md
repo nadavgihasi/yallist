@@ -157,7 +157,7 @@ Problems in production reach one Telegram chat, never email: CloudWatch alarms f
 
 ### Alarms (CloudWatch)
 
-Production only ([sst.config.ts](../infra/app/sst.config.ts)); dev has the topic and notifier but no alarms. Each alarm looks at one 5-minute window, treats no data (no traffic) as healthy, and notifies the `Alerts` SNS topic when it goes to ALARM and when it goes back to OK. CloudWatch never repeats a notification while an alarm stays in ALARM. The `AlertsNotifier` Lambda ([alarm-notifier.ts](../apps/api/src/alarm-notifier.ts)) posts each change with the stage, state, reason and a CloudWatch console link.
+Production only ([stacks/app.ts](../infra/app/stacks/app.ts)); dev has the topic and notifier but no alarms. Each alarm looks at one 5-minute window, treats no data (no traffic) as healthy, and notifies the `Alerts` SNS topic when it goes to ALARM and when it goes back to OK. CloudWatch never repeats a notification while an alarm stays in ALARM. The `AlertsNotifier` Lambda ([alarm-notifier.ts](../apps/api/src/alarm-notifier.ts)) posts each change with the stage, state, reason and a CloudWatch console link.
 
 | Alarm                                         | Metric                             | Fires at                               |
 | --------------------------------------------- | ---------------------------------- | -------------------------------------- |
@@ -179,14 +179,14 @@ Two Sentry projects, both on the free plan: `yallist-app` (web and Android, [src
 - **Inert without a DSN:** local dev, unit tests and the UI tests build without one, so Sentry never loads.
 - **Web:** loads Sentry's prebuilt browser bundle (`browser.sentry-cdn.com`, pinned by version and SHA-384) after the app starts, so the app's own bundle grows by about 1 KB gzipped. Errors in the first moments, before it loads, are missed.
 - **API:** the light Node SDK (no OpenTelemetry): unhandled errors, tagged with the route pattern, are sent before the Lambda answers 500.
-- **Source maps:** uploaded only when `SENTRY_AUTH_TOKEN` is set. deploy.yml uploads the web export's (`export:web:release`, which deletes them before the site is deployed) and the API bundle's (a `postbuild` hook in `sst.config.ts`); android.yml uploads the APK's (Sentry's Gradle step, for manual runs only).
+- **Source maps:** uploaded only when `SENTRY_AUTH_TOKEN` is set. deploy.yml uploads the web export's (`export:web:release`, which deletes them before the site is deployed) and the API bundle's (a `postbuild` hook in [core.ts](../infra/app/core.ts)); android.yml uploads the APK's (Sentry's Gradle step, for manual runs only).
 - **Alerts:** Sentry calls `POST <api>/webhooks/sentry` ([sentry-webhook.ts](../apps/api/src/routes/sentry-webhook.ts)) when an alert rule fires. The API checks the `Sentry-Hook-Signature` HMAC with the integration's client secret and forwards issue alerts (`event_alert`) and metric alerts (`metric_alert`) to Telegram; it ignores other webhooks. Without the secret the endpoint answers 404.
 
 ### Muting
 
 - **For a while:** mute the chat in Telegram (1 hour, 8 hours, …). Alerts keep arriving silently.
 - **One Sentry alert:** edit or disable the alert rule in Sentry, or archive (ignore) the issue.
-- **One CloudWatch alarm, for good:** change its threshold in `sst.config.ts`, or remove it. Don't edit alarms in the console: the next deploy would undo it, and everything in AWS is defined in SST.
+- **One CloudWatch alarm, for good:** change its threshold in [stacks/app.ts](../infra/app/stacks/app.ts), or remove it. Don't edit alarms in the console: the next deploy would undo it, and everything in AWS is defined in SST.
 - **Emergency:** `aws cloudwatch disable-alarm-actions --alarm-names <name> --profile yallist-prod --region eu-central-1` silences one alarm until `enable-alarm-actions`. It's drift from the SST code, so turn it back on soon.
 - **Everything:** delete the `TELEGRAM_CHAT_ID` secret; the next deploy stops all messages.
 
@@ -281,7 +281,7 @@ Every resource has the stage in its name or identifier, so dev and production ne
 Every PR from a branch of this repo (not a fork) gets a live environment at `https://<router>/pr-<n>/`, posted as a PR comment. It's removed when the PR closes, or 6 hours after its last push. The design and its trade-offs are in [e2e-live-environments.md](plans/e2e-live-environments.md).
 
 - **`preview` stage** ([preview-stage.yml](../.github/workflows/preview-stage.yml), from `main`, admin role): a CloudFront Router and an HTTP API that every PR shares, with their ids in the SSM parameter `/yallist/preview/outputs`. Nothing answers outside a PR's prefix.
-- **`pr-<n>` stage** ([preview.yml](../.github/workflows/preview.yml), on every push, preview role): the API Lambda behind `ANY /pr-<n>/{proxy+}` on the shared API, the web export under `/pr-<n>` on the Router (`BASE_PATH`, [app.config.ts](../apps/mobile/app.config.ts)), and its own DSQL cluster, realtime API and receipts bucket. The API serves itself under the path of its URL ([app.ts](../apps/api/src/app.ts) `withBasePath`). Guests only: no Google client.
+- **`pr-<n>` stage** ([preview.yml](../.github/workflows/preview.yml), on every push, preview role): the API Lambda behind `ANY /pr-<n>/{proxy+}` on the shared API, the web export under `/pr-<n>` on the Router (`BASE_PATH`, [app.config.ts](../apps/mobile/app.config.ts)), and its own DSQL cluster, realtime API and receipts bucket. The API serves itself under the path of its URL ([app.ts](../apps/api/src/app.ts) `withBasePath`). Guests only: no Google client. No alarms or Telegram notifier, and the Telegram and Sentry secrets keep their `unset` placeholder, so a preview reports nothing.
 - **After the deploy:** migrations, a `/health` and site smoke check, the sticky comment, then the Maestro flows against the URL (`E2E_WEB_URL`, [e2e-web.sh](../scripts/e2e-web.sh)). To run them yourself: `E2E_WEB_URL=https://<router>/pr-<n>/ scripts/e2e-web.sh`.
 - **Removal** ([preview-remove.sh](../scripts/preview-remove.sh)): `sst remove --stage pr-<n>`, which is the whole teardown, then the stage's SST passphrase is deleted. The job fails if anything tagged `stage=pr-<n>` is left. Hourly, it also removes stages past their Lambda's `expires-at` tag, and fails on any stage a closed PR left behind.
 - **Preview role** (`yallist-global-github-preview`): only this repo's `preview`-environment jobs can assume it ([infra/global/preview.ts](../infra/global/preview.ts)), and only in `us-west-2`. It can only touch `yallist-pr-*` resources. Every role a PR stage creates gets the `yallist-preview-workload-boundary`, which limits it to its own stage. The admin deploy role is unchanged.
