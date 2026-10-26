@@ -9,21 +9,42 @@ import { ProgressRing } from '@/components/ProgressRing';
 import { StatusRing } from '@/components/StatusRing';
 import { TripTile } from '@/components/TripTile';
 import { toAvatar } from '@/features/trip/derive';
-import { he, missingCount, openTransfers, participants, peopleNames } from '@/i18n/he';
+import {
+  he,
+  missingCount,
+  missingNames,
+  openTransfers,
+  participants,
+  peopleNames,
+} from '@/i18n/he';
 import { formatRange, monthName } from '@/lib/dates';
+import { testId } from '@/lib/testId';
 import type { TripSummary } from '@/state/types';
 import { colors, radius, space, type } from '@/theme';
 
 /**
  * An upcoming trip: its scene with the countdown, then name and dates, a ring with what's missing
- * and what's mine, and who's in. `now` comes from `useToday()`.
+ * and what's mine, and who's in. `now` comes from `useToday()`. The `next` trip also names the
+ * first few missing items.
  */
-export function TripCard({ data, now }: { data: TripSummary; now: string }) {
+export function TripCard({
+  data,
+  now,
+  next = false,
+}: {
+  data: TripSummary;
+  now: string;
+  next?: boolean;
+}) {
   const { trip, itemCount, doneCount } = data;
   const missing = itemCount - doneCount;
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
-      <Pressable style={styles.card} accessibilityRole="link">
+      <Pressable
+        style={styles.card}
+        accessibilityRole="link"
+        {...testId(next ? 'home-next-trip' : undefined)}
+      >
         <Cover scene={trip.template} style={styles.cover}>
           <View style={styles.countdown}>
             <Countdown startsOn={trip.startsOn} endsOn={trip.endsOn} now={now} />
@@ -39,10 +60,17 @@ export function TripCard({ data, now }: { data: TripSummary; now: string }) {
           ) : (
             <View style={styles.row}>
               <ProgressRing done={doneCount} total={itemCount} />
-              <View style={styles.pills}>
-                <Pill label={missing === 0 ? he.trip.allCovered : missingCount(missing)} />
-                {data.mine.length > 0 && (
-                  <Pill label={he.status.mineQty(data.mine.length)} tone="brand" />
+              <View style={styles.side}>
+                <View style={styles.pills}>
+                  <Pill label={missing === 0 ? he.trip.allCovered : missingCount(missing)} />
+                  {data.mine.length > 0 && (
+                    <Pill label={he.status.mineQty(data.mine.length)} tone="brand" />
+                  )}
+                </View>
+                {next && missing > 0 && (
+                  <Text style={styles.missing} numberOfLines={1}>
+                    {missingNames(data.missingNames, missing)}
+                  </Text>
                 )}
               </View>
             </View>
@@ -92,7 +120,9 @@ const styles = StyleSheet.create({
   name: { ...type.sectionTitle, fontSize: 24, lineHeight: 30, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
-  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2], flexShrink: 1 },
+  side: { flexShrink: 1, gap: space[2] },
+  pills: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  missing: { ...type.caption, color: colors.ink },
   progressText: { ...type.itemTitle, color: colors.ink },
   mine: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.brandStrong },
   past: {

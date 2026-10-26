@@ -106,6 +106,10 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
           itemCount: data.items.length,
           doneCount: 1,
           mine: [single.name],
+          missingNames: data.items
+            .filter((i) => i.id !== single.id)
+            .slice(0, 3)
+            .map((i) => i.name),
         }),
       ]);
       expect(trips[0]!.members.map((m) => m.userId)).toEqual([organizer.id, member.id]);

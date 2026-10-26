@@ -76,6 +76,13 @@ export const he = {
     past: 'טיולים שהיו',
     mine: 'אצלך: ',
     noItems: 'עוד אין פריטים',
+    startFrom: 'מתחילים מ…',
+    oneTap: 'לחיצה אחת, רשימה מלאה',
+    openTrip: 'פותחים טיול חדש',
+    invite: {
+      title: 'טיול של אחד? מזמינים חברים',
+      text: 'שולחים קישור בוואטסאפ ורואים מי מביא מה.',
+    },
   },
   firstHome: {
     emptyTitle: 'עוד אין טיולים',
@@ -412,6 +419,12 @@ export function participants(n: number): string {
 /** `העברה אחת פתוחה` / `2 העברות פתוחות` */
 export function openTransfers(n: number): string {
   return n === 1 ? 'העברה אחת פתוחה' : `${n} העברות פתוחות`;
+}
+
+/** `אוהלים, קפה, קרח ועוד 10`: the first missing names out of `missing`. */
+export function missingNames(names: string[], missing: number): string {
+  const more = missing - names.length;
+  return more > 0 ? `${names.join(', ')} ${andMore(more)}` : names.join(', ');
 }
 
 /** `דנה, אבי ונועה`, then `דנה, אבי ועוד 2` past three. */

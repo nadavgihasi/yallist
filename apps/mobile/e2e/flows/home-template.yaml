@@ -1,0 +1,23 @@
+# Start a trip from a template tile on the empty home: the picker opens on it, and the trip gets its list.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [home]
+---
+- runFlow: ../common/sign-in.yaml
+- tapOn:
+    id: home-template-grill
+- tapOn:
+    id: new-trip-name
+- inputText: E2E grill
+- tapOn:
+    id: new-trip-create
+- assertVisible:
+    id: trip-title
+    text: E2E grill
+# The grill template's first item.
+- assertVisible: מנגל
