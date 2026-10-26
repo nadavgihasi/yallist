@@ -33,11 +33,13 @@ jobs:
       - run: pnpm --filter mobile exec expo export -p web
         env:
           EXPO_PUBLIC_API_URL: http://localhost:3100
+      # One name across attempts, so a shard rerun after "Re-run failed jobs" finds this build.
       - uses: actions/upload-artifact@v7
         with:
-          name: ui-tests-web-build-${{ github.run_number }}-${{ github.run_attempt }}
+          name: ui-tests-web-build
           path: apps/mobile/dist
           retention-days: 1
+          overwrite: true
 
   shard:
     needs: build
@@ -57,6 +59,8 @@ jobs:
     env:
       DATABASE_URL: postgres://postgres:postgres@localhost:5432/postgres
       MAESTRO_VERSION: 2.11.0
+      # Chrome for Testing for recording (see e2e-web.sh).
+      SE_BROWSER_VERSION: 147
     steps:
       - uses: actions/checkout@v7
         with:
@@ -69,15 +73,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - uses: actions/download-artifact@v8
         with:
-          name: ui-tests-web-build-${{ github.run_number }}-${{ github.run_attempt }}
+          name: ui-tests-web-build
           path: apps/mobile/dist
-      # Uses the runner's Java 17. Chrome for Testing 147 comes via Selenium (see e2e-web.sh).
+      # The Maestro CLI and the Chrome for Testing that Selenium downloads on first use.
+      - uses: actions/cache@v6
+        id: maestro-cache
+        with:
+          path: |
+            ~/.maestro-cli
+            ~/.cache/selenium
+          key: ui-tests-maestro-${{ env.MAESTRO_VERSION }}-chrome-${{ env.SE_BROWSER_VERSION }}
+      # Uses the runner's Java 17.
       - name: Install Maestro
+        if: steps.maestro-cache.outputs.cache-hit != 'true'
         run: |
-          curl -fsSL -o "$RUNNER_TEMP/maestro.zip" \
+          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/maestro.zip" \
             "https://github.com/mobile-dev-inc/maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
-          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/maestro/bin" >> "$GITHUB_PATH"
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d ~/.maestro-cli
+      - run: echo "$HOME/.maestro-cli/maestro/bin" >> "$GITHUB_PATH"
       # Ubuntu 24.04's AppArmor blocks the sandbox of a Chrome outside /opt (Chrome for Testing).
       - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
       - run: scripts/e2e-web.sh
@@ -85,13 +98,14 @@ jobs:
           E2E_SHARD: ${{ matrix.shard }}
           E2E_PREBUILT: 1
           E2E_OUT: ${{ runner.temp }}/ui-tests
-      # Videos, JUnit, screenshots on failure, Maestro, API and web logs.
+      # Videos, JUnit, screenshots on failure, Maestro, API and web logs. A rerun replaces them.
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: ui-tests-web-${{ github.run_number }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
+          name: ui-tests-web-${{ github.run_number }}-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/ui-tests
           retention-days: 14
+          overwrite: true
 
   # The one check to require: fails unless every shard passed.
   web:
@@ -105,7 +119,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@v8
         with:
-          pattern: ui-tests-web-${{ github.run_number }}-${{ github.run_attempt }}-shard-*
+          pattern: ui-tests-web-${{ github.run_number }}-shard-*
           path: results
       - name: Summary
         env:

@@ -56,7 +56,7 @@ DATABASE_URL=postgres://postgres:postgres@localhost:55432/postgres pnpm e2e:web
 DATABASE_URL=… pnpm e2e:web apps/mobile/e2e/flows/item-delete.yaml
 ```
 
-[scripts/e2e-web.sh](../../scripts/e2e-web.sh) creates a fresh database, starts the API on it (`:3100`), exports the web app against it, serves it (`:8180`), runs the flows in a 500×1400 headless Chrome (phone layout), then drops the database. Results go to `$E2E_OUT`: a video of every flow (`maestro/*/<flow>/startRecording/<flow>.mp4`), `junit.xml`, screenshots on failure, and the API and web logs. In CI each shard uploads them as `ui-tests-web-<run>-<attempt>-shard-<n>`, and the `web` job's summary links them along with each flow's result. Recording needs Chrome 145–147, which Maestro 2.11.0 supports, so the script has Selenium download Chrome for Testing 147.
+[scripts/e2e-web.sh](../../scripts/e2e-web.sh) creates a fresh database, starts the API on it (`:3100`), exports the web app against it, serves it (`:8180`), runs the flows in a 500×1400 headless Chrome (phone layout), then drops the database. Results go to `$E2E_OUT`: a video of every flow (`maestro/*/<flow>/startRecording/<flow>.mp4`), `junit.xml`, screenshots on failure, and the API and web logs. In CI each shard uploads them as `ui-tests-web-<run>-shard-<n>` (a rerun replaces it), and the `web` job's summary links them along with each flow's result. Recording needs Chrome 145–147, which Maestro 2.11.0 supports, so the script has Selenium download Chrome for Testing 147. CI caches it and the Maestro CLI, and shard reruns reuse the `build` job's export.
 
 ## Flows
 
