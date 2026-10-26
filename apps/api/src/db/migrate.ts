@@ -172,7 +172,7 @@ export async function backfillCategories(sql: Sql) {
 }
 
 /**
- * Data step for trips.cover (0005): trips created before it, or by the previous API version
+ * Data step for trips.cover (0006): trips created before it, or by the previous API version
  * mid-deploy, get their template's cover. Runs on every deploy; 1,000 trips per transaction
  * keeps each under DSQL's 3,000-row limit.
  */
