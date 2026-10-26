@@ -6,7 +6,7 @@
 
 - Every PR from this repo gets a **live environment on real AWS** at `https://<preview-cdn>/pr-<n>/`, with its own API Lambda, DSQL cluster, realtime API and receipts bucket. It's created on open, updated on every push, posted as a sticky PR comment, and removed on close or **6 hours** after the last push.
 - The slow, shared pieces (CloudFront, API Gateway) are created **once** by a `preview` SST stage. A PR's `pr-<n>` SST stage only adds fast resources, so a push is live in **about 4–5 minutes** and `sst remove --stage pr-<n>` is the whole teardown.
-- **Every AWS resource is in `infra/app/sst.config.ts`** (stage-conditional); nothing is created by hand or by CLI. The one thing that isn't an AWS resource, the stage's **SST passphrase and state**, is deleted by the cleanup job.
+- **Every AWS resource is in the app's SST code** (`infra/app`, one file per kind of stage, §3); nothing is created by hand or by CLI. The one thing that isn't an AWS resource, the stage's **SST passphrase and state**, is deleted by the cleanup job.
 - The Maestro web flows ([ui-tests.md](ui-tests.md)) run against the preview with `WEB_URL`, which replaces the Playwright plan.
 - Previews deploy with a **least-privilege OIDC role** that only an allowlist of GitHub users can assume; the admin deploy role keeps its current trust ([§6](#6-security)).
 
@@ -52,9 +52,9 @@ flowchart LR
 | Receipts bucket       | `pr-<n>`  | `removal: 'remove'` empties it on `sst remove`.                                              |
 | Secrets               | `pr-<n>`  | `BetterAuthSecret` from the `preview` GitHub environment. No Google client, no GitHub token. |
 
-## 3. `sst.config.ts`
+## 3. SST code
 
-One file, three kinds of stage: `dev`/`production` (unchanged), `preview`, and `/^pr-\d+$/`. The per-PR branch is today's config minus the HTTP API and the CDN:
+One SST app, three kinds of stage, one file each: `dev`/`production` (unchanged) in `stacks/app.ts`, `preview` in `stacks/preview-shared.ts` and `/^pr-\d+$/` in `stacks/preview-pr.ts`; `sst.config.ts` picks the region and dispatches. `app.ts` and `preview-pr.ts` build the app from the same parts (`core.ts`). A separate SST app for `preview` was considered: it would only split the state and deploy command, while the SSM contract and the API's CORS would be shared across apps. A PR stage is the app minus the HTTP API and the CDN:
 
 ```ts
 const outputs = aws.ssm.getParameterOutput({ name: '/yallist/preview/outputs' }).value.apply(JSON.parse);
@@ -112,7 +112,7 @@ Later speed-ups if wanted: poll for the cluster by tag and migrate while the sit
 
 **Preview role `yallist-global-github-preview`** (in `infra/global`): 1-hour sessions; a region-lock deny outside `us-west-2` (except IAM, STS, CloudFront and the global SSM read); `lambda`, `logs`, `s3`, `ssm`, `dsql` scoped to `yallist-pr-*` names and tags, SST's `us-west-2` state and asset buckets, `/sst/passphrase/yallist/pr-*`; `iam:CreateRole`/`PassRole` only on `role/yallist-pr-*` and only with the `yallist-preview-workload-boundary`; `apigateway` only on `/apis/<preview api id>/*`; `cloudfront-keyvaluestore` and `CreateInvalidation` only on the preview Router; `appsync` region-locked; `tag:GetResources`. The boundary limits every `pr-*` Lambda role to its own cluster, bucket, realtime API and logs. The first runs will surface missing actions; iterate with CloudTrail.
 
-**Why keep the limited role when the admin role stays broad:** it's what the preview workflow runs with, so a bug in `sst.config.ts` or the workflow can only touch `yallist-pr-*` resources in `us-west-2`, never `dev`, `production` or `global`. It doesn't stop a deliberate attacker.
+**Why keep the limited role when the admin role stays broad:** it's what the preview workflow runs with, so a bug in the app's SST code or the workflow can only touch `yallist-pr-*` resources in `us-west-2`, never `dev`, `production` or `global`. It doesn't stop a deliberate attacker.
 
 **Residual risk, accepted:** any allowlisted user (or anyone holding their GitHub session or laptop) can push a branch whose workflow sets `environment: preview` and assumes the admin role, since it trusts every environment. The allowlist and the "all external contributors need approval" setting are the controls; the admin role's trust is not. Revisit if a second contributor joins.
 
@@ -182,7 +182,7 @@ Moved to [deploy.md, Set up](../deploy.md#set-up), with the exact commands.
 Where the code differs from the sections above:
 
 - **`preview` has no `$default` Lambda or cluster.** It holds only the Router, the HTTP API and the SSM parameter. Nothing answers outside a PR's prefix, and it leaves all 20 DSQL clusters for PRs. The smoke checks are per PR.
-- **`preview` deploys from its own workflow**, [preview-stage.yml](../../.github/workflows/preview-stage.yml), with the admin role in the `global` environment. It runs when `infra/app/sst.config.ts` changes on `main`. `deploy.yml` is unchanged, and the first run bootstraps SST in `us-west-2`, so no laptop step is needed.
+- **`preview` deploys from its own workflow**, [preview-stage.yml](../../.github/workflows/preview-stage.yml), with the admin role in the `global` environment. It runs when the preview stage's code (`infra/app/sst.config.ts`, `core.ts`, `stacks/preview-shared.ts`) changes on `main`. `deploy.yml` is unchanged, and the first run bootstraps SST in `us-west-2`, so no laptop step is needed.
 - **The API's prefix comes from its URL.** `withBasePath` mounts the app under the path of `Resource.Api.url`, so there's no `BASE_PATH` on the Lambda. `createAuth` always passes `<api>/api/auth` as Better Auth's `baseURL`. The web export reads `BASE_PATH`, not `EXPO_PUBLIC_BASE_PATH`.
 - **`expires-at` is a tag on the PR's API Lambda only**, not a default tag. That way a deploy doesn't retag every resource, and `expire` lists only those Lambdas.
 - **`expire` fails only for a stage a closed PR left behind.** A 6-hour expiry is routine, and failing on it would notify on every PR.
