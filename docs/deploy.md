@@ -2,8 +2,8 @@
 
 Infrastructure is [SST](https://sst.dev), in two SST apps. Both live in the `@yallist/infra` workspace package under [infra/](../infra), which owns the `sst` dependency and the deploy scripts; the root `pnpm deploy:*` and `pnpm sst` scripts delegate to it.
 
-- **App** ([infra/app/sst.config.ts](../infra/app/sst.config.ts)): the API, its database and the Expo web export. Stages `dev` and `production`.
-- **Global** ([infra/global/sst.config.ts](../infra/global/sst.config.ts)): account-wide resources in `eu-central-1`. These are the $10/month budget, which emails `BUDGET_EMAIL` at 80% actual and 100% forecasted spend, and the IAM role GitHub Actions deploys with. One stage, `global`, protected.
+- **App** ([infra/app/sst.config.ts](../infra/app/sst.config.ts)): the API, its database and the Expo web export. Stages `dev` and `production`, plus the PR preview stages `preview` and `pr-<n>` ([PR previews](#pr-previews)).
+- **Global** ([infra/global/sst.config.ts](../infra/global/sst.config.ts)): account-wide resources in `eu-central-1`. These are the $10/month budget, which emails `BUDGET_EMAIL` at 80% actual and 100% forecasted spend, and the IAM role GitHub Actions deploys with. It also holds the preview role, its permissions boundary and a $5/month `us-west-2` budget. One stage, `global`, protected.
 
 ## Deploys come from `main`
 
@@ -26,12 +26,14 @@ After that, the `yallist-dev` access key is only needed for emergencies. Conside
 
 ## Stages
 
-There are exactly two stages. Any other `--stage` fails before touching AWS.
+There are two app stages, plus the PR previews' stages. Any other `--stage` fails before touching AWS.
 
-| Stage        | Region         | Command            | AWS profile    | On `sst remove`                        |
-| ------------ | -------------- | ------------------ | -------------- | -------------------------------------- |
-| `dev`        | `us-east-2`    | `pnpm deploy:dev`  | `yallist-dev`  | Everything is deleted.                 |
-| `production` | `eu-central-1` | `pnpm deploy:prod` | `yallist-prod` | Refused (`protect`). Buckets retained. |
+| Stage        | Region         | Command                                       | AWS profile    | On `sst remove`                        |
+| ------------ | -------------- | --------------------------------------------- | -------------- | -------------------------------------- |
+| `dev`        | `us-east-2`    | `pnpm deploy:dev`                             | `yallist-dev`  | Everything is deleted.                 |
+| `production` | `eu-central-1` | `pnpm deploy:prod`                            | `yallist-prod` | Refused (`protect`). Buckets retained. |
+| `preview`    | `us-west-2`    | [preview-stage.yml](#pr-previews)             | `yallist-dev`  | Everything is deleted.                 |
+| `pr-<n>`     | `us-west-2`    | [preview.yml](#pr-previews), CI only (`CI=1`) | none           | Everything is deleted.                 |
 
 The profile and region are set per stage in `infra/app/sst.config.ts`, not in the scripts. In CI (`CI=true`) no profile is used. That way every `sst` command (`deploy`, `diff`, `remove`) picks the right credentials without an `AWS_PROFILE=` prefix.
 
@@ -264,6 +266,56 @@ Every resource has the stage in its name or identifier, so dev and production ne
 - **Tags:** every resource that supports tags is tagged `app=yallist` and `stage=<stage>` (`stage=global` for `infra/global`), through the AWS provider's default tags. SST also adds its own `sst:app` and `sst:stage` tags. That includes IAM roles, the OIDC provider, the budget and the Lambda log groups, which SST creates explicitly (30-day retention) rather than leaving Lambda to create them untagged.
   - **Not taggable** (AWS has no tags for them; the stage is in the name or parent): CloudFront functions and key-value stores, API Gateway routes and integrations, Lambda permissions, IAM role policies and attachments, and the S3 bucket policy.
   - **Not ours to tag:** SST's per-region bootstrap, created by the SST CLI rather than these configs and shared by every stage in the region: the `sst-state-*` and `sst-asset-*` buckets, the `sst-asset` ECR repository and the `/sst/bootstrap` and `/sst/passphrase/*` SSM parameters.
+
+## PR previews
+
+Every PR from this repo by a user in `PREVIEW_ALLOWED_ACTORS` gets a live environment at `https://<router>/pr-<n>/`, posted as a PR comment. It's removed when the PR closes, or 6 hours after its last push. The design and its trade-offs are in [e2e-live-environments.md](plans/e2e-live-environments.md).
+
+- **`preview` stage** ([preview-stage.yml](../.github/workflows/preview-stage.yml), from `main`, admin role): a CloudFront Router and an HTTP API that every PR shares, with their ids in the SSM parameter `/yallist/preview/outputs`. Nothing answers outside a PR's prefix.
+- **`pr-<n>` stage** ([preview.yml](../.github/workflows/preview.yml), on every push, preview role): the API Lambda behind `ANY /pr-<n>/{proxy+}` on the shared API, the web export under `/pr-<n>` on the Router (`BASE_PATH`, [app.config.ts](../apps/mobile/app.config.ts)), and its own DSQL cluster, realtime API and receipts bucket. The API serves itself under the path of its URL ([app.ts](../apps/api/src/app.ts) `withBasePath`). Guests only: no Google client.
+- **After the deploy:** migrations, a `/health` and site smoke check, the sticky comment, then the Maestro flows against the URL (`E2E_WEB_URL`, [e2e-web.sh](../scripts/e2e-web.sh)). To run them yourself: `E2E_WEB_URL=https://<router>/pr-<n>/ scripts/e2e-web.sh`.
+- **Removal** ([preview-remove.sh](../scripts/preview-remove.sh)): `sst remove --stage pr-<n>`, which is the whole teardown, then the stage's SST passphrase is deleted. The job fails if anything tagged `stage=pr-<n>` is left. Hourly, it also removes stages past their Lambda's `expires-at` tag, and fails on any stage a closed PR left behind.
+- **Preview role** (`yallist-global-github-preview`): only `preview`-environment jobs of the users in `PREVIEW_ACTOR_IDS` ([infra/global](../infra/global/sst.config.ts)) can assume it, and only in `us-west-2`. It can only touch `yallist-pr-*` resources. Every role a PR stage creates gets the `yallist-preview-workload-boundary`, which limits it to its own stage. The admin deploy role is unchanged.
+- **Locally:** `E2E_BASE_PATH=/pr-123 scripts/e2e-web.sh` runs the flows against a build served under a prefix, as a preview is.
+
+### Set up
+
+These steps happen once, in this order. Each step needs the ones before it.
+
+1. **Merge the infra PR.** `deploy.yml` then deploys `global` with the preview role, boundary and budget. Then point the workflow at the role:
+   ```sh
+   gh variable set AWS_PREVIEW_ROLE_ARN -R nadavgihasi/yallist \
+     --body arn:aws:iam::007742375034:role/yallist-global-github-preview
+   ```
+2. **Allowlist users** for the workflow. Logins go here; their numeric ids (`gh api users/<login> -q .id`) go in `PREVIEW_ACTOR_IDS` in infra/global.
+   ```sh
+   gh variable set PREVIEW_ALLOWED_ACTORS -R nadavgihasi/yallist --body '["nadavgihasi"]'
+   ```
+3. **Create the `preview` environment.** It has no branch restriction, because PR branches deploy, and one secret:
+   ```sh
+   gh api -X PUT repos/nadavgihasi/yallist/environments/preview
+   gh secret set BETTER_AUTH_SECRET --env preview -R nadavgihasi/yallist --body "$(openssl rand -base64 32)"
+   ```
+4. **Require approval for fork PR workflows** from all external contributors:
+   ```sh
+   gh api -X PUT repos/nadavgihasi/yallist/actions/permissions/fork-pr-contributor-approval \
+     -f approval_policy=all_external_contributors
+   ```
+5. **Add `actor_id` to the OIDC subject**, only after step 1 has deployed the role. Every token's `sub` then ends in `:actor_id:<id>`, which the preview role's trust requires; the admin role's `environment:*` still matches.
+   ```sh
+   gh api -X PUT repos/nadavgihasi/yallist/actions/oidc/customization/sub \
+     -F use_default=false -F use_immutable_subject=true \
+     -f 'include_claim_keys[]=repo' -f 'include_claim_keys[]=context' -f 'include_claim_keys[]=actor_id'
+   gh api repos/nadavgihasi/yallist/actions/oidc/customization/sub   # sub_claim_prefix must still be repo:nadavgihasi@37207301/yallist@1431912139
+   ```
+   If GitHub rejects `actor_id`, or the prefix lost its `@ids`, undo it with `-F use_default=true -F use_immutable_subject=true` and check the admin role's trust before going on.
+6. **Merge the workflows PR.** `preview-stage.yml` then deploys the `preview` stage with the admin role. That's the first use of the admin role under the new subject. A new CloudFront distribution takes up to about 15 minutes. If the workflow didn't start, run it by hand:
+   ```sh
+   gh workflow run preview-stage.yml -R nadavgihasi/yallist
+   ```
+7. **Push to any PR.** Its preview comment appears after about 5 minutes.
+
+When the preview role is denied something, CloudTrail in `us-west-2` names the action. Add it to `GithubPreviewPolicy` in infra/global, and to the boundary if a PR's Lambda needs it.
 
 ## Remove dev
 
