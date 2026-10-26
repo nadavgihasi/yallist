@@ -11,7 +11,8 @@
 #
 # CI splits the flows in two: E2E_SHARD=1 runs the flows tagged shard-1, E2E_SHARD=2 the rest
 # (new flows land there; tag one shard-1 when shard 2 gets longer). E2E_PREBUILT=1 serves an
-# existing apps/mobile/dist, exported with EXPO_PUBLIC_API_URL=http://localhost:$API_PORT.
+# existing apps/mobile/dist, exported with EXPO_PUBLIC_API_URL=http://localhost:$API_PORT
+# and EXPO_PUBLIC_E2E_RECEIPT as below.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -37,8 +38,12 @@ trap cleanup EXIT
   >"$OUT/api.log" 2>&1 &
 
 if [[ -z ${E2E_PREBUILT:-} ]]; then
-  (cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT "$bin/expo" export -p web) \
-    >"$OUT/export.log" 2>&1
+  # Maestro can't use the browser's file picker, so this build picks the fixture photo instead
+  # (pickAvatar in src/state/avatar.ts; CI's build job sets the same). The API keeps photos in
+  # memory (src/dev.ts).
+  receipt="data:image/jpeg;base64,$(base64 <apps/mobile/e2e/fixtures/receipt.jpg | tr -d '\n')"
+  (cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT \
+    EXPO_PUBLIC_E2E_RECEIPT=$receipt "$bin/expo" export -p web) >"$OUT/export.log" 2>&1
 fi
 (cd apps/mobile && exec "$bin/expo" serve --port "$WEB_PORT") >"$OUT/web.log" 2>&1 &
 
