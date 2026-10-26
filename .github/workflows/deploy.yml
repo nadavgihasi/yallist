@@ -96,6 +96,8 @@ jobs:
       SST_SECRET_BetterAuthSecret: ${{ secrets.BETTER_AUTH_SECRET }}
       SST_SECRET_GoogleClientSecret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       SST_SECRET_GithubFeedbackToken: ${{ secrets.FEEDBACK_GITHUB_TOKEN }} # optional
+      SST_SECRET_TelegramBotToken: ${{ secrets.TELEGRAM_BOT_TOKEN }} # optional, alerts
+      SST_SECRET_TelegramChatId: ${{ secrets.TELEGRAM_CHAT_ID }} # optional, alerts
     steps: *deploy
 
   production:
@@ -111,6 +113,8 @@ jobs:
       SST_SECRET_BetterAuthSecret: ${{ secrets.BETTER_AUTH_SECRET }}
       SST_SECRET_GoogleClientSecret: ${{ secrets.GOOGLE_CLIENT_SECRET }}
       SST_SECRET_GithubFeedbackToken: ${{ secrets.FEEDBACK_GITHUB_TOKEN }} # optional
+      SST_SECRET_TelegramBotToken: ${{ secrets.TELEGRAM_BOT_TOKEN }} # optional, alerts
+      SST_SECRET_TelegramChatId: ${{ secrets.TELEGRAM_CHAT_ID }} # optional, alerts
     steps: *deploy
 
   # Tags main and creates the GitHub release only once production has it (docs/releases.md).

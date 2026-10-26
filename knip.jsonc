@@ -8,7 +8,7 @@
     ".": {},
     "apps/api": {
       // Lambda handlers, referenced by path from infra/app/sst.config.ts.
-      "entry": ["src/lambda.ts", "src/realtime-authorizer.ts"],
+      "entry": ["src/lambda.ts", "src/realtime-authorizer.ts", "src/alarm-notifier.ts"],
     },
     "apps/mobile": {
       // Knip assumes Expo apps use expo-updates; this one doesn't.
