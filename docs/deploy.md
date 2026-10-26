@@ -6,7 +6,7 @@ Infrastructure is [SST](https://sst.dev), in two SST apps. Both live in the `@ya
 
   | Stage               | File                                                              | What it creates                                                                                                                                                        |
   | ------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `dev`, `production` | [stacks/app.ts](../infra/app/stacks/app.ts)                       | The app, with an HTTP API of its own.                                                                                                                                  |
+  | `dev`, `production` | [stacks/app.ts](../infra/app/stacks/app.ts)                       | The app, with an HTTP API of its own, and its alerts: the `Alerts` topic and Telegram notifier, and in production the CloudWatch alarms.                               |
   | `preview`           | [stacks/preview-shared.ts](../infra/app/stacks/preview-shared.ts) | What every PR preview shares: the CloudFront Router, the HTTP API and the SSM parameter with their ids.                                                                |
   | `pr-<n>`            | [stacks/preview-pr.ts](../infra/app/stacks/preview-pr.ts)         | One PR's copy of the app: its API Lambda with a route and integration on the shared API, its site on the Router, the permissions boundary on its roles and its expiry. |
 
@@ -278,13 +278,13 @@ Every resource has the stage in its name or identifier, so dev and production ne
 
 ## PR previews
 
-Every PR from this repo by a user in `PREVIEW_ALLOWED_ACTORS` gets a live environment at `https://<router>/pr-<n>/`, posted as a PR comment. It's removed when the PR closes, or 6 hours after its last push. The design and its trade-offs are in [e2e-live-environments.md](plans/e2e-live-environments.md).
+Every PR from a branch of this repo (not a fork) gets a live environment at `https://<router>/pr-<n>/`, posted as a PR comment. It's removed when the PR closes, or 6 hours after its last push. The design and its trade-offs are in [e2e-live-environments.md](plans/e2e-live-environments.md).
 
 - **`preview` stage** ([preview-stage.yml](../.github/workflows/preview-stage.yml), from `main`, admin role): a CloudFront Router and an HTTP API that every PR shares, with their ids in the SSM parameter `/yallist/preview/outputs`. Nothing answers outside a PR's prefix.
 - **`pr-<n>` stage** ([preview.yml](../.github/workflows/preview.yml), on every push, preview role): the API Lambda behind `ANY /pr-<n>/{proxy+}` on the shared API, the web export under `/pr-<n>` on the Router (`BASE_PATH`, [app.config.ts](../apps/mobile/app.config.ts)), and its own DSQL cluster, realtime API and receipts bucket. The API serves itself under the path of its URL ([app.ts](../apps/api/src/app.ts) `withBasePath`). Guests only: no Google client.
 - **After the deploy:** migrations, a `/health` and site smoke check, the sticky comment, then the Maestro flows against the URL (`E2E_WEB_URL`, [e2e-web.sh](../scripts/e2e-web.sh)). To run them yourself: `E2E_WEB_URL=https://<router>/pr-<n>/ scripts/e2e-web.sh`.
 - **Removal** ([preview-remove.sh](../scripts/preview-remove.sh)): `sst remove --stage pr-<n>`, which is the whole teardown, then the stage's SST passphrase is deleted. The job fails if anything tagged `stage=pr-<n>` is left. Hourly, it also removes stages past their Lambda's `expires-at` tag, and fails on any stage a closed PR left behind.
-- **Preview role** (`yallist-global-github-preview`): only `preview`-environment jobs of the users in `PREVIEW_ACTOR_IDS` ([infra/global/preview.ts](../infra/global/preview.ts)) can assume it, and only in `us-west-2`. It can only touch `yallist-pr-*` resources. Every role a PR stage creates gets the `yallist-preview-workload-boundary`, which limits it to its own stage. The admin deploy role is unchanged.
+- **Preview role** (`yallist-global-github-preview`): only this repo's `preview`-environment jobs can assume it ([infra/global/preview.ts](../infra/global/preview.ts)), and only in `us-west-2`. It can only touch `yallist-pr-*` resources. Every role a PR stage creates gets the `yallist-preview-workload-boundary`, which limits it to its own stage. The admin deploy role is unchanged.
 - **Locally:** `E2E_BASE_PATH=/pr-123 scripts/e2e-web.sh` runs the flows against a build served under a prefix, as a preview is.
 
 ### Set up
@@ -296,33 +296,18 @@ These steps happen once, in this order. Each step needs the ones before it.
    gh variable set AWS_PREVIEW_ROLE_ARN -R nadavgihasi/yallist \
      --body arn:aws:iam::007742375034:role/yallist-global-github-preview
    ```
-2. **Allowlist users** for the workflow. Logins go here; their numeric ids (`gh api users/<login> -q .id`) go in `PREVIEW_ACTOR_IDS` in [infra/global/preview.ts](../infra/global/preview.ts).
-   ```sh
-   gh variable set PREVIEW_ALLOWED_ACTORS -R nadavgihasi/yallist --body '["nadavgihasi"]'
-   ```
-3. **Create the `preview` environment.** It has no branch restriction, because PR branches deploy, and one secret:
+2. **Create the `preview` environment.** It has no branch restriction, because PR branches deploy, and one secret:
    ```sh
    gh api -X PUT repos/nadavgihasi/yallist/environments/preview
    gh secret set BETTER_AUTH_SECRET --env preview -R nadavgihasi/yallist --body "$(openssl rand -base64 32)"
    ```
-4. **Require approval for fork PR workflows** from all external contributors:
-   ```sh
-   gh api -X PUT repos/nadavgihasi/yallist/actions/permissions/fork-pr-contributor-approval \
-     -f approval_policy=all_external_contributors
-   ```
-5. **Add `actor_id` to the OIDC subject**, only after step 1 has deployed the role. Every token's `sub` then ends in `:actor_id:<id>`, which the preview role's trust requires; the admin role's `environment:*` still matches.
-   ```sh
-   gh api -X PUT repos/nadavgihasi/yallist/actions/oidc/customization/sub \
-     -F use_default=false -F use_immutable_subject=true \
-     -f 'include_claim_keys[]=repo' -f 'include_claim_keys[]=context' -f 'include_claim_keys[]=actor_id'
-   gh api repos/nadavgihasi/yallist/actions/oidc/customization/sub   # sub_claim_prefix must still be repo:nadavgihasi@37207301/yallist@1431912139
-   ```
-   If GitHub rejects `actor_id`, or the prefix lost its `@ids`, undo it with `-F use_default=true -F use_immutable_subject=true` and check the admin role's trust before going on.
-6. **Merge the workflows PR.** `preview-stage.yml` then deploys the `preview` stage with the admin role. That's the first use of the admin role under the new subject. A new CloudFront distribution takes up to about 15 minutes. If the workflow didn't start, run it by hand:
+3. **Merge the workflows PR.** `preview-stage.yml` then deploys the `preview` stage with the admin role. A new CloudFront distribution takes up to about 15 minutes. If the workflow didn't start, run it by hand:
    ```sh
    gh workflow run preview-stage.yml -R nadavgihasi/yallist
    ```
-7. **Push to any PR.** Its preview comment appears after about 5 minutes.
+4. **Push to any PR.** Its preview comment appears after about 5 minutes.
+
+There's no user allowlist, no fork-approval setting and no `actor_id` in the OIDC subject: only collaborators can push branches here, and fork PRs get no secrets or OIDC token. Revisit when adding collaborators.
 
 When the preview role is denied something, CloudTrail in `us-west-2` names the action. Add it to `GithubPreviewPolicy` in [infra/global/preview.ts](../infra/global/preview.ts), and to the boundary if a PR's Lambda needs it.
 
