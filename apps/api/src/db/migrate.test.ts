@@ -30,15 +30,19 @@ describe('toDsql', () => {
 
 /**
  * A stand-in for a DSQL connection: `begin` runs the DDL (`ddl` returns its rows or throws), and
- * each other query is answered by the first entry of `answers` whose key it contains.
+ * each other query, with its parameters as $n (as postgres.js sends them), is answered by the
+ * first entry of `answers` whose key it contains: rows, or an error to reject with.
  */
-function fakeDsql(ddl: () => unknown[], answers: Record<string, unknown[]>) {
-  const queries: string[] = [];
-  const sql = (strings: TemplateStringsArray, ...values: unknown[]) => {
-    const query = strings.reduce((q, s, i) => q + (i ? String(values[i - 1]) : '') + s, '');
-    queries.push(query.replace(/\s+/g, ' ').trim());
-    const key = Object.keys(answers).find((k) => query.includes(k));
-    return Promise.resolve(key ? answers[key] : []);
+function fakeDsql(ddl: () => unknown[], answers: Record<string, unknown[] | Error>) {
+  const queries: { text: string; params: unknown[] }[] = [];
+  const sql = (strings: TemplateStringsArray, ...params: unknown[]) => {
+    const text = strings
+      .reduce((q, s, i) => `${q}$${i}${s}`)
+      .replace(/\s+/g, ' ')
+      .trim();
+    queries.push({ text, params });
+    const answer = answers[Object.keys(answers).find((k) => text.includes(k)) ?? ''] ?? [];
+    return answer instanceof Error ? Promise.reject(answer) : Promise.resolve(answer);
   };
   sql.begin = (fn: (tx: { unsafe: (q: string) => unknown }) => unknown) =>
     Promise.resolve().then(() => fn({ unsafe: () => ddl() }));
@@ -49,23 +53,54 @@ const exists = () => {
   throw Object.assign(new Error('relation "a_idx" already exists'), { code: '42P07' });
 };
 
+/** The queries that wait for job `jobId` and then read how it ended. */
+const waitsFor = (jobId: string) => [
+  { text: 'call sys.wait_for_job($1::text)', params: [jobId] },
+  { text: 'select status, details from sys.jobs where job_id = $1::text', params: [jobId] },
+];
+
 describe('apply on DSQL', () => {
   const index = 'CREATE UNIQUE INDEX "a_idx" ON "a" USING btree ("x");';
 
-  it('waits for an index build', async () => {
-    const { sql, queries } = fakeDsql(() => [{ job_id: 'j1' }], { wait_for_job: [{ ok: true }] });
+  it('calls sys.wait_for_job as a procedure, then checks the job completed', async () => {
+    const { sql, queries } = fakeDsql(() => [{ job_id: 'j1' }], {
+      'where job_id': [{ status: 'completed', details: null }],
+    });
     await apply(sql, index, true);
-    expect(queries).toEqual(['select sys.wait_for_job(j1) as ok']);
+    expect(queries).toEqual(waitsFor('j1'));
   });
 
   it('fails when the index build fails', async () => {
     const { sql } = fakeDsql(() => [{ job_id: 'j1' }], {
-      wait_for_job: [{ ok: false }],
-      'from sys.jobs': [{ status: 'failed', details: 'Found duplicate key' }],
+      'where job_id': [{ status: 'failed', details: 'Found duplicate key' }],
     });
     await expect(apply(sql, index, true)).rejects.toThrow(
       'DSQL job j1 did not complete: failed Found duplicate key',
     );
+  });
+
+  it("reports the job's details when the wait itself raises", async () => {
+    const { sql } = fakeDsql(() => [{ job_id: 'j1' }], {
+      wait_for_job: new Error('job failed'),
+      'where job_id': [{ status: 'failed', details: 'Found duplicate key' }],
+    });
+    await expect(apply(sql, index, true)).rejects.toThrow(
+      'DSQL job j1 did not complete: failed Found duplicate key',
+    );
+  });
+
+  it('fails when the job is still running after the wait', async () => {
+    const { sql } = fakeDsql(() => [{ job_id: 'j1' }], {
+      'where job_id': [{ status: 'processing', details: null }],
+    });
+    await expect(apply(sql, index, true)).rejects.toThrow(
+      'DSQL job j1 did not complete: processing',
+    );
+  });
+
+  it('fails when the job is gone', async () => {
+    const { sql } = fakeDsql(() => [{ job_id: 'j1' }], {});
+    await expect(apply(sql, index, true)).rejects.toThrow('DSQL job j1 did not complete: unknown');
   });
 
   it('accepts an index an earlier run built', async () => {
@@ -76,11 +111,11 @@ describe('apply on DSQL', () => {
   it('waits for an index an earlier run is still building', async () => {
     const { sql, queries } = fakeDsql(exists, {
       pg_index: [{ valid: false }],
-      'from sys.jobs': [{ jobId: 'j2' }],
-      wait_for_job: [{ ok: true }],
+      "status in ('submitted', 'processing')": [{ jobId: 'j2' }],
+      'where job_id': [{ status: 'completed', details: null }],
     });
     await apply(sql, index, true);
-    expect(queries.at(-1)).toBe('select sys.wait_for_job(j2) as ok');
+    expect(queries.slice(-2)).toEqual(waitsFor('j2'));
   });
 
   it('fails on an index whose earlier build failed', async () => {

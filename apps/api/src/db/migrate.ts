@@ -76,14 +76,23 @@ export async function apply(sql: Sql, statement: string, dsql: boolean) {
   if (jobId) await waitForJob(sql, jobId);
 }
 
-/** Blocks until a DSQL job finishes; throws with its details unless it completed. */
+/**
+ * Blocks until a DSQL job finishes, then throws with its details unless it completed.
+ * sys.wait_for_job is a procedure (so CALL, not SELECT), and CALL returns no rows: sys.jobs is
+ * what says how the job ended. It may also raise when the job fails, in which case the job's
+ * status still explains why.
+ */
 async function waitForJob(sql: Sql, jobId: string) {
-  const [{ ok }] = await sql<[{ ok: boolean }]>`select sys.wait_for_job(${jobId}) as ok`;
-  if (ok) return;
+  const waited = await sql`call sys.wait_for_job(${jobId}::text)`.then(
+    () => undefined,
+    (error: unknown) => error,
+  );
   const [job] = await sql<{ status: string; details: string | null }[]>`
-    select status, details from sys.jobs where job_id = ${jobId}`;
+    select status, details from sys.jobs where job_id = ${jobId}::text`;
+  if (job?.status === 'completed') return;
   throw new Error(
     `DSQL job ${jobId} did not complete: ${job ? `${job.status} ${job.details ?? ''}` : 'unknown'}`,
+    { cause: waited },
   );
 }
 
