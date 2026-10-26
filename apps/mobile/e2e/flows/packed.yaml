@@ -1,0 +1,38 @@
+# In "אצלי", tick an item I'm bringing as packed; the tick stays after a reload.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [items]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- runFlow:
+    file: ../common/add-item.yaml
+    env:
+      ITEM: Grill
+- tapOn:
+    id: item-claim
+- tapOn: אצלי.*
+- assertNotVisible:
+    id: item-packed-tick
+- tapOn:
+    id: item-packed-.*
+- assertVisible:
+    id: item-packed-tick
+# The tick shows before the API has it; leaving the page sooner would drop the save. Nothing has
+# this id: this only waits (longer on a preview's cold Lambda).
+- extendedWaitUntil:
+    visible:
+      id: never-shown
+    timeout: 4000
+    optional: true
+# Saved: still ticked after opening the app again.
+- openLink: ${WEB_URL}
+- tapOn: E2E trip
+- tapOn: אצלי.*
+- assertVisible:
+    id: item-packed-tick

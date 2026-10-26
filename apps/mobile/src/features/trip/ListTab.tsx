@@ -40,6 +40,7 @@ export function ListTab({
   const shown = (f: ListFilter) =>
     filterItems(listItems, f, data.claims, data.expenses, view.activeIds, me);
   const visible = new Set(shown(filter).map((i) => i.id));
+  const packed = new Set(data.packed);
 
   // The list's categories in order, then uncategorized items. Empty categories show under "all",
   // so there's somewhere to add the first item.
@@ -147,6 +148,7 @@ export function ListTab({
               claims={data.claims}
               view={view}
               me={me}
+              packed={filter === 'mine' ? packed.has(item.id) : undefined}
               onOpen={() =>
                 router.push({
                   pathname: '/trips/[tripId]/items/[itemId]',
@@ -154,6 +156,7 @@ export function ListTab({
                 })
               }
               onClaim={(quantity) => act({ type: 'setClaim', itemId: item.id, quantity })}
+              onPack={(p) => act({ type: 'setPacked', itemId: item.id, packed: p })}
             />
           ))}
           {category && filter === 'all' && (

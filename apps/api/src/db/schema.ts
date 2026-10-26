@@ -276,6 +276,23 @@ export const claims = pgTable(
   ],
 );
 
+/**
+ * What a user ticked as packed in their "אצלי" list: personal, only they see it. Only for items on
+ * their list (an "each" item, or one they claimed); releasing the claim or deleting the item
+ * clears it.
+ */
+export const itemPacked = pgTable(
+  'item_packed',
+  {
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => items.id),
+    userId: userRef('user_id').notNull(),
+    packedAt: timestamp('packed_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.itemId, t.userId] })],
+);
+
 export const expenses = pgTable(
   'expenses',
   {

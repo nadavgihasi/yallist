@@ -22,6 +22,8 @@ export interface NewExpenseInput {
 /** A change to a trip, sent to the API by `useTripAction`. */
 export type Action =
   | { type: 'setClaim'; itemId: string; quantity: number }
+  /** My own "packed" tick in "אצלי"; nobody else sees it. */
+  | { type: 'setPacked'; itemId: string; packed: boolean }
   // `newCategory`: create a category of that name first, and put the item in it.
   | { type: 'addItem'; item: NewItemInput; claim: number; newCategory?: string }
   | { type: 'deleteItem'; itemId: string }
@@ -59,13 +61,20 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
         ...data,
         claims:
           quantity > 0 ? [...others, { itemId: action.itemId, userId: me, quantity }] : others,
+        // Released: off my list, so no longer packed (as the API does).
+        packed: quantity > 0 ? data.packed : data.packed.filter((id) => id !== action.itemId),
       };
+    }
+    case 'setPacked': {
+      const others = data.packed.filter((id) => id !== action.itemId);
+      return { ...data, packed: action.packed ? [...others, action.itemId] : others };
     }
     case 'deleteItem':
       return {
         ...data,
         items: data.items.filter((i) => i.id !== action.itemId),
         claims: data.claims.filter((c) => c.itemId !== action.itemId),
+        packed: data.packed.filter((id) => id !== action.itemId),
         expenses: data.expenses.map((e) =>
           e.itemId === action.itemId ? { ...e, itemId: undefined } : e,
         ),

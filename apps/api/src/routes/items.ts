@@ -1,4 +1,4 @@
-import { claimCap, claimedQuantity } from '@yallist/domain';
+import { claimCap, claimedQuantity, isOnMyList } from '@yallist/domain';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -10,6 +10,7 @@ import { lockClaims, setClaim } from '../dal/claims';
 import { findPurchase } from '../dal/expenses';
 import { appendItem, deleteItem, endOfList, lockItem, updateItem } from '../dal/items';
 import { requireMember } from '../dal/members';
+import { deleteItemPacked, setPacked } from '../dal/packed';
 import type { Db } from '../db/client';
 import { KINDS, LISTS } from '../db/schema';
 import { transact, type Tx } from '../db/tx';
@@ -121,6 +122,8 @@ export const itemRoutes = (auth: Auth, db: Db) =>
             if (changed.kind && claimed > 0) throw fail(409, 'Already claimed');
             if (next.quantityNeeded < claimed) throw fail(409, 'Less than already claimed');
           }
+          // Not "each" any more: off the lists of those who only had it as everyone's item.
+          if (changed.kind) await deleteItemPacked(tx, itemId);
           // The bring list has no purchases: unmark it as bought first.
           if (changed.list === 'bring' && (await findPurchase(tx, itemId))) {
             throw fail(409, 'Already bought');
@@ -149,6 +152,7 @@ export const itemRoutes = (auth: Auth, db: Db) =>
         await requireMember(tx, tripId, me, { lock: true });
         const item = await lockItem(tx, tripId, itemId);
         await deleteItem(tx, itemId);
+        await deleteItemPacked(tx, itemId);
         await logActivity(tx, tripId, me, 'item_deleted', { itemId, name: item.name });
       });
       return c.body(null, 204);
@@ -171,8 +175,31 @@ export const itemRoutes = (auth: Auth, db: Db) =>
           if (quantity > cap) throw fail(409, `At most ${cap} can be claimed`);
           const had = current.some((cl) => cl.userId === me);
           await setClaim(tx, itemId, me, quantity, had);
+          // Packed is about what's on my list: releasing the claim takes it off.
+          if (quantity === 0) await setPacked(tx, itemId, me, false);
           await logActivity(tx, tripId, me, 'claim_set', { itemId, quantity });
         });
         return c.json({ itemId, userId: me, quantity });
+      },
+    )
+
+    // Ticks an item on my list ("each", or one I claimed) as packed. Personal: only I see it, so
+    // it isn't logged as activity.
+    .put(
+      '/:tripId/items/:itemId/packed',
+      validate('param', itemParam),
+      validate('json', z.object({ packed: z.boolean() })),
+      async (c) => {
+        const { tripId, itemId } = c.req.valid('param');
+        const { packed } = c.req.valid('json');
+        const me = c.var.user.id;
+        await transact(db, async (tx) => {
+          await requireMember(tx, tripId, me, { lock: true });
+          const item = await lockItem(tx, tripId, itemId);
+          const onMyList = isOnMyList(toItem(item), await lockClaims(tx, itemId), me);
+          if (packed && !onMyList) throw fail(409, 'Not on your list');
+          await setPacked(tx, itemId, me, packed);
+        });
+        return c.json({ itemId, packed });
       },
     );

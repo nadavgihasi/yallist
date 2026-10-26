@@ -17,6 +17,7 @@ import {
   requireMember,
   setMember,
 } from '../dal/members';
+import { deleteMemberPacked, packedItemIds } from '../dal/packed';
 import { displayNameOf } from '../dal/profiles';
 import { insertTrip, loadTrips, lockTrip, setTrip } from '../dal/trips';
 import type { Db } from '../db/client';
@@ -137,11 +138,14 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
     // Everything the trip screens need, with balances. Active members only.
     .get('/:tripId', validate('param', tripParam), async (c) => {
       const { tripId } = c.req.valid('param');
-      const data = await transact(db, async (tx) => {
-        await requireMember(tx, tripId, c.var.user.id);
-        return (await loadTrips(tx, [tripId], photos))[0]!;
+      const me = c.var.user.id;
+      const { data, packed } = await transact(db, async (tx) => {
+        await requireMember(tx, tripId, me);
+        const [trip] = await loadTrips(tx, [tripId], photos);
+        return { data: trip!, packed: await packedItemIds(tx, tripId, me) };
       });
-      return c.json({ ...data, ...settleUp(data) });
+      // `packed`: the items I ticked as packed. Only mine; nobody else's.
+      return c.json({ ...data, ...settleUp(data), packed });
     })
 
     .patch('/:tripId', validate('param', tripParam), validate('json', updateTrip), async (c) => {
@@ -204,6 +208,7 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
         await assertNotLastOrganizer(tx, target);
         await setMember(tx, target, { status: 'removed' });
         await deleteMemberClaims(tx, tripId, userId);
+        await deleteMemberPacked(tx, tripId, userId);
         await logActivity(tx, tripId, c.var.user.id, 'member_removed', { userId });
       });
       return c.json({ userId, status: 'removed' as const });

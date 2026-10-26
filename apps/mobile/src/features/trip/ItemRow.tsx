@@ -32,15 +32,20 @@ export function ItemRow({
   claims,
   view,
   me,
+  packed,
   onOpen,
   onClaim,
+  onPack,
 }: {
   item: Item;
   claims: readonly Claim[];
   view: TripView;
   me: string;
+  /** In "אצלי": whether I packed it, and the ring becomes my packed checkbox. */
+  packed?: boolean;
   onOpen: () => void;
   onClaim: (quantity: number) => void;
+  onPack: (packed: boolean) => void;
 }) {
   const status = view.status(item);
   const line = statusLine(item, status, claims, view, me);
@@ -92,7 +97,26 @@ export function ItemRow({
 
   return (
     <View style={styles.row}>
-      <StatusRing state={ringOf(status)} label={line.label} />
+      {packed === undefined ? (
+        <StatusRing state={ringOf(status)} label={line.label} />
+      ) : (
+        <Pressable
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: packed }}
+          accessibilityLabel={he.trip.packedLabel(item.name)}
+          {...testId(`item-packed-${item.id}`)}
+          onPress={() => onPack(!packed)}
+          style={styles.check}
+        >
+          {/* The UI tests can't read aria-checked on web: the tick has its own id. */}
+          <View
+            style={[styles.box, packed && styles.boxOn]}
+            {...testId(packed ? 'item-packed-tick' : undefined)}
+          >
+            {packed && <Icon name="check" size={16} color={colors.onPrimary} strokeWidth={3} />}
+          </View>
+        </Pressable>
+      )}
       <Pressable style={styles.main} onPress={onOpen} accessibilityRole="button">
         <Text style={styles.name}>
           {item.name}
@@ -115,6 +139,24 @@ export function ItemRow({
 }
 
 const styles = StyleSheet.create({
+  // A 44px target around the 28px ring, taking the ring's place in the row.
+  check: {
+    width: space.touch,
+    height: space.touch,
+    margin: (28 - space.touch) / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  box: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: colors.inkMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  boxOn: { backgroundColor: colors.brand, borderColor: colors.brand },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
   main: { flex: 1, minWidth: 0, gap: space[1], justifyContent: 'center', minHeight: space.touch },
   name: { ...type.itemTitle, color: colors.ink },

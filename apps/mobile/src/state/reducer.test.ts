@@ -53,6 +53,7 @@ function trip(overrides: Partial<TripData> = {}): TripData {
     payments: [],
     balances: {},
     transfers: [],
+    packed: [],
     ...overrides,
   };
 }
@@ -69,6 +70,31 @@ describe('setClaim', () => {
     expect(applyAction(t, { type: 'setClaim', itemId: 'meat', quantity: 0 }, 'me').claims).toEqual(
       [],
     );
+  });
+});
+
+describe('setPacked', () => {
+  it('ticks and unticks an item, once', () => {
+    const packed = applyAction(trip(), { type: 'setPacked', itemId: 'meat', packed: true }, 'me');
+    expect(packed.packed).toEqual(['meat']);
+    const again = applyAction(packed, { type: 'setPacked', itemId: 'meat', packed: true }, 'me');
+    expect(again.packed).toEqual(['meat']);
+    expect(
+      applyAction(again, { type: 'setPacked', itemId: 'meat', packed: false }, 'me').packed,
+    ).toEqual([]);
+  });
+
+  it('is cleared when I release the claim or the item is deleted', () => {
+    const t = trip({ claims: [{ itemId: 'meat', userId: 'me', quantity: 1 }], packed: ['meat'] });
+    const released = applyAction(t, { type: 'setClaim', itemId: 'meat', quantity: 0 }, 'me');
+    expect(released.packed).toEqual([]);
+    expect(applyAction(t, { type: 'deleteItem', itemId: 'meat' }, 'me').packed).toEqual([]);
+    const lowered = trip({
+      claims: [{ itemId: 'chairs', userId: 'me', quantity: 3 }],
+      packed: ['chairs'],
+    });
+    const fewer = applyAction(lowered, { type: 'setClaim', itemId: 'chairs', quantity: 2 }, 'me');
+    expect(fewer.packed).toEqual(['chairs']);
   });
 });
 

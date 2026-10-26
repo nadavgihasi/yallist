@@ -37,7 +37,12 @@ export function useCreateTrip() {
     mutationFn: (json: NewTrip) => parseResponse(api.trips.$post({ json })),
     onSuccess: (data) => {
       // Opens without another round trip; a new trip has nothing to settle.
-      queryClient.setQueryData(tripKey(data.trip.id), { ...data, balances: {}, transfers: [] });
+      queryClient.setQueryData(tripKey(data.trip.id), {
+        ...data,
+        balances: {},
+        transfers: [],
+        packed: [],
+      });
       void queryClient.invalidateQueries({ queryKey: tripsKey });
     },
     onError: () => showToast(he.errors.failed, 'error'),
@@ -70,6 +75,13 @@ async function send(tripId: string, action: Action): Promise<unknown> {
   switch (action.type) {
     case 'setClaim':
       return claim(action.itemId, action.quantity);
+    case 'setPacked':
+      return parseResponse(
+        trip.items[':itemId'].packed.$put({
+          param: { ...param, itemId: action.itemId },
+          json: { packed: action.packed },
+        }),
+      );
     case 'addItem': {
       const json = await withNewCategory(action.item, action.newCategory);
       const item = await parseResponse(trip.items.$post({ param, json }));

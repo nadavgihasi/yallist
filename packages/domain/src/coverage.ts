@@ -104,10 +104,10 @@ export function filterItems(
 }
 
 /**
- * What "אצלי" shows: what I took, and every "each" item, since everyone brings their own, even
- * before I mark that I have it.
+ * What "אצלי" shows, and what I can tick as packed: what I took, and every "each" item, since
+ * everyone brings their own, even before I mark that I have it.
  */
-function isOnMyList(item: Item, claims: readonly Claim[], me: string): boolean {
+export function isOnMyList(item: Item, claims: readonly Claim[], me: string): boolean {
   return item.kind === 'each' || claimsFor(item.id, claims).some((c) => c.userId === me);
 }
 

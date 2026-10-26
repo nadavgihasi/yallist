@@ -156,6 +156,7 @@ export const he = {
     release: 'ביטול',
     releaseLabel: 'שחרור הפריט',
     have: 'יש לי',
+    packedLabel: (name: string) => `ארזתי את ${name}`,
     plusOne: 'אני אביא עוד אחד',
     minusOne: 'אחד פחות',
     empty: {

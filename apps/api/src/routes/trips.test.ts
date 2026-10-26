@@ -398,6 +398,90 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
     });
   });
 
+  describe('packed', () => {
+    const pack = (user: Guest, tripId: string, itemId: string, packed: boolean) =>
+      client.trips[':tripId'].items[':itemId'].packed.$put(
+        { param: { tripId, itemId }, json: { packed } },
+        as(user),
+      );
+    const packedOf = async (user: Guest, tripId: string) =>
+      (await (await detail(user, tripId)).json()).packed;
+
+    it('ticks items on my list, and only I see my ticks', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const single = data.items.find((i) => i.kind === 'single')!;
+      const each = data.items.find((i) => i.kind === 'each')!;
+
+      // An "each" item is on everyone's list; anything else only once I claimed it.
+      expect((await pack(member, tripId, each.id, true)).status).toBe(200);
+      const notMine = await pack(member, tripId, single.id, true);
+      expect(notMine.status).toBe(409);
+      expect((await pack(organizer, tripId, single.id, true)).status).toBe(409);
+      await claim(member, tripId, single.id, 1);
+      expect(await (await pack(member, tripId, single.id, true)).json()).toEqual({
+        itemId: single.id,
+        packed: true,
+      });
+      // Ticking twice is a no-op.
+      expect((await pack(member, tripId, single.id, true)).status).toBe(200);
+
+      expect((await packedOf(member, tripId)).sort()).toEqual([single.id, each.id].sort());
+      expect(await packedOf(organizer, tripId)).toEqual([]);
+      // Private: not in the trip's activity.
+      expect(await activityTypes(tripId)).toEqual(['trip_created', 'member_joined', 'claim_set']);
+
+      expect((await pack(member, tripId, each.id, false)).status).toBe(200);
+      expect(await packedOf(member, tripId)).toEqual([single.id]);
+    });
+
+    it('clears when the claim is released, the item deleted or no longer each, or the member removed', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const [a, b] = data.items.filter((i) => i.kind === 'single');
+      const each = data.items.find((i) => i.kind === 'each')!;
+      for (const item of [a!, b!]) await claim(member, tripId, item.id, 1);
+      for (const item of [a!, b!, each]) await pack(member, tripId, item.id, true);
+
+      await claim(member, tripId, a!.id, 0);
+      expect((await packedOf(member, tripId)).sort()).toEqual([b!.id, each.id].sort());
+
+      const del = await client.trips[':tripId'].items[':itemId'].$delete(
+        { param: { tripId, itemId: b!.id } },
+        as(organizer),
+      );
+      expect(del.status).toBe(204);
+      expect(await packedOf(member, tripId)).toEqual([each.id]);
+
+      // No longer "each" (nobody claimed it): off my list.
+      const single = await client.trips[':tripId'].items[':itemId'].$patch(
+        { param: { tripId, itemId: each.id }, json: { kind: 'single' } },
+        as(organizer),
+      );
+      expect(single.status).toBe(200);
+      expect(await packedOf(member, tripId)).toEqual([]);
+
+      await claim(member, tripId, a!.id, 1);
+      await pack(member, tripId, a!.id, true);
+      await client.trips[':tripId'].members[':userId'].$delete(
+        { param: { tripId, userId: member.id } },
+        as(organizer),
+      );
+      const [row] = await sql<{ count: number }[]>`
+        select count(*)::int as count from item_packed where user_id = ${member.id}`;
+      expect(row!.count).toBe(0);
+    });
+
+    it('rejects non-members and unknown items', async () => {
+      const { member, data } = await tripWithMember();
+      const stranger = await guest('stranger');
+      const each = data.items.find((i) => i.kind === 'each')!;
+      expect((await pack(stranger, data.trip.id, each.id, true)).status).toBe(404);
+      const unknown = '00000000-0000-4000-8000-000000000000';
+      expect((await pack(member, data.trip.id, unknown, true)).status).toBe(404);
+    });
+  });
+
   describe('editing items', () => {
     const items = () => client.trips[':tripId'].items;
     type Changes = Parameters<ReturnType<typeof items>[':itemId']['$patch']>[0]['json'];

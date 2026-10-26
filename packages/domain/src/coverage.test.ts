@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { claimCap, filterItems, isDone, itemStatus } from './coverage';
+import { claimCap, filterItems, isDone, isOnMyList, itemStatus } from './coverage';
 import type { Claim, Expense, Item } from './types';
 
 const item = (over: Partial<Item> & Pick<Item, 'id'>): Item => ({
@@ -130,6 +130,16 @@ describe('isDone / filterItems', () => {
     expect(mine([...claims, claim('bag', 'me')])).toEqual(['a', 'bag', 'hat']);
     expect(mine([])).toEqual(['bag', 'hat']);
     expect(mine([claim('bag', 'ron'), claim('b', 'ron')])).toEqual(['bag', 'hat']);
+  });
+});
+
+describe('isOnMyList', () => {
+  it('holds for "each" items and for what I claimed, whoever else has a share', () => {
+    const tent = item({ id: 'tent', kind: 'qty', quantityNeeded: 3 });
+    expect(isOnMyList(item({ id: 'bag', kind: 'each' }), [], 'me')).toBe(true);
+    expect(isOnMyList(tent, [claim('tent', 'ron', 2)], 'me')).toBe(false);
+    expect(isOnMyList(tent, [claim('tent', 'ron', 2), claim('tent', 'me')], 'me')).toBe(true);
+    expect(isOnMyList(item({ id: 'grill' }), [claim('grill', 'ron')], 'me')).toBe(false);
   });
 });
 
