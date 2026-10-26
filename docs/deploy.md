@@ -4,11 +4,11 @@ Infrastructure is [SST](https://sst.dev), in two SST apps. Both live in the `@ya
 
 - **App** ([infra/app](../infra/app)): the API, its database and the Expo web export. Stages `dev` and `production`, plus the PR preview stages `preview` and `pr-<n>` ([PR previews](#pr-previews)). [sst.config.ts](../infra/app/sst.config.ts) picks each stage's region and credentials, then runs one file per kind of stage:
 
-  | Stage               | File                                                              | What it creates                                                                                                                                                        |
-  | ------------------- | ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-  | `dev`, `production` | [stacks/app.ts](../infra/app/stacks/app.ts)                       | The app, with an HTTP API of its own, and its alerts: the `Alerts` topic and Telegram notifier, and in production the CloudWatch alarms.                               |
-  | `preview`           | [stacks/preview-shared.ts](../infra/app/stacks/preview-shared.ts) | What every PR preview shares: the CloudFront Router, the HTTP API and the SSM parameter with their ids.                                                                |
-  | `pr-<n>`            | [stacks/preview-pr.ts](../infra/app/stacks/preview-pr.ts)         | One PR's copy of the app: its API Lambda with a route and integration on the shared API, its site on the Router, the permissions boundary on its roles and its expiry. |
+  | Stage               | File                                                              | What it creates                                                                                                                                                                        |
+  | ------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `dev`, `production` | [stacks/app.ts](../infra/app/stacks/app.ts)                       | The app, with an HTTP API of its own, and its alerts ([monitoring.ts](../infra/app/monitoring.ts)): the `Alerts` topic and Telegram notifier, and in production the CloudWatch alarms. |
+  | `preview`           | [stacks/preview-shared.ts](../infra/app/stacks/preview-shared.ts) | What every PR preview shares: the CloudFront Router, the HTTP API and the SSM parameter with their ids.                                                                                |
+  | `pr-<n>`            | [stacks/preview-pr.ts](../infra/app/stacks/preview-pr.ts)         | One PR's copy of the app: its API Lambda with a route and integration on the shared API, its site on the Router, the permissions boundary on its roles and its expiry.                 |
 
   The app's parts (database, secrets, realtime, site, receipts, API Lambda) are in [core.ts](../infra/app/core.ts), shared by `app.ts` and `preview-pr.ts`, so a preview is built like `dev`.
 
@@ -157,7 +157,7 @@ Problems in production reach one Telegram chat, never email: CloudWatch alarms f
 
 ### Alarms (CloudWatch)
 
-Production only ([stacks/app.ts](../infra/app/stacks/app.ts)); dev has the topic and notifier but no alarms. Each alarm looks at one 5-minute window, treats no data (no traffic) as healthy, and notifies the `Alerts` SNS topic when it goes to ALARM and when it goes back to OK. CloudWatch never repeats a notification while an alarm stays in ALARM. The `AlertsNotifier` Lambda ([alarm-notifier.ts](../apps/api/src/alarm-notifier.ts)) posts each change with the stage, state, reason and a CloudWatch console link.
+Production only ([monitoring.ts](../infra/app/monitoring.ts)); dev has the topic and notifier but no alarms. Each alarm looks at one 5-minute window, treats no data (no traffic) as healthy, and notifies the `Alerts` SNS topic when it goes to ALARM and when it goes back to OK. CloudWatch never repeats a notification while an alarm stays in ALARM. The `AlertsNotifier` Lambda ([alarm-notifier.ts](../apps/api/src/alarm-notifier.ts)) posts each change with the stage, state, reason and a CloudWatch console link.
 
 | Alarm                                         | Metric                             | Fires at                               |
 | --------------------------------------------- | ---------------------------------- | -------------------------------------- |
@@ -186,7 +186,7 @@ Two Sentry projects, both on the free plan: `yallist-app` (web and Android, [src
 
 - **For a while:** mute the chat in Telegram (1 hour, 8 hours, …). Alerts keep arriving silently.
 - **One Sentry alert:** edit or disable the alert rule in Sentry, or archive (ignore) the issue.
-- **One CloudWatch alarm, for good:** change its threshold in [stacks/app.ts](../infra/app/stacks/app.ts), or remove it. Don't edit alarms in the console: the next deploy would undo it, and everything in AWS is defined in SST.
+- **One CloudWatch alarm, for good:** change its threshold in [monitoring.ts](../infra/app/monitoring.ts), or remove it. Don't edit alarms in the console: the next deploy would undo it, and everything in AWS is defined in SST.
 - **Emergency:** `aws cloudwatch disable-alarm-actions --alarm-names <name> --profile yallist-prod --region eu-central-1` silences one alarm until `enable-alarm-actions`. It's drift from the SST code, so turn it back on soon.
 - **Everything:** delete the `TELEGRAM_CHAT_ID` secret; the next deploy stops all messages.
 

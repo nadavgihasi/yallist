@@ -20,7 +20,7 @@ What's left from the overnight review (security, backend, frontend, infra, code 
 - **API rate limiting:** API Gateway throttling, then Better Auth rateLimit with DB storage — `apps/api/src/auth.ts`, `infra/app/stacks/app.ts`
 - **Receipt orphan cleanup:** S3 lifecycle rule expiring unattached uploads — `infra/app/core.ts`
 - **Removal sticks:** removed users can rejoin via the same link; mergeUser reactivates them — `routes/trips.ts`, `dal/profiles.ts`
-- **Alarms and observability:** SNS + 5xx/error alarms on production — `infra/app/stacks/app.ts`
+- **Alarms and observability:** SNS + 5xx/error alarms on production — `infra/app/monitoring.ts`
 - **Offline mutations across restart:** `setMutationDefaults` + refetch on resume, with Phase 7 — `apps/mobile/src/state/`
 - **Overlapping optimistic writes:** roll back by refetching — `state/trips.ts`
 - **Token and personal data at rest:** secure-store on native, CSP on web, don't persist `['me']` — `apps/mobile/src/`
