@@ -1,0 +1,174 @@
+name: Preview
+
+# A live environment per PR on real AWS: its own `pr-<n>` SST stage in us-west-2, served under
+# /pr-<n> by the shared `preview` stage (preview-stage.yml). Deployed on every push, removed when
+# the PR closes or 6 hours after its last push. See docs/plans/e2e-live-environments.md.
+#
+# Only PRs from this repo (never forks, never pull_request_target) whose author and actor are in
+# the repo variable PREVIEW_ALLOWED_ACTORS, a JSON array of logins. Jobs run in the `preview`
+# environment with the preview role (AWS_PREVIEW_ROLE_ARN), which also checks the actor.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One run per PR at a time: a push or a close cancels the deploy in progress (remove unlocks it).
+concurrency:
+  group: preview-${{ github.event.pull_request.number || 'expire' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  STAGE: pr-${{ github.event.pull_request.number }}
+
+jobs:
+  deploy:
+    if: >-
+      github.event_name == 'pull_request' && github.event.action != 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(fromJSON(vars.PREVIEW_ALLOWED_ACTORS || '[]'), github.event.pull_request.user.login) &&
+      contains(fromJSON(vars.PREVIEW_ALLOWED_ACTORS || '[]'), github.actor)
+    runs-on: ubuntu-latest
+    environment:
+      name: preview
+      url: ${{ steps.deploy.outputs.url }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      id-token: write # OIDC token for the preview role
+      pull-requests: write # the sticky comment
+    env:
+      SST_SECRET_BetterAuthSecret: ${{ secrets.BETTER_AUTH_SECRET }}
+      EXPO_PUBLIC_STAGE: pr-${{ github.event.pull_request.number }} # VersionLine
+      MAESTRO_VERSION: 2.11.0
+      # Chrome for Testing for recording (see e2e-web.sh).
+      SE_BROWSER_VERSION: 147
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
+          aws-region: us-west-2
+      - name: Deploy the PR's stage
+        id: deploy
+        run: |
+          pnpm sst deploy --stage "$STAGE"
+          echo "url=$(jq -r .url infra/app/.sst/outputs.json)/" >> "$GITHUB_OUTPUT"
+          echo "api=$(jq -r .api infra/app/.sst/outputs.json)" >> "$GITHUB_OUTPUT"
+      # The cluster starts empty; later pushes apply only new migrations.
+      - name: Migrate the database
+        run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @yallist/api db:migrate
+      - name: Smoke check
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+          API: ${{ steps.deploy.outputs.api }}
+        run: |
+          curl -fsS --retry 5 --retry-all-errors "$API/health"
+          curl -fsS --retry 5 --retry-all-errors -o /dev/null "$URL"
+      - name: Post the URL on the PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          URL: ${{ steps.deploy.outputs.url }}
+          API: ${{ steps.deploy.outputs.api }}
+        run: |
+          marker='<!-- preview -->'
+          body="$marker
+          **Preview:** $URL
+          API: $API · commit $SHA · guests only
+
+          Removed when this PR closes, or 6 hours after its last push (the next push brings it back)."
+          id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
+            -q ".[] | select(.body | startswith(\"$marker\")) | .id" | head -1)
+          if [[ -n $id ]]; then
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$id" -f body="$body" > /dev/null
+          else
+            gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$body"
+          fi
+      # The UI tests (apps/mobile/e2e) against the preview, as ui-tests.yml runs them locally.
+      # The Maestro CLI and the Chrome for Testing that Selenium downloads, shared with ui-tests.yml.
+      - uses: actions/cache@v6
+        id: maestro-cache
+        with:
+          path: |
+            ~/.maestro-cli
+            ~/.cache/selenium
+          key: ui-tests-maestro-${{ env.MAESTRO_VERSION }}-chrome-${{ env.SE_BROWSER_VERSION }}
+      - name: Install Maestro
+        if: steps.maestro-cache.outputs.cache-hit != 'true'
+        run: |
+          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/maestro.zip" \
+            "https://github.com/mobile-dev-inc/maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d ~/.maestro-cli
+      - run: echo "$HOME/.maestro-cli/maestro/bin" >> "$GITHUB_PATH"
+      # Ubuntu 24.04's AppArmor blocks the sandbox of a Chrome outside /opt (Chrome for Testing).
+      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: UI tests
+        run: scripts/e2e-web.sh
+        env:
+          E2E_WEB_URL: ${{ steps.deploy.outputs.url }}
+          E2E_OUT: ${{ runner.temp }}/ui-tests
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: preview-ui-tests-${{ github.run_number }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/ui-tests
+          retention-days: 14
+
+  remove:
+    if: >-
+      github.event_name == 'pull_request' && github.event.action == 'closed' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      contains(fromJSON(vars.PREVIEW_ALLOWED_ACTORS || '[]'), github.actor)
+    runs-on: ubuntu-latest
+    environment: preview
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    steps: &remove # main's config and script, whatever the PR changed.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
+          aws-region: us-west-2
+      - run: scripts/preview-remove.sh "$TARGET"
+        env:
+          TARGET: ${{ github.job == 'remove' && format('pr-{0}', github.event.pull_request.number) || '--expired' }}
+          GH_TOKEN: ${{ github.token }}
+
+  # Hourly: removes previews 6 hours after their last push, and any a closed PR left behind.
+  expire:
+    if: >-
+      github.event_name != 'pull_request' &&
+      contains(fromJSON(vars.PREVIEW_ALLOWED_ACTORS || '[]'), github.actor)
+    runs-on: ubuntu-latest
+    environment: preview
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: read # PR states
+    steps: *remove
