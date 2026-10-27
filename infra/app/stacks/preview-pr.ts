@@ -1,7 +1,7 @@
 import { appCore } from '../core';
 import { readPreviewOutputs } from './preview-shared';
 
-// A PR's stage is removed this long after its last deploy (preview.yml, expire).
+// A PR's stage is removed this long after its last deploy (preview-cleanup.yml).
 const TTL_HOURS = 6;
 
 /**
@@ -29,7 +29,7 @@ export function previewPr() {
   // The PR's route on the shared HTTP API: `ANY /pr-<n>/{proxy+}` to its own Lambda.
   const fn = new sst.aws.Function('ApiFunction', {
     ...apiFunction,
-    // When the preview workflow removes this stage (preview.yml, expire).
+    // When preview-cleanup.yml removes this stage.
     tags: { 'expires-at': new Date(Date.now() + TTL_HOURS * 3600_000).toISOString() },
   });
   const integration = new aws.apigatewayv2.Integration('ApiIntegration', {

@@ -2,7 +2,8 @@ name: Preview
 
 # A live environment per PR on real AWS: its own `pr-<n>` SST stage in us-west-2, served under
 # /pr-<n> by the shared `preview` stage (preview-stage.yml). Deployed on every push, removed when
-# the PR closes or 6 hours after its last push. See docs/plans/e2e-live-environments.md.
+# the PR closes, or 6 hours after its last push by preview-cleanup.yml. See
+# docs/plans/e2e-live-environments.md.
 #
 # Only PRs from this repo's branches, never forks (which get no secrets or OIDC token anyway),
 # and never pull_request_target. Only collaborators can push branches, so there's no allowlist.
@@ -11,9 +12,6 @@ name: Preview
 on:
   pull_request:
     types: [opened, synchronize, reopened, closed]
-  schedule:
-    - cron: '17 * * * *'
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -22,9 +20,13 @@ permissions:
 # remove unlocks the stage that run left locked. A reopen waits instead: the only run it can find
 # is the close's remove, and cancelling that mid-way leaves the stage's state pointing at resources
 # it already deleted.
+#
+# deploy and remove also hold preview-stage-<n>, which never cancels: preview-cleanup.yml removes
+# stale stages in it, outside this run-level group, so a push can't cancel that removal halfway;
+# its deploy waits for the removal to finish and redeploys fresh.
 concurrency:
-  group: preview-${{ github.event.pull_request.number || 'expire' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'reopened' }}
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: ${{ github.event.action != 'reopened' }}
 
 env:
   STAGE: pr-${{ github.event.pull_request.number }}
@@ -32,10 +34,13 @@ env:
 jobs:
   deploy:
     if: >-
-      github.event_name == 'pull_request' && github.event.action != 'closed' &&
+      github.event.action != 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       vars.AWS_PREVIEW_ROLE_ARN != ''
     runs-on: ubuntu-latest
+    concurrency:
+      group: preview-stage-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     environment:
       name: preview
       url: ${{ steps.deploy.outputs.url }}
@@ -205,16 +210,19 @@ jobs:
 
   remove:
     if: >-
-      github.event_name == 'pull_request' && github.event.action == 'closed' &&
+      github.event.action == 'closed' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       vars.AWS_PREVIEW_ROLE_ARN != ''
     runs-on: ubuntu-latest
+    concurrency:
+      group: preview-stage-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     environment: preview
     timeout-minutes: 20
     permissions:
       contents: read
       id-token: write
-    steps: &remove # main's config and script, whatever the PR changed.
+    steps: # main's config and script, whatever the PR changed.
       - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.repository.default_branch }}
@@ -229,19 +237,4 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
           aws-region: us-west-2
-      - run: scripts/preview-remove.sh "$TARGET"
-        env:
-          TARGET: ${{ github.job == 'remove' && format('pr-{0}', github.event.pull_request.number) || '--expired' }}
-          GH_TOKEN: ${{ github.token }}
-
-  # Hourly: removes previews 6 hours after their last push, and any a closed PR left behind.
-  expire:
-    if: github.event_name != 'pull_request' && vars.AWS_PREVIEW_ROLE_ARN != ''
-    runs-on: ubuntu-latest
-    environment: preview
-    timeout-minutes: 60
-    permissions:
-      contents: read
-      id-token: write
-      pull-requests: read # PR states
-    steps: *remove
+      - run: scripts/preview-remove.sh "$STAGE"
