@@ -57,6 +57,7 @@ const USER_COLUMNS = [
   ['activity', 'actor'],
   ['feedback', 'user_id'],
   ['shopping_runs', 'shopper_id'],
+  ['user_essentials', 'user_id'],
 ] as const;
 
 /**
@@ -100,6 +101,14 @@ export async function mergeUser(db: Db, from: string, to: string) {
       where a.shopper_id = ${from} and a.active and exists (
         select 1 from shopping_runs b
         where b.trip_id = a.trip_id and b.shopper_id = ${to} and b.active)`);
+    // Essentials both have (ignoring case) stay the account's; the guest's others follow theirs.
+    await tx.execute(sql`
+      delete from user_essentials a where a.user_id = ${from} and exists (
+        select 1 from user_essentials b where b.user_id = ${to} and lower(b.name) = lower(a.name))`);
+    await tx.execute(sql`
+      update user_essentials set position = position + (
+        select coalesce(max(position) + 1, 0) from user_essentials where user_id = ${to})
+      where user_id = ${from}`);
     for (const [table, key] of USER_KEYED) {
       await tx.execute(sql`
         delete from ${id(table)} a where a.user_id = ${from} and exists (

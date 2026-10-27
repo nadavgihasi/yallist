@@ -7,6 +7,7 @@ import { requireUser, type Auth } from '../auth';
 import { logActivity } from '../dal/activity';
 import { lockCategory } from '../dal/categories';
 import { lockClaims, setClaim, setPacked } from '../dal/claims';
+import { saveEssential } from '../dal/essentials';
 import { findPurchase } from '../dal/expenses';
 import {
   addPrivateItem,
@@ -153,18 +154,20 @@ export const itemRoutes = (auth: Auth, db: Db) =>
       },
     )
 
-    // add_private_item: something only I need, in my bag, claimed by me.
+    // add_private_item: something only I need, in my bag, claimed by me; with `saveAsEssential`,
+    // in every trip I create or join from now on too.
     .post(
       '/:tripId/bag',
       validate('param', tripParam),
-      validate('json', z.object({ name: text(60) })),
+      validate('json', z.object({ name: text(60), saveAsEssential: z.boolean().default(false) })),
       async (c) => {
         const { tripId } = c.req.valid('param');
-        const { name } = c.req.valid('json');
+        const { name, saveAsEssential } = c.req.valid('json');
         const me = c.var.user.id;
         const item = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
-          // Step 4 (essentials) adds `saveAsEssential` here: it also saves the name as one.
+          // Also into every trip from now on (הקבועים שלי).
+          if (saveAsEssential) await saveEssential(tx, me, name);
           return addPrivateItem(tx, tripId, me, name);
         });
         c.set('privateWrite', true);

@@ -1,0 +1,70 @@
+# הקבועים שלי: something added to my bag "for every trip" and something added on the essentials
+# screen both arrive by themselves in my bag ("רק שלי") in the next trip I create.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [items]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- tapOn:
+    id: trip-tab-bag
+- assertVisible:
+    id: bag-essentials
+    text: הקבועים שלי · 0
+- tapOn:
+    id: trip-add
+- tapOn:
+    id: bag-add-name
+- inputText: Sunscreen
+- tapOn:
+    id: bag-add-essential
+- tapOn:
+    id: bag-add-save
+- assertVisible: Sunscreen
+- assertVisible: מהקבועים שלך
+- assertVisible:
+    id: bag-essentials
+    text: הקבועים שלי · 1
+- tapOn:
+    id: bag-essentials
+- assertVisible:
+    id: essentials-title
+- assertVisible: Sunscreen
+- tapOn:
+    id: essentials-name
+- inputText: Hat
+- tapOn:
+    id: essentials-add
+- assertVisible: Hat
+# Saved before leaving the screen; nothing has this id: this only waits.
+- extendedWaitUntil:
+    visible:
+      id: never-shown
+    timeout: 3000
+    optional: true
+# A new trip has both in my bag.
+- openLink: ${WEB_URL}
+- tapOn:
+    id: home-new-trip
+- tapOn:
+    id: new-trip-template-blank
+- tapOn:
+    id: new-trip-name
+- inputText: Next trip
+- tapOn:
+    id: new-trip-create
+- assertVisible:
+    id: trip-title
+    text: Next trip
+- tapOn:
+    id: trip-tab-bag
+- assertVisible: Sunscreen
+- assertVisible: Hat
+- assertVisible:
+    id: bag-progress
+    text: ארזת 0 מתוך 2

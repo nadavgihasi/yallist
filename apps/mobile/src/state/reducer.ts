@@ -34,8 +34,8 @@ export type Action =
   // `newCategory`: create a category of that name first, and put the item in it.
   | { type: 'addItem'; item: NewItemInput; claim: number; newCategory?: string }
   | { type: 'deleteItem'; itemId: string }
-  /** Something only I need, into my bag (packing spec `add_private_item`). */
-  | { type: 'addPrivateItem'; name: string }
+  /** Something only I need, into my bag (`add_private_item`), and maybe into my essentials. */
+  | { type: 'addPrivateItem'; name: string; saveAsEssential?: boolean }
   | { type: 'editItem'; itemId: string; changes: NewItemInput; newCategory?: string }
   | { type: 'addCategory'; list: ListKind; name: string }
   | { type: 'renameCategory'; categoryId: string; name: string }

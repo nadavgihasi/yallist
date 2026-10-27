@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
 import { logActivity } from '../dal/activity';
+import { copyEssentials } from '../dal/essentials';
 import { findMember, insertMember } from '../dal/members';
 import { displayNameOf } from '../dal/profiles';
 import { loadTrips, tripByToken } from '../dal/trips';
@@ -51,7 +52,8 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
       });
     })
 
-    // Joins the trip, or asks to when it requires approval. Joining again changes nothing.
+    // Joins the trip, or asks to when it requires approval, with my essentials in my bag. Joining
+    // again changes nothing.
     .post(
       '/:token/join',
       requireUser(auth),
@@ -75,6 +77,8 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
             status,
             displayName: displayName ?? (await displayNameOf(tx, user)),
           });
+          // In their bag even while waiting for approval: it's there once they're in.
+          await copyEssentials(tx, trip.id, user.id);
           await logActivity(
             tx,
             trip.id,

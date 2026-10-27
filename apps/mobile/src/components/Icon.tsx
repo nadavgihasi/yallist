@@ -11,6 +11,8 @@ const ICONS = {
   back: ['M9 5l7 7-7 7'],
   /** A row that opens something, pointing the reading direction (left in RTL). */
   chevronEnd: ['M15 5l-7 7 7 7'],
+  chevronUp: ['M5 15l7-7 7 7'],
+  chevronDown: ['M5 9l7 7 7-7'],
   arrowEnd: ['M19 12H5', 'M11 6l-6 6 6 6'],
   plus: ['M12 5v14', 'M5 12h14'],
   minus: ['M5 12h14'],

@@ -172,6 +172,7 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
       'trip_categories',
       'trip_members',
       'trips',
+      'user_essentials',
       'users',
       'verifications',
     ]);

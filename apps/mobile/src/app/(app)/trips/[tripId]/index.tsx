@@ -211,7 +211,7 @@ export default function TripScreen() {
                 onFilter={setFilter}
               />
             )}
-            {tab === 'bag' && <BagTab data={data} view={view} />}
+            {tab === 'bag' && <BagTab data={data} view={view} me={me.userId} />}
             {tab === 'people' && <PeopleTab data={data} view={view} me={me.userId} />}
             {tab === 'money' && <MoneyTab data={data} view={view} me={me.userId} />}
           </View>
