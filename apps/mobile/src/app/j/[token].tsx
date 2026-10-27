@@ -28,12 +28,15 @@ export default function Join() {
   const [name, setName] = useState('');
   const [busy, setBusy] = useState(false);
   const [state, setState] = useState<'pending' | 'removed'>();
+  // A signed-in visitor's place in the trip, from the preview.
+  const membership = invite.data?.membership;
+  const pending = state === 'pending' || membership?.status === 'pending';
 
   // Waiting for an organizer: asking again is harmless and says when we're in.
   const recheck = useQuery({
     queryKey: ['join', token],
     queryFn: () => joinTrip(token),
-    enabled: state === 'pending',
+    enabled: pending,
     // Stops once declined (403): the page says so instead.
     refetchInterval: (query) => (statusOf(query.state.error) === 403 ? false : 10_000),
     // While they switch to WhatsApp to nudge the organizer, too.
@@ -52,6 +55,15 @@ export default function Join() {
     if (approvedTrip) open(approvedTrip);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `open` is new every render
   }, [approvedTrip]);
+
+  // Opening the link to a trip we're already in goes straight to it (#125).
+  const memberOf = membership?.status === 'active' ? membership.tripId : undefined;
+  useEffect(() => {
+    if (!memberOf) return;
+    showToast(he.join.alreadyIn);
+    open(memberOf);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `open` is new every render
+  }, [memberOf]);
 
   const join = async (signingIn?: () => Promise<AuthResult>) => {
     if (busy) return;
@@ -79,7 +91,7 @@ export default function Join() {
     if (trimmed) void join(() => signInAsGuest(trimmed));
   };
 
-  if (invite.isPending) return <Loader line={he.states.joinLoading} />;
+  if (invite.isPending || memberOf) return <Loader line={he.states.joinLoading} />;
 
   const leave = {
     label: me ? he.join.toTrips : he.join.toStart,
@@ -112,7 +124,7 @@ export default function Join() {
     );
 
   const trip = invite.data;
-  if (state === 'pending')
+  if (pending)
     return (
       <View style={styles.screen} accessibilityLiveRegion="polite">
         <EmptyState

@@ -2,9 +2,8 @@ import { test as base, expect, type Page } from '@playwright/test';
 
 import { addItem, newTrip, signIn } from './helpers';
 
-// Two people on one trip, each in their own browser context (session), in one test: what the
-// local stack can't serve (a real /<base>/j/<token> link; `expo serve` 404s on it) or doesn't
-// run (AppSync Events).
+// Two people on one trip, each in their own browser context (session), in one test: what Maestro
+// can't drive, against what the local stack doesn't run (AppSync Events).
 
 const API_URL = process.env.E2E_API_URL;
 const REALTIME_HOST = process.env.E2E_REALTIME_HOST;

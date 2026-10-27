@@ -12,19 +12,31 @@ import type { Db } from '../db/client';
 import { transact } from '../db/tx';
 import type { Publish } from '../realtime';
 
+/** The signed-in caller's place in the trip, as the invite preview tells them. */
+type Membership = { status: 'active' | 'pending'; tripId: string } | { status: 'none' };
+
 const tokenParam = z.object({ token: z.string().min(1).max(64) });
 
 /** The invite link: a bearer capability for joining one trip (SPEC §5). */
 export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
   new Hono()
     // Public, for the join page and link previews: only what a stranger holding the link may see.
+    // A signed-in caller also learns their own membership, so a member isn't asked to join again.
     .get('/:token', validate('param', tokenParam), async (c) => {
       const { token } = c.req.valid('param');
+      const session = await auth.api.getSession({ headers: c.req.raw.headers });
       const data = await transact(db, async (tx) => {
         const trip = await tripByToken(tx, token);
         return (await loadTrips(tx, [trip.id]))[0]!;
       });
       const activeIds = activeMemberIds(data.members);
+      const status = session && data.members.find((m) => m.userId === session.user.id)?.status;
+      // A removed member gets `none`: joining says so (403).
+      const membership: Membership | undefined = !session
+        ? undefined
+        : status === 'active' || status === 'pending'
+          ? { status, tripId: data.trip.id }
+          : { status: 'none' };
       const missing = data.items.filter((i) => !isDone(i, data.claims, data.expenses, activeIds));
       return c.json({
         name: data.trip.name,
@@ -34,6 +46,8 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
         memberCount: activeIds.length,
         missingCount: missing.length,
         missingItems: missing.slice(0, 6).map((i) => i.name),
+        // Only for a signed-in caller; a stranger learns nothing about who's in.
+        ...(membership && { membership }),
       });
     })
 
