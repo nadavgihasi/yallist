@@ -1,6 +1,16 @@
 import { randomBytes } from 'node:crypto';
 
-import { activeMemberIds, claimsFor, COVER_IDS, coverFor, isDone } from '@yallist/domain';
+import {
+  activeMemberIds,
+  ALBUM_URL_MAX,
+  claimsFor,
+  COVER_IDS,
+  coverFor,
+  isDone,
+  isMeetupPlace,
+  MEETUP_MAX,
+  parseAlbumUrl,
+} from '@yallist/domain';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -53,7 +63,23 @@ const createTrip = z
   })
   .refine(datesInOrder, datesMessage);
 const updateTrip = z
-  .object({ ...tripFields, status: z.enum(TRIP_STATUSES) })
+  .object({
+    ...tripFields,
+    status: z.enum(TRIP_STATUSES),
+    // Null clears them. Only links to the allowed hosts: members open them with a tap.
+    meetupText: z
+      .string()
+      .trim()
+      .max(MEETUP_MAX)
+      .refine(isMeetupPlace, 'Not a place or a Google Maps or Waze link')
+      .nullable(),
+    albumUrl: z
+      .string()
+      .trim()
+      .max(ALBUM_URL_MAX)
+      .refine((url) => parseAlbumUrl(url) !== undefined, 'Not a Google Photos link')
+      .nullable(),
+  })
   .partial()
   .refine(datesInOrder, datesMessage);
 

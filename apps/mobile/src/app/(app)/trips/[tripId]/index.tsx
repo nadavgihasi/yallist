@@ -25,6 +25,7 @@ import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
 import { PeopleTab } from '@/features/trip/PeopleTab';
 import { ReadinessHero } from '@/features/trip/ReadinessHero';
+import { TripLinks } from '@/features/trip/TripLinks';
 import { he, participants } from '@/i18n/he';
 import { formatRange } from '@/lib/dates';
 import { statusOf } from '@/lib/api';
@@ -133,6 +134,7 @@ export default function TripScreen() {
 
   const view = deriveTrip(data, me.userId);
   const { trip } = data;
+  const organizer = view.memberById.get(me.userId)?.role === 'organizer';
   const count = (l: 'bring' | 'buy') => view.items.filter((i) => i.list === l).length;
   const tabs = [
     { value: 'bring' as const, label: he.trip.tabCount(he.trip.tabs.bring, count('bring')) },
@@ -196,7 +198,7 @@ export default function TripScreen() {
           style={[styles.cover, desktop && styles.coverDesktop]}
           testID={`trip-hero-cover-${trip.cover}`}
         >
-          {view.memberById.get(me.userId)?.role === 'organizer' && (
+          {organizer && (
             <PillButton
               label={he.cover.changeShort}
               accessibilityLabel={he.cover.change}
@@ -243,6 +245,7 @@ export default function TripScreen() {
               .join(' · ')}
           </Text>
         </View>
+        <TripLinks trip={trip} organizer={organizer} />
 
         {!desktop && hero}
         <View style={desktop && styles.columns}>

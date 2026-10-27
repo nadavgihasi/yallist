@@ -166,6 +166,10 @@ export const trips = pgTable(
     cover: text('cover', { enum: COVER_IDS }),
     currency: text('currency').notNull().default('ILS'),
     requireApproval: boolean('require_approval').notNull().default(false),
+    /** Where the group meets: a place's name or address, or a Google Maps or Waze link. */
+    meetupText: text('meetup_text'),
+    /** A Google Photos album link. */
+    albumUrl: text('album_url'),
     inviteToken: text('invite_token').notNull().unique(),
     status: text('status', { enum: TRIP_STATUSES }).notNull().default('planning'),
     createdBy: userRef('created_by').notNull(),

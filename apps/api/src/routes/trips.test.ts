@@ -193,6 +193,49 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       );
       expect(bad.status).toBe(400);
     });
+
+    it('sets the meetup place and photo album: organizers only, allowed links only', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const patch = (user: Guest, json: { meetupText?: string | null; albumUrl?: string | null }) =>
+        client.trips[':tripId'].$patch({ param: { tripId }, json }, as(user));
+      const album = 'https://photos.app.goo.gl/AbC123';
+
+      expect((await patch(member, { meetupText: 'חניון עין גדי' })).status).toBe(403);
+      for (const meetupText of [
+        'https://example.com/place',
+        'http://waze.com/ul?q=x',
+        '  ',
+        'x'.repeat(301),
+      ]) {
+        expect((await patch(organizer, { meetupText })).status).toBe(400);
+      }
+      for (const albumUrl of [
+        'http://photos.app.goo.gl/AbC123',
+        'https://photos.google.com.evil.example/x',
+        'https://drive.google.com/x',
+        `${album}/${'x'.repeat(300)}`,
+      ]) {
+        expect((await patch(organizer, { albumUrl })).status).toBe(400);
+      }
+
+      const res = await patch(organizer, { meetupText: ' חניון עין גדי ', albumUrl: album });
+      expect(res.status).toBe(200);
+      expect(await res.json()).toMatchObject({ meetupText: 'חניון עין גדי', albumUrl: album });
+      const link = 'https://maps.app.goo.gl/AbC123';
+      expect((await patch(organizer, { meetupText: link })).status).toBe(200);
+      // Every member sees them.
+      expect((await (await detail(member, tripId)).json()).trip).toMatchObject({
+        meetupText: link,
+        albumUrl: album,
+      });
+      expect(await activityTypes(tripId)).toContain('trip_updated');
+
+      expect((await patch(organizer, { meetupText: null, albumUrl: null })).status).toBe(200);
+      const { trip } = await (await detail(member, tripId)).json();
+      expect(trip.meetupText).toBeUndefined();
+      expect(trip.albumUrl).toBeUndefined();
+    });
   });
 
   describe('invites', () => {
