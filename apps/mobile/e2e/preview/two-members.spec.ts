@@ -192,10 +192,11 @@ test('a private item in my bag never reaches the other member', async ({ page: d
   expect(res).not.toContain('Sunscreen');
   expect(await realtimeEvents(dana)).toEqual([]);
   await dana.reload();
-  for (const tab of ['bring', 'buy', 'bag']) {
+  for (const tab of ['bag', 'buy', 'bring']) {
     await dana.locator(`#trip-tab-${tab}`).click();
     await expect(dana.getByText('Sunscreen')).toHaveCount(0);
   }
+  // Ending on the bring tab: its progress doesn't count it.
   await expect(dana.locator('#bring-progress')).toHaveText('0 מתוך 1 מסודרים');
 });
 
