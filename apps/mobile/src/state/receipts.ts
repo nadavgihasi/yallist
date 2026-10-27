@@ -21,7 +21,7 @@ const QUALITY = 0.8;
  */
 export async function pickReceipt(source: 'camera' | 'library'): Promise<string | undefined> {
   if (source === 'camera' && !(await ImagePicker.requestCameraPermissionsAsync()).granted) {
-    showToast(he.receipt.noCamera);
+    showToast(he.receipt.noCamera, 'error');
     return undefined;
   }
   const launch =
@@ -110,6 +110,8 @@ export async function uploadReceipt(tripId: string, expenseId: string, uri: stri
     );
     await postForm(form, file, uri, report);
     await parseResponse(receipt.$post({ param, json: { key: form.key } }));
+    // The viewer's link to a receipt this one replaces (receipt.tsx) points at a deleted photo.
+    queryClient.removeQueries({ queryKey: ['receipt', expenseId] });
     await queryClient.invalidateQueries({ queryKey: tripKey(tripId) });
     setUpload(expenseId, undefined);
   } catch (error) {

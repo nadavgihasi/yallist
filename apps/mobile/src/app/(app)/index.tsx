@@ -2,8 +2,6 @@ import type { TemplateId } from '@yallist/domain';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
-  ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,10 +11,12 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { Callout } from '@/components/Callout';
 import { Cover } from '@/components/Cover';
+import { EmptyState } from '@/components/EmptyState';
 import { FLOATING_CLEARANCE, FloatingAction } from '@/components/FloatingAction';
-import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
+import { Skeleton } from '@/components/Skeleton';
 import { TemplateTile } from '@/components/TemplateTile';
 import { VersionLine } from '@/components/VersionLine';
 import { PastTripRow, TripCard } from '@/features/home/TripCard';
@@ -72,16 +72,19 @@ export default function Home() {
         </View>
 
         {trips.isPending ? (
-          <ActivityIndicator color={colors.primary} style={styles.status} />
+          <Skeleton style={[styles.grid, { gap }]}>
+            {[0, 1].map((i) => (
+              <View key={i} style={wide ? cell : styles.fullTile}>
+                <TripCardSkeleton />
+              </View>
+            ))}
+          </Skeleton>
         ) : trips.isError && !trips.data ? (
-          <Pressable
-            accessibilityRole="button"
-            onPress={() => trips.refetch()}
-            style={styles.status}
-          >
-            <Text style={styles.caption}>{he.errors.loadFailed}</Text>
-            <Text style={styles.retry}>{he.errors.retry}</Text>
-          </Pressable>
+          <EmptyState
+            spot="noSignal"
+            {...he.states.offline}
+            actions={[{ label: he.errors.retry, onPress: () => void trips.refetch() }]}
+          />
         ) : empty ? (
           <FirstHome side={desktop} />
         ) : (
@@ -107,13 +110,7 @@ export default function Home() {
             {wide && (
               <View style={[{ gap }, desktop && styles.side]}>
                 <Starts title={he.home.openTrip} columns={desktop ? 1 : 2} />
-                <View style={styles.callout}>
-                  <Icon name="userPlus" size={20} color={colors.primaryStrong} />
-                  <View style={styles.calloutTexts}>
-                    <Text style={styles.calloutTitle}>{he.home.invite.title}</Text>
-                    <Text style={styles.calloutText}>{he.home.invite.text}</Text>
-                  </View>
-                </View>
+                <Callout {...he.home.invite} />
               </View>
             )}
           </View>
@@ -161,6 +158,22 @@ function FirstHome({ side }: { side: boolean }) {
   );
 }
 
+/** A `TripCard` while trips load: cover band, then the title and pills beside the ring. */
+function TripCardSkeleton() {
+  return (
+    <Skeleton.Card cover={88}>
+      <View style={styles.skeletonRow}>
+        <View style={styles.skeletonLines}>
+          <Skeleton.Line width="70%" height={20} />
+          <Skeleton.Line width="45%" />
+          <Skeleton.Line width="55%" height={28} />
+        </View>
+        <Skeleton.Circle size={size.ring.card} />
+      </View>
+    </Skeleton.Card>
+  );
+}
+
 /** Template tiles that open a new trip with that template picked. */
 function Starts({ title, columns }: { title: string; columns: 1 | 2 }) {
   return (
@@ -205,16 +218,8 @@ const styles = StyleSheet.create({
   // Two equal columns at any width; a lone last tile would stretch, but there are four.
   halfTile: { flexBasis: '40%', flexGrow: 1 },
   fullTile: { width: '100%' },
-  callout: {
-    flexDirection: 'row',
-    gap: space[3],
-    padding: space[4],
-    borderRadius: radius.card,
-    backgroundColor: colors.primaryTint,
-  },
-  calloutTexts: { flex: 1, gap: space[1] },
-  calloutTitle: { ...type.buttonSm, color: colors.primaryStrong },
-  calloutText: { ...type.caption, color: colors.primaryStrong },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
+  skeletonLines: { flex: 1, gap: space[3] },
   firstStack: { gap: space[4] },
   firstSide: { flexDirection: 'row', gap: space[4], alignItems: 'flex-start' },
   half: { flex: 1 },
@@ -233,8 +238,6 @@ const styles = StyleSheet.create({
   },
   caption: { ...type.caption, color: colors.inkMuted },
   body: { ...type.body, color: colors.inkMuted },
-  status: { alignItems: 'center', gap: space[2], paddingVertical: 48 },
-  retry: { ...type.buttonSm, color: colors.primary },
   illustrated: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
   // Tall enough that the `slice` crop keeps the tent in view at any card width.
   illustration: { aspectRatio: 390 / 240 },

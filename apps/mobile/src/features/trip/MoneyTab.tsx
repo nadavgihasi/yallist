@@ -5,11 +5,14 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
+import { Callout } from '@/components/Callout';
+import { EmptyState } from '@/components/EmptyState';
 import { Icon } from '@/components/Icon';
-import { Card, EmptyState, ListGroup } from '@/components/ListGroup';
+import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, joinNames } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import { useReceiptUpload } from '@/state/receipts';
 import { tripKey, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
@@ -47,7 +50,7 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
 
   const markPaid = () => {
     myOpen.forEach((t) => act({ type: 'markPayment', toUser: t.to, amountAgorot: t.amountAgorot }));
-    showToast(he.money.markedToast(formatShekel(sum(myOpen))));
+    showToast(he.money.markedToast(formatShekel(sum(myOpen))), 'success');
   };
   // A payment the receiver already confirmed stays.
   const unmarkPaid = () =>
@@ -171,7 +174,24 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
       )}
 
       {data.expenses.length === 0 ? (
-        <EmptyState title={he.money.noExpenses} text={he.money.noExpensesText} />
+        <>
+          <EmptyState
+            spot={data.trip.cover}
+            title={he.money.noExpenses}
+            text={he.money.noExpensesText}
+            actions={[
+              {
+                label: he.money.addExpense,
+                onPress: () =>
+                  router.push({
+                    pathname: '/trips/[tripId]/expenses/new',
+                    params: { tripId: data.trip.id },
+                  }),
+              },
+            ]}
+          />
+          <Callout title={he.states.tip} text={he.money.tip} />
+        </>
       ) : (
         <ListGroup title={he.money.expenses} aside={he.money.total(formatShekel(view.totalSpent))}>
           {data.expenses.map((e) => (
@@ -235,6 +255,7 @@ function ReceiptButton({
       accessibilityRole="button"
       accessibilityLabel={label}
       hitSlop={4}
+      {...testId('expense-receipt')}
       onPress={() =>
         router.push({
           pathname: '/trips/[tripId]/expenses/[expenseId]/receipt',

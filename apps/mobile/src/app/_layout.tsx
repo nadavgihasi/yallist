@@ -9,10 +9,19 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { I18nManager, Platform, StyleSheet, View } from 'react-native';
 
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { Loader } from '@/components/Loader';
 import { Toast } from '@/components/Toast';
+import { he } from '@/i18n/he';
 import { withSentry } from '@/lib/sentry';
 import { StoreProvider } from '@/state/store';
-import { colors, isRTL } from '@/theme';
+import { colors, isRTL, webDir } from '@/theme';
+
+// A crash in a screen replaces just that screen, so "try again" keeps where you were (this
+// layout's own boundary would remount the navigator, back to its first screen); the export
+// catches the rest, layouts included.
+export const unstable_settings = { screenErrorBoundary: ErrorBoundary };
+export { ErrorBoundary };
 
 if (Platform.OS !== 'web') {
   I18nManager.allowRTL(isRTL);
@@ -20,9 +29,6 @@ if (Platform.OS !== 'web') {
 }
 
 void SplashScreen.preventAutoHideAsync();
-
-/** react-native-web resolves start/end styles from the nearest `dir`, not from `<html dir>`. */
-const webRtl = Platform.OS === 'web' ? ({ dir: isRTL ? 'rtl' : 'ltr' } as object) : {};
 
 export default withSentry(RootLayout);
 
@@ -38,13 +44,14 @@ function RootLayout() {
     if (ready) void SplashScreen.hideAsync();
   }, [ready]);
 
-  if (!ready) return null;
+  // Android keeps the splash screen up meanwhile; web shows the Loader.
+  if (!ready) return <Loader line={he.states.boot} />;
 
   return (
     <>
       <StatusBar style="dark" />
       <StoreProvider>
-        <View style={styles.root} {...webRtl}>
+        <View style={styles.root} {...webDir}>
           <Stack
             screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}
           />

@@ -1,4 +1,4 @@
-import type { TextStyle } from 'react-native';
+import { Platform, type TextStyle } from 'react-native';
 
 /**
  * Design system v2 tokens (docs/design/tokens). Names follow the handoff, except the page
@@ -130,6 +130,9 @@ export const motion = {
  * react-native-web.
  */
 export const isRTL = true;
+
+/** react-native-web resolves start/end styles from the nearest `dir`, not from `<html dir>`. */
+export const webDir = (Platform.OS === 'web' ? { dir: isRTL ? 'rtl' : 'ltr' } : {}) as object;
 
 /** Only the floating primary button has a shadow; cards stay flat. */
 export const shadow = {

@@ -4,7 +4,7 @@ What's left from the overnight review (security, backend, frontend, infra, code 
 
 ## Now (in progress)
 
-- **Production DB backups:** AWS Backup on the production DSQL cluster, daily, 7 days (#80) — `infra/app/sst.config.ts`
+- **Production DB backups:** AWS Backup on the production DSQL cluster, daily, 7 days (#80) — `infra/app/core.ts`
 - **Debts with removed members:** allow payments to/from former members so their balance can be settled — `routes/money.ts`, `routes/trips.ts`
 - **Safe migrations:** treat "already exists" as applied so a crash between DDL and its `__migrations` row can't wedge deploys; await `CREATE INDEX ASYNC` jobs and fail on error — `apps/api/src/db/migrate.ts`
 - **Deploy waits for CI:** deploy.yml calls ci.yml first (#81) — `.github/workflows/deploy.yml`, `ci.yml`
@@ -13,14 +13,14 @@ What's left from the overnight review (security, backend, frontend, infra, code 
 - **Actions pinned by SHA:** plus `persist-credentials: false` and Dependabot for actions — `.github/workflows/*`, `.github/zizmor.yml`
 - **`trustedOrigins` localhost in production:** non-production stages only — `apps/api/src/auth.ts`
 - **Deploy polish:** per-step names, and tag the release after production deploys — `.github/workflows/deploy.yml`, `scripts/release.sh`
-- **arm64 Lambdas:** ~20% cheaper — `infra/app/sst.config.ts`
+- **arm64 Lambdas:** ~20% cheaper — `infra/app/core.ts`
 
 ## Later
 
-- **API rate limiting:** API Gateway throttling, then Better Auth rateLimit with DB storage — `apps/api/src/auth.ts`, `infra/app/sst.config.ts`
-- **Receipt orphan cleanup:** S3 lifecycle rule expiring unattached uploads — `infra/app/sst.config.ts`
+- **API rate limiting:** API Gateway throttling, then Better Auth rateLimit with DB storage — `apps/api/src/auth.ts`, `infra/app/stacks/app.ts`
+- **Receipt orphan cleanup:** S3 lifecycle rule expiring unattached uploads — `infra/app/core.ts`
 - **Removal sticks:** removed users can rejoin via the same link; mergeUser reactivates them — `routes/trips.ts`, `dal/profiles.ts`
-- **Alarms and observability:** SNS + 5xx/error alarms on production — `infra/app/sst.config.ts`
+- **Alarms and observability:** SNS + 5xx/error alarms on production — `infra/app/monitoring.ts`
 - **Offline mutations across restart:** `setMutationDefaults` + refetch on resume, with Phase 7 — `apps/mobile/src/state/`
 - **Overlapping optimistic writes:** roll back by refetching — `state/trips.ts`
 - **Token and personal data at rest:** secure-store on native, CSP on web, don't persist `['me']` — `apps/mobile/src/`

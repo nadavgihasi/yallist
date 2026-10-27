@@ -9,7 +9,7 @@ One file per phase from the [SPEC build plan](../SPEC.md#11-build-plan), adapted
 | --------------- | -------------------------------------------------------- | ------ |
 | 0 — Foundation  | [phase-0-foundation.md](phase-0-foundation.md)           | Done   |
 | 1 — Backend     | [phase-1-backend.md](phase-1-backend.md)                 | Done   |
-| PR previews     | [e2e-live-environments.md](e2e-live-environments.md)     | Design |
+| PR previews     | [e2e-live-environments.md](e2e-live-environments.md)     | Built  |
 | Remote pipeline | [remote-feature-pipeline.md](remote-feature-pipeline.md) | Design |
 | UI tests        | [ui-tests.md](ui-tests.md)                               | Web    |
 | Email sign-in   | [email-signup.md](email-signup.md)                       | Design |

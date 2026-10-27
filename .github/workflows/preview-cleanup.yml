@@ -1,0 +1,105 @@
+name: Preview cleanup
+
+# Hourly: removes stale PR preview stages (preview.yml): a closed, merged or missing PR's, and any
+# deployed over 6 hours ago. See docs/plans/e2e-live-environments.md. Runs in the `preview`
+# environment with the preview role, as preview.yml's remove does, and is skipped until
+# AWS_PREVIEW_ROLE_ARN is set (docs/deploy.md#set-up).
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: preview-cleanup
+
+jobs:
+  find:
+    if: vars.AWS_PREVIEW_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    environment: preview
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      id-token: write # OIDC token for the preview role
+      pull-requests: read # PR states
+    outputs:
+      prs: ${{ steps.find.outputs.prs }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
+          aws-region: us-west-2
+      - name: Find stale stages
+        id: find
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          stale=$(scripts/preview-stale.sh)
+          echo "prs=$(sed -n 's/^pr-\([0-9]*\) .*/\1/p' <<<"$stale" | jq -nc '[inputs]')" >> "$GITHUB_OUTPUT"
+          {
+            echo '### Stale previews'
+            [[ -n $stale ]] || echo 'None.'
+            [[ -z $stale ]] || while read -r stage reason; do echo "- \`$stage\`: $reason"; done <<<"$stale"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  remove:
+    needs: find
+    if: needs.find.outputs.prs != '[]'
+    runs-on: ubuntu-latest
+    environment: preview
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: read
+    strategy:
+      fail-fast: false # one stage's failure doesn't keep the others
+      matrix:
+        pr: ${{ fromJSON(needs.find.outputs.prs) }}
+    # The stage's group in preview.yml (groups are per repo), which never cancels: waits for the
+    # PR's deploy or remove in progress, and a push during this removal waits for it to finish.
+    concurrency:
+      group: preview-stage-${{ matrix.pr }}
+      cancel-in-progress: false
+    env:
+      STAGE: pr-${{ matrix.pr }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
+          aws-region: us-west-2
+      # Again, now that the PR's group is ours: a reopen, a push or its own remove may have come first.
+      - name: Remove the stage if it's still stale
+        run: |
+          reason=$(scripts/preview-stale.sh "$STAGE" | cut -d' ' -f2-)
+          if [[ -z $reason ]]; then
+            echo "- \`$STAGE\`: skipped, no longer stale" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          if scripts/preview-remove.sh "$STAGE"; then
+            echo "- \`$STAGE\`: removed ($reason)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- \`$STAGE\`: **removal failed** ($reason)" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          # Closing should have removed it, so something leaked: fail, which notifies.
+          if [[ $reason == PR* ]]; then
+            echo "::error::$STAGE was left behind: $reason"
+            exit 1
+          fi

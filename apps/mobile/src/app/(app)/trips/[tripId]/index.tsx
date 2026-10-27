@@ -2,7 +2,6 @@ import { formatShekel, type ListFilter } from '@yallist/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
-  ActivityIndicator,
   Platform,
   Pressable,
   ScrollView,
@@ -15,10 +14,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SegmentedControl } from '@/components/Controls';
 import { Cover } from '@/components/Cover';
+import { StateScreen } from '@/components/EmptyState';
 import { FLOATING_CLEARANCE, FloatingAction } from '@/components/FloatingAction';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
+import { Skeleton } from '@/components/Skeleton';
 import { deriveTrip } from '@/features/trip/derive';
 import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
@@ -30,7 +31,7 @@ import { statusOf } from '@/lib/api';
 import { testId } from '@/lib/testId';
 import { useToday } from '@/lib/useToday';
 import { useMe } from '@/state/store';
-import { useTripQuery } from '@/state/trips';
+import { useTripQuery, useTripUpdates } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
@@ -50,6 +51,7 @@ export default function TripScreen() {
   }>();
   const { tripId, itemId, list, categoryId } = params;
   const query = useTripQuery(tripId);
+  useTripUpdates(tripId, query.isSuccess);
   const data = query.data;
   const me = useMe();
   const insets = useSafeAreaInsets();
@@ -76,24 +78,18 @@ export default function TripScreen() {
     }, [itemId, list, categoryId]),
   );
 
+  const home = { label: he.states.toTrips, onPress: () => router.replace('/') };
   if (!data) {
-    if (query.isPending) {
-      return <ActivityIndicator color={colors.primary} style={styles.missing} />;
-    }
+    if (query.isPending) return <TripSkeleton top={space[6] + insets.top} />;
     // Not a member (or no such trip) is a 4xx; anything else may pass.
-    const gone = (statusOf(query.error) ?? 500) < 500;
-    return (
-      <View style={styles.missing}>
-        <Text style={styles.missingText}>{gone ? he.trip.notFound : he.errors.loadFailed}</Text>
-        {!gone && (
-          <Pressable onPress={() => query.refetch()}>
-            <Text style={styles.link}>{he.errors.retry}</Text>
-          </Pressable>
-        )}
-        <Pressable onPress={() => router.replace('/')}>
-          <Text style={styles.link}>{he.trip.back}</Text>
-        </Pressable>
-      </View>
+    return (statusOf(query.error) ?? 500) < 500 ? (
+      <StateScreen spot="signpost" {...he.states.notFound} actions={[home]} />
+    ) : (
+      <StateScreen
+        spot="noSignal"
+        {...he.states.offline}
+        actions={[{ label: he.errors.retry, onPress: () => void query.refetch() }, home]}
+      />
     );
   }
 
@@ -234,11 +230,41 @@ export default function TripScreen() {
   );
 }
 
+/** The trip while it loads: cover and title, the hero, then a list. */
+function TripSkeleton({ top }: { top: number }) {
+  return (
+    <View style={styles.screen}>
+      <Skeleton style={[styles.page, styles.column, { paddingTop: top }]}>
+        <Skeleton.Card cover={120}>
+          <Skeleton.Line width="60%" height={28} />
+          <Skeleton.Line width="40%" />
+        </Skeleton.Card>
+        <Skeleton.Card>
+          <View style={styles.skeletonRow}>
+            <View style={styles.skeletonLines}>
+              <Skeleton.Line width="45%" height={24} />
+              <Skeleton.Line width="70%" />
+            </View>
+            <Skeleton.Circle size={size.ring.hero} />
+          </View>
+        </Skeleton.Card>
+        <Skeleton.Card>
+          {[70, 50, 60].map((w) => (
+            <View key={w} style={styles.skeletonRow}>
+              <Skeleton.Circle size={size.ring.status} />
+              <Skeleton.Line width={`${w}%`} />
+            </View>
+          ))}
+        </Skeleton.Card>
+      </Skeleton>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.ground },
-  missing: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space[3] },
-  missingText: { ...type.sectionTitle, color: colors.ink },
-  link: { ...type.buttonSm, color: colors.primary },
+  skeletonRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  skeletonLines: { flex: 1, gap: space[3] },
   page: {
     width: '100%',
     maxWidth: contentMaxWidth,

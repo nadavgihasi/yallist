@@ -37,7 +37,7 @@ export default function Login() {
       .then(() => router.replace(target))
       .catch(() => {
         setBusy(false);
-        showToast(he.errors.signIn);
+        showToast(he.errors.signIn, 'error');
       });
   };
 

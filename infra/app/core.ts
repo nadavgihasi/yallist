@@ -126,8 +126,9 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
     sourceArn: realtimeApi.apiArn,
   });
   new aws.appsync.ChannelNamespace('RealtimeTrips', { apiId: realtimeApi.apiId, name: 'trips' });
+  const realtimeHttp = realtimeApi.dns.apply((dns) => dns.HTTP!);
   const realtime = new sst.Linkable('Realtime', {
-    properties: { http: realtimeApi.dns.apply((dns) => dns.HTTP!) },
+    properties: { http: realtimeHttp },
     include: [
       sst.aws.permission({
         actions: ['appsync:EventPublish'],
@@ -211,7 +212,13 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
     },
   } satisfies sst.aws.FunctionArgs;
 
-  return { web, apiFunction, realtimeAuthorizer, telegram: [telegramBotToken, telegramChatId] };
+  return {
+    web,
+    apiFunction,
+    realtimeAuthorizer,
+    realtimeHttp,
+    telegram: [telegramBotToken, telegramChatId],
+  };
 }
 
 /**

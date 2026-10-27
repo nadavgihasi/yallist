@@ -13,7 +13,8 @@ import { CoverPicker } from '@/components/CoverPicker';
 import { AmountField, TextField } from '@/components/Fields';
 import { FloatingAction } from '@/components/FloatingAction';
 import { Icon } from '@/components/Icon';
-import { Card, EmptyState, ListGroup } from '@/components/ListGroup';
+import { EmptyState } from '@/components/EmptyState';
+import { Card, ListGroup } from '@/components/ListGroup';
 import { Logo } from '@/components/Logo';
 import { Pill } from '@/components/Pill';
 import { PillButton } from '@/components/PillButton';
@@ -128,8 +129,8 @@ export default function ComponentsPreview() {
         </View>
         <SegmentedControl
           options={[
-            { value: 'bring', label: 'להביא · 20' },
-            { value: 'buy', label: 'לקנות · 7' },
+            { value: 'bring', label: 'ציוד · 20' },
+            { value: 'buy', label: 'קניות · 7' },
           ]}
           value={list}
           onChange={setList}

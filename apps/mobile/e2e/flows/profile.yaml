@@ -13,3 +13,8 @@ tags: [profile, shard-1]
     id: home-profile
 - assertVisible:
     id: profile-title
+- extendedWaitUntil:
+    notVisible:
+      id: loading
+    timeout: 10000
+- assertVisible: התראות בדרך
