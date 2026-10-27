@@ -12,4 +12,5 @@ One file per phase from the [SPEC build plan](../SPEC.md#11-build-plan), adapted
 | PR previews     | [e2e-live-environments.md](e2e-live-environments.md)     | Built  |
 | Remote pipeline | [remote-feature-pipeline.md](remote-feature-pipeline.md) | Design |
 | UI tests        | [ui-tests.md](ui-tests.md)                               | Web    |
+| Email sign-in   | [email-signup.md](email-signup.md)                       | Design |
 | 2+ — Roadmap    | [roadmap.md](roadmap.md)                                 | Draft  |
