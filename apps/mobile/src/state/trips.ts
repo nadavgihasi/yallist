@@ -312,7 +312,8 @@ export function useTripAction(tripId: string) {
     // Refetch after the last queued change only; an earlier refetch would undo later ones.
     // Returning the refetch keeps the change pending until the screen shows the server's state.
     onSettled: (_data, _error, action) => {
-      if (action.type === 'addPrivateItem') {
+      // My essentials, and my past private items that suggestions come from.
+      if (action.type === 'addPrivateItem' || action.type === 'deleteItem') {
         void queryClient.invalidateQueries({ queryKey: essentialsKey(me) });
       }
       return queryClient.isMutating({ mutationKey: key }) > 1

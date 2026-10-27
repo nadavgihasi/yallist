@@ -92,11 +92,12 @@ export function BagTab({ data, view, me }: { data: TripData; view: TripView; me:
   const essentialsRow = (
     <Pressable
       accessibilityRole="button"
-      {...testId('bag-essentials')}
       onPress={() => router.push('/essentials')}
       style={styles.essentials}
     >
-      <Text style={styles.essentialsText}>{he.bag.essentialsRow(essentials.length)}</Text>
+      <Text style={styles.essentialsText} {...testId('bag-essentials')}>
+        {he.bag.essentialsRow(essentials.length)}
+      </Text>
       <Icon name="chevronEnd" size={18} color={colors.inkMuted} />
     </Pressable>
   );
