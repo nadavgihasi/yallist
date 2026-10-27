@@ -404,6 +404,28 @@ export const he = {
     loadFailed: 'לא הצלחנו לטעון את הקבלה',
     noCamera: 'צריך הרשאה למצלמה כדי לצלם קבלה',
   },
+  /** The trip's meetup place and photo album (TripLinks, the links sheet). */
+  links: {
+    meetup: 'נקודת מפגש',
+    /** A pasted map link stands in for the place's name. */
+    mapLink: 'מיקום במפה',
+    waze: 'פתיחה ב־Waze',
+    maps: 'פתיחה במפות',
+    openLink: 'פתיחת המיקום',
+    album: 'אלבום התמונות של הטיול',
+    add: 'הוספת נקודת מפגש ואלבום',
+    edit: 'עריכה',
+    editLabel: 'עריכת נקודת המפגש והאלבום',
+    title: 'נקודת מפגש ואלבום',
+    hint: 'כל המשתתפים יראו אותם בעמוד הטיול',
+    meetupHint: 'כתובת, שם מקום או קישור מ־Google Maps או Waze',
+    meetupPlaceholder: 'חניון עין גדי',
+    albumLabel: 'אלבום תמונות',
+    albumHint: 'קישור מ־Google Photos',
+    badMeetup: 'אפשר להדביק קישור רק מ־Google Maps או מ־Waze',
+    badAlbum: 'צריך קישור לאלבום ב־Google Photos',
+    save: 'שמירה',
+  },
   cover: {
     title: 'תמונת כיסוי',
     hint: 'מה שכולם יראו בכרטיס הטיול',

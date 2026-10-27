@@ -29,6 +29,8 @@ export function toTrip(row: typeof trips.$inferSelect) {
     cover: row.cover ?? coverFor(row.template),
     status: row.status,
     requireApproval: row.requireApproval,
+    meetupText: opt(row.meetupText),
+    albumUrl: opt(row.albumUrl),
     createdAt: row.createdAt.toISOString(),
   };
 }

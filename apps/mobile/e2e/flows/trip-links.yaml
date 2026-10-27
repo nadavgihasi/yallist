@@ -1,0 +1,46 @@
+# An organizer sets the meetup place and the photo album; the trip shows buttons to open them.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [trips]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+# Nothing set yet: organizers get a quiet way to add them.
+- assertNotVisible:
+    id: trip-meetup-waze
+- tapOn:
+    id: trip-links-add
+- tapOn:
+    id: trip-links-meetup
+- inputText: Ein Gedi parking
+# Only Google Photos links: anything else is refused before saving.
+- tapOn:
+    id: trip-links-album
+- inputText: https://example.com/album
+- assertVisible: צריך קישור לאלבום ב־Google Photos
+- eraseText: 30
+- inputText: https://photos.app.goo.gl/E2E
+- tapOn:
+    id: trip-links-save
+- assertVisible:
+    id: trip-meetup-text
+    text: Ein Gedi parking
+- assertVisible:
+    id: trip-meetup-waze
+- assertVisible:
+    id: trip-meetup-maps
+- assertVisible:
+    id: trip-album
+# Saved, not just shown: still there after a reload.
+- openLink: ${WEB_URL}
+- tapOn: E2E trip
+- assertVisible:
+    id: trip-meetup-text
+    text: Ein Gedi parking
+- assertVisible:
+    id: trip-album
