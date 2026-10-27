@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseResponse, type InferRequestType } from 'hono/client';
+import { useEffect } from 'react';
 
 import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
-import { api, statusOf } from '@/lib/api';
+import { api, sessionToken, statusOf } from '@/lib/api';
+import { REALTIME_HOST, subscribe } from '@/lib/realtime';
 
 import { uploadReceipt } from './receipts';
 import { applyAction, type Action, type NewItemInput } from './reducer';
@@ -25,6 +27,33 @@ export const useTripQuery = (tripId: string) =>
     queryKey: tripKey(tripId),
     queryFn: () => parseResponse(api.trips[':tripId'].$get({ param: { tripId } })),
   });
+
+/**
+ * Keeps the trip fresh while its screen is open: other members' changes arrive as events on its
+ * realtime channel, and each one refetches the trip (and the home screen's list). Only while the
+ * trip loads fine: not for a trip we can't open, and offline the refetch on reconnect re-enables it.
+ */
+export function useTripUpdates(tripId: string, enabled: boolean) {
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!REALTIME_HOST || !enabled) return;
+    const key = tripKey(tripId);
+    const refresh = () => {
+      // Our own changes publish events too. While one is pending, its onSettled refetches after
+      // the last; refetching now would briefly show the server without the queued changes.
+      if (queryClient.isMutating({ mutationKey: key })) return;
+      void queryClient.invalidateQueries({ queryKey: key });
+      void queryClient.invalidateQueries({ queryKey: tripsKey });
+    };
+    return subscribe({
+      host: REALTIME_HOST,
+      channel: `/trips/${tripId}`,
+      token: sessionToken,
+      onEvent: refresh,
+      onSubscribed: refresh,
+    });
+  }, [queryClient, tripId, enabled]);
+}
 
 /** The trip, once loaded. The trip screen handles loading and errors; sheets above it use this. */
 export const useTrip = (tripId: string): TripData | undefined => useTripQuery(tripId).data;
