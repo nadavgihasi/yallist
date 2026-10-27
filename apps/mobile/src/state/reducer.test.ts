@@ -48,6 +48,7 @@ function trip(overrides: Partial<TripData> = {}): TripData {
     members: [member('me', 'organizer'), member('ron')],
     categories: [],
     items: [chairs, meat],
+    privateItems: [],
     claims: [],
     expenses: [],
     payments: [],
@@ -122,6 +123,21 @@ describe('deleteItem', () => {
     expect(next.items.map((i) => i.id)).toEqual(['chairs']);
     expect(next.claims).toEqual([]);
     expect(next.expenses).toEqual([expect.objectContaining({ id: 'e1', itemIds: [] })]);
+  });
+
+  it('takes a private item out of my bag', () => {
+    const gum: Item = {
+      ...chairs,
+      id: 'gum',
+      kind: 'single',
+      quantityNeeded: 1,
+      privateOwnerId: 'me',
+    };
+    const t = trip({ privateItems: [gum], claims: [{ itemId: 'gum', userId: 'me', quantity: 1 }] });
+    const next = applyAction(t, { type: 'deleteItem', itemId: 'gum' }, 'me');
+    expect(next.privateItems).toEqual([]);
+    expect(next.claims).toEqual([]);
+    expect(next.items).toEqual(t.items);
   });
 });
 

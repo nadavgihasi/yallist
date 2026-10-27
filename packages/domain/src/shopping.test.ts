@@ -29,6 +29,7 @@ describe('isRunEligible', () => {
     expect(isRunEligible(item('free', 0), [], [bought(['x', 'free'])])).toBe(false);
     expect(isRunEligible(item('tent', 0, { list: 'bring' }), [], [])).toBe(false);
     expect(isRunEligible(item('snacks', 0, { kind: 'each' }), [], [])).toBe(false);
+    expect(isRunEligible(item('gum', 0, { privateOwnerId: 'ron' }), [], [])).toBe(false);
   });
 });
 

@@ -148,7 +148,7 @@ export const he = {
   },
   trip: {
     back: 'חזרה לכל הטיולים',
-    tabs: { bring: 'ציוד', buy: 'קניות', money: 'כסף', people: 'ניהול' },
+    tabs: { bring: 'ציוד', buy: 'קניות', bag: 'התיק שלי', money: 'כסף', people: 'ניהול' },
     filters: { all: 'הכול', missing: 'חסר', mine: 'אצלי' },
     allCovered: 'הכול מכוסה',
     coveredOf: (done: number, total: number) => `${done} מתוך ${total} כבר מכוסים`,
@@ -177,10 +177,11 @@ export const he = {
     fab: {
       bring: 'הוספת פריט להבאה',
       buy: 'הוספת פריט לקנייה',
+      bag: 'הוספת פריט לתיק שלי',
       money: 'הוספת הוצאה',
     },
     /** Visible floating-button labels; `fab` stays the accessible name. */
-    fabShort: { bring: 'פריט חדש', buy: 'פריט חדש', money: 'הוצאה חדשה' },
+    fabShort: { bring: 'פריט חדש', buy: 'פריט חדש', bag: 'פריט לתיק', money: 'הוצאה חדשה' },
     invite: 'הזמנת חברים',
     tabCount: (label: string, n: number) => `${label} · ${n}`,
   },
@@ -199,6 +200,25 @@ export const he = {
     forEach: 'לכל אחד',
     packed: 'ארוז',
     packedOf: (packed: number, claims: number) => `ארזו ${packed} מתוך ${claims}`,
+  },
+  /** התיק שלי (packing spec §6.2, §6.3). */
+  bag: {
+    packedOf: (packed: number, total: number) => `ארזת ${packed} מתוך ${total}`,
+    group: 'לקבוצה',
+    groupCaption: 'הקבוצה רואה מה ארוז',
+    mine: 'רק שלי',
+    mineCaption: 'גלוי רק לך',
+    /** Where an entry comes from (myBag's `source`); a private item has none. */
+    source: {
+      list: 'אצלך · מהרשימה',
+      each: 'אחד לכל אחד · מהרשימה',
+      bought: 'קנית · מהקניות',
+    },
+    empty: { title: 'עוד לא לקחת כלום', text: 'בוחרים מהרשימה או מוסיפים משהו אישי.' },
+    delete: 'מחיקה',
+    deleteLabel: (name: string) => `מחיקת ${name}`,
+    confirmDelete: 'למחוק?',
+    add: { title: 'פריט לתיק', name: 'מה לארוז?', submit: 'הוספה' },
   },
   hero: {
     /** `חסרים 13: אוהלים, קפה, קרח…` */

@@ -47,6 +47,7 @@ export function toItem(row: typeof items.$inferSelect): Item {
     note: opt(row.note),
     createdBy: row.createdBy,
     createdAt: row.createdAt.toISOString(),
+    privateOwnerId: opt(row.privateOwnerId),
   };
 }
 

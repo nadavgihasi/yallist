@@ -47,6 +47,7 @@ const USER_COLUMNS = [
   ['trips', 'created_by'],
   ['trip_members', 'user_id'],
   ['items', 'created_by'],
+  ['items', 'private_owner_id'],
   ['claims', 'user_id'],
   ['expenses', 'paid_by'],
   ['expenses', 'created_by'],

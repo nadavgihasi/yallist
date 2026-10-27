@@ -36,6 +36,11 @@ export interface Item {
   /** Who added it and when (ISO); the store screen shows items added during a run. */
   createdBy?: string;
   createdAt?: string;
+  /**
+   * Set on a private item: one thing in this user's bag ("רק שלי"), which only they see. It
+   * counts towards no coverage, progress, filter or run.
+   */
+  privateOwnerId?: string;
 }
 
 export interface Claim {

@@ -8,7 +8,14 @@ import { logActivity } from '../dal/activity';
 import { lockCategory } from '../dal/categories';
 import { lockClaims, setClaim, setPacked } from '../dal/claims';
 import { findPurchase } from '../dal/expenses';
-import { appendItem, deleteItem, endOfList, lockItem, updateItem } from '../dal/items';
+import {
+  addPrivateItem,
+  appendItem,
+  deleteItem,
+  endOfList,
+  lockItem,
+  updateItem,
+} from '../dal/items';
 import { requireMember } from '../dal/members';
 import type { Db } from '../db/client';
 import { KINDS, LISTS } from '../db/schema';
@@ -69,6 +76,11 @@ const itemParam = z.object({ tripId: z.uuid(), itemId: z.uuid() });
  * The bring and buy lists. Any active member may change them. An edit may change any field, as
  * long as the item stays valid: the kind only while nobody claimed it, the quantity never below
  * what's claimed, and a bought item stays on the buy list.
+ *
+ * Private items (packing spec §2, "רק שלי") are their owner's alone: everyone else gets a 404 for
+ * them, as for any item that doesn't exist. Their owner adds, packs and deletes them; they're
+ * never edited or claimed through the shared routes. Changing them writes no activity and tells
+ * no one (`privateWrite`).
  */
 export const itemRoutes = (auth: Auth, db: Db) =>
   new Hono()
@@ -141,16 +153,39 @@ export const itemRoutes = (auth: Auth, db: Db) =>
       },
     )
 
+    // add_private_item: something only I need, in my bag, claimed by me.
+    .post(
+      '/:tripId/bag',
+      validate('param', tripParam),
+      validate('json', z.object({ name: text(60) })),
+      async (c) => {
+        const { tripId } = c.req.valid('param');
+        const { name } = c.req.valid('json');
+        const me = c.var.user.id;
+        const item = await transact(db, async (tx) => {
+          await requireMember(tx, tripId, me, { lock: true });
+          // Step 4 (essentials) adds `saveAsEssential` here: it also saves the name as one.
+          return addPrivateItem(tx, tripId, me, name);
+        });
+        c.set('privateWrite', true);
+        return c.json(toItem(item), 201);
+      },
+    )
+
     // Soft delete: the item and its claims disappear from the trip, the history stays.
     .delete('/:tripId/items/:itemId', validate('param', itemParam), async (c) => {
       const { tripId, itemId } = c.req.valid('param');
       const me = c.var.user.id;
-      await transact(db, async (tx) => {
+      const item = await transact(db, async (tx) => {
         await requireMember(tx, tripId, me, { lock: true });
-        const item = await lockItem(tx, tripId, itemId);
+        const item = await lockItem(tx, tripId, itemId, me);
         await deleteItem(tx, itemId);
-        await logActivity(tx, tripId, me, 'item_deleted', { itemId, name: item.name });
+        if (!item.privateOwnerId) {
+          await logActivity(tx, tripId, me, 'item_deleted', { itemId, name: item.name });
+        }
+        return item;
       });
+      if (item.privateOwnerId) c.set('privateWrite', true);
       return c.body(null, 204);
     })
 
@@ -178,7 +213,8 @@ export const itemRoutes = (auth: Auth, db: Db) =>
     )
 
     // Packs or unpacks my claim on an item (packing spec §4). Only the claim's owner can: there's
-    // no way to name anyone else's. Everyone sees it, through the usual trip refetch.
+    // no way to name anyone else's. Everyone sees it, through the usual trip refetch, unless the
+    // item is private.
     .put(
       '/:tripId/items/:itemId/packed',
       validate('param', itemParam),
@@ -187,11 +223,13 @@ export const itemRoutes = (auth: Auth, db: Db) =>
         const { tripId, itemId } = c.req.valid('param');
         const { packed } = c.req.valid('json');
         const me = c.var.user.id;
-        await transact(db, async (tx) => {
+        const item = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
-          await lockItem(tx, tripId, itemId);
+          const item = await lockItem(tx, tripId, itemId, me);
           if (!(await setPacked(tx, itemId, me, packed))) throw fail(409, 'Not claimed by you');
+          return item;
         });
+        if (item.privateOwnerId) c.set('privateWrite', true);
         return c.json({ itemId, userId: me, packed });
       },
     );

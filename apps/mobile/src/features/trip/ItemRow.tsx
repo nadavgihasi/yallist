@@ -17,7 +17,7 @@ import { TONE_COLOR, packedText, quantityText, statusLine } from './labels';
 const RING: Record<Packing, RingState> = { missing: 'open', covered: 'held', packed: 'done' };
 
 /** `aria-pressed` on web, which React Native's types lack; native reads it as selected. */
-const pressed = (on: boolean) =>
+export const pressed = (on: boolean) =>
   Platform.OS === 'web'
     ? ({ 'aria-pressed': on } as object)
     : { accessibilityState: { selected: on } };

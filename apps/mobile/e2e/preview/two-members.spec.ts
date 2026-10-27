@@ -78,27 +78,13 @@ async function join(dana: Page, noa: Page) {
   return tripId;
 }
 
-test.skip(!API_URL, 'E2E_API_URL (the preview stage output `api`) not set');
-
-test('join through an invite link; the hero then points at what is missing', async ({
-  page: dana,
-  noa,
-}) => {
-  await join(dana, noa);
-  // Not alone any more: the hero's call to action opens the missing list.
-  await dana.locator('#trip-hero-missing').click();
-  await expect(dana.getByText('Tent', { exact: true }).filter({ visible: true })).toBeVisible();
-  await expect(dana.locator('#item-claim')).toBeVisible();
-});
-
-test('a claim reaches the other member over AppSync Events', async ({ page: dana, noa }) => {
-  test.skip(!REALTIME_HOST, 'E2E_REALTIME_HOST (the preview stage output `realtime`) not set');
-  const tripId = await join(dana, noa);
-  await dana.locator('#trip-tab-bring').click();
-
-  // Dana's session subscribes to the trip's channel from her page, as the app would: a
-  // WebSocket from the site's origin, with her session token for the realtime authorizer.
-  await dana.evaluate(
+/**
+ * Subscribes `page`'s session to the trip's channel from the page, as the app would: a WebSocket
+ * from the site's origin, with its session token for the realtime authorizer. The events it gets
+ * collect in `window.realtimeEvents`.
+ */
+async function listen(page: Page, tripId: string) {
+  await page.evaluate(
     async ([httpHost, tripId, token]) => {
       const auth = { host: httpHost, Authorization: token };
       const header = btoa(JSON.stringify(auth))
@@ -126,15 +112,37 @@ test('a claim reaches the other member over AppSync Events', async ({ page: dana
         };
       });
     },
-    [REALTIME_HOST!, tripId, await sessionToken(dana)] as const,
+    [REALTIME_HOST!, tripId, await sessionToken(page)] as const,
   );
+}
+
+const realtimeEvents = (page: Page) =>
+  page.evaluate(() => (window as unknown as { realtimeEvents: string[] }).realtimeEvents);
+
+test.skip(!API_URL, 'E2E_API_URL (the preview stage output `api`) not set');
+
+test('join through an invite link; the hero then points at what is missing', async ({
+  page: dana,
+  noa,
+}) => {
+  await join(dana, noa);
+  // Not alone any more: the hero's call to action opens the missing list.
+  await dana.locator('#trip-hero-missing').click();
+  await expect(dana.getByText('Tent', { exact: true }).filter({ visible: true })).toBeVisible();
+  await expect(dana.locator('#item-claim')).toBeVisible();
+});
+
+test('a claim reaches the other member over AppSync Events', async ({ page: dana, noa }) => {
+  test.skip(!REALTIME_HOST, 'E2E_REALTIME_HOST (the preview stage output `realtime`) not set');
+  const tripId = await join(dana, noa);
+  await dana.locator('#trip-tab-bring').click();
+
+  await listen(dana, tripId);
 
   await noa.locator('#item-claim').click();
   await expect(noa.locator('#item-release')).toBeVisible();
   await expect
-    .poll(() =>
-      dana.evaluate(() => (window as unknown as { realtimeEvents: string[] }).realtimeEvents),
-    )
+    .poll(() => realtimeEvents(dana))
     .toContainEqual(JSON.stringify({ type: 'changed', tripId }));
 
   // The app subscribes too (src/lib/realtime.ts), so Dana's list shows the claim without a reload.
@@ -154,6 +162,41 @@ test('packing reaches the other member, who cannot toggle it', async ({ page: da
   // Over AppSync Events: no reload. Noa's claim isn't Dana's to pack, so she gets no toggle.
   await expect(dana.locator('#bring-packed')).toHaveText('ארוז 1', { timeout: 10_000 });
   await expect(dana.locator('#item-pack, #item-unpack')).toHaveCount(0);
+});
+
+test('a private item in my bag never reaches the other member', async ({ page: dana, noa }) => {
+  test.skip(!REALTIME_HOST, 'E2E_REALTIME_HOST (the preview stage output `realtime`) not set');
+  const tripId = await join(dana, noa);
+  await listen(dana, tripId);
+
+  // Noa adds Sunscreen to her bag and packs it.
+  await noa.locator('#trip-tab-bag').click();
+  await noa.locator('#trip-add').click();
+  await noa.locator('#bag-add-name').fill('Sunscreen');
+  await noa.locator('#bag-add-save').click();
+  await expect(noa.getByText('Sunscreen', { exact: true })).toBeVisible();
+  await noa.locator('#bag-pack').last().click();
+  await expect(noa.locator('#bag-progress')).toHaveText('ארזת 1 מתוך 1');
+
+  // Dana's channel says nothing changed (given the time a publish takes to arrive), her API
+  // answers don't mention it, and nothing on her screens shows it.
+  await dana.waitForTimeout(5_000);
+  const res = await dana.evaluate(
+    async ([api, tripId, token]) =>
+      (
+        await fetch(`${api}/trips/${tripId}`, { headers: { authorization: `Bearer ${token}` } })
+      ).text(),
+    [API_URL!, tripId, await sessionToken(dana)] as const,
+  );
+  expect(res).toContain('"privateItems":[]');
+  expect(res).not.toContain('Sunscreen');
+  expect(await realtimeEvents(dana)).toEqual([]);
+  await dana.reload();
+  for (const tab of ['bring', 'buy', 'bag']) {
+    await dana.locator(`#trip-tab-${tab}`).click();
+    await expect(dana.getByText('Sunscreen')).toHaveCount(0);
+  }
+  await expect(dana.locator('#bring-progress')).toHaveText('0 מתוך 1 מסודרים');
 });
 
 test('deleting a trip sends the other member home', async ({ page: dana, noa }) => {

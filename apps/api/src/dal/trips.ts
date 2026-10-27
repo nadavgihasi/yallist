@@ -22,6 +22,7 @@ import type { Executor, Tx } from '../db/tx';
 import type { ReceiptStore } from '../receipts';
 import { toCategory, toExpense, toItem, toTrip } from '../trip-data';
 import { listCategories } from './categories';
+import { visibleTo } from './items';
 
 export async function insertTrip(tx: Executor, values: typeof trips.$inferInsert) {
   const [trip] = await tx.insert(trips).values(values).returning();
@@ -98,11 +99,18 @@ export async function tripByToken(tx: Executor, token: string) {
 }
 
 /**
- * Everything about the given trips that the app's trip screens need, in one snapshot. With
- * `photos`, for a caller who is an active member of every one of them, active members come with
- * their avatar's URL: only trip-mates see someone's photo.
+ * Everything about the given trips that the app's trip screens need, in one snapshot, as
+ * `viewer` sees it: their own private items (and claims on them) apart in `privateItems`, and
+ * nobody else's. Null: no one's (the public invite preview). With `photos`, for a viewer who is
+ * an active member of every one of them, active members come with their avatar's URL: only
+ * trip-mates see someone's photo.
  */
-export async function loadTrips(tx: Executor, tripIds: string[], photos?: ReceiptStore) {
+export async function loadTrips(
+  tx: Executor,
+  tripIds: string[],
+  viewer: string | null,
+  photos?: ReceiptStore,
+) {
   if (tripIds.length === 0) return [];
   const [
     tripRows,
@@ -137,13 +145,13 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
     tx
       .select()
       .from(items)
-      .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt)))
+      .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt), visibleTo(viewer)))
       .orderBy(asc(items.list), asc(items.position)),
     tx
       .select({ tripId: items.tripId, claim: claims })
       .from(claims)
       .innerJoin(items, eq(items.id, claims.itemId))
-      .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt))),
+      .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt), visibleTo(viewer))),
     tx
       .select()
       .from(expenses)
@@ -197,7 +205,9 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
         }),
       ),
     categories: categoryRows.filter((c) => c.tripId === trip.id).map(toCategory),
-    items: itemRows.filter((i) => i.tripId === trip.id).map(toItem),
+    items: itemRows.filter((i) => i.tripId === trip.id && !i.privateOwnerId).map(toItem),
+    /** The viewer's own private items (their bag's "רק שלי"); counted nowhere. */
+    privateItems: itemRows.filter((i) => i.tripId === trip.id && i.privateOwnerId).map(toItem),
     claims: claimRows
       .filter((c) => c.tripId === trip.id)
       .map(({ claim }): Claim => ({

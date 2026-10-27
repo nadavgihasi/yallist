@@ -27,7 +27,7 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
       const session = await auth.api.getSession({ headers: c.req.raw.headers });
       const data = await transact(db, async (tx) => {
         const trip = await tripByToken(tx, token);
-        return (await loadTrips(tx, [trip.id]))[0]!;
+        return (await loadTrips(tx, [trip.id], null))[0]!;
       });
       const activeIds = activeMemberIds(data.members);
       const status = session && data.members.find((m) => m.userId === session.user.id)?.status;

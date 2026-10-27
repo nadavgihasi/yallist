@@ -57,8 +57,8 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
 
   /**
    * A grill trip with something in every table: `a` organizes, `b` is a member who claimed an
-   * item and paid an expense with a receipt, `p` waits for approval; one item is soft-deleted,
-   * `b` paid `a` back. `b` finished a shopping run (one item bought, one returned) and `a` has
+   * item, has a private one and paid an expense with a receipt, `p` waits for approval; one item
+   * is soft-deleted, `b` paid `a` back. `b` finished a shopping run (one item bought, one returned) and `a` has
    * one open.
    */
   async function fullTrip() {
@@ -88,6 +88,8 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
       as(b!),
     );
     await trip(tripId).items[':itemId'].$delete({ param: { tripId, itemId: second!.id } }, as(b!));
+    // A private item in b's bag, with its claim.
+    await trip(tripId).bag.$post({ param, json: { name: 'קרם הגנה' } }, as(b!));
 
     const expense = await (
       await trip(tripId).expenses.$post(

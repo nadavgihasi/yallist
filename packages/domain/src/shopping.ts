@@ -3,8 +3,8 @@ import { splitEqually } from './money';
 import type { Claim, Expense, Item } from './types';
 
 /**
- * What a shopping run can claim: a buy item nobody claimed that isn't bought yet. Not an `each`
- * item: everyone buys their own, so it is never part of one shared expense.
+ * What a shopping run can claim: a shared buy item nobody claimed that isn't bought yet. Not an
+ * `each` item: everyone buys their own, so it is never part of one shared expense.
  */
 export function isRunEligible(
   item: Item,
@@ -14,6 +14,7 @@ export function isRunEligible(
   return (
     item.list === 'buy' &&
     item.kind !== 'each' &&
+    !item.privateOwnerId &&
     claimsFor(item.id, claims).length === 0 &&
     !linkedExpense(item.id, expenses)
   );

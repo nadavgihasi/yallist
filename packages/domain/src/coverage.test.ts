@@ -121,6 +121,14 @@ describe('isDone / filterItems', () => {
     expect(ids('mine')).toEqual(['a']);
   });
 
+  it('never lists private items', () => {
+    const all = [...items, item({ id: 'gum', privateOwnerId: 'me' })];
+    const withGum = [...claims, claim('gum', 'me')];
+    for (const f of ['all', 'missing', 'mine'] as const) {
+      expect(filterItems(all, f, withGum, [], active, 'me').map((i) => i.id)).not.toContain('gum');
+    }
+  });
+
   it('puts every "each" item on my list, whether or not I have mine yet', () => {
     const bag = item({ id: 'bag', kind: 'each' });
     const hat = item({ id: 'hat', kind: 'each', list: 'buy' });

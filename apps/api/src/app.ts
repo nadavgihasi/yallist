@@ -18,6 +18,13 @@ import { sentryWebhookRoutes, type SentryWebhookConfig } from './routes/sentry-w
 import { tripRoutes } from './routes/trips';
 import { reportError } from './sentry';
 
+declare module 'hono' {
+  interface ContextVariableMap {
+    /** Set by a write that changed only the caller's private items: nobody else is told. */
+    privateWrite: true;
+  }
+}
+
 export function createApp(
   auth: Auth,
   db: Db,
@@ -49,8 +56,11 @@ export function createApp(
     .route('/feedback', feedbackRoutes(auth, db, feedback))
     .use('/trips/:tripId/*', async (c, next) => {
       await next();
-      // After every successful write to a trip, so after its transaction committed.
-      if (c.req.method !== 'GET' && c.res.ok) await notify(c.req.param('tripId'));
+      // After every successful write to a trip, so after its transaction committed. Not for
+      // private items: other members must not even learn that something changed.
+      if (c.req.method !== 'GET' && c.res.ok && !c.get('privateWrite')) {
+        await notify(c.req.param('tripId'));
+      }
     })
     .route('/trips', tripRoutes(auth, db, receipts))
     .route('/trips', categoryRoutes(auth, db))
