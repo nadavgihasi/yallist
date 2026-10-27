@@ -239,6 +239,20 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
             <Icon name="chevronEnd" size={20} color={colors.inkMuted} />
           </SettingRow>
         </Pressable>
+        <Pressable
+          accessibilityRole="link"
+          onPress={() => router.push('/privacy')}
+          style={(state: WebState) => [
+            styles.linkRow,
+            (state.hovered || state.pressed) && styles.hover,
+            state.focused && styles.focus,
+          ]}
+          {...testId('profile-privacy')}
+        >
+          <SettingRow label={he.profile.privacy} hint={he.profile.privacyHint}>
+            <Icon name="chevronEnd" size={20} color={colors.inkMuted} />
+          </SettingRow>
+        </Pressable>
       </ListGroup>
 
       <SignOut guest={guest} />

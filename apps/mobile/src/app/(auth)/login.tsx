@@ -1,4 +1,4 @@
-import { Redirect, router, useLocalSearchParams, type Href } from 'expo-router';
+import { Link, Redirect, router, useLocalSearchParams, type Href } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -111,7 +111,12 @@ export default function Login() {
             </>
           )}
         </View>
-        <VersionLine />
+        <View style={styles.footer}>
+          <Link href="/privacy" style={styles.footerLink} {...testId('login-privacy')}>
+            {he.login.privacy}
+          </Link>
+          <VersionLine />
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -186,6 +191,8 @@ const styles = StyleSheet.create({
   claimText: { ...type.buttonSm, color: colors.primaryStrong },
   // Pinned to the bottom of the screen when the content is short (login.html `margin-top: auto`).
   actions: { marginTop: 'auto', gap: space[3] },
+  footer: { alignItems: 'center', gap: space[2] },
+  footerLink: { ...type.caption, color: colors.inkMuted, textDecorationLine: 'underline' },
   input: {
     minHeight: 60,
     paddingHorizontal: space[5],

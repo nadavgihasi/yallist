@@ -56,6 +56,7 @@ export const he = {
     otherWays: 'דרכים אחרות להיכנס',
     google: 'המשך עם Google',
     googleSoon: 'כניסה עם Google בקרוב',
+    privacy: 'מדיניות פרטיות',
   },
   dates: {
     /** Screen-reader hint on a date field. */
@@ -482,6 +483,8 @@ export const he = {
     feedback: 'משוב',
     suggest: "הצעת פיצ'ר",
     suggestHint: 'רעיון לשיפור או משהו שלא עובד',
+    privacy: 'מדיניות פרטיות',
+    privacyHint: 'מה נשמר, מי רואה ואיך מוחקים',
   },
   feedback: {
     title: { feature: "הצעת פיצ'ר", bug: 'דיווח על תקלה' },
