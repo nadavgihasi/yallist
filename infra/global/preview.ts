@@ -238,7 +238,7 @@ export function previewAccess(githubOidcArn: $util.Output<string>, email: string
           Resource: $interpolate`arn:aws:cloudfront::${account}:key-value-store/*`,
         },
         {
-          // Finding leftover PR stages (preview.yml, remove and expire).
+          // Finding leftover and stale PR stages (preview.yml remove, preview-cleanup.yml).
           Sid: 'FindPrResources',
           Effect: 'Allow',
           Action: 'tag:GetResources',
