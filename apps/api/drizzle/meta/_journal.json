@@ -54,8 +54,15 @@
     {
       "idx": 7,
       "version": "7",
-      "when": 1793092474056,
-      "tag": "0007_shopping_runs",
+      "when": 1793092328359,
+      "tag": "0007_claims_packed_at",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793094392523,
+      "tag": "0008_shopping_runs",
       "breakpoints": true
     }
   ]

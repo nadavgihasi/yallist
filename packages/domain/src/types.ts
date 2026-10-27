@@ -47,6 +47,8 @@ export interface Claim {
   runId?: string;
   /** Checked off in the store, while its run is active. */
   inCart?: boolean;
+  /** In the claimer's bag; the whole claim, not each unit. */
+  packed?: boolean;
 }
 
 export interface Expense {

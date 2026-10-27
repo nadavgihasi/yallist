@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Yallist — בסופר</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#3D53E8}a:hover{color:#101725}
+</style>
+</helmet>
+<div dir="rtl" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; padding: 24px 16px 0; background: #F4F5F8; font-family: Rubik, system-ui, -apple-system, sans-serif; color: #101725; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+<div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0; font-size: 30px; line-height: 36px; font-weight: 800; letter-spacing: -0.01em">בסופר</h1>
+<p style="margin: 0; font-size: 15px; line-height: 20px; color: #4D5564">קניות לקמפינג בכנרת</p>
+</div>
+<a href="ShopRunPick.dc.html" aria-label="חזרה לבחירת פריטים" style="display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="#101725" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</a>
+</div>
+<p style="display: flex; align-items: center; gap: 8px; align-self: flex-start; margin: 0; padding: 8px 14px; border-radius: 999px; background: #FFFFFF; font-size: 14px; line-height: 20px; color: #4D5564">
+<span aria-hidden="true" style="width: 8px; height: 8px; border-radius: 999px; background: #FF5A1F"></span>
+כולם רואים שהקניות האלה עליך
+</p>
+<section style="display: flex; flex-direction: column; gap: 4px; padding: 16px 20px; border-radius: 24px; background: #FFFFFF">
+<p style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 700">{{inCartLabel}}</p>
+<div style="height: 8px; margin: 6px 0 8px; border-radius: 999px; background: #F4F5F8; overflow: hidden">
+<div style="width: {{pct}}; height: 8px; border-radius: 999px; background: #FF5A1F"></div>
+</div>
+<sc-for list="{{rows}}" as="item" hint-placeholder-count="5">
+<button type="button" onClick="{{item.toggle}}" aria-pressed="{{item.pressed}}" aria-label="{{item.ariaLabel}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 0; border: 0; background: transparent; color: #101725; font-family: Rubik, system-ui, sans-serif; text-align: start; cursor: pointer">
+<sc-if value="{{item.on}}" hint-placeholder-val="{{ false }}">
+<span aria-hidden="true" style="display: flex; align-items: center; justify-content: center; flex: none; width: 32px; height: 32px; border-radius: 999px; background: #FF5A1F">
+<svg width="18" height="18" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</span>
+</sc-if>
+<sc-if value="{{item.off}}" hint-placeholder-val="{{ true }}">
+<span aria-hidden="true" style="flex: none; box-sizing: border-box; width: 32px; height: 32px; border-radius: 999px; border: 2px solid #4D5564"></span>
+</sc-if>
+<span style="flex-grow: 1; font-size: 17px; line-height: 24px; font-weight: 700">{{item.name}}</span>
+<span style="flex: none; font-size: 14px; line-height: 20px; color: #4D5564">{{item.qty}}</span>
+</button>
+</sc-for>
+</section>
+<sc-if value="{{showLive}}" hint-placeholder-val="{{ true }}">
+<section style="display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-radius: 24px; background: #FFFFFF">
+<span style="display: flex; align-items: center; justify-content: center; flex: none; width: 32px; height: 32px; border-radius: 999px; background: #425AF4; color: #FFFFFF; font-size: 14px; font-weight: 800">ר</span>
+<div style="flex-grow: 1; display: flex; flex-direction: column; gap: 2px">
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #4D5564">רון הוסיף עכשיו</p>
+<p style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 700">קרח · 3 שקיות</p>
+</div>
+<button type="button" onClick="{{takeIce}}" style="flex: none; height: 44px; padding: 0 18px; border: 0; border-radius: 999px; background: #E8EBFE; color: #3D53E8; font-family: Rubik, system-ui, sans-serif; font-size: 15px; line-height: 20px; font-weight: 700; cursor: pointer">גם עליי</button>
+</section>
+</sc-if>
+<a href="ShopRunDone.dc.html" style="position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 28px; border-radius: 999px; background: #425AF4; color: #FFFFFF; font-size: 18px; line-height: 24px; font-weight: 800; white-space: nowrap; text-decoration: none; box-shadow: 0 10px 24px rgba(16, 23, 37, 0.18)">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+סיימתי, לקופה
+</a>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const s = this.state || {};
+const tookIce = !!s.tookIce;
+const cart = s.cart || { sausages: true, water: true, eggs: true };
+const items = [
+{ id: 'sausages', name: 'נקניקיות', qty: '2 חבילות' },
+{ id: 'water', name: 'מים', qty: '6 שישיות' },
+{ id: 'eggs', name: 'ביצים', qty: '30' },
+{ id: 'coffee', name: 'קפה וחלב', qty: '' },
+{ id: 'charcoal', name: 'פחמים', qty: '2 שקים' }
+].concat(tookIce ? [{ id: 'ice', name: 'קרח', qty: '3 שקיות' }] : []);
+const n = items.filter((x) => cart[x.id]).length;
+return {
+rows: items.map((x) => {
+const on = !!cart[x.id];
+return {
+name: x.name,
+qty: x.qty,
+on: on,
+off: !on,
+pressed: on ? 'true' : 'false',
+ariaLabel: on ? 'הוצאת ' + x.name + ' מהעגלה' : 'סימון ' + x.name + ' בעגלה',
+toggle: () => {
+const next = Object.assign({}, cart);
+next[x.id] = !on;
+this.setState({ cart: next, tookIce: tookIce });
+}
+};
+}),
+inCartLabel: n + ' מתוך ' + items.length + ' בעגלה',
+pct: Math.round(n / items.length * 100) + '%',
+showLive: !tookIce,
+takeIce: () => this.setState({ cart: cart, tookIce: true })
+};
+}
+}
+</script>
+</body>
+</html>

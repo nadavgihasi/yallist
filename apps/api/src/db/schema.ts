@@ -274,6 +274,8 @@ export const claims = pgTable(
     runId: uuid('run_id').references((): AnyPgColumn => shoppingRuns.id),
     /** Checked off in the store; means something only while the run is active. */
     inCartAt: timestamp('in_cart_at', { withTimezone: true }),
+    /** In the claimer's bag. Only they set it; claiming more clears it. */
+    packedAt: timestamp('packed_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [

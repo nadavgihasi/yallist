@@ -6,7 +6,7 @@ import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
 import { logActivity } from '../dal/activity';
 import { lockCategory } from '../dal/categories';
-import { lockClaims, setClaim } from '../dal/claims';
+import { lockClaims, setClaim, setPacked } from '../dal/claims';
 import { findPurchase } from '../dal/expenses';
 import { appendItem, deleteItem, endOfList, lockItem, updateItem } from '../dal/items';
 import { requireMember } from '../dal/members';
@@ -169,10 +169,29 @@ export const itemRoutes = (auth: Auth, db: Db) =>
           const current = await lockClaims(tx, itemId);
           const cap = claimCap(toItem(item), current, me);
           if (quantity > cap) throw fail(409, `At most ${cap} can be claimed`);
-          const had = current.some((cl) => cl.userId === me);
+          const had = current.find((cl) => cl.userId === me);
           await setClaim(tx, itemId, me, quantity, had);
           await logActivity(tx, tripId, me, 'claim_set', { itemId, quantity });
         });
         return c.json({ itemId, userId: me, quantity });
+      },
+    )
+
+    // Packs or unpacks my claim on an item (packing spec §4). Only the claim's owner can: there's
+    // no way to name anyone else's. Everyone sees it, through the usual trip refetch.
+    .put(
+      '/:tripId/items/:itemId/packed',
+      validate('param', itemParam),
+      validate('json', z.object({ packed: z.boolean() })),
+      async (c) => {
+        const { tripId, itemId } = c.req.valid('param');
+        const { packed } = c.req.valid('json');
+        const me = c.var.user.id;
+        await transact(db, async (tx) => {
+          await requireMember(tx, tripId, me, { lock: true });
+          await lockItem(tx, tripId, itemId);
+          if (!(await setPacked(tx, itemId, me, packed))) throw fail(409, 'Not claimed by you');
+        });
+        return c.json({ itemId, userId: me, packed });
       },
     );

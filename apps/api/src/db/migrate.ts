@@ -203,7 +203,7 @@ export async function backfillCovers(sql: Sql) {
 }
 
 /**
- * Data step for expense_items (0007): each single-item purchase (expenses.item_id) gets its
+ * Data step for expense_items (0008): each single-item purchase (expenses.item_id) gets its
  * expense_items row, which is what "bought" reads now. Runs on every deploy, so purchases the
  * previous API version made mid-deploy are linked too. 1,000 per transaction keeps each under
  * DSQL's 3,000-row limit.

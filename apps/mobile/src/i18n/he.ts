@@ -157,6 +157,9 @@ export const he = {
     release: 'ביטול',
     releaseLabel: 'שחרור הפריט',
     have: 'יש לי',
+    pack: 'סימון כארוז',
+    unpack: 'סימון כלא ארוז',
+    coveredCount: (done: number, total: number) => `${done} מתוך ${total} מסודרים`,
     plusOne: 'אני אביא עוד אחד',
     minusOne: 'אחד פחות',
     empty: {
@@ -194,6 +197,8 @@ export const he = {
     boughtBy: (amount: string, name: string) => `${amount}, ${name}`,
     boughtByMe: (amount: string) => `${amount}, שילמת`,
     forEach: 'לכל אחד',
+    packed: 'ארוז',
+    packedOf: (packed: number, claims: number) => `ארזו ${packed} מתוך ${claims}`,
   },
   hero: {
     /** `חסרים 13: אוהלים, קפה, קרח…` */
@@ -497,6 +502,11 @@ export function joiningAs(name: string): string {
 /** `חסר 1` / `חסרים 3` */
 export function missingCount(n: number): string {
   return n === 1 ? 'חסר 1' : `חסרים ${n}`;
+}
+
+/** The bring list's progress card: `ארוז 1` / `9 ארוזים` */
+export function packedCount(n: number): string {
+  return n === 1 ? 'ארוז 1' : `${n} ארוזים`;
 }
 
 /** Category header summary, mockup word order: `חסר 1` / `3 חסרים` */

@@ -1,4 +1,10 @@
-import { QUICK_SUGGESTIONS, filterItems, type ListFilter, type ListKind } from '@yallist/domain';
+import {
+  QUICK_SUGGESTIONS,
+  filterItems,
+  listProgress,
+  type ListFilter,
+  type ListKind,
+} from '@yallist/domain';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -7,7 +13,9 @@ import { EmptyState } from '@/components/EmptyState';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
-import { he } from '@/i18n/he';
+import { Progress } from '@/components/Progress';
+import { he, packedCount } from '@/i18n/he';
+import { testId } from '@/lib/testId';
 import { useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
@@ -70,9 +78,22 @@ export function ListTab({
       params: { tripId, categoryId },
     });
 
+  const progress = list === 'bring' && listProgress(listItems, data.claims, view.activeIds);
+
   return (
     <View style={styles.wrap}>
       {list === 'buy' && <ShopBanner data={data} view={view} me={me} />}
+      {progress && progress.total > 0 && (
+        <Card gap={space[2]}>
+          <Text style={styles.progress} {...testId('bring-progress')}>
+            {he.trip.coveredCount(progress.covered, progress.total)}
+          </Text>
+          <Progress done={progress.covered} total={progress.total} />
+          <Text style={styles.aside} {...testId('bring-packed')}>
+            {packedCount(progress.packed)}
+          </Text>
+        </Card>
+      )}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
@@ -156,6 +177,7 @@ export function ListTab({
                 })
               }
               onClaim={(quantity) => act({ type: 'setClaim', itemId: item.id, quantity })}
+              onPack={(packed) => act({ type: 'setPacked', itemId: item.id, packed })}
             />
           ))}
           {category && filter === 'all' && (
@@ -200,6 +222,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   aside: { ...type.caption, color: colors.inkMuted },
+  progress: { ...type.itemTitle, color: colors.ink },
   edit: {
     width: 36,
     height: 36,

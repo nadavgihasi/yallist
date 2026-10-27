@@ -1,6 +1,7 @@
 import {
   claimedQuantity,
   formatShekel,
+  packingStatus,
   type Claim,
   type Item,
   type ItemStatus,
@@ -82,6 +83,19 @@ export function statusLine(
       };
     }
   }
+}
+
+/** Appended to the status line: `ארוז` once every claim is packed, `ארזו 2 מתוך 3` before. */
+export function packedText(
+  item: Item,
+  claims: readonly Claim[],
+  activeIds: readonly string[],
+): string | undefined {
+  const { packedCount, claimCount } = packingStatus(item, claims, activeIds);
+  if (packedCount === 0) return undefined;
+  return packedCount === claimCount
+    ? he.status.packed
+    : he.status.packedOf(packedCount, claimCount);
 }
 
 /** The quantity text next to the item name (`5/8`, `לכל אחד`, `4 ק״ג`). */

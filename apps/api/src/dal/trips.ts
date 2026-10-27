@@ -163,6 +163,7 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
         arrived: claim.arrivedAt !== null,
         runId: claim.runId ?? undefined,
         inCart: claim.inCartAt ? true : undefined,
+        packed: claim.packedAt !== null,
       })),
     expenses: expenseRows
       .filter((e) => e.tripId === trip.id)

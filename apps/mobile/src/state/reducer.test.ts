@@ -73,6 +73,36 @@ describe('setClaim', () => {
   });
 });
 
+describe('setPacked', () => {
+  it('packs and unpacks only my claim', () => {
+    const t = trip({
+      claims: [
+        { itemId: 'chairs', userId: 'me', quantity: 2 },
+        { itemId: 'chairs', userId: 'ron', quantity: 2 },
+      ],
+    });
+    const packed = applyAction(t, { type: 'setPacked', itemId: 'chairs', packed: true }, 'me');
+    expect(packed.claims.map((c) => [c.userId, c.packed])).toEqual([
+      ['me', true],
+      ['ron', undefined],
+    ]);
+    const unpacked = applyAction(
+      packed,
+      { type: 'setPacked', itemId: 'chairs', packed: false },
+      'me',
+    );
+    expect(unpacked.claims[0]!.packed).toBe(false);
+  });
+
+  it('is cleared when I claim more, and kept when I claim less', () => {
+    const t = trip({ claims: [{ itemId: 'chairs', userId: 'me', quantity: 2, packed: true }] });
+    const more = applyAction(t, { type: 'setClaim', itemId: 'chairs', quantity: 3 }, 'me');
+    expect(more.claims).toEqual([{ itemId: 'chairs', userId: 'me', quantity: 3, packed: false }]);
+    const less = applyAction(t, { type: 'setClaim', itemId: 'chairs', quantity: 1 }, 'me');
+    expect(less.claims).toEqual([{ itemId: 'chairs', userId: 'me', quantity: 1, packed: true }]);
+  });
+});
+
 describe('deleteItem', () => {
   it('drops claims but keeps the expense, unlinked, so balances do not change', () => {
     const t = trip({
