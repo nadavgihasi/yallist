@@ -123,8 +123,8 @@ export const he = {
     optional: '(לא חובה)',
     wherePlaceholder: 'אפשר להחליט ביחד אחר כך',
     preview: 'מה נכנס לרשימות',
-    previewBring: 'להביא: ',
-    previewBuy: 'לקנות: ',
+    previewBring: 'ציוד: ',
+    previewBuy: 'קניות: ',
     previewBlank: 'מתחילים מאפס ומוסיפים פריטים אחרי היצירה.',
     /** Curated highlights per template (NewTripV2), not the first N items. */
     previews: {
@@ -147,7 +147,7 @@ export const he = {
   },
   trip: {
     back: 'חזרה לכל הטיולים',
-    tabs: { bring: 'להביא', buy: 'לקנות', people: 'אנשים', money: 'כסף' },
+    tabs: { bring: 'ציוד', buy: 'קניות', people: 'אנשים', money: 'כסף' },
     filters: { all: 'הכול', missing: 'חסר', mine: 'אצלי' },
     allCovered: 'הכול מכוסה',
     coveredOf: (done: number, total: number) => `${done} מתוך ${total} כבר מכוסים`,
