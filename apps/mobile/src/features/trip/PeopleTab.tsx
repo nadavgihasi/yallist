@@ -8,7 +8,7 @@ import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, participants } from '@/i18n/he';
-import { inviteUrl } from '@/lib/invite';
+import { invitePayload, inviteUrl } from '@/lib/invite';
 import { testId } from '@/lib/testId';
 import { useTripAction } from '@/state/trips';
 import type { TripData, TripMember } from '@/state/types';
@@ -26,7 +26,7 @@ const WEB_URL =
 /** Shares the invite link; where the browser can't share, copies it. */
 async function shareLink(url: string) {
   try {
-    await Share.share({ message: url, url });
+    await Share.share(invitePayload(url, Platform.OS));
   } catch (e) {
     // Closing the share sheet isn't a failure: don't copy behind the user's back.
     if (e instanceof Error && e.name === 'AbortError') return;
