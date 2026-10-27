@@ -147,7 +147,7 @@ export const he = {
   },
   trip: {
     back: 'חזרה לכל הטיולים',
-    tabs: { bring: 'ציוד', buy: 'קניות', people: 'אנשים', money: 'כסף' },
+    tabs: { bring: 'ציוד', buy: 'קניות', money: 'כסף', people: 'ניהול' },
     filters: { all: 'הכול', missing: 'חסר', mine: 'אצלי' },
     allCovered: 'הכול מכוסה',
     coveredOf: (done: number, total: number) => `${done} מתוך ${total} כבר מכוסים`,

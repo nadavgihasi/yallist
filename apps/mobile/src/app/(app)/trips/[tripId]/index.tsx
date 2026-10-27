@@ -35,7 +35,7 @@ import { useLeaveTrip, useTripQuery, useTripUpdates } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
-const TABS = ['bring', 'buy', 'people', 'money'] as const;
+const TABS = ['bring', 'buy', 'money', 'people'] as const;
 type Tab = (typeof TABS)[number];
 
 /** Keeps the desktop side panel in view while the list scrolls (web only). */
@@ -107,8 +107,8 @@ export default function TripScreen() {
   const tabs = [
     { value: 'bring' as const, label: he.trip.tabCount(he.trip.tabs.bring, count('bring')) },
     { value: 'buy' as const, label: he.trip.tabCount(he.trip.tabs.buy, count('buy')) },
-    { value: 'people' as const, label: he.trip.tabs.people },
     { value: 'money' as const, label: he.trip.tabs.money },
+    { value: 'people' as const, label: he.trip.tabs.people },
   ];
 
   // Phone and tablet: above the tabs. Desktop: at the top of the side panel.
