@@ -33,6 +33,9 @@ export interface Item {
   /** Free text for buy items, e.g. "4 ק״ג". */
   displayQty?: string;
   note?: string;
+  /** Who added it and when (ISO); the store screen shows items added during a run. */
+  createdBy?: string;
+  createdAt?: string;
 }
 
 export interface Claim {
@@ -40,11 +43,16 @@ export interface Claim {
   userId: string;
   quantity: number;
   arrived?: boolean;
+  /** The shopping run that claimed it. */
+  runId?: string;
+  /** Checked off in the store, while its run is active. */
+  inCart?: boolean;
 }
 
 export interface Expense {
   id: string;
-  itemId?: string;
+  /** The buy items this purchase covers: they count as bought. */
+  itemIds?: string[];
   description: string;
   amountAgorot: number;
   paidBy: string;

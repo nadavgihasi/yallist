@@ -45,6 +45,8 @@ export function toItem(row: typeof items.$inferSelect): Item {
     unit: opt(row.unit),
     displayQty: opt(row.displayQty),
     note: opt(row.note),
+    createdBy: row.createdBy,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 
@@ -52,10 +54,14 @@ export function toCategory(row: typeof tripCategories.$inferSelect): Category {
   return { id: row.id, list: row.list, name: row.name, position: row.position };
 }
 
-export function toExpense(row: typeof expenses.$inferSelect, shares: string[]): Expense {
+export function toExpense(
+  row: typeof expenses.$inferSelect,
+  shares: string[],
+  itemIds: string[],
+): Expense {
   return {
     id: row.id,
-    itemId: opt(row.itemId),
+    itemIds,
     description: row.description,
     amountAgorot: row.amountAgorot,
     paidBy: row.paidBy,

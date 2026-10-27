@@ -121,7 +121,7 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
       shares: [a.id, b.id],
       itemId: buy.id,
     });
-    expect(await res.json()).toMatchObject({ itemId: buy.id, paidBy: a.id });
+    expect(await res.json()).toMatchObject({ itemIds: [buy.id], paidBy: a.id });
     expect(
       (await addExpense(b, tripId, { amountAgorot: 100, shares: [b.id], itemId: buy.id })).status,
     ).toBe(409);

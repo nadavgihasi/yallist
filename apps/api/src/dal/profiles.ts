@@ -55,6 +55,7 @@ const USER_COLUMNS = [
   ['payments', 'to_user'],
   ['activity', 'actor'],
   ['feedback', 'user_id'],
+  ['shopping_runs', 'shopper_id'],
 ] as const;
 
 /**
@@ -86,6 +87,18 @@ export async function mergeUser(db: Db, from: string, to: string) {
       from claims a, items i
       where a.item_id = b.item_id and i.id = b.item_id and i.kind = 'qty'
         and a.user_id = ${from} and b.user_id = ${to}`);
+    // One active shopping run per shopper and trip: where both have one, `from`'s claims join
+    // the account's run and `from`'s run ends.
+    await tx.execute(sql`
+      update claims c set run_id = b.id
+      from shopping_runs a, shopping_runs b
+      where c.run_id = a.id and a.shopper_id = ${from} and a.active
+        and b.trip_id = a.trip_id and b.shopper_id = ${to} and b.active`);
+    await tx.execute(sql`
+      update shopping_runs a set status = 'cancelled', active = null, finished_at = now()
+      where a.shopper_id = ${from} and a.active and exists (
+        select 1 from shopping_runs b
+        where b.trip_id = a.trip_id and b.shopper_id = ${to} and b.active)`);
     for (const [table, key] of USER_KEYED) {
       await tx.execute(sql`
         delete from ${id(table)} a where a.user_id = ${from} and exists (

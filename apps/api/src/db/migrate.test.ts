@@ -3,7 +3,14 @@ import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createTestDatabase, DATABASE_URL } from '../test-db';
-import { apply, backfillCategories, backfillCovers, migrate, toDsql } from './migrate';
+import {
+  apply,
+  backfillCategories,
+  backfillCovers,
+  backfillExpenseItems,
+  migrate,
+  toDsql,
+} from './migrate';
 
 describe('toDsql', () => {
   it('builds indexes asynchronously, without USING', () => {
@@ -152,6 +159,7 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
       'accounts',
       'activity',
       'claims',
+      'expense_items',
       'expense_shares',
       'expenses',
       'feedback',
@@ -159,6 +167,7 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
       'payments',
       'profiles',
       'sessions',
+      'shopping_runs',
       'template_items',
       'trip_categories',
       'trip_members',
@@ -268,5 +277,44 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
     const [{ count }] = await sql<[{ count: number }]>`
       select count(*)::int as count from trips where cover is null`;
     expect(count).toBe(0);
+  });
+
+  it('links single-item purchases to their item in expense_items, once', async () => {
+    await migrate(sql, { dsql: false });
+    const [user] = await sql<{ id: string }[]>`
+      insert into users (name, email) values ('e', 'e@example.com') returning id`;
+    const u = user!.id;
+    await sql`insert into profiles (id, display_name, avatar_color) values (${u}, 'e', '#000')`;
+    const [trip] = await sql<{ id: string }[]>`
+      insert into trips (name, starts_on, ends_on, template, invite_token, created_by)
+      values ('t', '2026-11-05', '2026-11-07', 'blank', 'expense-items', ${u}) returning id`;
+    const item = async (name: string) =>
+      (
+        await sql<{ id: string }[]>`
+          insert into items (trip_id, list, category, position, name, kind, created_by)
+          values (${trip!.id}, 'buy', '', 0, ${name}, 'single', ${u}) returning id`
+      )[0]!.id;
+    const [meat, ice] = [await item('meat'), await item('ice')];
+    const expense = async (itemId: string | null) =>
+      (
+        await sql<{ id: string }[]>`
+          insert into expenses (trip_id, item_id, description, amount_agorot, paid_by, created_by)
+          values (${trip!.id}, ${itemId}, 'x', 100, ${u}, ${u}) returning id`
+      )[0]!.id;
+    const [forMeat, forIce] = [await expense(meat), await expense(ice)];
+    await expense(null);
+    // Already linked by the new API.
+    await sql`insert into expense_items (expense_id, item_id) values (${forIce}, ${ice})`;
+
+    await backfillExpenseItems(sql);
+    await backfillExpenseItems(sql);
+
+    const links = await sql<{ expenseId: string; itemId: string }[]>`
+      select expense_id as "expenseId", item_id as "itemId" from expense_items
+      where item_id in (${meat}, ${ice}) order by item_id = ${meat} desc`;
+    expect(links).toEqual([
+      { expenseId: forMeat, itemId: meat },
+      { expenseId: forIce, itemId: ice },
+    ]);
   });
 });
