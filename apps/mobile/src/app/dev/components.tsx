@@ -129,8 +129,8 @@ export default function ComponentsPreview() {
         </View>
         <SegmentedControl
           options={[
-            { value: 'bring', label: 'להביא · 20' },
-            { value: 'buy', label: 'לקנות · 7' },
+            { value: 'bring', label: 'ציוד · 20' },
+            { value: 'buy', label: 'קניות · 7' },
           ]}
           value={list}
           onChange={setList}
