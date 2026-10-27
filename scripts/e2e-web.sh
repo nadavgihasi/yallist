@@ -12,7 +12,8 @@
 # CI splits the flows in two: E2E_SHARD=1 runs the flows tagged shard-1, E2E_SHARD=2 the rest
 # (new flows land there; tag one shard-1 when shard 2 gets longer). E2E_PREBUILT=1 serves an
 # existing apps/mobile/dist, exported with EXPO_PUBLIC_API_URL=http://localhost:$API_PORT and
-# EXPO_PUBLIC_E2E as below.
+# EXPO_PUBLIC_E2E as below, and no EXPO_PUBLIC_REALTIME_URL: there's no AppSync locally, so the
+# app doesn't subscribe to live updates (src/lib/realtime.ts).
 #
 # E2E_BASE_PATH=/pr-123 serves the API and the web app under that path, as a PR preview does
 # (docs/plans/e2e-live-environments.md): the export uses it as its base URL and the web server
@@ -73,8 +74,8 @@ trap cleanup EXIT
 
 if [[ -z ${E2E_PREBUILT:-} ]]; then
   # EXPO_PUBLIC_E2E opens the test-only routes (src/app/dev/crash.tsx).
-  (cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT$BASE BASE_PATH=$BASE \
-    EXPO_PUBLIC_E2E=1 "$bin/expo" export -p web) >"$OUT/export.log" 2>&1
+  (cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT$BASE EXPO_PUBLIC_REALTIME_URL='' \
+    BASE_PATH=$BASE EXPO_PUBLIC_E2E=1 "$bin/expo" export -p web) >"$OUT/export.log" 2>&1
 fi
 if [[ -z $BASE ]]; then
   # expo serve has no single-page fallback: the deep links the flows open get the app's page.

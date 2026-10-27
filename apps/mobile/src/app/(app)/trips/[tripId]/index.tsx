@@ -31,7 +31,7 @@ import { statusOf } from '@/lib/api';
 import { testId } from '@/lib/testId';
 import { useToday } from '@/lib/useToday';
 import { useMe } from '@/state/store';
-import { useTripQuery } from '@/state/trips';
+import { useTripQuery, useTripUpdates } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
@@ -51,6 +51,7 @@ export default function TripScreen() {
   }>();
   const { tripId, itemId, list, categoryId } = params;
   const query = useTripQuery(tripId);
+  useTripUpdates(tripId, query.isSuccess);
   const data = query.data;
   const me = useMe();
   const insets = useSafeAreaInsets();
