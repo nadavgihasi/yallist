@@ -1,0 +1,36 @@
+name: Maestro for web
+description: >-
+  The Maestro CLI and the Chrome for Testing it records with, cached, for scripts/e2e-web.sh.
+  Run it with MAESTRO set to the `maestro` output. Used by ui-tests.yml and preview.yml.
+outputs:
+  maestro:
+    description: Path of the Maestro CLI
+    value: ${{ steps.path.outputs.maestro }}
+runs:
+  using: composite
+  steps:
+    # The Maestro CLI and the Chrome for Testing that Selenium downloads on first use: 147, the
+    # default SE_BROWSER_VERSION in e2e-web.sh.
+    - uses: actions/cache@v6
+      id: cache
+      with:
+        path: |
+          ~/.maestro-cli
+          ~/.cache/selenium
+        key: ui-tests-maestro-2.11.0-chrome-147
+    # Uses the runner's Java 17.
+    - name: Install Maestro
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      env:
+        MAESTRO_VERSION: 2.11.0
+      run: |
+        curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/maestro.zip" \
+          "https://github.com/mobile-dev-inc/maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
+        unzip -q "$RUNNER_TEMP/maestro.zip" -d ~/.maestro-cli
+    - id: path
+      shell: bash
+      run: echo "maestro=$HOME/.maestro-cli/maestro/bin/maestro" >> "$GITHUB_OUTPUT"
+    # Ubuntu 24.04's AppArmor blocks the sandbox of a Chrome outside /opt (Chrome for Testing).
+    - shell: bash
+      run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
