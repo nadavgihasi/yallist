@@ -23,6 +23,7 @@ import { colors, space, type } from '@/theme';
 import type { TripView } from './derive';
 import { ItemRow } from './ItemRow';
 import { groupSummary } from './labels';
+import { ShopBanner } from './ShopBanner';
 
 const FILTERS: ListFilter[] = ['all', 'missing', 'mine'];
 
@@ -81,6 +82,7 @@ export function ListTab({
 
   return (
     <View style={styles.wrap}>
+      {list === 'buy' && <ShopBanner data={data} view={view} me={me} />}
       {progress && progress.total > 0 && (
         <Card gap={space[2]}>
           <Text style={styles.progress} {...testId('bring-progress')}>

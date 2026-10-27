@@ -13,6 +13,7 @@ import { itemRoutes } from './routes/items';
 import { meRoutes } from './routes/me';
 import { moneyRoutes } from './routes/money';
 import { receiptRoutes } from './routes/receipts';
+import { runRoutes } from './routes/runs';
 import { sentryWebhookRoutes, type SentryWebhookConfig } from './routes/sentry-webhook';
 import { tripRoutes } from './routes/trips';
 import { reportError } from './sentry';
@@ -56,6 +57,7 @@ export function createApp(
     .route('/trips', itemRoutes(auth, db))
     .route('/trips', moneyRoutes(auth, db, receipts))
     .route('/trips', receiptRoutes(auth, db, receipts))
+    .route('/trips', runRoutes(auth, db))
     .route('/invites', inviteRoutes(auth, db, notify));
 }
 

@@ -6,11 +6,13 @@ import { avatarUrl } from '../avatars';
 import {
   activity,
   claims,
+  expenseItems,
   expenseShares,
   expenses,
   items,
   payments,
   profiles,
+  shoppingRuns,
   tripCategories,
   tripMembers,
   trips,
@@ -70,6 +72,9 @@ export async function deleteTrip(tx: Executor, tripId: string) {
     .from(expenses)
     .where(eq(expenses.tripId, tripId));
   await tx.delete(claims).where(inArray(claims.itemId, tripItems));
+  // Runs after the claims that point at them; runs and purchased items before the expenses.
+  await tx.delete(shoppingRuns).where(eq(shoppingRuns.tripId, tripId));
+  await tx.delete(expenseItems).where(inArray(expenseItems.expenseId, tripExpenses));
   await tx.delete(expenseShares).where(inArray(expenseShares.expenseId, tripExpenses));
   const deleted = await tx
     .delete(expenses)
@@ -107,7 +112,9 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
     claimRows,
     expenseRows,
     shareRows,
+    purchaseRows,
     paymentRows,
+    runRows,
   ] = await Promise.all([
     tx.select().from(trips).where(inArray(trips.id, tripIds)),
     tx
@@ -147,11 +154,22 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
       .from(expenseShares)
       .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
       .where(inArray(expenses.tripId, tripIds)),
+    // A purchase of an item that was since deleted no longer marks anything bought.
+    tx
+      .select({ expenseId: expenseItems.expenseId, itemId: expenseItems.itemId })
+      .from(expenseItems)
+      .innerJoin(items, eq(items.id, expenseItems.itemId))
+      .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt))),
     tx
       .select()
       .from(payments)
       .where(inArray(payments.tripId, tripIds))
       .orderBy(asc(payments.markedAt)),
+    tx
+      .select()
+      .from(shoppingRuns)
+      .where(and(inArray(shoppingRuns.tripId, tripIds), eq(shoppingRuns.status, 'active')))
+      .orderBy(asc(shoppingRuns.startedAt)),
   ]);
 
   const avatars = new Map<string, string | undefined>();
@@ -160,7 +178,6 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
     const urls = await Promise.all(active.map((m) => avatarUrl(photos, m)));
     active.forEach((m, i) => avatars.set(m.userId, urls[i]));
   }
-  const liveItems = new Set(itemRows.map((i) => i.id));
   return tripRows.map((trip) => ({
     trip: toTrip(trip),
     inviteToken: trip.inviteToken,
@@ -188,15 +205,17 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
         userId: claim.userId,
         quantity: claim.quantity,
         arrived: claim.arrivedAt !== null,
+        runId: claim.runId ?? undefined,
+        inCart: claim.inCartAt ? true : undefined,
         packed: claim.packedAt !== null,
       })),
     expenses: expenseRows
       .filter((e) => e.tripId === trip.id)
       .map((e) =>
         toExpense(
-          // A purchase of an item that was since deleted no longer marks anything bought.
-          { ...e, itemId: e.itemId && liveItems.has(e.itemId) ? e.itemId : null },
+          e,
           shareRows.filter((s) => s.expenseId === e.id).map((s) => s.userId),
+          purchaseRows.filter((p) => p.expenseId === e.id).map((p) => p.itemId),
         ),
       ),
     payments: paymentRows
@@ -208,5 +227,9 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
         amountAgorot: p.amountAgorot,
         status: p.status,
       })),
+    /** Who is out shopping right now (active runs only). */
+    runs: runRows
+      .filter((r) => r.tripId === trip.id)
+      .map((r) => ({ id: r.id, shopperId: r.shopperId, startedAt: r.startedAt.toISOString() })),
   }));
 }

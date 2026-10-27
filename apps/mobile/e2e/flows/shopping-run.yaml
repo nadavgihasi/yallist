@@ -1,0 +1,49 @@
+# Go shopping for the buy list: take two items, check one off, pay at the till. The one in the
+# cart is bought with one expense; the other goes back to the list.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [shopping]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- tapOn:
+    id: trip-tab-buy
+- runFlow:
+    file: ../common/add-item.yaml
+    env:
+      ITEM: Milk
+- runFlow:
+    file: ../common/add-item.yaml
+    env:
+      ITEM: Bread
+- tapOn:
+    id: shop-start
+# Both are picked already.
+- tapOn:
+    id: shop-start-save
+- assertVisible:
+    id: shop-title
+- tapOn:
+    id: shop-item-Milk
+- assertVisible: 1 מתוך 2 בעגלה
+- tapOn:
+    id: shop-checkout
+- tapOn:
+    id: shop-finish-amount
+- inputText: '45.5'
+- tapOn:
+    id: shop-finish-save
+# Back on the buy list: Milk is bought, Bread is missing again, and the run is closed.
+- assertVisible:
+    id: trip-title
+- assertVisible:
+    id: shop-start
+- assertVisible: .*45\.5.*
+- tapOn:
+    id: trip-tab-money
+- assertVisible: קניות · פריט אחד

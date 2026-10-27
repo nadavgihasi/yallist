@@ -168,6 +168,40 @@ describe.skipIf(!DATABASE_URL)('auth', () => {
     ]);
   });
 
+  it('keeps one active shopping run per trip, with both users’ items in it', async () => {
+    const guest = await signInAsGuest('guest');
+    const account = await signInAsGuest('account');
+    const [trip] = await sql<{ id: string }[]>`
+      insert into trips (name, starts_on, ends_on, template, invite_token, created_by)
+      values ('E', '2026-11-01', '2026-11-02', 'camp', 'token-e', ${account.id}) returning id`;
+    const run = async (userId: string) =>
+      (
+        await sql<{ id: string }[]>`
+          insert into shopping_runs (trip_id, shopper_id, status, active)
+          values (${trip!.id}, ${userId}, 'active', true) returning id`
+      )[0]!.id;
+    const [guestRun, accountRun] = [await run(guest.id), await run(account.id)];
+    const [item] = await sql<{ id: string }[]>`
+      insert into items (trip_id, list, category, position, name, kind, created_by)
+      values (${trip!.id}, 'buy', '', 0, 'ice', 'single', ${account.id}) returning id`;
+    await sql`
+      insert into claims (item_id, user_id, quantity, run_id)
+      values (${item!.id}, ${guest.id}, 1, ${guestRun})`;
+
+    await mergeUser(db, guest.id, account.id);
+
+    expect(
+      await sql`select id, shopper_id, status from shopping_runs
+        where trip_id = ${trip!.id} order by status`,
+    ).toEqual([
+      { id: accountRun, shopper_id: account.id, status: 'active' },
+      { id: guestRun, shopper_id: account.id, status: 'cancelled' },
+    ]);
+    expect(await sql`select user_id, run_id from claims where item_id = ${item!.id}`).toEqual([
+      { user_id: account.id, run_id: accountRun },
+    ]);
+  });
+
   it('keeps the account’s photo, else takes the guest’s; returns the one left over', async () => {
     const photo = async (name: string, key: string | null) => {
       const user = await signInAsGuest(name);

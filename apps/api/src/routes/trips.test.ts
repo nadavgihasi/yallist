@@ -496,6 +496,8 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         unit: 'יח׳',
         displayQty: '6',
         note: 'מתקפלים',
+        createdBy: item.createdBy,
+        createdAt: item.createdAt,
       });
       const [logged] = await sql<{ payload: { fields: string[] } }[]>`
         select payload from activity where trip_id = ${tripId} and type = 'item_updated'`;

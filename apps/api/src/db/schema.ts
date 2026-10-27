@@ -18,6 +18,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique,
   uniqueIndex,
   uuid,
   type AnyPgColumn,
@@ -43,6 +44,7 @@ export const ROLES = ['organizer', 'member'] as const satisfies MemberRole[];
 const MEMBER_STATUSES = ['pending', 'active', 'removed'] as const satisfies MemberStatus[];
 export const TRIP_STATUSES = ['planning', 'ended', 'archived'] as const;
 const PAYMENT_STATUSES = ['marked', 'confirmed'] as const;
+export const RUN_STATUSES = ['active', 'done', 'cancelled'] as const;
 
 function oneOf(name: string, column: AnyPgColumn, values: readonly string[]) {
   const list = sql.raw(values.map((v) => `'${v}'`).join(', '));
@@ -268,6 +270,10 @@ export const claims = pgTable(
     quantity: integer('quantity').notNull(),
     /** Set in trip-day mode. */
     arrivedAt: timestamp('arrived_at', { withTimezone: true }),
+    /** The shopping run that claimed it. */
+    runId: uuid('run_id').references((): AnyPgColumn => shoppingRuns.id),
+    /** Checked off in the store; means something only while the run is active. */
+    inCartAt: timestamp('in_cart_at', { withTimezone: true }),
     /** In the claimer's bag. Only they set it; claiming more clears it. */
     packedAt: timestamp('packed_at', { withTimezone: true }),
     createdAt: createdAt(),
@@ -285,7 +291,10 @@ export const expenses = pgTable(
     tripId: uuid('trip_id')
       .notNull()
       .references(() => trips.id),
-    /** The buy-list item this purchase covers. */
+    /**
+     * The buy-list item a single-item purchase covers. Superseded by expense_items, which is what
+     * "bought" reads; still written for single-item purchases until a follow-up drops it.
+     */
     itemId: uuid('item_id').references(() => items.id),
     description: text('description').notNull(),
     amountAgorot: integer('amount_agorot').notNull(),
@@ -310,6 +319,53 @@ export const expenseShares = pgTable(
     userId: userRef('user_id').notNull(),
   },
   (t) => [primaryKey({ columns: [t.expenseId, t.userId] })],
+);
+
+/** The buy items a purchase covers: one expense per item at most, so an item is bought once. */
+export const expenseItems = pgTable(
+  'expense_items',
+  {
+    expenseId: uuid('expense_id')
+      .notNull()
+      .references(() => expenses.id),
+    itemId: uuid('item_id')
+      .notNull()
+      .references(() => items.id),
+  },
+  (t) => [
+    primaryKey({ columns: [t.expenseId, t.itemId] }),
+    unique('expense_items_item_unique').on(t.itemId),
+  ],
+);
+
+/**
+ * One shopper's trip to the store: they claim many buy items at once, check them off, and pay
+ * once. At most one active run per shopper and trip. DSQL has no partial indexes, so `active` is
+ * true while the run is active and null after; nulls are distinct in a unique index, so the
+ * unique (trip, shopper, active) allows any number of finished runs and one active one.
+ */
+export const shoppingRuns = pgTable(
+  'shopping_runs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    tripId: uuid('trip_id')
+      .notNull()
+      .references(() => trips.id),
+    shopperId: userRef('shopper_id').notNull(),
+    status: text('status', { enum: RUN_STATUSES }).notNull(),
+    active: boolean('active'),
+    startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    finishedAt: timestamp('finished_at', { withTimezone: true }),
+    expenseId: uuid('expense_id').references(() => expenses.id),
+  },
+  (t) => [
+    unique('shopping_runs_active_unique').on(t.tripId, t.shopperId, t.active),
+    oneOf('shopping_runs_status_check', t.status, RUN_STATUSES),
+    check(
+      'shopping_runs_active_check',
+      sql`(${t.status} = 'active' and ${t.active}) or (${t.status} <> 'active' and ${t.active} is null)`,
+    ),
+  ],
 );
 
 /** A recorded settle-up transfer. */

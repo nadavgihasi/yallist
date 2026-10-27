@@ -1,6 +1,6 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useMutationState, useQuery, useQueryClient } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { parseResponse, type InferRequestType } from 'hono/client';
+import { parseResponse, type InferRequestType, type InferResponseType } from 'hono/client';
 import { useCallback, useEffect } from 'react';
 
 import { showToast } from '@/components/Toast';
@@ -227,8 +227,46 @@ async function send(tripId: string, action: Action): Promise<unknown> {
     }
     case 'setCover':
       return parseResponse(trip.$patch({ param, json: { cover: action.cover } }));
+    case 'startRun':
+      return parseResponse(trip.runs.$post({ param, json: { itemIds: action.itemIds } }));
+    case 'addToRun':
+      return parseResponse(
+        trip.runs[':runId'].items.$post({
+          param: { ...param, runId: action.runId },
+          json: { itemId: action.itemId },
+        }),
+      );
+    case 'setInCart':
+      return parseResponse(
+        trip.items[':itemId'].cart.$put({
+          param: { ...param, itemId: action.itemId },
+          json: { inCart: action.inCart },
+        }),
+      );
+    case 'finishRun': {
+      const { runId, amountAgorot, shares, receipt } = action;
+      const expense = await parseResponse(
+        trip.runs[':runId'].finish.$post({
+          param: { ...param, runId },
+          json: { amountAgorot, shares },
+        }),
+      );
+      if (receipt) {
+        void uploadReceipt(tripId, expense.id, receipt).then(
+          (ok) => ok || showToast(he.receipt.failedToast, 'error'),
+        );
+      }
+      return expense;
+    }
+    case 'cancelRun':
+      return parseResponse(
+        trip.runs[':runId'].cancel.$post({ param: { ...param, runId: action.runId } }),
+      );
   }
 }
+
+/** What `startRun` answers: the run, and the items someone else got first. */
+export type StartedRun = InferResponseType<(typeof api.trips)[':tripId']['runs']['$post'], 200>;
 
 /**
  * Changes to one trip: shown at once where possible (`applyAction`), sent in order, rolled back
@@ -255,13 +293,15 @@ export function useTripAction(tripId: string) {
       const conflict = statusOf(error) === 409;
       const message = !conflict
         ? he.errors.failed
-        : action.type === 'setClaim'
+        : action.type === 'setClaim' || action.type === 'addToRun'
           ? he.errors.claimTaken
           : action.type === 'addCategory' || action.type === 'renameCategory'
             ? he.errors.categoryExists
             : action.type === 'editItem'
               ? he.errors.itemEditRefused
-              : he.errors.failed;
+              : action.type === 'setInCart' || action.type === 'cancelRun'
+                ? he.errors.runOver
+                : he.errors.failed;
       showToast(message, 'error');
     },
     // Refetch after the last queued change only; an earlier refetch would undo later ones.
@@ -276,3 +316,12 @@ export function useTripAction(tripId: string) {
   });
   return mutate;
 }
+
+/** A finished run that is still waiting to reach the API (offline): label it until it syncs. */
+export const useFinishWaiting = (tripId: string) =>
+  useMutationState({
+    filters: {
+      mutationKey: tripKey(tripId),
+      predicate: (m) => m.state.isPaused && (m.state.variables as Action).type === 'finishRun',
+    },
+  }).length > 0;

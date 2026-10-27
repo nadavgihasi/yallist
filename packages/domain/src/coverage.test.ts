@@ -81,7 +81,7 @@ describe('itemStatus', () => {
   it('bought when an expense links to a buy item', () => {
     const exp: Expense = {
       id: 'e',
-      itemId: 'meat',
+      itemIds: ['meat'],
       description: '',
       amountAgorot: 45000,
       paidBy: 'dana',
@@ -103,7 +103,7 @@ describe('isDone / filterItems', () => {
     expect(isDone(items[1]!, claims, [], active)).toBe(false);
     const bought: Expense = {
       id: 'e',
-      itemId: 'c',
+      itemIds: ['c'],
       description: '',
       amountAgorot: 100,
       paidBy: 'ron',

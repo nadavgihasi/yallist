@@ -18,6 +18,7 @@ import {
   setMember,
 } from '../dal/members';
 import { displayNameOf } from '../dal/profiles';
+import { cancelMemberRuns } from '../dal/runs';
 import { deleteActivity, deleteTrip, insertTrip, loadTrips, lockTrip, setTrip } from '../dal/trips';
 import type { Db } from '../db/client';
 import { ROLES, TEMPLATE_IDS, tripMembers, TRIP_STATUSES } from '../db/schema';
@@ -223,7 +224,8 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
       return c.json({ userId, status: 'removed' as const });
     })
 
-    // Removes an active member and drops their claims: what they took is missing again.
+    // Removes an active member, cancels their shopping run and drops their claims: what they
+    // took is missing again.
     .delete('/:tripId/members/:userId', validate('param', memberParam), async (c) => {
       const { tripId, userId } = c.req.valid('param');
       await transact(db, async (tx) => {
@@ -231,6 +233,7 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
         if (target.status !== 'active') throw fail(409, 'Not an active member');
         await assertNotLastOrganizer(tx, target);
         await setMember(tx, target, { status: 'removed' });
+        await cancelMemberRuns(tx, tripId, userId);
         await deleteMemberClaims(tx, tripId, userId);
         await logActivity(tx, tripId, c.var.user.id, 'member_removed', { userId });
       });

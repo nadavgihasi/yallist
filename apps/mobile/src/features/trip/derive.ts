@@ -2,6 +2,7 @@ import {
   activeMemberIds,
   claimsFor,
   isDone,
+  isRunEligible,
   itemStatus,
   splitEqually,
   type Item,
@@ -40,6 +41,14 @@ export function deriveTrip(data: TripData, me: string) {
   const myQuantity = (itemId: string) =>
     claimsFor(itemId, data.claims).find((c) => c.userId === me)?.quantity ?? 0;
   const mine = items.filter((i) => myQuantity(i.id) > 0);
+  // Shopping runs under way: mine, and who is buying each item right now.
+  const myRun = data.runs.find((r) => r.shopperId === me);
+  const activeRuns = new Map(data.runs.map((r) => [r.id, r]));
+  const shopperOf = (itemId: string) => {
+    const claim = claimsFor(itemId, data.claims).find((c) => c.runId && activeRuns.has(c.runId));
+    return claim?.userId;
+  };
+  const runClaims = (runId: string) => data.claims.filter((c) => c.runId === runId);
 
   return {
     activeIds,
@@ -55,6 +64,11 @@ export function deriveTrip(data: TripData, me: string) {
     missingIn,
     myQuantity,
     mine,
+    myRun,
+    shopperOf,
+    runClaims,
+    /** What a run may claim now: shared buy items nobody has, not bought yet. */
+    runEligible: items.filter((i) => isRunEligible(i, data.claims, data.expenses)),
     status: (item: Item) => itemStatus(item, data.claims, data.expenses, activeIds, me),
     /** Who pays whom to settle up, worked out by the API. */
     transfers: data.transfers,

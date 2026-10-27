@@ -28,7 +28,7 @@ export function isCovered(item: Item, claims: readonly Claim[], activeIds: reado
 }
 
 export function linkedExpense(itemId: string, expenses: readonly Expense[]): Expense | undefined {
-  return expenses.find((e) => e.itemId === itemId);
+  return expenses.find((e) => e.itemIds?.includes(itemId));
 }
 
 export type ItemStatus =

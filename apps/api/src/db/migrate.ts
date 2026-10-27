@@ -48,6 +48,7 @@ export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
   await seedTemplates(sql);
   await backfillCategories(sql);
   await backfillCovers(sql);
+  await backfillExpenseItems(sql);
 }
 
 /** SQLSTATEs of re-running a CREATE TABLE/INDEX, ADD COLUMN or ADD CONSTRAINT that committed. */
@@ -198,5 +199,27 @@ export async function backfillCovers(sql: Sql) {
         }
       }),
     );
+  }
+}
+
+/**
+ * Data step for expense_items (0008): each single-item purchase (expenses.item_id) gets its
+ * expense_items row, which is what "bought" reads now. Runs on every deploy, so purchases the
+ * previous API version made mid-deploy are linked too. 1,000 per transaction keeps each under
+ * DSQL's 3,000-row limit.
+ */
+export async function backfillExpenseItems(sql: Sql) {
+  for (;;) {
+    const linked = await withRetry(() =>
+      sql.begin(
+        (tx) => tx`
+          insert into expense_items (expense_id, item_id)
+          select e.id, e.item_id from expenses e
+          where e.item_id is not null
+            and not exists (select 1 from expense_items x where x.item_id = e.item_id)
+          limit 1000`,
+      ),
+    );
+    if (linked.count === 0) return;
   }
 }

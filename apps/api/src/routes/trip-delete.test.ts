@@ -47,6 +47,9 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
         (select count(*) from expenses where trip_id = ${tripId}) as expenses,
         (select count(*) from expense_shares where expense_id in
           (select id from expenses where trip_id = ${tripId})) as shares,
+        (select count(*) from expense_items where expense_id in
+          (select id from expenses where trip_id = ${tripId})) as expense_items,
+        (select count(*) from shopping_runs where trip_id = ${tripId}) as shopping_runs,
         (select count(*) from payments where trip_id = ${tripId}) as payments,
         (select count(*) from activity where trip_id = ${tripId}) as activity`;
     return Object.fromEntries(Object.entries(counts!).map(([k, v]) => [k, Number(v)]));
@@ -55,7 +58,8 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
   /**
    * A grill trip with something in every table: `a` organizes, `b` is a member who claimed an
    * item and paid an expense with a receipt, `p` waits for approval; one item is soft-deleted,
-   * `b` paid `a` back.
+   * `b` paid `a` back. `b` finished a shopping run (one item bought, one returned) and `a` has
+   * one open.
    */
   async function fullTrip() {
     const [a, b, p] = await Promise.all(['a', 'b', 'p'].map((n) => signInAsGuest(app, n)));
@@ -111,6 +115,21 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
       { param, json: { toUser: a!.id, amountAgorot: 500 } },
       as(b!),
     );
+    const [x, y, z] = data.items.filter((i) => i.list === 'buy' && i.kind !== 'each');
+    const runs = trip(tripId).runs;
+    const started = await (
+      await runs.$post({ param, json: { itemIds: [x!.id, y!.id] } }, as(b!))
+    ).json();
+    await trip(tripId).items[':itemId'].cart.$put(
+      { param: { tripId, itemId: x!.id }, json: { inCart: true } },
+      as(b!),
+    );
+    const finished = await runs[':runId'].finish.$post(
+      { param: { tripId, runId: started.run!.id }, json: { amountAgorot: 900, shares: [b!.id] } },
+      as(b!),
+    );
+    expect(finished.status).toBe(201);
+    await runs.$post({ param, json: { itemIds: [z!.id] } }, as(a!));
     return { a: a!, b: b!, p: p!, tripId, receiptKey: form.key };
   }
 

@@ -1,10 +1,14 @@
+import type { Claim } from '@yallist/domain';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { claims, items } from '../db/schema';
 import type { Executor, Tx } from '../db/tx';
 
-export const lockClaims = (tx: Tx, itemId: string) =>
-  tx.select().from(claims).where(eq(claims.itemId, itemId)).for('update');
+/** The item's claims, locked. */
+export async function lockClaims(tx: Tx, itemId: string): Promise<Claim[]> {
+  const rows = await tx.select().from(claims).where(eq(claims.itemId, itemId)).for('update');
+  return rows.map((c) => ({ ...c, runId: c.runId ?? undefined }));
+}
 
 const mine = (itemId: string, userId: string) =>
   and(eq(claims.itemId, itemId), eq(claims.userId, userId));

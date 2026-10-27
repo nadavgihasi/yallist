@@ -94,8 +94,11 @@ function ItemSheetBody({
   const qty = quantityText(item, data.claims);
   const amount = parseShekel(price);
   const bought = status.kind === 'bought';
+  // A shopping run's purchase covers several items: it's changed from the money tab, never
+  // replaced by this item's price.
+  const shared = (expense?.itemIds?.length ?? 0) > 1;
   // `each` items are everyone's own purchase, so they aren't priced as one shared expense.
-  const canPrice = isBuy && item.kind !== 'each' && (mine > 0 || !!expense);
+  const canPrice = isBuy && item.kind !== 'each' && (mine > 0 || !!expense) && !shared;
   const expenseEdit =
     expense &&
     amount &&
@@ -175,7 +178,7 @@ function ItemSheetBody({
               onPress={saveBought}
             />
           )}
-          {expense && (
+          {expense && !shared && (
             <PillButton
               label={he.item.unmarkBought}
               variant="quiet"

@@ -4,5 +4,6 @@ export * from './money';
 export * from './packing';
 export * from './profile';
 export * from './scrub';
+export * from './shopping';
 export * from './templates';
 export * from './types';

@@ -74,6 +74,7 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
             tx,
             { ...input, tripId, paidBy, createdBy: me },
             shares,
+            input.itemId ? [input.itemId] : [],
           );
           await logActivity(tx, tripId, me, 'expense_added', {
             expenseId: created.id,
@@ -81,7 +82,7 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           });
           return created;
         });
-        return c.json(toExpense(expense, shares), 201);
+        return c.json(toExpense(expense, shares, expense.itemId ? [expense.itemId] : []), 201);
       },
     )
 

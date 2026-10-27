@@ -81,6 +81,7 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
         createdBy: me,
       },
       [me],
+      [item.id],
     );
     await deleteItem(db, item.id);
 
@@ -90,6 +91,7 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
     expect(data!.expenses).toEqual([
       {
         id: expect.any(String),
+        itemIds: [],
         description: 'קרח',
         amountAgorot: 1000,
         paidBy: me,
