@@ -51,9 +51,10 @@ export function withQuantity(claim: Claim, quantity: number): Claim {
 
 /**
  * Where an entry in my bag comes from, for its label: something I took from the bring list
- * (`each`: one of those everyone brings their own of), something I bought, or a private item.
+ * (`each`: one of those everyone brings their own of), something I bought, or a private item,
+ * which is `essential` when it's one of my essentials.
  */
-export type BagSource = 'list' | 'each' | 'bought' | 'private';
+export type BagSource = 'list' | 'each' | 'bought' | 'essential' | 'private';
 
 export interface BagEntry {
   item: Item;
@@ -67,13 +68,17 @@ export interface BagEntry {
  * Everything `userId` physically brings (התיק שלי): `group`, their claims on shared items (every
  * bring item, and buy items once bought; an unbought buy claim stays on the buy list), and
  * `mine`, their private items. Unpacked first, then in list order (bring, then buy).
+ * `essentialNames`: the user's essentials, which private items of the same name (ignoring case)
+ * came from.
  */
 export function myBag(
   userId: string,
   items: readonly Item[],
   claims: readonly Claim[],
   boughtItemIds: ReadonlySet<string>,
+  essentialNames: readonly string[] = [],
 ): { group: BagEntry[]; mine: BagEntry[]; packed: number; total: number } {
+  const essentials = new Set(essentialNames.map(nameKey));
   const group: BagEntry[] = [];
   const mine: BagEntry[] = [];
   for (const item of items) {
@@ -85,7 +90,9 @@ export function myBag(
       source,
     });
     if (item.privateOwnerId) {
-      if (item.privateOwnerId === userId) mine.push(entry('private'));
+      if (item.privateOwnerId === userId) {
+        mine.push(entry(essentials.has(nameKey(item.name)) ? 'essential' : 'private'));
+      }
     } else if (claim && item.list === 'bring') {
       group.push(entry(item.kind === 'each' ? 'each' : 'list'));
     } else if (claim && boughtItemIds.has(item.id)) {
@@ -103,4 +110,32 @@ export function myBag(
     packed: all.filter((e) => e.packed).length,
     total: all.length,
   };
+}
+
+/** Names compare ignoring case and the spaces around them. */
+const nameKey = (name: string) => name.trim().toLowerCase();
+
+/**
+ * "אולי גם": up to 3 things I had in my bag on past trips (`pastPrivateItemNames`, repeats
+ * included) that this trip doesn't have yet and that aren't among my essentials, which arrive by
+ * themselves. Most frequent first; ties keep the order given.
+ */
+export function suggestions(
+  currentTripItems: readonly Item[],
+  pastPrivateItemNames: readonly string[],
+  essentialNames: readonly string[] = [],
+): string[] {
+  const taken = new Set([...currentTripItems.map((i) => i.name), ...essentialNames].map(nameKey));
+  const counts = new Map<string, { name: string; count: number }>();
+  for (const name of pastPrivateItemNames) {
+    const k = nameKey(name);
+    if (taken.has(k)) continue;
+    const seen = counts.get(k);
+    if (seen) seen.count++;
+    else counts.set(k, { name: name.trim(), count: 1 });
+  }
+  return [...counts.values()]
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 3)
+    .map((s) => s.name);
 }

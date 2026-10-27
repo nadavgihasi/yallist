@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { listProgress, myBag, packingStatus, withQuantity } from './packing';
+import { listProgress, myBag, packingStatus, suggestions, withQuantity } from './packing';
 import type { Claim, Item } from './types';
 
 const item = (over: Partial<Item> & Pick<Item, 'id'>): Item => ({
@@ -139,6 +139,16 @@ describe('myBag', () => {
     });
   });
 
+  it('marks private items named like one of my essentials, ignoring case', () => {
+    const sunscreen = item({ id: 'sun', name: 'Sunscreen', privateOwnerId: 'me', position: 7 });
+    const withSun = [...items, sunscreen];
+    const bagged = myBag('me', withSun, claims, new Set(), [' sunscreen', 'כובע']);
+    expect(bagged.mine.map((e) => [e.item.id, e.source])).toEqual([
+      ['sun', 'essential'],
+      ['swim', 'private'],
+    ]);
+  });
+
   it('puts unpacked entries first, then list order', () => {
     const packedAll = claims.map((c) => ({ ...c, packed: c.itemId !== 'sleeping' }));
     expect(ids(myBag('me', items, packedAll, new Set(['sausages'])).group)).toEqual([
@@ -156,5 +166,20 @@ describe('withQuantity', () => {
     expect(withQuantity(packed, 3)).toEqual(claim('chairs', 'me', 3, false));
     expect(withQuantity(packed, 1)).toEqual(claim('chairs', 'me', 1, true));
     expect(withQuantity(packed, 2)).toEqual(packed);
+  });
+});
+
+describe('suggestions', () => {
+  const names = (...n: string[]) => n.map((name, i) => item({ id: `i${i}`, name }));
+
+  it('suggests my past private items, most frequent first, at most 3', () => {
+    const past = ['כובע', 'מגבת', 'Charger', 'מגבת', 'charger ', 'מגבת', 'ספר'];
+    expect(suggestions([], past)).toEqual(['מגבת', 'Charger', 'כובע']);
+  });
+
+  it('skips what this trip has, shared or mine, and my essentials, ignoring case', () => {
+    const past = ['כובע', 'מגבת', 'Charger', 'ספר', 'Book'];
+    expect(suggestions(names('CHARGER', 'כובע'), past, ['book'])).toEqual(['מגבת', 'ספר']);
+    expect(suggestions(names(), [])).toEqual([]);
   });
 });

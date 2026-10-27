@@ -11,6 +11,7 @@ import {
   isOwnAvatarKey,
   newAvatarKey,
 } from '../avatars';
+import { listEssentials, MAX_ESSENTIALS, pastPrivateNames, setEssentials } from '../dal/essentials';
 import { findProfile, lockProfile, updateProfile } from '../dal/profiles';
 import type { Db } from '../db/client';
 import type { profiles } from '../db/schema';
@@ -77,6 +78,32 @@ export const meRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
       if (!profile) throw fail(404, 'Not found');
       return c.json(await toMe(profile, c.var.user, photos));
     })
+
+    // הקבועים שלי, and the names of my private items so far (what "אולי גם" suggests from).
+    .get('/essentials', async (c) => {
+      const me = c.var.user.id;
+      const [essentials, pastItems] = await Promise.all([
+        listEssentials(db, me),
+        pastPrivateNames(db, me),
+      ]);
+      return c.json({ essentials, pastItems });
+    })
+
+    // set_essentials: the whole list, in order. Trips I'm already in keep what they have.
+    .put(
+      '/essentials',
+      validate(
+        'json',
+        z.object({
+          names: z.array(z.string().trim().min(1).max(60)).max(MAX_ESSENTIALS),
+        }),
+      ),
+      async (c) => {
+        const { names } = c.req.valid('json');
+        const essentials = await transact(db, (tx) => setEssentials(tx, c.var.user.id, names));
+        return c.json({ essentials });
+      },
+    )
 
     .patch('/', validate('json', profileChanges), async (c) => {
       const profile = await updateProfile(db, c.var.user.id, c.req.valid('json'));

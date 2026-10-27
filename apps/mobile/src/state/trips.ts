@@ -8,6 +8,7 @@ import { he } from '@/i18n/he';
 import { api, sessionToken, statusOf } from '@/lib/api';
 import { REALTIME_HOST, subscribe } from '@/lib/realtime';
 
+import { essentialsKey } from './essentials';
 import { uploadReceipt } from './receipts';
 import { applyAction, type Action, type NewItemInput } from './reducer';
 import { useMe } from './store';
@@ -141,8 +142,10 @@ async function send(tripId: string, action: Action): Promise<unknown> {
       const item = await parseResponse(trip.items.$post({ param, json }));
       return action.claim > 0 && claim(item.id, action.claim);
     }
-    case 'addPrivateItem':
-      return parseResponse(trip.bag.$post({ param, json: { name: action.name } }));
+    case 'addPrivateItem': {
+      const { name, saveAsEssential } = action;
+      return parseResponse(trip.bag.$post({ param, json: { name, saveAsEssential } }));
+    }
     case 'deleteItem':
       return parseResponse(
         trip.items[':itemId'].$delete({ param: { ...param, itemId: action.itemId } }),
@@ -308,13 +311,17 @@ export function useTripAction(tripId: string) {
     },
     // Refetch after the last queued change only; an earlier refetch would undo later ones.
     // Returning the refetch keeps the change pending until the screen shows the server's state.
-    onSettled: () =>
-      queryClient.isMutating({ mutationKey: key }) > 1
+    onSettled: (_data, _error, action) => {
+      if (action.type === 'addPrivateItem') {
+        void queryClient.invalidateQueries({ queryKey: essentialsKey(me) });
+      }
+      return queryClient.isMutating({ mutationKey: key }) > 1
         ? undefined
         : Promise.all([
             queryClient.invalidateQueries({ queryKey: key }),
             queryClient.invalidateQueries({ queryKey: tripsKey }),
-          ]),
+          ]);
+    },
   });
   return mutate;
 }

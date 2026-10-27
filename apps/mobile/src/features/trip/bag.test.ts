@@ -27,6 +27,11 @@ describe('bagLabel', () => {
     expect(bagLabel(entry({ source: 'bought', packed: true }))).toBe('קנית · מהקניות · ארוז');
   });
 
+  it('marks private items that came from my essentials', () => {
+    expect(bagLabel(entry({ source: 'essential' }))).toBe('מהקבועים שלך');
+    expect(bagLabel(entry({ source: 'essential', packed: true }))).toBe('מהקבועים שלך · ארוז');
+  });
+
   it('gives a private item no source, only packed', () => {
     expect(bagLabel(entry({ source: 'private' }))).toBe('');
     expect(bagLabel(entry({ source: 'private', packed: true }))).toBe('ארוז');

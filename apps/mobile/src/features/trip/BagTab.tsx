@@ -1,4 +1,5 @@
-import type { BagEntry } from '@yallist/domain';
+import { myBag, suggestions, type BagEntry } from '@yallist/domain';
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -11,6 +12,7 @@ import { StatusRing } from '@/components/StatusRing';
 import { he } from '@/i18n/he';
 import { formatShort } from '@/lib/dates';
 import { testId } from '@/lib/testId';
+import { useEssentials } from '@/state/essentials';
 import { useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
@@ -23,11 +25,15 @@ import { bagLabel, bagName } from './bag';
  * התיק שלי (packing spec §6.2): everything I bring, to tick off as it goes into the bag. What I
  * took for the group, which the group sees packed, and my private items, which only I see.
  */
-export function BagTab({ data, view }: { data: TripData; view: TripView }) {
+export function BagTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
   const act = useTripAction(data.trip.id);
   // The private item whose delete was tapped once; a second tap deletes it.
   const [confirming, setConfirming] = useState<string>();
-  const { group, mine, packed, total } = view.bag;
+  const { essentials = [], pastItems = [] } = useEssentials().data ?? {};
+  const tripItems = [...view.items, ...data.privateItems];
+  const bought = new Set(data.expenses.flatMap((e) => e.itemIds ?? []));
+  const { group, mine, packed, total } = myBag(me, tripItems, data.claims, bought, essentials);
+  const maybe = suggestions(tripItems, pastItems, essentials);
 
   const row = (entry: BagEntry, removable: boolean) => {
     const { item } = entry;
@@ -66,7 +72,45 @@ export function BagTab({ data, view }: { data: TripData; view: TripView }) {
     );
   };
 
-  if (total === 0) return <EmptyState spot={data.trip.cover} {...he.bag.empty} />;
+  // "אולי גם": one tap puts it in my bag.
+  const chips = maybe.length > 0 && (
+    <View style={styles.chips}>
+      <Text style={styles.caption}>{he.bag.maybe}</Text>
+      {maybe.map((name) => (
+        <PillButton
+          key={name}
+          label={name}
+          variant="soft"
+          size="sm"
+          icon={<Icon name="plus" size={16} color={colors.primaryStrong} strokeWidth={2.5} />}
+          {...testId('bag-suggestion')}
+          onPress={() => act({ type: 'addPrivateItem', name })}
+        />
+      ))}
+    </View>
+  );
+  const essentialsRow = (
+    <Pressable
+      accessibilityRole="button"
+      {...testId('bag-essentials')}
+      onPress={() => router.push('/essentials')}
+      style={styles.essentials}
+    >
+      <Text style={styles.essentialsText}>{he.bag.essentialsRow(essentials.length)}</Text>
+      <Icon name="chevronEnd" size={18} color={colors.inkMuted} />
+    </Pressable>
+  );
+
+  if (total === 0) {
+    return (
+      <View style={styles.wrap}>
+        <EmptyState spot={data.trip.cover} {...he.bag.empty}>
+          {chips}
+        </EmptyState>
+        {essentialsRow}
+      </View>
+    );
+  }
 
   return (
     <View style={styles.wrap}>
@@ -91,7 +135,7 @@ export function BagTab({ data, view }: { data: TripData; view: TripView }) {
           {group.map((e) => row(e, false))}
         </Card>
       )}
-      {mine.length > 0 && (
+      {(mine.length > 0 || chips) && (
         <Card gap={space[2]}>
           <View style={styles.header}>
             <View style={styles.lockTitle}>
@@ -103,8 +147,10 @@ export function BagTab({ data, view }: { data: TripData; view: TripView }) {
             <Text style={styles.small}>{he.bag.mineCaption}</Text>
           </View>
           {mine.map((e) => row(e, true))}
+          {chips}
         </Card>
       )}
+      {essentialsRow}
     </View>
   );
 }
@@ -133,4 +179,22 @@ const styles = StyleSheet.create({
   },
   main: { flex: 1, minWidth: 0, gap: 2 },
   name: { ...type.itemTitle, color: colors.ink },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: space[2],
+    paddingTop: space[1],
+  },
+  essentials: {
+    minHeight: space.touch,
+    paddingHorizontal: space[5],
+    borderRadius: 999,
+    backgroundColor: colors.card,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[3],
+  },
+  essentialsText: { ...type.buttonSm, color: colors.primaryStrong },
 });

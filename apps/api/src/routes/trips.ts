@@ -8,6 +8,7 @@ import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
 import { logActivity } from '../dal/activity';
 import { deleteMemberClaims } from '../dal/claims';
+import { copyEssentials } from '../dal/essentials';
 import { seedItems } from '../dal/items';
 import {
   activeTripIds,
@@ -87,7 +88,7 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
   new Hono()
     .use(requireUser(auth))
 
-    // Create a trip from a template: the caller is its organizer.
+    // Create a trip from a template: the caller is its organizer, with their essentials in their bag.
     .post('/', validate('json', createTrip), async (c) => {
       const { template, cover, ...input } = c.req.valid('json');
       const user = c.var.user;
@@ -107,6 +108,7 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
           displayName: await displayNameOf(tx, user),
         });
         await seedItems(tx, tripId, user.id, template);
+        await copyEssentials(tx, tripId, user.id);
         await logActivity(tx, tripId, user.id, 'trip_created', { template });
         return (await loadTrips(tx, [tripId], user.id, photos))[0]!;
       });

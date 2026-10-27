@@ -377,6 +377,23 @@ export const shoppingRuns = pgTable(
   ],
 );
 
+/**
+ * הקבועים שלי: what a user always packs, copied into their bag as private items in every trip they
+ * create or join (packing spec §3). Names are unique per user ignoring case; the constraint covers
+ * exact duplicates (DSQL has no expression indexes), the API checks case under the profile lock.
+ */
+export const userEssentials = pgTable(
+  'user_essentials',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: userRef('user_id').notNull(),
+    name: text('name').notNull(),
+    position: integer('position').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [unique('user_essentials_name_unique').on(t.userId, t.name)],
+);
+
 /** A recorded settle-up transfer. */
 export const payments = pgTable(
   'payments',

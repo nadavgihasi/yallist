@@ -61,13 +61,16 @@ export function Switch({
   value,
   onChange,
   label,
+  testID,
 }: {
   value: boolean;
   onChange: (value: boolean) => void;
   label: string;
+  testID?: string;
 }) {
   return (
     <Pressable
+      {...testId(testID)}
       accessibilityRole="switch"
       accessibilityLabel={label}
       accessibilityState={{ checked: value }}
