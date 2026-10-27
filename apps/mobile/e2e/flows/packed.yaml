@@ -1,0 +1,50 @@
+# Pack an item I'm bringing, from the list; it stays packed after a reload, and unpacks.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [items]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- runFlow:
+    file: ../common/add-item.yaml
+    env:
+      ITEM: Grill
+# Only my claim's ring is a toggle.
+- assertNotVisible:
+    id: item-pack
+- tapOn:
+    id: item-claim
+- assertVisible:
+    id: bring-packed
+    text: 0 ארוזים
+- tapOn:
+    id: item-pack
+- assertVisible:
+    id: item-unpack
+- assertVisible:
+    id: bring-packed
+    text: ארוז 1
+# Packed shows before the API has it; leaving the page sooner would drop the save. Nothing has
+# this id: this only waits (longer on a preview's cold Lambda).
+- extendedWaitUntil:
+    visible:
+      id: never-shown
+    timeout: 4000
+    optional: true
+# Saved: still packed after opening the app again.
+- openLink: ${WEB_URL}
+- tapOn: E2E trip
+- assertVisible:
+    id: item-unpack
+- tapOn:
+    id: item-unpack
+- assertVisible:
+    id: item-pack
+- assertVisible:
+    id: bring-packed
+    text: 0 ארוזים

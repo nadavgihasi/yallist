@@ -1,5 +1,7 @@
 docs/design/*
 !docs/design/README.md
+# Design-tool sources, kept as exported.
+docs/specs/*/design/
 pnpm-lock.yaml
 **/.sst/
 apps/api/drizzle/

@@ -40,6 +40,8 @@ export interface Claim {
   userId: string;
   quantity: number;
   arrived?: boolean;
+  /** In the claimer's bag; the whole claim, not each unit. */
+  packed?: boolean;
 }
 
 export interface Expense {

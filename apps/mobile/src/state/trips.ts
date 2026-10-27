@@ -129,6 +129,13 @@ async function send(tripId: string, action: Action): Promise<unknown> {
   switch (action.type) {
     case 'setClaim':
       return claim(action.itemId, action.quantity);
+    case 'setPacked':
+      return parseResponse(
+        trip.items[':itemId'].packed.$put({
+          param: { ...param, itemId: action.itemId },
+          json: { packed: action.packed },
+        }),
+      );
     case 'addItem': {
       const json = await withNewCategory(action.item, action.newCategory);
       const item = await parseResponse(trip.items.$post({ param, json }));

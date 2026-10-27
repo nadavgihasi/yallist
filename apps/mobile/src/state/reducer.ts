@@ -1,4 +1,11 @@
-import { claimCap, type CoverId, type ItemKind, type ListKind } from '@yallist/domain';
+import {
+  claimCap,
+  withQuantity,
+  type Claim,
+  type CoverId,
+  type ItemKind,
+  type ListKind,
+} from '@yallist/domain';
 
 import type { TripData } from './types';
 
@@ -22,6 +29,8 @@ export interface NewExpenseInput {
 /** A change to a trip, sent to the API by `useTripAction`. */
 export type Action =
   | { type: 'setClaim'; itemId: string; quantity: number }
+  /** Packs or unpacks my claim on the item. */
+  | { type: 'setPacked'; itemId: string; packed: boolean }
   // `newCategory`: create a category of that name first, and put the item in it.
   | { type: 'addItem'; item: NewItemInput; claim: number; newCategory?: string }
   | { type: 'deleteItem'; itemId: string }
@@ -54,13 +63,22 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
       if (!item) return data;
       // Same cap the server enforces: never claim past what's still needed.
       const quantity = Math.min(action.quantity, claimCap(item, data.claims, me));
-      const others = data.claims.filter((c) => !(c.itemId === action.itemId && c.userId === me));
+      const isMine = (c: Claim) => c.itemId === action.itemId && c.userId === me;
+      const others = data.claims.filter((c) => !isMine(c));
+      const mine = data.claims.find(isMine) ?? { itemId: action.itemId, userId: me, quantity: 0 };
       return {
         ...data,
-        claims:
-          quantity > 0 ? [...others, { itemId: action.itemId, userId: me, quantity }] : others,
+        // Claiming more unpacks it, as the API does.
+        claims: quantity > 0 ? [...others, withQuantity(mine, quantity)] : others,
       };
     }
+    case 'setPacked':
+      return {
+        ...data,
+        claims: data.claims.map((c) =>
+          c.itemId === action.itemId && c.userId === me ? { ...c, packed: action.packed } : c,
+        ),
+      };
     case 'deleteItem':
       return {
         ...data,

@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Yallist — יוצאים לקנות</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#3D53E8}a:hover{color:#101725}
+</style>
+</helmet>
+<div dir="rtl" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; padding: 24px 16px 0; background: #F4F5F8; font-family: Rubik, system-ui, -apple-system, sans-serif; color: #101725; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="#101725" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</span>
+<p style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 800">קמפינג בכנרת</p>
+</div>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 999px; background: #FFFFFF">
+<span style="display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 999px; color: #4D5564; font-size: 15px; font-weight: 700">מביאים · 20</span>
+<span style="display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 999px; background: #425AF4; color: #FFFFFF; font-size: 15px; font-weight: 700">קונים · 8</span>
+</div>
+<div aria-hidden="true" style="position: absolute; inset: 0; background: rgba(16, 23, 37, 0.45)"></div>
+<section aria-label="יוצאים לקנות" style="position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 12px; padding: 12px 20px 24px; border-radius: 28px 28px 0 0; background: #FFFFFF">
+<span aria-hidden="true" style="align-self: center; width: 36px; height: 5px; border-radius: 999px; background: #D5D9E0"></span>
+<div style="display: flex; flex-direction: column; gap: 4px">
+<h1 style="margin: 0; font-size: 24px; line-height: 30px; font-weight: 800">יוצאים לקנות</h1>
+<p style="margin: 0; font-size: 15px; line-height: 22px; color: #4D5564">מסמנים מה לוקחים, וכולם רואים שזה עליך.</p>
+</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<p style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 700; color: #4D5564">{{countLabel}}</p>
+<button type="button" onClick="{{toggleAll}}" style="height: 44px; padding: 0 4px; border: 0; background: transparent; color: #3D53E8; font-family: Rubik, system-ui, sans-serif; font-size: 15px; line-height: 20px; font-weight: 700; cursor: pointer">{{allLabel}}</button>
+</div>
+<div style="display: flex; flex-direction: column">
+<sc-for list="{{free}}" as="item" hint-placeholder-count="6">
+<button type="button" onClick="{{item.toggle}}" aria-pressed="{{item.pressed}}" style="display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0; border: 0; background: transparent; color: #101725; font-family: Rubik, system-ui, sans-serif; text-align: start; cursor: pointer">
+<sc-if value="{{item.on}}" hint-placeholder-val="{{ true }}">
+<span aria-hidden="true" style="display: flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px; border-radius: 8px; background: #425AF4">
+<svg width="14" height="14" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="#FFFFFF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</span>
+</sc-if>
+<sc-if value="{{item.off}}" hint-placeholder-val="{{ false }}">
+<span aria-hidden="true" style="flex: none; box-sizing: border-box; width: 24px; height: 24px; border-radius: 8px; border: 2px solid #4D5564"></span>
+</sc-if>
+<span style="flex-grow: 1; font-size: 16px; line-height: 22px; font-weight: 700">{{item.name}}</span>
+<span style="flex: none; font-size: 14px; line-height: 20px; color: #4D5564">{{item.qty}}</span>
+</button>
+</sc-for>
+</div>
+<p style="margin: 4px 0 0; font-size: 14px; line-height: 20px; font-weight: 700; color: #4D5564">כבר של מישהו</p>
+<div style="display: flex; flex-direction: column; gap: 8px">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 40px">
+<span style="display: flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; border-radius: 999px; background: #425AF4; color: #FFFFFF; font-size: 13px; font-weight: 800">ד</span>
+<span style="flex-grow: 1; font-size: 16px; line-height: 22px; color: #4D5564">בשר לעל האש</span>
+<span style="flex: none; font-size: 14px; line-height: 20px; color: #4D5564">דנה</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px; min-height: 40px">
+<span style="display: flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; border-radius: 999px; background: #425AF4; color: #FFFFFF; font-size: 13px; font-weight: 800">ר</span>
+<span style="flex-grow: 1; font-size: 16px; line-height: 22px; color: #4D5564">פיתות ×40</span>
+<span style="flex: none; font-size: 14px; line-height: 20px; color: #4D5564">רון</span>
+</div>
+</div>
+<a href="ShopRunCart.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 10px; height: 56px; margin-top: 4px; border-radius: 999px; background: #425AF4; color: #FFFFFF; font-size: 18px; line-height: 24px; font-weight: 800; text-decoration: none">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.5 11h10L20 8H6.5" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path><circle cx="9" cy="19" r="1.5" fill="#FFFFFF"></circle><circle cx="17" cy="19" r="1.5" fill="#FFFFFF"></circle></svg>
+{{ctaLabel}}
+</a>
+</section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const s = this.state || {};
+const items = [
+{ id: 'sausages', name: 'נקניקיות', qty: '2 חבילות' },
+{ id: 'water', name: 'מים', qty: '6 שישיות' },
+{ id: 'eggs', name: 'ביצים', qty: '30' },
+{ id: 'coffee', name: 'קפה וחלב', qty: '' },
+{ id: 'charcoal', name: 'פחמים', qty: '2 שקים' },
+{ id: 'ice', name: 'קרח', qty: '3 שקיות' }
+];
+const sel = s.sel || { sausages: true, water: true, eggs: true, coffee: true, charcoal: true };
+const n = items.filter((x) => sel[x.id]).length;
+const allOn = n === items.length;
+return {
+free: items.map((x) => {
+const on = !!sel[x.id];
+return {
+name: x.name,
+qty: x.qty,
+on: on,
+off: !on,
+pressed: on ? 'true' : 'false',
+toggle: () => {
+const next = Object.assign({}, sel);
+next[x.id] = !on;
+this.setState({ sel: next });
+}
+};
+}),
+countLabel: 'פנויים · ' + n + ' מתוך ' + items.length + ' נבחרו',
+allLabel: allOn ? 'ניקוי' : 'בחירת הכול',
+toggleAll: () => {
+const next = {};
+if (!allOn) items.forEach((x) => { next[x.id] = true; });
+this.setState({ sel: next });
+},
+ctaLabel: n === 0 ? 'בוחרים לפחות פריט אחד' : 'עליי · ' + n + ' פריטים'
+};
+}
+}
+</script>
+</body>
+</html>

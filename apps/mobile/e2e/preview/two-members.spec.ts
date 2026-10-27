@@ -142,6 +142,21 @@ test('a claim reaches the other member over AppSync Events', async ({ page: dana
   await expect(dana.locator('#item-claim')).toBeHidden({ timeout: 10_000 });
 });
 
+test('packing reaches the other member, who cannot toggle it', async ({ page: dana, noa }) => {
+  test.skip(!REALTIME_HOST, 'E2E_REALTIME_HOST (the preview stage output `realtime`) not set');
+  await join(dana, noa);
+  await dana.locator('#trip-tab-bring').click();
+  await expect(dana.locator('#bring-packed')).toHaveText('0 ארוזים');
+
+  await noa.locator('#item-claim').click();
+  await noa.locator('#item-pack').click();
+  await expect(noa.locator('#item-unpack')).toBeVisible();
+
+  // Over AppSync Events: no reload. Noa's claim isn't Dana's to pack, so she gets no toggle.
+  await expect(dana.locator('#bring-packed')).toHaveText('ארוז 1', { timeout: 10_000 });
+  await expect(dana.locator('#item-pack, #item-unpack')).toHaveCount(0);
+});
+
 test('deleting a trip sends the other member home', async ({ page: dana, noa }) => {
   test.skip(!REALTIME_HOST, 'E2E_REALTIME_HOST (the preview stage output `realtime`) not set');
   await join(dana, noa);

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Yallist — הקבלה שלך</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#3D53E8}a:hover{color:#101725}
+</style>
+</helmet>
+<div dir="rtl" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; padding: 24px 16px 0; background: #F4F5F8; font-family: Rubik, system-ui, -apple-system, sans-serif; color: #101725; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="Trip.dc.html" aria-label="חזרה לטיול" style="display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="#101725" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</a>
+<h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em">הקבלה שלך</h1>
+</div>
+<section style="display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-radius: 24px; background: #FFFFFF">
+<div aria-hidden="true" style="display: flex; flex-direction: column; gap: 5px; flex: none; box-sizing: border-box; width: 48px; height: 64px; padding: 8px 7px; border-radius: 6px; background: #F4F5F8">
+<span style="height: 3px; border-radius: 2px; background: #B8BEC9"></span>
+<span style="height: 3px; width: 70%; border-radius: 2px; background: #B8BEC9"></span>
+<span style="height: 3px; border-radius: 2px; background: #B8BEC9"></span>
+<span style="height: 3px; width: 55%; border-radius: 2px; background: #B8BEC9"></span>
+<span style="height: 3px; border-radius: 2px; background: #B8BEC9"></span>
+<span style="height: 3px; width: 80%; border-radius: 2px; background: #4D5564"></span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<p style="margin: 0; font-size: 18px; line-height: 24px; font-weight: 800">רמי לוי · ₪538.40</p>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #4D5564">4 מהרשימה · קפה וחלב לא נמצא</p>
+</div>
+</section>
+<section style="display: flex; flex-direction: column; gap: 4px; padding: 16px 20px; border-radius: 24px; background: #FFFFFF">
+<p style="margin: 0 0 4px; font-size: 14px; line-height: 20px; font-weight: 700; color: #4D5564">מהרשימה · יסומנו כנקנו</p>
+<sc-for list="{{matched}}" as="item" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 48px">
+<span style="display: flex; align-items: center; justify-content: center; flex: none; width: 28px; height: 28px; border-radius: 999px; background: #FF5A1F">
+<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</span>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 0">
+<p style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 700">{{item.name}}</p>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #4D5564">{{item.line}}</p>
+</div>
+<span style="flex: none; font-size: 15px; line-height: 20px; font-weight: 700">{{item.price}}</span>
+</div>
+</sc-for>
+</section>
+<section style="display: flex; flex-direction: column; gap: 4px; padding: 16px 20px; border-radius: 24px; background: #FFFFFF">
+<p style="margin: 0 0 4px; font-size: 14px; line-height: 20px; font-weight: 700; color: #4D5564">לא היה ברשימה</p>
+<sc-for list="{{extras}}" as="item" hint-placeholder-count="3">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 48px">
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column">
+<p style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 700">{{item.name}}</p>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #4D5564">{{item.price}}</p>
+</div>
+<button type="button" onClick="{{item.toggle}}" aria-label="{{item.ariaLabel}}" style="display: flex; align-items: center; flex: none; height: 44px; padding: 0; border: 0; background: transparent; cursor: pointer">
+<span style="display: flex; align-items: center; gap: 6px; height: 36px; padding: 0 14px; border-radius: 999px; background: #E8EBFE; color: #3D53E8; font-family: Rubik, system-ui, sans-serif; font-size: 14px; line-height: 20px; font-weight: 700">
+<sc-if value="{{item.personal}}" hint-placeholder-val="{{ false }}">
+<svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="#3D53E8" stroke-width="2.4"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="#3D53E8" stroke-width="2.4" stroke-linecap="round"></path></svg>
+</sc-if>
+<sc-if value="{{item.shared}}" hint-placeholder-val="{{ true }}">
+<svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7M21 19v-1a4 4 0 0 0-3-3.9M15 4.1a3.5 3.5 0 0 1 0 6.8" fill="none" stroke="#3D53E8" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</sc-if>
+{{item.label}}
+</span>
+</button>
+</div>
+</sc-for>
+<p style="margin: 4px 0 0; font-size: 14px; line-height: 20px; color: #4D5564">{{mineLabel}}</p>
+</section>
+<button type="button" style="position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; height: 60px; padding: 0 28px; border: 0; border-radius: 999px; background: #425AF4; color: #FFFFFF; font-family: Rubik, system-ui, sans-serif; font-size: 18px; line-height: 24px; font-weight: 800; white-space: nowrap; box-shadow: 0 10px 24px rgba(16, 23, 37, 0.18)">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="#FFFFFF" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+{{ctaLabel}}
+</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const s = this.state || {};
+const shekel = (c) => '₪' + (c / 100).toFixed(2);
+const total = 53840;
+const matched = [
+{ name: 'נקניקיות', line: 'נקניקיות זוגלובק ×2', cents: 5980 },
+{ name: 'מים', line: 'מים מינרליים שישייה ×6', cents: 8340 },
+{ name: 'ביצים', line: 'ביצים L ‏30 יח׳', cents: 3690 },
+{ name: 'פחמים', line: 'פחם עץ 4 ק״ג ×2', cents: 6400 }
+];
+const extras = [
+{ id: 'bamba', name: 'במבה ×4', cents: 2360 },
+{ id: 'beer', name: 'בירות ×24', cents: 24080 },
+{ id: 'razor', name: 'סכיני גילוח', cents: 2990 }
+];
+const personal = s.personal || { razor: true };
+const mineCents = extras.filter((x) => personal[x.id]).reduce((a, x) => a + x.cents, 0);
+return {
+matched: matched.map((x) => ({ name: x.name, line: x.line, price: shekel(x.cents) })),
+extras: extras.map((x) => {
+const isMine = !!personal[x.id];
+return {
+name: x.name,
+price: shekel(x.cents),
+personal: isMine,
+shared: !isMine,
+label: isMine ? 'שלי' : 'לכולם',
+ariaLabel: x.name + ': ' + (isMine ? 'שלי, להעביר לכולם' : 'לכולם, להעביר לשלי'),
+toggle: () => {
+const next = Object.assign({}, personal);
+next[x.id] = !isMine;
+this.setState({ personal: next });
+}
+};
+}),
+mineLabel: mineCents > 0 ? shekel(mineCents) + ' שלך, לא נכנס לחלוקה' : 'הכול נכנס לחלוקה',
+ctaLabel: 'אישור · ' + shekel(total - mineCents) + ' לחלוקה'
+};
+}
+}
+</script>
+</body>
+</html>
