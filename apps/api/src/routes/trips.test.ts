@@ -327,7 +327,13 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       expect((await claim(organizer, tripId, qty.id, qty.quantityNeeded)).status).toBe(200);
       const after = await (await detail(member, tripId)).json();
       expect(after.claims).toEqual([
-        { itemId: qty.id, userId: organizer.id, quantity: qty.quantityNeeded, arrived: false },
+        {
+          itemId: qty.id,
+          userId: organizer.id,
+          quantity: qty.quantityNeeded,
+          arrived: false,
+          packed: false,
+        },
       ]);
     });
 
@@ -395,6 +401,66 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         'item_updated',
         'item_deleted',
       ]);
+    });
+
+    describe('packed', () => {
+      const pack = (user: Guest, tripId: string, itemId: string, packed: boolean) =>
+        client.trips[':tripId'].items[':itemId'].packed.$put(
+          { param: { tripId, itemId }, json: { packed } },
+          as(user),
+        );
+      const claimsOf = async (user: Guest, tripId: string) =>
+        (await (await detail(user, tripId)).json()).claims;
+
+      it('packs my own claim, and the whole group sees it', async () => {
+        const { organizer, member, data } = await tripWithMember();
+        const tripId = data.trip.id;
+        const single = data.items.find((i) => i.kind === 'single')!;
+        await claim(member, tripId, single.id, 1);
+
+        const res = await pack(member, tripId, single.id, true);
+        expect(await res.json()).toEqual({ itemId: single.id, userId: member.id, packed: true });
+        expect(await claimsOf(organizer, tripId)).toEqual([
+          { itemId: single.id, userId: member.id, quantity: 1, arrived: false, packed: true },
+        ]);
+        // Packing twice is a no-op; unpacking clears it.
+        expect((await pack(member, tripId, single.id, true)).status).toBe(200);
+        expect((await pack(member, tripId, single.id, false)).status).toBe(200);
+        expect((await claimsOf(member, tripId))[0]!.packed).toBe(false);
+      });
+
+      it("refuses anyone who doesn't own a claim on the item", async () => {
+        const { organizer, member, data } = await tripWithMember();
+        const tripId = data.trip.id;
+        const [single, unclaimed] = data.items.filter((i) => i.kind === 'single');
+        await claim(member, tripId, single!.id, 1);
+
+        expect((await pack(organizer, tripId, single!.id, true)).status).toBe(409);
+        expect((await pack(organizer, tripId, single!.id, false)).status).toBe(409);
+        expect((await pack(member, tripId, unclaimed!.id, true)).status).toBe(409);
+        const stranger = await guest('stranger');
+        expect((await pack(stranger, tripId, single!.id, true)).status).toBe(404);
+        const unknown = '00000000-0000-4000-8000-000000000000';
+        expect((await pack(member, tripId, unknown, true)).status).toBe(404);
+        expect((await claimsOf(member, tripId))[0]!.packed).toBe(false);
+      });
+
+      it('unpacks when I claim more, and stays packed when I claim less', async () => {
+        const { member, data } = await tripWithMember();
+        const tripId = data.trip.id;
+        const qty = data.items.find((i) => i.kind === 'qty')!;
+        const packedNow = async () => (await claimsOf(member, tripId))[0]!.packed;
+        await claim(member, tripId, qty.id, 1);
+        await pack(member, tripId, qty.id, true);
+
+        await claim(member, tripId, qty.id, 2);
+        expect(await packedNow()).toBe(false);
+        await pack(member, tripId, qty.id, true);
+        await claim(member, tripId, qty.id, 1);
+        expect(await packedNow()).toBe(true);
+        await claim(member, tripId, qty.id, 1);
+        expect(await packedNow()).toBe(true);
+      });
     });
   });
 

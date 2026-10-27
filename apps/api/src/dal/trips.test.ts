@@ -50,13 +50,15 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
     const [a, b] = [await trip(me, 'a'), await trip(me, 'b')];
     const inA = await buy(a, me, 'פחם');
     const inB = await buy(b, me, 'מים');
-    await setClaim(db, inB.id, me, 1, false);
+    await setClaim(db, inB.id, me, 1, undefined);
 
     const loaded = await loadTrips(db, [b, a]);
     const byName = Object.fromEntries(loaded.map((d) => [d.trip.name, d]));
     expect(byName.a!.items.map((i) => i.id)).toEqual([inA.id]);
     expect(byName.a!.claims).toEqual([]);
-    expect(byName.b!.claims).toEqual([{ itemId: inB.id, userId: me, quantity: 1, arrived: false }]);
+    expect(byName.b!.claims).toEqual([
+      { itemId: inB.id, userId: me, quantity: 1, arrived: false, packed: false },
+    ]);
     expect(byName.b!.members).toEqual([
       expect.objectContaining({ userId: me, role: 'organizer', status: 'active' }),
     ]);
@@ -67,7 +69,7 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
     const { id: me } = await signInAsGuest(testApp(db), 'me');
     const tripId = await trip(me, 'c');
     const item = await buy(tripId, me, 'קרח');
-    await setClaim(db, item.id, me, 1, false);
+    await setClaim(db, item.id, me, 1, undefined);
     await insertExpense(
       db,
       {
