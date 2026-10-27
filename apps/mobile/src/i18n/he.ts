@@ -147,7 +147,7 @@ export const he = {
   },
   trip: {
     back: 'חזרה לכל הטיולים',
-    tabs: { bring: 'ציוד', buy: 'קניות', people: 'אנשים', money: 'כסף' },
+    tabs: { bring: 'ציוד', buy: 'קניות', money: 'כסף', people: 'ניהול' },
     filters: { all: 'הכול', missing: 'חסר', mine: 'אצלי' },
     allCovered: 'הכול מכוסה',
     coveredOf: (done: number, total: number) => `${done} מתוך ${total} כבר מכוסים`,
@@ -210,6 +210,16 @@ export const he = {
     missing: (trip: string, dates: string, names: string, link: string) =>
       `חסרים ל${trip} (${dates}): ${names}. מי מביא? ${link}`,
     allCovered: (trip: string, link: string) => `הכול מכוסה ל${trip} 🎉 ${link}`,
+  },
+  deleteTrip: {
+    action: 'מחיקת טיול',
+    title: 'למחוק את הטיול?',
+    warning: 'אי אפשר לבטל את זה. הטיול יימחק לכל המשתתפים, עם הרשימות, ההוצאות והקבלות.',
+    nameLabel: 'כדי לאשר, הקלידו את שם הטיול',
+    confirm: 'מחיקה לצמיתות',
+    deleted: 'הטיול נמחק',
+    /** A trip open on screen stopped loading with a 404: deleted, or we were removed from it. */
+    gone: 'הטיול נמחק או שכבר אין לך גישה אליו',
   },
   people: {
     inviteTitle: 'עוד חברים מצטרפים?',

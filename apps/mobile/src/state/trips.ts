@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { router } from 'expo-router';
 import { parseResponse, type InferRequestType } from 'hono/client';
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 
 import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
@@ -69,6 +70,35 @@ export function useCreateTrip() {
       queryClient.setQueryData(tripKey(data.trip.id), { ...data, balances: {}, transfers: [] });
       void queryClient.invalidateQueries({ queryKey: tripsKey });
     },
+    onError: () => showToast(he.errors.failed, 'error'),
+  });
+}
+
+/** Home, and the trip out of the caches: what's left once it's gone (deleted, or we were removed). */
+export function useLeaveTrip(tripId: string) {
+  const queryClient = useQueryClient();
+  return useCallback(
+    (message: string) => {
+      router.dismissTo('/');
+      showToast(message);
+      // After leaving the screen, so its query isn't refetched for a trip that's gone.
+      setTimeout(() => {
+        queryClient.removeQueries({ queryKey: tripKey(tripId) });
+        void queryClient.invalidateQueries({ queryKey: tripsKey });
+      });
+    },
+    [queryClient, tripId],
+  );
+}
+
+/** Deletes the trip for everyone (organizers), then goes home. */
+export function useDeleteTrip(tripId: string) {
+  const leave = useLeaveTrip(tripId);
+  return useMutation({
+    // Under the trip's key: its realtime refresh waits while this is pending.
+    mutationKey: [...tripKey(tripId), 'delete'],
+    mutationFn: () => parseResponse(api.trips[':tripId'].$delete({ param: { tripId } })),
+    onSuccess: () => leave(he.deleteTrip.deleted),
     onError: () => showToast(he.errors.failed, 'error'),
   });
 }

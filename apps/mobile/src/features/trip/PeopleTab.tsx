@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Share, StyleSheet, Text, View } from 'react-native';
 
@@ -136,6 +137,18 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
           );
         })}
       </ListGroup>
+
+      {organizer && (
+        <PillButton
+          label={he.deleteTrip.action}
+          variant="danger"
+          icon={<Icon name="trash" size={18} color={colors.brandStrong} />}
+          {...testId('trip-delete')}
+          onPress={() =>
+            router.push({ pathname: '/trips/[tripId]/delete', params: { tripId: data.trip.id } })
+          }
+        />
+      )}
     </View>
   );
 }

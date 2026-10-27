@@ -156,3 +156,17 @@ test('packing reaches the other member, who cannot toggle it', async ({ page: da
   await expect(dana.locator('#bring-packed')).toHaveText('ארוז 1', { timeout: 10_000 });
   await expect(dana.locator('#item-pack, #item-unpack')).toHaveCount(0);
 });
+
+test('deleting a trip sends the other member home', async ({ page: dana, noa }) => {
+  test.skip(!REALTIME_HOST, 'E2E_REALTIME_HOST (the preview stage output `realtime`) not set');
+  await join(dana, noa);
+  await dana.locator('#trip-delete').click();
+  await dana.locator('#trip-delete-name').fill('E2E trip');
+  await dana.locator('#trip-delete-confirm').click();
+  await expect(dana.locator('#home-new-trip')).toBeVisible();
+
+  // Noa still had it open: its realtime event refetches it, and the 404 takes her home.
+  await expect(noa.getByText('הטיול נמחק או שכבר אין לך גישה אליו')).toBeVisible();
+  await expect(noa.locator('#home-new-trip')).toBeVisible();
+  await expect(noa.locator('#trip-title')).toBeHidden();
+});
