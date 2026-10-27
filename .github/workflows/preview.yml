@@ -44,6 +44,8 @@ jobs:
       pull-requests: write # the sticky comment
     outputs:
       url: ${{ steps.deploy.outputs.url }}
+      api: ${{ steps.deploy.outputs.api }}
+      realtime: ${{ steps.deploy.outputs.realtime }}
     env:
       SST_SECRET_BetterAuthSecret: ${{ secrets.BETTER_AUTH_SECRET }}
       EXPO_PUBLIC_STAGE: pr-${{ github.event.pull_request.number }} # VersionLine
@@ -67,8 +69,8 @@ jobs:
         run: |
           pnpm sst unlock --stage "$STAGE"
           pnpm sst deploy --stage "$STAGE"
-          echo "url=$(jq -r .url infra/app/.sst/outputs.json)/" >> "$GITHUB_OUTPUT"
-          echo "api=$(jq -r .api infra/app/.sst/outputs.json)" >> "$GITHUB_OUTPUT"
+          jq -r '"url=\(.url)/", "api=\(.api)", "realtime=\(.realtime)"' \
+            infra/app/.sst/outputs.json >> "$GITHUB_OUTPUT"
       # The cluster starts empty; later pushes apply only new migrations.
       - name: Migrate the database
         run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @yallist/api db:migrate
@@ -118,10 +120,9 @@ jobs:
           persist-credentials: false
       - uses: ./.github/actions/maestro-web
         id: maestro
-      # Not the flows tagged test-photo or test-route: they need a build that picks the fixture
-      # photo in place of the file picker (EXPO_PUBLIC_E2E_RECEIPT) or opens the test-only routes
+      # Not the flows tagged test-route: they need a build that opens the test-only routes
       # (EXPO_PUBLIC_E2E), which a preview people use mustn't be.
-      - run: scripts/e2e-web.sh --exclude-tags=test-photo,test-route apps/mobile/e2e
+      - run: scripts/e2e-web.sh --exclude-tags=test-route apps/mobile/e2e
         env:
           MAESTRO: ${{ steps.maestro.outputs.maestro }}
           E2E_WEB_URL: ${{ needs.deploy.outputs.url }}
@@ -136,9 +137,9 @@ jobs:
           retention-days: 14
           overwrite: true
 
-  # Fails unless the preview deployed and every shard passed.
+  # Fails unless the preview deployed, every shard passed and the preview-only tests passed.
   ui-tests:
-    needs: [deploy, ui-shard]
+    needs: [deploy, ui-shard, preview-only]
     if: always() && needs.deploy.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -154,11 +155,51 @@ jobs:
         env:
           ARTIFACTS: '[Videos and logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts) (`preview-ui-tests-…-shard-N`): one MP4 per flow under `maestro/*/<flow>/startRecording/`.'
         run: python3 scripts/ui-tests-summary.py results/*/junit.xml >> "$GITHUB_STEP_SUMMARY"
-      - name: Fail unless every shard passed
+      - name: Fail unless every shard and the preview-only tests passed
         env:
           DEPLOY: ${{ needs.deploy.result }}
           SHARDS: ${{ needs.ui-shard.result }}
-        run: test "$DEPLOY" = success && test "$SHARDS" = success
+          PREVIEW_ONLY: ${{ needs.preview-only.result }}
+        run: test "$DEPLOY" = success && test "$SHARDS" = success && test "$PREVIEW_ONLY" = success
+
+  # The preview-only UI tests (apps/mobile/e2e/preview, Playwright): photos through the real file
+  # input to S3, two sessions (invite link, approval, AppSync Events) and CORS on the real API.
+  # No AWS role or secrets: they only browse the preview. See docs/plans/ui-tests.md.
+  preview-only:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The browser (Chrome headless shell) and ffmpeg for the videos, per Playwright version.
+      - id: playwright
+        run: echo "version=$(pnpm --filter mobile exec playwright --version | cut -d" " -f2)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ steps.playwright.outputs.version }}
+      - run: pnpm --filter mobile exec playwright install chromium-headless-shell ffmpeg
+      - run: pnpm --filter mobile exec playwright test
+        env:
+          E2E_WEB_URL: ${{ needs.deploy.outputs.url }}
+          E2E_API_URL: ${{ needs.deploy.outputs.api }}
+          E2E_REALTIME_HOST: ${{ needs.deploy.outputs.realtime }}
+          E2E_OUT: ${{ runner.temp }}/preview-only
+      # A video per page (two per test for two people), JUnit, and a trace for each failure.
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: preview-only-tests-${{ github.run_number }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/preview-only
+          retention-days: 14
 
   remove:
     if: >-

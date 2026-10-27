@@ -29,11 +29,8 @@ jobs:
           node-version-file: .nvmrc
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      # The API URL every shard serves (scripts/e2e-web.sh API_PORT), the test-only routes, and
-      # the photo the build picks in place of the file picker (EXPO_PUBLIC_E2E_RECEIPT there).
-      - run: |
-          EXPO_PUBLIC_E2E_RECEIPT="data:image/jpeg;base64,$(base64 -w0 apps/mobile/e2e/fixtures/receipt.jpg)" \
-            pnpm --filter mobile exec expo export -p web
+      # The API URL every shard serves (scripts/e2e-web.sh API_PORT) and the test-only routes.
+      - run: pnpm --filter mobile exec expo export -p web
         env:
           EXPO_PUBLIC_API_URL: http://localhost:3100
           EXPO_PUBLIC_E2E: 1
