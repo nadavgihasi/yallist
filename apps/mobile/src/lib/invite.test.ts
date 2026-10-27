@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { inviteUrl } from './invite';
+import { invitePayload, inviteUrl } from './invite';
 
 describe('inviteUrl', () => {
   it('builds an https link to the join page', () => {
@@ -21,5 +21,16 @@ describe('inviteUrl', () => {
     expect(inviteUrl('https://yallist.example', 'a/b?c')).toBe(
       'https://yallist.example/j/a%2Fb%3Fc',
     );
+  });
+});
+
+describe('invitePayload', () => {
+  const url = 'https://yallist.example/j/abc';
+  // What the receiving app shows: share targets join the text and the url.
+  const shared = (p: { message?: string; url?: string }) =>
+    [p.message, p.url].filter(Boolean).join(' ');
+
+  it.each(['web', 'ios', 'android'])('carries the link once on %s', (os) => {
+    expect(shared(invitePayload(url, os)).split(url)).toHaveLength(2);
   });
 });
