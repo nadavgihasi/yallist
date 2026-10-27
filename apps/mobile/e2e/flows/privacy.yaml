@@ -1,0 +1,20 @@
+# The privacy policy opens signed out, from the login screen, in Hebrew and in English.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [privacy]
+---
+- launchApp:
+    clearState: true
+- tapOn:
+    id: login-privacy
+- assertVisible:
+    id: privacy-title
+- assertVisible: מדיניות פרטיות
+- tapOn:
+    id: privacy-lang
+- assertVisible: Privacy policy
