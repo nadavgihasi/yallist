@@ -4,6 +4,7 @@ import {
   isDone,
   isRunEligible,
   itemStatus,
+  myBag,
   splitEqually,
   type Item,
   type ListKind,
@@ -49,6 +50,7 @@ export function deriveTrip(data: TripData, me: string) {
     return claim?.userId;
   };
   const runClaims = (runId: string) => data.claims.filter((c) => c.runId === runId);
+  const bought = new Set(data.expenses.flatMap((e) => e.itemIds ?? []));
 
   return {
     activeIds,
@@ -67,6 +69,8 @@ export function deriveTrip(data: TripData, me: string) {
     myRun,
     shopperOf,
     runClaims,
+    /** Everything I bring: my claims on the lists, and my private items (התיק שלי). */
+    bag: myBag(me, [...items, ...data.privateItems], data.claims, bought),
     /** What a run may claim now: shared buy items nobody has, not bought yet. */
     runEligible: items.filter((i) => isRunEligible(i, data.claims, data.expenses)),
     status: (item: Item) => itemStatus(item, data.claims, data.expenses, activeIds, me),

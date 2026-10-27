@@ -141,6 +141,8 @@ async function send(tripId: string, action: Action): Promise<unknown> {
       const item = await parseResponse(trip.items.$post({ param, json }));
       return action.claim > 0 && claim(item.id, action.claim);
     }
+    case 'addPrivateItem':
+      return parseResponse(trip.bag.$post({ param, json: { name: action.name } }));
     case 'deleteItem':
       return parseResponse(
         trip.items[':itemId'].$delete({ param: { ...param, itemId: action.itemId } }),

@@ -20,6 +20,7 @@ import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { Skeleton } from '@/components/Skeleton';
+import { BagTab } from '@/features/trip/BagTab';
 import { deriveTrip } from '@/features/trip/derive';
 import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
@@ -35,7 +36,7 @@ import { useLeaveTrip, useTripQuery, useTripUpdates } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
-const TABS = ['bring', 'buy', 'money', 'people'] as const;
+const TABS = ['bring', 'buy', 'bag', 'money', 'people'] as const;
 type Tab = (typeof TABS)[number];
 
 /** Keeps the desktop side panel in view while the list scrolls (web only). */
@@ -107,6 +108,7 @@ export default function TripScreen() {
   const tabs = [
     { value: 'bring' as const, label: he.trip.tabCount(he.trip.tabs.bring, count('bring')) },
     { value: 'buy' as const, label: he.trip.tabCount(he.trip.tabs.buy, count('buy')) },
+    { value: 'bag' as const, label: he.trip.tabs.bag },
     { value: 'money' as const, label: he.trip.tabs.money },
     { value: 'people' as const, label: he.trip.tabs.people },
   ];
@@ -131,8 +133,10 @@ export default function TripScreen() {
       ? null
       : tab === 'money'
         ? () => router.push({ pathname: '/trips/[tripId]/expenses/new', params: { tripId } })
-        : () =>
-            router.push({ pathname: '/trips/[tripId]/items/new', params: { tripId, list: tab } });
+        : tab === 'bag'
+          ? () => router.push({ pathname: '/trips/[tripId]/bag/new', params: { tripId } })
+          : () =>
+              router.push({ pathname: '/trips/[tripId]/items/new', params: { tripId, list: tab } });
 
   return (
     <View style={styles.screen}>
@@ -207,6 +211,7 @@ export default function TripScreen() {
                 onFilter={setFilter}
               />
             )}
+            {tab === 'bag' && <BagTab data={data} view={view} />}
             {tab === 'people' && <PeopleTab data={data} view={view} me={me.userId} />}
             {tab === 'money' && <MoneyTab data={data} view={view} me={me.userId} />}
           </View>
@@ -228,8 +233,8 @@ export default function TripScreen() {
       </ScrollView>
       {add && (
         <FloatingAction
-          label={he.trip.fabShort[tab as 'bring' | 'buy' | 'money']}
-          accessibilityLabel={he.trip.fab[tab as 'bring' | 'buy' | 'money']}
+          label={he.trip.fabShort[tab as Exclude<Tab, 'people'>]}
+          accessibilityLabel={he.trip.fab[tab as Exclude<Tab, 'people'>]}
           testID="trip-add"
           onPress={add}
         />

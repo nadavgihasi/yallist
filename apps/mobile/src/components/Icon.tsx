@@ -82,6 +82,10 @@ const ICONS = {
   cart: ['M3 4h2l2.5 11h10L20 8H6.5'],
   /** "More options" (three dots). */
   more: ['M12 5h.01', 'M12 12h.01', 'M12 19h.01'],
+  lock: [
+    'M7 11h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2Z',
+    'M8 11V8a4 4 0 0 1 8 0v3',
+  ],
   trash: [
     'M3 6h18',
     'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6',

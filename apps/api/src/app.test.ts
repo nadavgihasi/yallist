@@ -168,6 +168,29 @@ describe.skipIf(!DATABASE_URL)('auth', () => {
     ]);
   });
 
+  it('moves the guest’s private items to the account', async () => {
+    const guest = await signInAsGuest('guest');
+    const account = await signInAsGuest('account');
+    const [trip] = await sql<{ id: string }[]>`
+      insert into trips (name, starts_on, ends_on, template, invite_token, created_by)
+      values ('P', '2026-11-01', '2026-11-02', 'camp', 'token-p', ${guest.id}) returning id`;
+    const [gum] = await sql<{ id: string }[]>`
+      insert into items (trip_id, list, category, position, name, kind, created_by,
+        private_owner_id)
+      values (${trip!.id}, 'bring', '', 0, 'gum', 'single', ${guest.id}, ${guest.id})
+      returning id`;
+    await sql`insert into claims (item_id, user_id, quantity) values (${gum!.id}, ${guest.id}, 1)`;
+
+    await mergeUser(db, guest.id, account.id);
+
+    expect(await sql`select private_owner_id from items where id = ${gum!.id}`).toEqual([
+      { private_owner_id: account.id },
+    ]);
+    expect(await sql`select user_id from claims where item_id = ${gum!.id}`).toEqual([
+      { user_id: account.id },
+    ]);
+  });
+
   it('keeps one active shopping run per trip, with both users’ items in it', async () => {
     const guest = await signInAsGuest('guest');
     const account = await signInAsGuest('account');

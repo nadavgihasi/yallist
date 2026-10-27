@@ -1,0 +1,3 @@
+ALTER TABLE "items" ADD COLUMN "private_owner_id" uuid;--> statement-breakpoint
+ALTER TABLE "items" ADD CONSTRAINT "items_private_owner_id_profiles_id_fk" FOREIGN KEY ("private_owner_id") REFERENCES "public"."profiles"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "items" ADD CONSTRAINT "items_private_check" CHECK ("items"."private_owner_id" is null or ("items"."list" = 'bring' and "items"."kind" = 'single' and "items"."quantity_needed" = 1));

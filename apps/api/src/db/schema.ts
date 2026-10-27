@@ -251,12 +251,21 @@ export const items = pgTable(
     createdBy: userRef('created_by').notNull(),
     createdAt: createdAt(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
+    /**
+     * Set: a private item in this user's bag, which only they can see or change (packing spec
+     * §3). Always one thing on the bring list, which they claim when adding it.
+     */
+    privateOwnerId: userRef('private_owner_id'),
   },
   (t) => [
     index('items_trip_idx').on(t.tripId),
     oneOf('items_list_check', t.list, LISTS),
     oneOf('items_kind_check', t.kind, KINDS),
     positive('items_quantity_needed_check', t.quantityNeeded),
+    check(
+      'items_private_check',
+      sql`${t.privateOwnerId} is null or (${t.list} = 'bring' and ${t.kind} = 'single' and ${t.quantityNeeded} = 1)`,
+    ),
   ],
 );
 

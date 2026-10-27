@@ -108,7 +108,7 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
         });
         await seedItems(tx, tripId, user.id, template);
         await logActivity(tx, tripId, user.id, 'trip_created', { template });
-        return (await loadTrips(tx, [tripId], photos))[0]!;
+        return (await loadTrips(tx, [tripId], user.id, photos))[0]!;
       });
       return c.json(data, 201);
     })
@@ -117,7 +117,8 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
     .get('/', async (c) => {
       const me = c.var.user.id;
       const all = await transact(db, async (tx) =>
-        loadTrips(tx, await activeTripIds(tx, me), photos),
+        // Shared items only: private ones count towards nothing, not even for their owner.
+        loadTrips(tx, await activeTripIds(tx, me), null, photos),
       );
       const summaries = all
         .sort((a, b) => a.trip.startsOn.localeCompare(b.trip.startsOn))
@@ -146,7 +147,7 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
       const { tripId } = c.req.valid('param');
       const data = await transact(db, async (tx) => {
         await requireMember(tx, tripId, c.var.user.id);
-        return (await loadTrips(tx, [tripId], photos))[0]!;
+        return (await loadTrips(tx, [tripId], c.var.user.id, photos))[0]!;
       });
       return c.json({ ...data, ...settleUp(data) });
     })

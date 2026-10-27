@@ -34,6 +34,8 @@ export type Action =
   // `newCategory`: create a category of that name first, and put the item in it.
   | { type: 'addItem'; item: NewItemInput; claim: number; newCategory?: string }
   | { type: 'deleteItem'; itemId: string }
+  /** Something only I need, into my bag (packing spec `add_private_item`). */
+  | { type: 'addPrivateItem'; name: string }
   | { type: 'editItem'; itemId: string; changes: NewItemInput; newCategory?: string }
   | { type: 'addCategory'; list: ListKind; name: string }
   | { type: 'renameCategory'; categoryId: string; name: string }
@@ -91,6 +93,7 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
       return {
         ...data,
         items: data.items.filter((i) => i.id !== action.itemId),
+        privateItems: data.privateItems.filter((i) => i.id !== action.itemId),
         claims: data.claims.filter((c) => c.itemId !== action.itemId),
         expenses: data.expenses.map((e) => ({
           ...e,

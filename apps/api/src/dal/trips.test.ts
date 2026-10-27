@@ -52,7 +52,7 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
     const inB = await buy(b, me, 'מים');
     await setClaim(db, inB.id, me, 1, undefined);
 
-    const loaded = await loadTrips(db, [b, a]);
+    const loaded = await loadTrips(db, [b, a], null);
     const byName = Object.fromEntries(loaded.map((d) => [d.trip.name, d]));
     expect(byName.a!.items.map((i) => i.id)).toEqual([inA.id]);
     expect(byName.a!.claims).toEqual([]);
@@ -62,7 +62,7 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
     expect(byName.b!.members).toEqual([
       expect.objectContaining({ userId: me, role: 'organizer', status: 'active' }),
     ]);
-    expect(await loadTrips(db, [])).toEqual([]);
+    expect(await loadTrips(db, [], null)).toEqual([]);
   });
 
   it('drops a deleted item with its claims, and unlinks its purchase', async () => {
@@ -85,7 +85,7 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
     );
     await deleteItem(db, item.id);
 
-    const [data] = await loadTrips(db, [tripId]);
+    const [data] = await loadTrips(db, [tripId], null);
     expect(data!.items).toEqual([]);
     expect(data!.claims).toEqual([]);
     expect(data!.expenses).toEqual([

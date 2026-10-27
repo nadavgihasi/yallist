@@ -98,9 +98,10 @@ export function filterItems(
   activeIds: readonly string[],
   me: string,
 ): Item[] {
-  if (filter === 'all') return [...items];
-  if (filter === 'missing') return items.filter((i) => !isDone(i, claims, expenses, activeIds));
-  return items.filter((i) => isOnMyList(i, claims, me));
+  const shared = items.filter((i) => !i.privateOwnerId);
+  if (filter === 'all') return shared;
+  if (filter === 'missing') return shared.filter((i) => !isDone(i, claims, expenses, activeIds));
+  return shared.filter((i) => isOnMyList(i, claims, me));
 }
 
 /**

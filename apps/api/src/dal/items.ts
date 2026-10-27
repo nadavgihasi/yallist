@@ -1,7 +1,7 @@
-import { and, asc, eq, isNull, max } from 'drizzle-orm';
+import { and, asc, eq, isNull, max, or } from 'drizzle-orm';
 
 import { fail } from '../access';
-import { items, templateItems, type TEMPLATE_IDS } from '../db/schema';
+import { claims, items, templateItems, type TEMPLATE_IDS } from '../db/schema';
 import type { Executor, Tx } from '../db/tx';
 import { insertCategories } from './categories';
 
@@ -11,23 +11,42 @@ type NewItem = Omit<
 >;
 type ItemChanges = Partial<NewItem & { position: number }>;
 
-/** A live (not deleted) item of the trip. Writes pass `lock`: claims and edits run one at a time. */
+/**
+ * Items everyone in the trip sees, plus `owner`'s private items when given. Everyone else's
+ * private items don't exist, as far as any query built on this can tell.
+ */
+export const visibleTo = (owner?: string | null) =>
+  owner
+    ? or(isNull(items.privateOwnerId), eq(items.privateOwnerId, owner))
+    : isNull(items.privateOwnerId);
+
+/**
+ * A live (not deleted) shared item of the trip, or with `owner`, also one of their private items.
+ * Writes pass `lock`: claims and edits run one at a time.
+ */
 export async function findItem(
   tx: Executor,
   tripId: string,
   itemId: string,
-  { lock = false } = {},
+  { lock = false, owner }: { lock?: boolean; owner?: string } = {},
 ) {
   const query = tx
     .select()
     .from(items)
-    .where(and(eq(items.id, itemId), eq(items.tripId, tripId), isNull(items.deletedAt)));
+    .where(
+      and(
+        eq(items.id, itemId),
+        eq(items.tripId, tripId),
+        isNull(items.deletedAt),
+        visibleTo(owner),
+      ),
+    );
   const [item] = await (lock ? query.for('update') : query);
   return item;
 }
 
-export async function lockItem(tx: Tx, tripId: string, itemId: string) {
-  const item = await findItem(tx, tripId, itemId, { lock: true });
+export async function lockItem(tx: Tx, tripId: string, itemId: string, owner?: string) {
+  const item = await findItem(tx, tripId, itemId, { lock: true, owner });
   if (!item) throw fail(404, 'Item not found');
   return item;
 }
@@ -83,6 +102,18 @@ export async function seedItems(
 export async function updateItem(tx: Executor, itemId: string, changes: ItemChanges) {
   const [item] = await tx.update(items).set(changes).where(eq(items.id, itemId)).returning();
   return item!;
+}
+
+/** Adds a private item to the owner's bag, claimed by them. */
+export async function addPrivateItem(tx: Executor, tripId: string, owner: string, name: string) {
+  const item = await appendItem(tx, tripId, owner, {
+    list: 'bring',
+    kind: 'single',
+    name,
+    privateOwnerId: owner,
+  });
+  await tx.insert(claims).values({ itemId: item.id, userId: owner, quantity: 1 });
+  return item;
 }
 
 /** Soft delete: the item and its claims disappear from the trip, the history stays. */
