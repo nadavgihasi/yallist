@@ -4,6 +4,7 @@ import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 import { fail } from '../access';
 import { avatarUrl } from '../avatars';
 import {
+  activity,
   claims,
   expenseItems,
   expenseShares,
@@ -12,6 +13,7 @@ import {
   payments,
   profiles,
   shoppingRuns,
+  tripCategories,
   tripMembers,
   trips,
   users,
@@ -44,6 +46,48 @@ export async function lockTrip(tx: Tx, tripId: string) {
   const [trip] = await tx.select().from(trips).where(eq(trips.id, tripId)).for('update');
   if (!trip) throw fail(404, 'Trip not found');
   return trip;
+}
+
+/** Deletes up to `limit` of the trip's oldest activity rows; returns how many it deleted. */
+export async function deleteActivity(tx: Executor, tripId: string, limit: number) {
+  const rows = await tx
+    .select({ id: activity.id })
+    .from(activity)
+    .where(eq(activity.tripId, tripId))
+    .limit(limit);
+  if (rows.length === 0) return 0;
+  const ids = rows.map((r) => r.id);
+  await tx.delete(activity).where(inArray(activity.id, ids));
+  return ids.length;
+}
+
+/**
+ * Deletes the trip and everything in it, children first (no cascades on DSQL). Returns the
+ * receipt keys its expenses had, for the caller to delete from storage once this commits.
+ */
+export async function deleteTrip(tx: Executor, tripId: string) {
+  const tripItems = tx.select({ id: items.id }).from(items).where(eq(items.tripId, tripId));
+  const tripExpenses = tx
+    .select({ id: expenses.id })
+    .from(expenses)
+    .where(eq(expenses.tripId, tripId));
+  await tx.delete(claims).where(inArray(claims.itemId, tripItems));
+  // Runs after the claims that point at them; runs and purchased items before the expenses.
+  await tx.delete(shoppingRuns).where(eq(shoppingRuns.tripId, tripId));
+  await tx.delete(expenseItems).where(inArray(expenseItems.expenseId, tripExpenses));
+  await tx.delete(expenseShares).where(inArray(expenseShares.expenseId, tripExpenses));
+  const deleted = await tx
+    .delete(expenses)
+    .where(eq(expenses.tripId, tripId))
+    .returning({ receiptPath: expenses.receiptPath });
+  await tx.delete(payments).where(eq(payments.tripId, tripId));
+  // Items after their purchases, categories after their items.
+  await tx.delete(items).where(eq(items.tripId, tripId));
+  await tx.delete(tripCategories).where(eq(tripCategories.tripId, tripId));
+  await tx.delete(activity).where(eq(activity.tripId, tripId));
+  await tx.delete(tripMembers).where(eq(tripMembers.tripId, tripId));
+  await tx.delete(trips).where(eq(trips.id, tripId));
+  return deleted.flatMap((e) => (e.receiptPath ? [e.receiptPath] : []));
 }
 
 export async function tripByToken(tx: Executor, token: string) {

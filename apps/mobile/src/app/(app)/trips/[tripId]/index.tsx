@@ -1,6 +1,6 @@
 import { formatShekel, type ListFilter } from '@yallist/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -31,11 +31,11 @@ import { statusOf } from '@/lib/api';
 import { testId } from '@/lib/testId';
 import { useToday } from '@/lib/useToday';
 import { useMe } from '@/state/store';
-import { useTripQuery, useTripUpdates } from '@/state/trips';
+import { useLeaveTrip, useTripQuery, useTripUpdates } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
-const TABS = ['bring', 'buy', 'people', 'money'] as const;
+const TABS = ['bring', 'buy', 'money', 'people'] as const;
 type Tab = (typeof TABS)[number];
 
 /** Keeps the desktop side panel in view while the list scrolls (web only). */
@@ -78,6 +78,14 @@ export default function TripScreen() {
     }, [itemId, list, categoryId]),
   );
 
+  // Open when it was deleted (its realtime event refetches it) or we were removed from it: home,
+  // with a word on why, rather than a trip that no longer saves anything.
+  const leave = useLeaveTrip(tripId);
+  const gone = data !== undefined && statusOf(query.error) === 404;
+  useEffect(() => {
+    if (gone) leave(he.deleteTrip.gone);
+  }, [gone, leave]);
+
   const home = { label: he.states.toTrips, onPress: () => router.replace('/') };
   if (!data) {
     if (query.isPending) return <TripSkeleton top={space[6] + insets.top} />;
@@ -99,8 +107,8 @@ export default function TripScreen() {
   const tabs = [
     { value: 'bring' as const, label: he.trip.tabCount(he.trip.tabs.bring, count('bring')) },
     { value: 'buy' as const, label: he.trip.tabCount(he.trip.tabs.buy, count('buy')) },
-    { value: 'people' as const, label: he.trip.tabs.people },
     { value: 'money' as const, label: he.trip.tabs.money },
+    { value: 'people' as const, label: he.trip.tabs.people },
   ];
 
   // Phone and tablet: above the tabs. Desktop: at the top of the side panel.

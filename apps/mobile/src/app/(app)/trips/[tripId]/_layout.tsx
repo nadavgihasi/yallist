@@ -25,6 +25,7 @@ export default function TripLayout() {
       <Stack.Screen name="shop/index" />
       <Stack.Screen name="shop/start" options={sheet} />
       <Stack.Screen name="shop/finish" options={sheet} />
+      <Stack.Screen name="delete" options={sheet} />
     </Stack>
   );
 }

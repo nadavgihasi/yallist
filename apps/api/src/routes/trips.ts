@@ -19,11 +19,11 @@ import {
 } from '../dal/members';
 import { displayNameOf } from '../dal/profiles';
 import { cancelMemberRuns } from '../dal/runs';
-import { insertTrip, loadTrips, lockTrip, setTrip } from '../dal/trips';
+import { deleteActivity, deleteTrip, insertTrip, loadTrips, lockTrip, setTrip } from '../dal/trips';
 import type { Db } from '../db/client';
 import { ROLES, TEMPLATE_IDS, tripMembers, TRIP_STATUSES } from '../db/schema';
 import { transact, type Tx } from '../db/tx';
-import type { ReceiptStore } from '../receipts';
+import { deleteReceipt, type ReceiptStore } from '../receipts';
 import { settleUp, toTrip } from '../trip-data';
 
 /** 128 bits from a CSPRNG, URL-safe (SPEC §5): the invite link is a bearer capability. */
@@ -56,6 +56,12 @@ const updateTrip = z
   .object({ ...tripFields, status: z.enum(TRIP_STATUSES) })
   .partial()
   .refine(datesInOrder, datesMessage);
+
+/**
+ * Activity rows deleted per transaction when deleting a trip, well under DSQL's 3,000 rows. The
+ * log gains a row with every change, so a long-lived trip can have more than that.
+ */
+const ACTIVITY_BATCH = 2000;
 
 const tripParam = z.object({ tripId: z.uuid() });
 const memberParam = z.object({ tripId: z.uuid(), userId: z.uuid() });
@@ -159,6 +165,28 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
         return updated;
       });
       return c.json(toTrip(trip));
+    })
+
+    // Organizers only; for every member, and for good. The activity log goes first, in batches
+    // (the app never shows it, so a failure after them loses nothing visible). Then the rest,
+    // all at once: members can't see a half-deleted trip.
+    .delete('/:tripId', validate('param', tripParam), async (c) => {
+      const { tripId } = c.req.valid('param');
+      const me = c.var.user.id;
+      const activityBatch = () =>
+        transact(db, async (tx) => {
+          await requireMember(tx, tripId, me, { organizer: true });
+          return deleteActivity(tx, tripId, ACTIVITY_BATCH);
+        });
+      while ((await activityBatch()) === ACTIVITY_BATCH);
+      const receiptPaths = await transact(db, async (tx) => {
+        await lockTrip(tx, tripId);
+        await requireMember(tx, tripId, me, { organizer: true, lock: true });
+        return deleteTrip(tx, tripId);
+      });
+      // After the commit, best effort, as when deleting an expense.
+      await Promise.all(receiptPaths.map((key) => deleteReceipt(photos, key)));
+      return c.body(null, 204);
     })
 
     // A new invite link; the old one stops working at once.
