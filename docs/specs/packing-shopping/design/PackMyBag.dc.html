@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Yallist — התיק שלי</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700;800&amp;display=swap">
+<style>
+body{margin:0}
+a{color:#3D53E8}a:hover{color:#101725}
+</style>
+</helmet>
+<div dir="rtl" style="position: relative; width: 390px; height: 844px; box-sizing: border-box; padding: 24px 16px 0; background: #F4F5F8; font-family: Rubik, system-ui, -apple-system, sans-serif; color: #101725; display: flex; flex-direction: column; gap: 16px; overflow: hidden">
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="Trip.dc.html" aria-label="חזרה לטיול" style="display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; border-radius: 999px; background: #FFFFFF">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="#101725" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</a>
+<h1 style="margin: 0; font-size: 22px; line-height: 28px; font-weight: 800; letter-spacing: -0.01em">קמפינג בכנרת</h1>
+</div>
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 999px; background: #FFFFFF">
+<button type="button" aria-pressed="false" style="height: 44px; border: 0; border-radius: 999px; background: #FFFFFF; color: #4D5564; font-family: Rubik, system-ui, sans-serif; font-size: 15px; line-height: 20px; font-weight: 700">מביאים · 20</button>
+<button type="button" aria-pressed="false" style="height: 44px; border: 0; border-radius: 999px; background: #FFFFFF; color: #4D5564; font-family: Rubik, system-ui, sans-serif; font-size: 15px; line-height: 20px; font-weight: 700">קונים · 7</button>
+<button type="button" aria-pressed="true" style="height: 44px; border: 0; border-radius: 999px; background: #425AF4; color: #FFFFFF; font-family: Rubik, system-ui, sans-serif; font-size: 15px; line-height: 20px; font-weight: 700">התיק שלי</button>
+</div>
+<section style="display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; border-radius: 24px; background: #FFFFFF">
+<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px">
+<p style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 700">{{packedLabel}}</p>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #4D5564">יוצאים מחר ב־8:00</p>
+</div>
+<div style="height: 8px; border-radius: 999px; background: #F4F5F8; overflow: hidden">
+<div style="width: {{pct}}; height: 8px; border-radius: 999px; background: #FF5A1F"></div>
+</div>
+</section>
+<section style="display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; border-radius: 24px; background: #FFFFFF">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<p style="margin: 0; font-size: 14px; line-height: 20px; font-weight: 700; color: #4D5564">לקבוצה</p>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #4D5564">הקבוצה רואה מה ארוז</p>
+</div>
+<sc-for list="{{groupItems}}" as="item" hint-placeholder-count="4">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 44px">
+<button type="button" onClick="{{item.toggle}}" aria-label="{{item.toggleLabel}}" aria-pressed="{{item.pressed}}" style="display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; margin: -8px; padding: 0; border: 0; background: transparent; cursor: pointer">
+<sc-if value="{{item.packed}}" hint-placeholder-val="{{ false }}">
+<span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: #FF5A1F">
+<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</span>
+</sc-if>
+<sc-if value="{{item.open}}" hint-placeholder-val="{{ true }}">
+<span style="box-sizing: border-box; width: 28px; height: 28px; border-radius: 999px; border: 2px solid #4D5564"></span>
+</sc-if>
+</button>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<p style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 700">{{item.name}}</p>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #4D5564">{{item.sub}}</p>
+</div>
+</div>
+</sc-for>
+</section>
+<section style="display: flex; flex-direction: column; gap: 8px; padding: 16px 20px; border-radius: 24px; background: #FFFFFF">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px">
+<p style="display: flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; line-height: 20px; font-weight: 700; color: #4D5564">
+<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2" fill="none" stroke="#4D5564" stroke-width="2.2"></rect><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="#4D5564" stroke-width="2.2" stroke-linecap="round"></path></svg>
+רק שלי
+</p>
+<p style="margin: 0; font-size: 13px; line-height: 18px; color: #4D5564">גלוי רק לך</p>
+</div>
+<sc-for list="{{myItems}}" as="item" hint-placeholder-count="2">
+<div style="display: flex; align-items: center; gap: 12px; min-height: 44px">
+<button type="button" onClick="{{item.toggle}}" aria-label="{{item.toggleLabel}}" aria-pressed="{{item.pressed}}" style="display: flex; align-items: center; justify-content: center; flex: none; width: 44px; height: 44px; margin: -8px; padding: 0; border: 0; background: transparent; cursor: pointer">
+<sc-if value="{{item.packed}}" hint-placeholder-val="{{ false }}">
+<span style="display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 999px; background: #FF5A1F">
+<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+</span>
+</sc-if>
+<sc-if value="{{item.open}}" hint-placeholder-val="{{ true }}">
+<span style="box-sizing: border-box; width: 28px; height: 28px; border-radius: 999px; border: 2px solid #4D5564"></span>
+</sc-if>
+</button>
+<div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px">
+<p style="margin: 0; font-size: 16px; line-height: 22px; font-weight: 700">{{item.name}}</p>
+<p style="margin: 0; font-size: 14px; line-height: 20px; color: #4D5564">{{item.sub}}</p>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{hasChips}}" hint-placeholder-val="{{ true }}">
+<div style="display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-top: 4px">
+<span style="font-size: 14px; line-height: 20px; color: #4D5564">אולי גם</span>
+<sc-for list="{{chips}}" as="chip" hint-placeholder-count="3">
+<button type="button" onClick="{{chip.add}}" style="display: flex; align-items: center; gap: 6px; height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: #E8EBFE; color: #3D53E8; font-family: Rubik, system-ui, sans-serif; font-size: 15px; line-height: 20px; font-weight: 700; cursor: pointer">
+<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="#3D53E8" stroke-width="2.5" stroke-linecap="round"></path></svg>
+{{chip.label}}
+</button>
+</sc-for>
+</div>
+</sc-if>
+</section>
+<button type="button" style="position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 16px; height: 60px; padding: 0 28px; border: 0; border-radius: 999px; background: #425AF4; color: #FFFFFF; font-family: Rubik, system-ui, sans-serif; font-size: 18px; line-height: 24px; font-weight: 800; white-space: nowrap; box-shadow: 0 10px 24px rgba(16, 23, 37, 0.18)">
+<svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14" fill="none" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"></path></svg>
+פריט לתיק
+</button>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+renderVals() {
+const s = this.state || {};
+const packed = s.packed || { cooler: true, sleeping: true, swim: true };
+const added = s.added || [];
+const toggle = (id) => () => {
+const next = Object.assign({}, packed);
+next[id] = !packed[id];
+this.setState({ packed: next, added: added });
+};
+const row = (it) => {
+const on = !!packed[it.id];
+return {
+name: it.name,
+sub: on ? it.sub + ' · ארוז' : it.sub,
+packed: on,
+open: !on,
+pressed: on ? 'true' : 'false',
+toggleLabel: on ? 'סימון כלא ארוז' : 'סימון כארוז',
+toggle: toggle(it.id)
+};
+};
+const group = [
+{ id: 'chairs', name: 'כיסאות מתקפלים ×4', sub: 'עליך · מהרשימה' },
+{ id: 'cooler', name: 'מצננת', sub: 'עליך · מהרשימה' },
+{ id: 'sleeping', name: 'שק שינה', sub: 'אחד לכל אחד · מהרשימה' },
+{ id: 'sausages', name: 'נקניקיות · 2 חבילות', sub: 'קנית · מהקניות' }
+];
+const suggestions = [
+{ id: 'towel', name: 'מגבת' },
+{ id: 'hat', name: 'כובע' },
+{ id: 'powerbank', name: 'מטען נייד' }
+];
+const mine = [
+{ id: 'swim', name: 'בגד ים', sub: 'מהקבועים שלך' },
+{ id: 'sunscreen', name: 'קרם הגנה', sub: 'מהקבועים שלך' }
+].concat(suggestions.filter((x) => added.indexOf(x.id) >= 0).map((x) => ({ id: x.id, name: x.name, sub: 'נוסף עכשיו' })));
+const all = group.concat(mine);
+const done = all.filter((x) => packed[x.id]).length;
+return {
+groupItems: group.map(row),
+myItems: mine.map(row),
+chips: suggestions.filter((x) => added.indexOf(x.id) < 0).map((x) => ({
+label: x.name,
+add: () => this.setState({ packed: packed, added: added.concat([x.id]) })
+})),
+hasChips: added.length < suggestions.length,
+packedLabel: 'ארזת ' + done + ' מתוך ' + all.length,
+pct: Math.round(done / all.length * 100) + '%'
+};
+}
+}
+</script>
+</body>
+</html>
