@@ -393,6 +393,8 @@ export const he = {
     removedText: 'אם זו טעות, כדאי לדבר עם המארגנים.',
     toTrips: 'לטיולים שלי',
     toStart: 'למסך הפתיחה',
+    /** Opening the invite link to a trip you're already in, on the way to it. */
+    alreadyIn: 'כבר יש לך מקום בטיול הזה',
   },
   profile: {
     title: 'הפרופיל שלי',

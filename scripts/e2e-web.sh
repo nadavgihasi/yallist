@@ -77,31 +77,25 @@ if [[ -z ${E2E_PREBUILT:-} ]]; then
   (cd apps/mobile && EXPO_PUBLIC_API_URL=http://localhost:$API_PORT$BASE EXPO_PUBLIC_REALTIME_URL='' \
     BASE_PATH=$BASE EXPO_PUBLIC_E2E=1 "$bin/expo" export -p web) >"$OUT/export.log" 2>&1
 fi
-if [[ -z $BASE ]]; then
-  # expo serve has no single-page fallback: the deep links the flows open get the app's page.
-  mkdir -p apps/mobile/dist/dev
-  cp apps/mobile/dist/index.html apps/mobile/dist/dev/crash.html
-  (cd apps/mobile && exec "$bin/expo" serve --port "$WEB_PORT") >"$OUT/web.log" 2>&1 &
-else
-  # expo serve ignores the base URL.
-  # shellcheck disable=SC2016 # JavaScript template literals, not shell
-  DIST=apps/mobile/dist BASE=$BASE PORT=$WEB_PORT node --input-type=module -e '
-    import { readFile } from "node:fs/promises";
-    import { createServer } from "node:http";
-    import { extname, join, normalize } from "node:path";
-    const { DIST, BASE, PORT } = process.env;
-    const types = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json",
-      ".css": "text/css", ".png": "image/png", ".ico": "image/x-icon", ".ttf": "font/ttf" };
-    createServer(async (req, res) => {
-      const path = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
-      if (!path.startsWith(`${BASE}/`)) return res.writeHead(404).end();
-      const file = join(DIST, normalize(path.slice(BASE.length)));
-      const body = await readFile(file).catch(() => undefined);
-      res.writeHead(200, { "content-type": (body && types[extname(file)]) || "text/html" });
-      res.end(body ?? (await readFile(join(DIST, "index.html"))));
-    }).listen(PORT);
-  ' >"$OUT/web.log" 2>&1 &
-fi
+# Serves the export under the base path, falling back to its index.html for the deep links the
+# flows open (/dev/crash, /j/<token>), like the deployed site. expo serve does neither.
+# shellcheck disable=SC2016 # JavaScript template literals, not shell
+DIST=apps/mobile/dist BASE=$BASE PORT=$WEB_PORT node --input-type=module -e '
+  import { readFile } from "node:fs/promises";
+  import { createServer } from "node:http";
+  import { extname, join, normalize } from "node:path";
+  const { DIST, BASE, PORT } = process.env;
+  const types = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json",
+    ".css": "text/css", ".png": "image/png", ".ico": "image/x-icon", ".ttf": "font/ttf" };
+  createServer(async (req, res) => {
+    const path = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+    if (!path.startsWith(`${BASE}/`)) return res.writeHead(404).end();
+    const file = join(DIST, normalize(path.slice(BASE.length)));
+    const body = await readFile(file).catch(() => undefined);
+    res.writeHead(200, { "content-type": (body && types[extname(file)]) || "text/html" });
+    res.end(body ?? (await readFile(join(DIST, "index.html"))));
+  }).listen(PORT);
+' >"$OUT/web.log" 2>&1 &
 
 for url in "http://localhost:$API_PORT$BASE/health" "http://localhost:$WEB_PORT$BASE/"; do
   for _ in $(seq 60); do curl -sf -o /dev/null "$url" && continue 2; sleep 0.5; done

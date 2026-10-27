@@ -1,0 +1,23 @@
+# A member opens their own trip's invite link: no join page, straight to the trip. Issue #125.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [trips]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- tapOn:
+    id: trip-tab-people
+- copyTextFrom:
+    id: people-invite-link
+- openLink: ${maestro.copiedText}
+- assertVisible: כבר יש לך מקום בטיול הזה
+- assertVisible:
+    id: trip-title
+    text: E2E trip
+- assertNotVisible:
+    id: join-name

@@ -41,6 +41,7 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
   const [confirming, setConfirming] = useState<string>();
   const organizer = view.memberById.get(me)?.role === 'organizer';
   const pending = data.members.filter((m) => m.status === 'pending');
+  const link = inviteUrl(WEB_URL, data.inviteToken);
 
   const taken = (userId: string) => {
     const ids = new Set(data.claims.filter((c) => c.userId === userId).map((c) => c.itemId));
@@ -94,8 +95,12 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
           wide
           icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
           {...testId('people-share')}
-          onPress={() => shareLink(inviteUrl(WEB_URL, data.inviteToken))}
+          onPress={() => shareLink(link)}
         />
+        {/* The link itself too, to copy by hand where sharing doesn't reach. */}
+        <Text style={styles.link} selectable numberOfLines={1} {...testId('people-invite-link')}>
+          {link}
+        </Text>
       </Card>
 
       {organizer && pending.length > 0 && (
@@ -158,6 +163,7 @@ const styles = StyleSheet.create({
   texts: { gap: space[1] },
   title: { ...type.itemTitle, color: colors.ink },
   text: { ...type.caption, color: colors.inkMuted },
+  link: { ...type.caption, color: colors.inkMuted, textAlign: 'center', writingDirection: 'ltr' },
   person: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
   personBody: { flex: 1, gap: space[1] },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },

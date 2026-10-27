@@ -62,14 +62,15 @@ DATABASE_URL=… pnpm e2e:web apps/mobile/e2e/flows/item-delete.yaml
 
 Each flow starts from a clean browser as a new guest with its own blank trip, so flows don't depend on each other.
 
-| Flow          | Covers                                                                |
-| ------------- | --------------------------------------------------------------------- |
-| `item-edit`   | Sign in, create a trip, add an item, rename it.                       |
-| `item-delete` | Delete an item, back on the trip's list. The regression test for #70. |
-| `claim`       | Claim an item, release it.                                            |
-| `expense`     | Add an expense on the money tab, see it listed.                       |
-| `profile`     | Open the profile.                                                     |
-| `trip-delete` | Delete the trip, typing its name to confirm; home without it. #121.   |
+| Flow            | Covers                                                                           |
+| --------------- | -------------------------------------------------------------------------------- |
+| `item-edit`     | Sign in, create a trip, add an item, rename it.                                  |
+| `item-delete`   | Delete an item, back on the trip's list. The regression test for #70.            |
+| `claim`         | Claim an item, release it.                                                       |
+| `expense`       | Add an expense on the money tab, see it listed.                                  |
+| `profile`       | Open the profile.                                                                |
+| `trip-delete`   | Delete the trip, typing its name to confirm; home without it. #121.              |
+| `invite-member` | Open the invite link to your own trip: straight to the trip, no join page. #125. |
 
 Shared steps are in `e2e/common/` (sign in, new trip, add item).
 
@@ -81,14 +82,14 @@ Some things only a deployed preview has, or Maestro web can't drive. [`e2e/previ
 
 **Why Playwright for these.** Maestro 2.11.0's web driver can't pick a file: it has no file upload (Selenium's `sendKeys` with a path, `setInputFiles`), `addMedia` does nothing on web, and it has no command that runs JavaScript in the page. `runScript` and `evalScript` run in Maestro's own JS engine, not the browser. The only way into the page is that `launchApp` arguments are pasted into a script unescaped, which is a bug to rely on. Maestro also drives one browser per flow, so two people would need two Maestro processes coordinated through shared files. Playwright picks files through the browser's real file chooser (`filechooser` + `setFiles`), opens two isolated sessions in one test (`browser.newContext`), and records a video of each. The Maestro flows stay the cross-platform suite; these are web-only and preview-only.
 
-| Test                       | Covers                                                                                                                                                                                                                                                               |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `receipts`                 | A 3000×4000 photo through the receipt's file input, shrunk on the device to 1500×2000, a presigned POST to the PR's S3 bucket (its CORS), attached, shown through a presigned GET, deleted, then added again from the expense's receipt sheet.                       |
-| `profile-photo`            | A photo through the profile's file input, cropped to 512×512, uploaded to S3, shown from it, removed.                                                                                                                                                                |
-| `two-members` (join, hero) | Dana's trip requires approval; she copies the invite link from the people tab (`/pr-<n>/j/<token>`; `expo serve` 404s on it locally); Noa opens it in a second session, asks to join; Dana approves; Noa lands on the trip; Dana's hero now offers the missing list. |
-| `two-members` (realtime)   | As above, then Dana's page subscribes to the trip's AppSync Events channel with her session, Noa claims the Tent, and the event arrives, and the app's own subscription updates Dana's list without a reload.                                                        |
-| `two-members` (delete)     | As in join, then Dana deletes the trip; Noa, still on it, is sent home with a message by the realtime event's refetch (a 404).                                                                                                                                       |
-| `auth`                     | Guest sign-in and an authorized call (`/me`, with its preflight) from the CloudFront origin to the real API Gateway, with CORS headers.                                                                                                                              |
+| Test                       | Covers                                                                                                                                                                                                                                         |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `receipts`                 | A 3000×4000 photo through the receipt's file input, shrunk on the device to 1500×2000, a presigned POST to the PR's S3 bucket (its CORS), attached, shown through a presigned GET, deleted, then added again from the expense's receipt sheet. |
+| `profile-photo`            | A photo through the profile's file input, cropped to 512×512, uploaded to S3, shown from it, removed.                                                                                                                                          |
+| `two-members` (join, hero) | Dana's trip requires approval; she copies the invite link from the people tab (`/pr-<n>/j/<token>`); Noa opens it in a second session, asks to join; Dana approves; Noa lands on the trip; Dana's hero now offers the missing list.            |
+| `two-members` (realtime)   | As above, then Dana's page subscribes to the trip's AppSync Events channel with her session, Noa claims the Tent, and the event arrives, and the app's own subscription updates Dana's list without a reload.                                  |
+| `two-members` (delete)     | As in join, then Dana deletes the trip; Noa, still on it, is sent home with a message by the realtime event's refetch (a 404).                                                                                                                 |
+| `auth`                     | Guest sign-in and an authorized call (`/me`, with its preflight) from the CloudFront origin to the real API Gateway, with CORS headers.                                                                                                        |
 
 Each test signs in its own new guests, so they share the preview's database and run in parallel (4 workers). Every page records a video (two per test for two people) and a failed test keeps a trace (DOM, network and console per step, `playwright show-trace`).
 

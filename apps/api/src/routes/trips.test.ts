@@ -218,6 +218,37 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       expect(preview.missingItems).toEqual(data.items.slice(0, 6).map((i) => i.name));
     });
 
+    it("tells a signed-in caller their own membership, and a stranger nobody's", async () => {
+      const organizer = await guest('organizer');
+      const data = await createTrip(organizer, { requireApproval: true });
+      const [waiting, stranger, declined] = [
+        await guest('waiting'),
+        await guest('stranger'),
+        await guest('declined'),
+      ];
+      await join(waiting, data.inviteToken);
+      await join(declined, data.inviteToken);
+      const decline = client.trips[':tripId'].members[':userId'].decline.$post(
+        { param: { tripId: data.trip.id, userId: declined.id } },
+        as(organizer),
+      );
+      expect((await decline).status).toBe(200);
+
+      const membership = async (user?: Guest) => {
+        const res = await client.invites[':token'].$get(
+          { param: { token: data.inviteToken } },
+          user && as(user),
+        );
+        return (await res.json()).membership;
+      };
+      const tripId = data.trip.id;
+      expect(await membership(organizer)).toEqual({ status: 'active', tripId });
+      expect(await membership(waiting)).toEqual({ status: 'pending', tripId });
+      expect(await membership(stranger)).toEqual({ status: 'none' });
+      expect(await membership(declined)).toEqual({ status: 'none' });
+      expect(await membership()).toBeUndefined();
+    });
+
     it('joins once, however many times the link is opened', async () => {
       const { member, data } = await tripWithMember();
       const again = await join(member, data.inviteToken);
