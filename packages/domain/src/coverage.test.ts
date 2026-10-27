@@ -120,6 +120,17 @@ describe('isDone / filterItems', () => {
     expect(ids('missing')).toEqual(['b']);
     expect(ids('mine')).toEqual(['a']);
   });
+
+  it('puts every "each" item on my list, whether or not I have mine yet', () => {
+    const bag = item({ id: 'bag', kind: 'each' });
+    const hat = item({ id: 'hat', kind: 'each', list: 'buy' });
+    const all = [...items, bag, hat];
+    const mine = (cl: Claim[]) => filterItems(all, 'mine', cl, [], active, 'me').map((i) => i.id);
+    expect(mine(claims)).toEqual(['a', 'bag', 'hat']);
+    expect(mine([...claims, claim('bag', 'me')])).toEqual(['a', 'bag', 'hat']);
+    expect(mine([])).toEqual(['bag', 'hat']);
+    expect(mine([claim('bag', 'ron'), claim('b', 'ron')])).toEqual(['bag', 'hat']);
+  });
 });
 
 describe('claimCap', () => {

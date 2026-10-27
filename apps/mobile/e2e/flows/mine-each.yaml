@@ -1,0 +1,25 @@
+# "אצלי" lists every "each" item (everyone brings their own), before I mark that I have it.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [items]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- tapOn:
+    id: trip-add
+- tapOn:
+    id: item-form-name
+- inputText: Sleeping bag
+- tapOn: לכל אחד.*
+- tapOn:
+    id: item-form-save
+- assertVisible: Sleeping bag
+- tapOn: אצלי.*
+- assertVisible: Sleeping bag
+- assertNotVisible:
+    id: empty-state-action

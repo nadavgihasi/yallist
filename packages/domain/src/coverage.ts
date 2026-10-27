@@ -100,7 +100,15 @@ export function filterItems(
 ): Item[] {
   if (filter === 'all') return [...items];
   if (filter === 'missing') return items.filter((i) => !isDone(i, claims, expenses, activeIds));
-  return items.filter((i) => claimsFor(i.id, claims).some((c) => c.userId === me));
+  return items.filter((i) => isOnMyList(i, claims, me));
+}
+
+/**
+ * What "אצלי" shows: what I took, and every "each" item, since everyone brings their own, even
+ * before I mark that I have it.
+ */
+function isOnMyList(item: Item, claims: readonly Claim[], me: string): boolean {
+  return item.kind === 'each' || claimsFor(item.id, claims).some((c) => c.userId === me);
 }
 
 /** Max quantity `userId` may claim, given everyone else's claims. */
