@@ -90,6 +90,17 @@ describe('subscribe', () => {
     expect(onEvent).toHaveBeenCalledTimes(2);
   });
 
+  it('reports a refused subscription, then tries again', () => {
+    const { onEvent } = start();
+    latest().onopen?.();
+    latest().receive({ type: 'connection_ack', connectionTimeoutMs: 60_000 });
+    latest().receive({ type: 'subscribe_error', id: '1', errors: [] });
+    expect(onEvent).toHaveBeenCalledOnce();
+    expect(latest().closed).toBe(true);
+    vi.advanceTimersByTime(1000);
+    expect(FakeSocket.all).toHaveLength(2);
+  });
+
   it('reconnects with growing delays, resetting once subscribed', () => {
     const { onSubscribed } = start();
     latest().close();

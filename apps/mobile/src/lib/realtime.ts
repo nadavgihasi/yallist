@@ -17,7 +17,10 @@ interface Options {
   channel: string;
   /** The session token, read on every (re)connect. */
   token: () => string | undefined;
-  /** An event arrived on the channel. */
+  /**
+   * An event arrived on the channel, or subscribing was refused (no longer a member, say a trip
+   * deleted before we subscribed): either way, the screen should refetch to find out.
+   */
   onEvent: () => void;
   /** Subscribed, first or after a reconnect: events may have been missed while away. */
   onSubscribed: () => void;
@@ -77,8 +80,11 @@ export function subscribe({ host, channel, token, onEvent, onSubscribed }: Optio
           return onSubscribed();
         case 'data':
           return onEvent();
+        case 'subscribe_error':
+          onEvent();
+          return reconnect();
         default:
-          // connection_error, subscribe_error (e.g. no longer a member), error.
+          // connection_error, error.
           return reconnect();
       }
     };
