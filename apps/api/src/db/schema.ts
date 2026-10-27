@@ -268,6 +268,8 @@ export const claims = pgTable(
     quantity: integer('quantity').notNull(),
     /** Set in trip-day mode. */
     arrivedAt: timestamp('arrived_at', { withTimezone: true }),
+    /** In the claimer's bag. Only they set it; claiming more clears it. */
+    packedAt: timestamp('packed_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [

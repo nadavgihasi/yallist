@@ -75,6 +75,24 @@ describe.skipIf(!DATABASE_URL)('realtime', () => {
       expect(published).toHaveLength(2);
     });
 
+    it('publishes when someone packs', async () => {
+      const dana = await signInAsGuest(app, 'דנה');
+      const { trip, items } = await tripOf(dana);
+      const param = { tripId: trip.id, itemId: items[0]!.id };
+      await client.trips[':tripId'].items[':itemId'].claim.$put(
+        { param, json: { quantity: 1 } },
+        as(dana),
+      );
+      published = [];
+
+      const res = await client.trips[':tripId'].items[':itemId'].packed.$put(
+        { param, json: { packed: true } },
+        as(dana),
+      );
+      expect(res.status).toBe(200);
+      expect(published).toEqual([{ tripId: trip.id, lastActivity: 'claim_set' }]);
+    });
+
     it('publishes when someone joins by invite', async () => {
       const dana = await signInAsGuest(app, 'דנה');
       const yoni = await signInAsGuest(app, 'יוני');
