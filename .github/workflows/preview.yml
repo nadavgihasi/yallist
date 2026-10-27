@@ -18,7 +18,8 @@ on:
 permissions:
   contents: read
 
-# One run per PR at a time: a push or a close cancels the deploy in progress (remove unlocks it).
+# One run per PR at a time: a push, close or reopen cancels the run in progress, and the next
+# deploy or remove unlocks the stage that run left locked.
 concurrency:
   group: preview-${{ github.event.pull_request.number || 'expire' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -41,12 +42,11 @@ jobs:
       contents: read
       id-token: write # OIDC token for the preview role
       pull-requests: write # the sticky comment
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
     env:
       SST_SECRET_BetterAuthSecret: ${{ secrets.BETTER_AUTH_SECRET }}
       EXPO_PUBLIC_STAGE: pr-${{ github.event.pull_request.number }} # VersionLine
-      MAESTRO_VERSION: 2.11.0
-      # Chrome for Testing for recording (see e2e-web.sh).
-      SE_BROWSER_VERSION: 147
     steps:
       - uses: actions/checkout@v7
         with:
@@ -63,7 +63,9 @@ jobs:
           aws-region: us-west-2
       - name: Deploy the PR's stage
         id: deploy
+        # Only this PR's runs touch its stage, one at a time, so a lock is a cancelled run's.
         run: |
+          pnpm sst unlock --stage "$STAGE"
           pnpm sst deploy --stage "$STAGE"
           echo "url=$(jq -r .url infra/app/.sst/outputs.json)/" >> "$GITHUB_OUTPUT"
           echo "api=$(jq -r .api infra/app/.sst/outputs.json)" >> "$GITHUB_OUTPUT"
@@ -98,38 +100,65 @@ jobs:
           else
             gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$body"
           fi
-      # The UI tests (apps/mobile/e2e) against the preview, as ui-tests.yml runs them locally.
-      # The Maestro CLI and the Chrome for Testing that Selenium downloads, shared with ui-tests.yml.
-      - uses: actions/cache@v6
-        id: maestro-cache
+
+  # The UI tests (apps/mobile/e2e) against the preview, on two workers as in ui-tests.yml. No AWS
+  # role or secrets: they only browse the preview. Every flow signs in as a new guest, so the
+  # shards share the preview's database without seeing each other's data.
+  ui-shard:
+    needs: deploy
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    steps:
+      - uses: actions/checkout@v7
         with:
-          path: |
-            ~/.maestro-cli
-            ~/.cache/selenium
-          key: ui-tests-maestro-${{ env.MAESTRO_VERSION }}-chrome-${{ env.SE_BROWSER_VERSION }}
-      - name: Install Maestro
-        if: steps.maestro-cache.outputs.cache-hit != 'true'
-        run: |
-          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/maestro.zip" \
-            "https://github.com/mobile-dev-inc/maestro/releases/download/cli-$MAESTRO_VERSION/maestro.zip"
-          unzip -q "$RUNNER_TEMP/maestro.zip" -d ~/.maestro-cli
-      - run: echo "$HOME/.maestro-cli/maestro/bin" >> "$GITHUB_PATH"
-      # Ubuntu 24.04's AppArmor blocks the sandbox of a Chrome outside /opt (Chrome for Testing).
-      - run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          persist-credentials: false
+      - uses: ./.github/actions/maestro-web
+        id: maestro
       # Not the flows tagged test-photo or test-route: they need a build that picks the fixture
       # photo in place of the file picker (EXPO_PUBLIC_E2E_RECEIPT) or opens the test-only routes
       # (EXPO_PUBLIC_E2E), which a preview people use mustn't be.
-      - name: UI tests
-        run: scripts/e2e-web.sh --exclude-tags=test-photo,test-route apps/mobile/e2e
+      - run: scripts/e2e-web.sh --exclude-tags=test-photo,test-route apps/mobile/e2e
         env:
-          E2E_WEB_URL: ${{ steps.deploy.outputs.url }}
+          MAESTRO: ${{ steps.maestro.outputs.maestro }}
+          E2E_WEB_URL: ${{ needs.deploy.outputs.url }}
+          E2E_SHARD: ${{ matrix.shard }}
           E2E_OUT: ${{ runner.temp }}/ui-tests
+      # One name across attempts, so "Re-run failed jobs" replaces a shard's results.
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: preview-ui-tests-${{ github.run_number }}-${{ github.run_attempt }}
+          name: preview-ui-tests-${{ github.run_number }}-shard-${{ matrix.shard }}
           path: ${{ runner.temp }}/ui-tests
           retention-days: 14
+          overwrite: true
+
+  # Fails unless the preview deployed and every shard passed.
+  ui-tests:
+    needs: [deploy, ui-shard]
+    if: always() && needs.deploy.result != 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: preview-ui-tests-${{ github.run_number }}-shard-*
+          path: results
+      - name: Summary
+        env:
+          ARTIFACTS: '[Videos and logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts) (`preview-ui-tests-…-shard-N`): one MP4 per flow under `maestro/*/<flow>/startRecording/`.'
+        run: python3 scripts/ui-tests-summary.py results/*/junit.xml >> "$GITHUB_STEP_SUMMARY"
+      - name: Fail unless every shard passed
+        env:
+          DEPLOY: ${{ needs.deploy.result }}
+          SHARDS: ${{ needs.ui-shard.result }}
+        run: test "$DEPLOY" = success && test "$SHARDS" = success
 
   remove:
     if: >-
