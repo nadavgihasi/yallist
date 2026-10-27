@@ -54,6 +54,8 @@ Visible first, cleanup last. Every PR: lands after #72 and #75, runs unit tests 
 
 1 → 2 → 3 is the critical path; 4, 6, 7 and 10 can run beside it.
 
+**Status (2026-10-27):** 1 (#92), 2 (#98), 3 (#97) and 4 (#107) are done; 5–12 are not started.
+
 ### 1. Progress ring, countdown, pills, trip card
 
 ![Trip card: caption lines become a countdown pill, ring, pills and a named avatar stack](assets/ui-plan/trip-card.png)
