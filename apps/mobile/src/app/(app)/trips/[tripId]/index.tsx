@@ -1,6 +1,6 @@
 import { formatShekel, type ListFilter } from '@yallist/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -31,7 +31,7 @@ import { statusOf } from '@/lib/api';
 import { testId } from '@/lib/testId';
 import { useToday } from '@/lib/useToday';
 import { useMe } from '@/state/store';
-import { useTripQuery, useTripUpdates } from '@/state/trips';
+import { useLeaveTrip, useTripQuery, useTripUpdates } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
@@ -77,6 +77,14 @@ export default function TripScreen() {
       }
     }, [itemId, list, categoryId]),
   );
+
+  // Open when it was deleted (its realtime event refetches it) or we were removed from it: home,
+  // with a word on why, rather than a trip that no longer saves anything.
+  const leave = useLeaveTrip(tripId);
+  const gone = data !== undefined && statusOf(query.error) === 404;
+  useEffect(() => {
+    if (gone) leave(he.deleteTrip.gone);
+  }, [gone, leave]);
 
   const home = { label: he.states.toTrips, onPress: () => router.replace('/') };
   if (!data) {

@@ -206,6 +206,16 @@ export const he = {
       `חסרים ל${trip} (${dates}): ${names}. מי מביא? ${link}`,
     allCovered: (trip: string, link: string) => `הכול מכוסה ל${trip} 🎉 ${link}`,
   },
+  deleteTrip: {
+    action: 'מחיקת טיול',
+    title: 'למחוק את הטיול?',
+    warning: 'אי אפשר לבטל את זה. הטיול יימחק לכל המשתתפים, עם הרשימות, ההוצאות והקבלות.',
+    nameLabel: 'כדי לאשר, הקלידו את שם הטיול',
+    confirm: 'מחיקה לצמיתות',
+    deleted: 'הטיול נמחק',
+    /** A trip open on screen stopped loading with a 404: deleted, or we were removed from it. */
+    gone: 'הטיול נמחק או שכבר אין לך גישה אליו',
+  },
   people: {
     inviteTitle: 'עוד חברים מצטרפים?',
     inviteText: 'שולחים את הקישור בוואטסאפ, וכל אחד מצטרף מהדפדפן.',

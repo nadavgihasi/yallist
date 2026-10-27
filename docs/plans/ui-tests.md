@@ -69,6 +69,7 @@ Each flow starts from a clean browser as a new guest with its own blank trip, so
 | `claim`       | Claim an item, release it.                                            |
 | `expense`     | Add an expense on the money tab, see it listed.                       |
 | `profile`     | Open the profile.                                                     |
+| `trip-delete` | Delete the trip, typing its name to confirm; home without it. #121.   |
 
 Shared steps are in `e2e/common/` (sign in, new trip, add item).
 
@@ -86,6 +87,7 @@ Some things only a deployed preview has, or Maestro web can't drive. [`e2e/previ
 | `profile-photo`            | A photo through the profile's file input, cropped to 512×512, uploaded to S3, shown from it, removed.                                                                                                                                                                |
 | `two-members` (join, hero) | Dana's trip requires approval; she copies the invite link from the people tab (`/pr-<n>/j/<token>`; `expo serve` 404s on it locally); Noa opens it in a second session, asks to join; Dana approves; Noa lands on the trip; Dana's hero now offers the missing list. |
 | `two-members` (realtime)   | As above, then Dana's page subscribes to the trip's AppSync Events channel with her session, Noa claims the Tent, and the event arrives, and the app's own subscription updates Dana's list without a reload.                                                        |
+| `two-members` (delete)     | As in join, then Dana deletes the trip; Noa, still on it, is sent home with a message by the realtime event's refetch (a 404).                                                                                                                                       |
 | `auth`                     | Guest sign-in and an authorized call (`/me`, with its preflight) from the CloudFront origin to the real API Gateway, with CORS headers.                                                                                                                              |
 
 Each test signs in its own new guests, so they share the preview's database and run in parallel (4 workers). Every page records a video (two per test for two people) and a failed test keeps a trace (DOM, network and console per step, `playwright show-trace`).

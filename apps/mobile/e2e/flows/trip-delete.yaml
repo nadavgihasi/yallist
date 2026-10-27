@@ -1,0 +1,36 @@
+# An organizer deletes a trip: a warning, then the trip's name typed to confirm. Issue #121.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [trips]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- tapOn:
+    id: trip-tab-people
+- tapOn:
+    id: trip-delete
+- assertVisible: אי אפשר לבטל את זה.*
+# A wrong name doesn't delete it.
+- tapOn:
+    id: trip-delete-name
+- inputText: E2E
+- tapOn:
+    id: trip-delete-confirm
+- assertVisible:
+    id: trip-delete-confirm
+- tapOn:
+    id: trip-delete-name
+- inputText: ' trip'
+- tapOn:
+    id: trip-delete-confirm
+# Home, without the trip.
+- assertVisible: הטיול נמחק
+- assertVisible:
+    id: home-new-trip
+- assertNotVisible:
+    id: home-next-trip
