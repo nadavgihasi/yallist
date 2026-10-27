@@ -18,7 +18,8 @@ on:
 permissions:
   contents: read
 
-# One run per PR at a time: a push or a close cancels the deploy in progress (remove unlocks it).
+# One run per PR at a time: a push, close or reopen cancels the run in progress, and the next
+# deploy or remove unlocks the stage that run left locked.
 concurrency:
   group: preview-${{ github.event.pull_request.number || 'expire' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -62,7 +63,9 @@ jobs:
           aws-region: us-west-2
       - name: Deploy the PR's stage
         id: deploy
+        # Only this PR's runs touch its stage, one at a time, so a lock is a cancelled run's.
         run: |
+          pnpm sst unlock --stage "$STAGE"
           pnpm sst deploy --stage "$STAGE"
           echo "url=$(jq -r .url infra/app/.sst/outputs.json)/" >> "$GITHUB_OUTPUT"
           echo "api=$(jq -r .api infra/app/.sst/outputs.json)" >> "$GITHUB_OUTPUT"
