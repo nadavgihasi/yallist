@@ -85,7 +85,7 @@ Some things only a deployed preview has, or Maestro web can't drive. [`e2e/previ
 | `receipts`                 | A 3000×4000 photo through the receipt's file input, shrunk on the device to 1500×2000, a presigned POST to the PR's S3 bucket (its CORS), attached, shown through a presigned GET, deleted, then added again from the expense's receipt sheet.                       |
 | `profile-photo`            | A photo through the profile's file input, cropped to 512×512, uploaded to S3, shown from it, removed.                                                                                                                                                                |
 | `two-members` (join, hero) | Dana's trip requires approval; she copies the invite link from the people tab (`/pr-<n>/j/<token>`; `expo serve` 404s on it locally); Noa opens it in a second session, asks to join; Dana approves; Noa lands on the trip; Dana's hero now offers the missing list. |
-| `two-members` (realtime)   | As above, then Dana's page subscribes to the trip's AppSync Events channel with her session, Noa claims the Tent, and the event arrives. The app itself doesn't subscribe yet, so the check that Dana's list updates without a reload is marked `test.fail`.         |
+| `two-members` (realtime)   | As above, then Dana's page subscribes to the trip's AppSync Events channel with her session, Noa claims the Tent, and the event arrives, and the app's own subscription updates Dana's list without a reload.                                                        |
 | `auth`                     | Guest sign-in and an authorized call (`/me`, with its preflight) from the CloudFront origin to the real API Gateway, with CORS headers.                                                                                                                              |
 
 Each test signs in its own new guests, so they share the preview's database and run in parallel (4 workers). Every page records a video (two per test for two people) and a failed test keeps a trace (DOM, network and console per step, `playwright show-trace`).
@@ -116,5 +116,4 @@ E2E_WEB_URL=https://<router>/pr-<n>/ E2E_API_URL=https://<api>/pr-<n> E2E_REALTI
 ## Deferred
 
 - Native runs (above). The flows haven't been run on a device yet; expect small fixes (keyboard covering buttons: `hideKeyboard`).
-- Realtime in the app: the client never subscribes to AppSync Events (`EXPO_PUBLIC_REALTIME_URL` is unused), so another member's change shows only after a refetch. The realtime test's last check expects that to fail; drop its `test.fail` when the app subscribes.
 - Desktop and tablet layouts on web; only the phone layout runs.

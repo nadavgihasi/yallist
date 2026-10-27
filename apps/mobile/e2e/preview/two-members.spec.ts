@@ -138,8 +138,6 @@ test('a claim reaches the other member over AppSync Events', async ({ page: dana
     )
     .toContainEqual(JSON.stringify({ type: 'changed', tripId }));
 
-  // The app doesn't subscribe yet (it never reads EXPO_PUBLIC_REALTIME_URL), so Dana's list
-  // only shows the claim after a reload. Expected to fail until it does; then drop `test.fail`.
-  test.fail();
+  // The app subscribes too (src/lib/realtime.ts), so Dana's list shows the claim without a reload.
   await expect(dana.locator('#item-claim')).toBeHidden({ timeout: 10_000 });
 });
