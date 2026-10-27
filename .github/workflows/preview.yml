@@ -137,9 +137,9 @@ jobs:
           retention-days: 14
           overwrite: true
 
-  # Fails unless the preview deployed and every shard passed.
+  # Fails unless the preview deployed, every shard passed and the preview-only tests passed.
   ui-tests:
-    needs: [deploy, ui-shard]
+    needs: [deploy, ui-shard, preview-only]
     if: always() && needs.deploy.result != 'skipped'
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -155,11 +155,12 @@ jobs:
         env:
           ARTIFACTS: '[Videos and logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts) (`preview-ui-tests-…-shard-N`): one MP4 per flow under `maestro/*/<flow>/startRecording/`.'
         run: python3 scripts/ui-tests-summary.py results/*/junit.xml >> "$GITHUB_STEP_SUMMARY"
-      - name: Fail unless every shard passed
+      - name: Fail unless every shard and the preview-only tests passed
         env:
           DEPLOY: ${{ needs.deploy.result }}
           SHARDS: ${{ needs.ui-shard.result }}
-        run: test "$DEPLOY" = success && test "$SHARDS" = success
+          PREVIEW_ONLY: ${{ needs.preview-only.result }}
+        run: test "$DEPLOY" = success && test "$SHARDS" = success && test "$PREVIEW_ONLY" = success
 
   # The preview-only UI tests (apps/mobile/e2e/preview, Playwright): photos through the real file
   # input to S3, two sessions (invite link, approval, AppSync Events) and CORS on the real API.
