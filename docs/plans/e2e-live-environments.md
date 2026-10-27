@@ -83,11 +83,11 @@ new sst.aws.StaticSite('Web', { router: { instance: router, path: prefix }, envi
 
 `preview.yml`: `pull_request` (`opened`, `synchronize`, `reopened`, `closed`), `schedule` hourly, `workflow_dispatch`. Concurrency group `preview-pr-<n>`, cancel in progress, except on `reopened`, which waits for the close's remove to finish.
 
-| Job      | When                               | Steps                                                                                                                                                                                                     |
-| -------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `deploy` | open, push; head repo is this repo | OIDC → preview role; `sst deploy --stage pr-<n>`; `db:migrate`; `/health` and site smoke; sticky PR comment with the URLs; Maestro flows with `WEB_URL=https://<router>/pr-<n>/`.                         |
-| `remove` | PR closed                          | `sst unlock`, `sst remove --stage pr-<n>`, delete passphrase and state, fail if `tag:GetResources` still finds `stage=pr-<n>`.                                                                            |
-| `expire` | hourly, dispatch                   | List `yallist-pr-*` Lambdas by tag; for each with `expires-at` in the past (6 h after its last deploy) or whose PR is closed, run the `remove` steps. Fails when it cleaned something, which notifies me. |
+| Job      | When                               | Steps                                                                                                                                                                                                                                                                                                                |
+| -------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `deploy` | open, push; head repo is this repo | OIDC → preview role; `sst unlock`, `sst deploy --stage pr-<n>`; `db:migrate`; `/health` and site smoke; sticky PR comment with the URLs. Then two `ui-shard` jobs (no AWS role) run the Maestro flows with `WEB_URL=https://<router>/pr-<n>/`, as ui-tests.yml shards them, and `ui-tests` fails unless both passed. |
+| `remove` | PR closed                          | `sst unlock`, `sst remove --stage pr-<n>`, delete passphrase and state, fail if `tag:GetResources` still finds `stage=pr-<n>`.                                                                                                                                                                                       |
+| `expire` | hourly, dispatch                   | List `yallist-pr-*` Lambdas by tag; for each with `expires-at` in the past (6 h after its last deploy) or whose PR is closed, run the `remove` steps. Fails when it cleaned something, which notifies me.                                                                                                            |
 
 Estimated time per push, `ubuntu-latest` (the first measurements are in [Measured](#measured)):
 
@@ -183,6 +183,7 @@ From the first real runs:
 
 - **DSQL cluster create: about 7 s.** It's not on the critical path, so a cluster per PR stays; the schema-per-PR fallback ([§4](#4-data-not-resources)) isn't needed.
 - **First full preview (pr-108):** deployed and migrated, then all 8 Maestro flows passed against it in 3 min 40 s.
+- **Two workers (pr-111):** the same 8 flows in two `ui-shard` jobs took 2 min 44 s from deploy to both shards done (1 min 47 s and 2 min 42 s per job).
 - **First-run race:** a PR's preview job that runs while `preview-stage.yml` is still bootstrapping SST in `us-west-2` fails with a 403 creating SST's bucket, because the preview role can't create it. Only the first run can hit it; re-run the job once the bootstrap is done.
 
 ## As built

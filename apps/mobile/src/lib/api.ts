@@ -13,6 +13,9 @@ export function setAuth(next: string | undefined, handleUnauthorized: () => void
   onUnauthorized = handleUnauthorized;
 }
 
+/** The session's bearer token, which the realtime connection authorizes with too. */
+export const sessionToken = () => token;
+
 /** Typed client for the API; unwrap responses with `parseResponse` from `hono/client`. */
 export const api = hc<AppType>(API_URL, {
   headers: (): Record<string, string> => (token ? { authorization: `Bearer ${token}` } : {}),
