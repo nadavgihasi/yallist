@@ -19,9 +19,11 @@ permissions:
   contents: read
 
 # One run per PR at a time: a push or a close cancels the deploy in progress (remove unlocks it).
+# A reopen waits instead: the only run it can find is the close's remove, and cancelling that
+# mid-way leaves the stage's state pointing at resources it already deleted.
 concurrency:
   group: preview-${{ github.event.pull_request.number || 'expire' }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.event.action != 'reopened' }}
 
 env:
   STAGE: pr-${{ github.event.pull_request.number }}

@@ -81,7 +81,7 @@ new sst.aws.StaticSite('Web', { router: { instance: router, path: prefix }, envi
 
 ## 5. Workflow and timing
 
-`preview.yml`: `pull_request` (`opened`, `synchronize`, `reopened`, `closed`), `schedule` hourly, `workflow_dispatch`. Concurrency group `preview-pr-<n>`, cancel in progress.
+`preview.yml`: `pull_request` (`opened`, `synchronize`, `reopened`, `closed`), `schedule` hourly, `workflow_dispatch`. Concurrency group `preview-pr-<n>`, cancel in progress, except on `reopened`, which waits for the close's remove to finish.
 
 | Job      | When                               | Steps                                                                                                                                                                                                     |
 | -------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
