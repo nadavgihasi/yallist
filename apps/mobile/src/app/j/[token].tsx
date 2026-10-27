@@ -14,6 +14,7 @@ import { GoogleButton } from '@/features/auth/GoogleButton';
 import { andMore, he, joiningAs, missingItems, participants } from '@/i18n/he';
 import { signInAsGuest, signInWithGoogle, statusOf, type AuthResult } from '@/lib/api';
 import { formatRange } from '@/lib/dates';
+import { testId } from '@/lib/testId';
 import { useSession } from '@/state/store';
 import { joinTrip, tripsKey, useInvite } from '@/state/trips';
 import { colors, layout, radius, space, type } from '@/theme';
@@ -122,6 +123,7 @@ export default function Join() {
             {
               label: recheck.isFetching ? he.join.checking : he.join.checkNow,
               onPress: () => void recheck.refetch(),
+              testID: 'join-check',
             },
             leave,
           ]}
@@ -175,6 +177,7 @@ export default function Join() {
               onSubmitEditing={joinAsGuest}
               placeholder={he.login.namePlaceholder}
               returnKeyType="go"
+              {...testId('join-name')}
             />
           </View>
           <PillButton
@@ -182,6 +185,7 @@ export default function Join() {
             size="lg"
             wide
             disabled={!name.trim() || busy}
+            {...testId('join-submit')}
             onPress={joinAsGuest}
           />
           <Text style={styles.note}>{he.join.noAccount}</Text>

@@ -35,6 +35,7 @@
     "react-native-worklets": "0.13.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.64.1",
     "@sentry/browser": "10.75.2",
     "@types/react": "~19.3.0",
     "@yallist/api": "workspace:*",

@@ -12,26 +12,13 @@ const EDGE = 512;
 const QUALITY = 0.8;
 
 /**
- * The UI tests' photo (scripts/e2e-web.sh): Maestro can't use the browser's file picker, so
- * their build picks this image instead. Unset in every real build.
- */
-const TEST_PHOTO = process.env.EXPO_PUBLIC_E2E_RECEIPT;
-
-/**
  * Picks a photo from the device and crops it to its centered square of at most 512px, as a
  * JPEG (the API takes up to 5 MB). Returns a local image URI, or undefined if the user backed out.
  */
 export async function pickAvatar(): Promise<string | undefined> {
-  let uri = TEST_PHOTO;
-  if (!uri) {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      quality: 1,
-    });
-    if (result.canceled) return undefined;
-    uri = result.assets[0]!.uri;
-  }
-  const image = await ImageManipulator.manipulate(uri).renderAsync();
+  const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 1 });
+  if (result.canceled) return undefined;
+  const image = await ImageManipulator.manipulate(result.assets[0]!.uri).renderAsync();
   const square = centerSquare(image.width, image.height);
   const context = ImageManipulator.manipulate(image).crop(square);
   if (square.width > EDGE) context.resize({ width: EDGE, height: EDGE });

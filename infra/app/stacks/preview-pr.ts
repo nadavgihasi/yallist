@@ -20,7 +20,7 @@ export function previewPr() {
   // The app serves itself under the prefix (apps/api/src/app.ts).
   const apiUrl = $interpolate`${shared.apiUrl}${prefix}`;
   const api = new sst.Linkable('Api', { properties: { url: apiUrl } });
-  const { web, apiFunction } = appCore({
+  const { web, apiFunction, realtimeHttp } = appCore({
     api,
     apiUrl,
     preview: { router: sst.aws.Router.get('Router', shared.distributionId), prefix },
@@ -49,5 +49,6 @@ export function previewPr() {
     principal: 'apigateway.amazonaws.com',
     sourceArn: $interpolate`${shared.apiExecutionArn}/*`,
   });
-  return { url: web.url, api: apiUrl };
+  // The realtime host: the preview-only UI tests subscribe to it (preview.yml).
+  return { url: web.url, api: apiUrl, realtime: realtimeHttp };
 }
