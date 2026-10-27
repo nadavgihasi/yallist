@@ -42,6 +42,12 @@ export function statusLine(
   const holders = (ids: string[]) =>
     item.kind === 'qty' ? qtyHolders() : s.at(ids.map(view.nameOf).join(', '));
 
+  // In someone else's shopping run: they're at the store with it now.
+  const shopper = status.kind === 'bought' ? undefined : view.shopperOf(item.id);
+  if (shopper && shopper !== me) {
+    return { label: he.shop.buying(view.displayNameOf(shopper)), tone: 'ok' };
+  }
+
   switch (status.kind) {
     case 'missing':
       return { label: s.missing, tone: 'missing' };
@@ -86,6 +92,11 @@ export function quantityText(item: Item, claims: readonly Claim[]): string {
     return `${total}/${item.quantityNeeded}${item.unit ? ` ${item.unit}` : ''}`;
   }
   return item.displayQty ?? '';
+}
+
+/** A buy item's amount in the shopping screens: its free text, or `×40` for a quantity. */
+export function buyQuantity(item: Item): string {
+  return item.displayQty ?? (item.kind === 'qty' ? `×${item.quantityNeeded}` : '');
 }
 
 export function groupSummary(missing: number): string {

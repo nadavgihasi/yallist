@@ -79,6 +79,9 @@ const ICONS = {
     'M5 3h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z',
     'm21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21',
   ],
+  cart: ['M3 4h2l2.5 11h10L20 8H6.5'],
+  /** "More options" (three dots). */
+  more: ['M12 5h.01', 'M12 12h.01', 'M12 19h.01'],
   trash: [
     'M3 6h18',
     'M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6',
@@ -94,6 +97,10 @@ const CIRCLES: Partial<Record<IconName, { cx: number; cy: number; r: number }[]>
   sun: [{ cx: 12, cy: 12, r: 4 }],
   camera: [{ cx: 12, cy: 13, r: 3 }],
   image: [{ cx: 9, cy: 9, r: 2 }],
+  cart: [
+    { cx: 9, cy: 19, r: 1.5 },
+    { cx: 17, cy: 19, r: 1.5 },
+  ],
 };
 
 export type IconName = keyof typeof ICONS;

@@ -15,6 +15,7 @@ import { colors, space, type } from '@/theme';
 import type { TripView } from './derive';
 import { ItemRow } from './ItemRow';
 import { groupSummary } from './labels';
+import { ShopBanner } from './ShopBanner';
 
 const FILTERS: ListFilter[] = ['all', 'missing', 'mine'];
 
@@ -71,6 +72,7 @@ export function ListTab({
 
   return (
     <View style={styles.wrap}>
+      {list === 'buy' && <ShopBanner data={data} view={view} me={me} />}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}

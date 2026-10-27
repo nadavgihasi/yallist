@@ -40,7 +40,15 @@ export type Action =
   | { type: 'deletePayment'; paymentId: string }
   | { type: 'confirmPayment'; paymentId: string }
   | { type: 'approveMember' | 'declineMember' | 'removeMember'; userId: string }
-  | { type: 'setCover'; cover: CoverId };
+  | { type: 'setCover'; cover: CoverId }
+  // Shopping runs (PACKING_SHOPPING_SPEC §4). Starting one needs the server's answer (the run's
+  // id, what was skipped); the rest show at once and queue offline like any other change.
+  | { type: 'startRun'; itemIds: string[] }
+  | { type: 'addToRun'; runId: string; itemId: string }
+  | { type: 'setInCart'; itemId: string; inCart: boolean }
+  // `receipt`: a local photo to upload once the expense exists, as for addExpense.
+  | { type: 'finishRun'; runId: string; amountAgorot: number; shares: string[]; receipt?: string }
+  | { type: 'cancelRun'; runId: string };
 
 /**
  * The trip as it will be once the API accepts `action`, shown right away (optimistic update).
@@ -66,9 +74,10 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
         ...data,
         items: data.items.filter((i) => i.id !== action.itemId),
         claims: data.claims.filter((c) => c.itemId !== action.itemId),
-        expenses: data.expenses.map((e) =>
-          e.itemId === action.itemId ? { ...e, itemId: undefined } : e,
-        ),
+        expenses: data.expenses.map((e) => ({
+          ...e,
+          itemIds: e.itemIds?.filter((id) => id !== action.itemId),
+        })),
       };
     case 'editItem': {
       const { changes, newCategory } = action;
@@ -145,12 +154,42 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
             ? { ...m, status: type === 'approveMember' ? 'active' : 'removed' }
             : m,
         ),
-        // A removed member's claims are dropped: what they took is missing again.
+        // A removed member's claims are dropped and their run cancelled: what they took is
+        // missing again.
         claims: data.claims.filter((c) => type !== 'removeMember' || c.userId !== userId),
+        runs: data.runs.filter((r) => type !== 'removeMember' || r.shopperId !== userId),
       };
     }
     case 'setCover':
       return { ...data, trip: { ...data.trip, cover: action.cover } };
+    case 'addToRun': {
+      const item = data.items.find((i) => i.id === action.itemId);
+      if (!item || data.claims.some((c) => c.itemId === item.id)) return data;
+      const claim = { itemId: item.id, userId: me, quantity: item.quantityNeeded };
+      return { ...data, claims: [...data.claims, { ...claim, runId: action.runId }] };
+    }
+    case 'setInCart':
+      return {
+        ...data,
+        claims: data.claims.map((c) =>
+          c.itemId === action.itemId && c.userId === me && c.runId
+            ? { ...c, inCart: action.inCart || undefined }
+            : c,
+        ),
+      };
+    // What isn't in the cart goes back to the list at once. The run stays until the API answers
+    // (labelled as waiting while offline): the purchase needs the server's expense.
+    case 'finishRun':
+      return {
+        ...data,
+        claims: data.claims.filter((c) => c.runId !== action.runId || c.inCart),
+      };
+    case 'cancelRun':
+      return {
+        ...data,
+        claims: data.claims.filter((c) => c.runId !== action.runId),
+        runs: data.runs.filter((r) => r.id !== action.runId),
+      };
     default:
       return data;
   }

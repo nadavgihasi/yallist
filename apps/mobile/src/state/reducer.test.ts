@@ -51,6 +51,7 @@ function trip(overrides: Partial<TripData> = {}): TripData {
     claims: [],
     expenses: [],
     payments: [],
+    runs: [],
     balances: {},
     transfers: [],
     ...overrides,
@@ -79,7 +80,7 @@ describe('deleteItem', () => {
       expenses: [
         {
           id: 'e1',
-          itemId: 'meat',
+          itemIds: ['meat'],
           description: 'בשר',
           amountAgorot: 45000,
           paidBy: 'me',
@@ -90,7 +91,7 @@ describe('deleteItem', () => {
     const next = applyAction(t, { type: 'deleteItem', itemId: 'meat' }, 'me');
     expect(next.items.map((i) => i.id)).toEqual(['chairs']);
     expect(next.claims).toEqual([]);
-    expect(next.expenses).toEqual([expect.objectContaining({ id: 'e1', itemId: undefined })]);
+    expect(next.expenses).toEqual([expect.objectContaining({ id: 'e1', itemIds: [] })]);
   });
 });
 
@@ -199,5 +200,56 @@ describe('changes that need a server id', () => {
       claim: 1,
     } as const;
     expect(applyAction(t, action, 'me')).toBe(t);
+  });
+});
+
+describe('shopping runs', () => {
+  const water: Item = { ...meat, id: 'water', name: 'מים', position: 1 };
+  const run = { id: 'r1', shopperId: 'me', startedAt: '2026-11-12T08:00:00.000Z' };
+  const inRun = (itemId: string, inCart?: boolean) => ({
+    itemId,
+    userId: 'me',
+    quantity: 1,
+    runId: 'r1',
+    inCart,
+  });
+
+  it('adds an unclaimed item to the run, never one someone has', () => {
+    const t = trip({ items: [chairs, meat, water], runs: [run] });
+    const next = applyAction(t, { type: 'addToRun', runId: 'r1', itemId: 'water' }, 'me');
+    expect(next.claims).toEqual([{ itemId: 'water', userId: 'me', quantity: 1, runId: 'r1' }]);
+    const taken = trip({ claims: [{ itemId: 'meat', userId: 'ron', quantity: 1 }], runs: [run] });
+    expect(applyAction(taken, { type: 'addToRun', runId: 'r1', itemId: 'meat' }, 'me')).toBe(taken);
+  });
+
+  it('checks my run items in and out of the cart', () => {
+    const t = trip({ claims: [inRun('meat')], runs: [run] });
+    const inCart = applyAction(t, { type: 'setInCart', itemId: 'meat', inCart: true }, 'me');
+    expect(inCart.claims).toEqual([inRun('meat', true)]);
+    const out = applyAction(inCart, { type: 'setInCart', itemId: 'meat', inCart: false }, 'me');
+    expect(out.claims).toEqual([inRun('meat', undefined)]);
+  });
+
+  it('returns what is not in the cart on finish, and everything on cancel', () => {
+    const t = trip({
+      items: [chairs, meat, water],
+      claims: [
+        inRun('meat', true),
+        inRun('water'),
+        { itemId: 'chairs', userId: 'ron', quantity: 2 },
+      ],
+      runs: [run],
+    });
+    const finished = applyAction(
+      t,
+      { type: 'finishRun', runId: 'r1', amountAgorot: 100, shares: ['me'] },
+      'me',
+    );
+    expect(finished.claims.map((c) => c.itemId)).toEqual(['meat', 'chairs']);
+    expect(finished.runs).toEqual([run]);
+
+    const cancelled = applyAction(t, { type: 'cancelRun', runId: 'r1' }, 'me');
+    expect(cancelled.claims.map((c) => c.itemId)).toEqual(['chairs']);
+    expect(cancelled.runs).toEqual([]);
   });
 });

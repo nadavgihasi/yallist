@@ -1,18 +1,18 @@
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Icon } from './Icon';
+import { Icon, type IconName } from './Icon';
 import { PillButton } from './PillButton';
 
 import { testId } from '@/lib/testId';
 import { colors, space } from '@/theme';
 
-/** The screen's one floating primary action: bottom-centered, `space-6` from the edge, plus icon. */
+/** The screen's one floating primary action: bottom-centered, `space-6` from the edge, plus icon by default. */
 export function FloatingAction({
   label,
   onPress,
   disabled,
-  icon = true,
+  icon = 'plus',
   accessibilityLabel,
   testID,
 }: {
@@ -21,7 +21,7 @@ export function FloatingAction({
   accessibilityLabel?: string;
   onPress: () => void;
   disabled?: boolean;
-  icon?: boolean;
+  icon?: IconName | false;
   testID?: string;
 }) {
   const insets = useSafeAreaInsets();
@@ -34,7 +34,7 @@ export function FloatingAction({
         disabled={disabled}
         accessibilityLabel={accessibilityLabel}
         {...testId(testID)}
-        icon={icon ? <Icon name="plus" color={colors.onPrimary} strokeWidth={2.5} /> : undefined}
+        icon={icon ? <Icon name={icon} color={colors.onPrimary} strokeWidth={2.5} /> : undefined}
         onPress={onPress}
       />
     </View>

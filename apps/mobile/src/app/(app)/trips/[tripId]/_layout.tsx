@@ -22,6 +22,9 @@ export default function TripLayout() {
       <Stack.Screen name="categories/new" options={sheet} />
       <Stack.Screen name="categories/[categoryId]" options={sheet} />
       <Stack.Screen name="cover" options={sheet} />
+      <Stack.Screen name="shop/index" />
+      <Stack.Screen name="shop/start" options={sheet} />
+      <Stack.Screen name="shop/finish" options={sheet} />
     </Stack>
   );
 }
