@@ -18,8 +18,11 @@ permissions:
 
 # One run per PR at a time: a push or a close cancels the deploy in progress (remove unlocks it).
 # A reopen waits instead: the only run it can find is the close's remove, and cancelling that
-# mid-way leaves the stage's state pointing at resources it already deleted. preview-cleanup.yml
-# removes stale stages in this same group.
+# mid-way leaves the stage's state pointing at resources it already deleted.
+#
+# The jobs also hold preview-stage-<n>, which never cancels: preview-cleanup.yml removes stale
+# stages in it, outside this run-level group, so a push can't cancel that removal halfway; its
+# deploy waits for the removal to finish and redeploys fresh.
 concurrency:
   group: preview-${{ github.event.pull_request.number }}
   cancel-in-progress: ${{ github.event.action != 'reopened' }}
@@ -34,6 +37,9 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       vars.AWS_PREVIEW_ROLE_ARN != ''
     runs-on: ubuntu-latest
+    concurrency:
+      group: preview-stage-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     environment:
       name: preview
       url: ${{ steps.deploy.outputs.url }}
@@ -138,6 +144,9 @@ jobs:
       github.event.pull_request.head.repo.full_name == github.repository &&
       vars.AWS_PREVIEW_ROLE_ARN != ''
     runs-on: ubuntu-latest
+    concurrency:
+      group: preview-stage-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     environment: preview
     timeout-minutes: 20
     permissions:

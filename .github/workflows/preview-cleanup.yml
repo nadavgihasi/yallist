@@ -62,11 +62,10 @@ jobs:
       fail-fast: false # one stage's failure doesn't keep the others
       matrix:
         pr: ${{ fromJSON(needs.find.outputs.prs) }}
-    # The PR's own group in preview.yml (concurrency groups are per repo): waits for the PR's
-    # deploy or remove in progress instead of racing it. A push while this runs cancels it, as a
-    # push cancels anything in the group.
+    # The stage's group in preview.yml (groups are per repo), which never cancels: waits for the
+    # PR's deploy or remove in progress, and a push during this removal waits for it to finish.
     concurrency:
-      group: preview-${{ matrix.pr }}
+      group: preview-stage-${{ matrix.pr }}
       cancel-in-progress: false
     env:
       STAGE: pr-${{ matrix.pr }}
