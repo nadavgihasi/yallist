@@ -87,13 +87,26 @@ jobs:
       # The cluster starts empty; later pushes apply only new migrations.
       - name: Migrate the database
         run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @yallist/api db:migrate
+      # A new stage's route takes up to a minute to reach CloudFront's edges after the deploy.
+      # Wait until the page's script loads too, not only its HTML, or the UI tests open a page
+      # that never renders (they used to start minutes later, after a slower first migration).
       - name: Smoke check
         env:
           URL: ${{ steps.deploy.outputs.url }}
           API: ${{ steps.deploy.outputs.api }}
         run: |
           curl -fsS --retry 5 --retry-all-errors "$API/health"
-          curl -fsS --retry 5 --retry-all-errors -o /dev/null "$URL"
+          origin=$(grep -oE '^https://[^/]+' <<< "$URL")
+          for _ in $(seq 36); do
+            script=$(curl -fsS "$URL" | grep -oE 'src="[^"]*/_expo/static/js/[^"]+\.js"' | head -1 | cut -d'"' -f2 || true)
+            if [[ -n $script ]] && curl -fsS -o /dev/null "$origin$script"; then
+              echo "Serving $script"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "::error::$URL didn't serve its script within 3 minutes."
+          exit 1
       - name: Post the URL on the PR
         env:
           GH_TOKEN: ${{ github.token }}
