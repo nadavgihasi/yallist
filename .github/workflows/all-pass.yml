@@ -1,0 +1,55 @@
+name: All pass
+
+# The one required status for main: waits for every other check on the PR's head commit (CI,
+# UI tests, Preview, Android build when its paths change, and any other app's checks) and passes
+# only if none failed. Checks that are skipped or neutral count as passing, so path-filtered and
+# conditional workflows don't block a merge when they don't run.
+#
+# A re-run of a failed check doesn't re-run this one: re-run `all-pass` after it goes green.
+on:
+  pull_request:
+
+permissions:
+  checks: read
+  contents: read
+
+concurrency:
+  group: all-pass-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  all-pass:
+    runs-on: ubuntu-latest
+    # Covers the slowest path: a preview deploy followed by its UI tests.
+    timeout-minutes: 90
+    steps:
+      - name: Wait for the other checks
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+          SELF: ${{ github.job }}
+        run: |
+          # Checks of jobs waiting on `needs` appear only once those finish, so "all done" must
+          # hold for a few polls in a row before it counts.
+          settled=0
+          while true; do
+            sleep 20
+            runs=$(gh api --paginate "repos/$REPO/commits/$SHA/check-runs?filter=latest&per_page=100" \
+              --jq ".check_runs[] | select(.name != \"$SELF\") | [.name, .status, (.conclusion // \"\")] | @tsv")
+            pending=$(awk -F'\t' '$2 != "completed"' <<< "$runs")
+            if [ -n "$pending" ]; then
+              settled=0
+              echo "Waiting on: $(cut -f1 <<< "$pending" | paste -sd, -)"
+              continue
+            fi
+            settled=$((settled + 1))
+            [ "$settled" -ge 3 ] && break
+          done
+          echo "$runs" | column -t -s $'\t'
+          failed=$(awk -F'\t' '$3 != "success" && $3 != "skipped" && $3 != "neutral"' <<< "$runs")
+          if [ -n "$failed" ]; then
+            echo "::error::Failed checks: $(cut -f1 <<< "$failed" | paste -sd, -)"
+            exit 1
+          fi
+          echo "All checks passed."
