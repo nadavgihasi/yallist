@@ -16,8 +16,21 @@ const DIR = new URL('../../drizzle/', import.meta.url);
  * own; a failed deploy resumes from the statement that failed. A statement can commit without
  * being recorded (a crash in between), so on the next run its "already exists" error means it
  * was applied.
+ *
+ * An empty database (a new PR preview, a test) gets drizzle/baseline.sql instead: the schema as
+ * of the migration it covers, in a third of the statements, with its indexes built at the same
+ * time. Those migrations are then recorded as applied and any later ones run as usual. `log`
+ * gets each statement's time (cli.ts prints them in deploys).
  */
-export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
+export async function migrate(
+  sql: Sql,
+  {
+    dsql,
+    baseline = true,
+    log,
+  }: { dsql: boolean; baseline?: boolean; log?: (line: string) => void },
+) {
+  const started = Date.now();
   await sql`create table if not exists __migrations (
     tag text not null,
     statement integer not null,
@@ -33,15 +46,16 @@ export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
   const journal: { entries: { tag: string }[] } = JSON.parse(
     readFileSync(new URL('meta/_journal.json', DIR), 'utf8'),
   );
+  if (baseline && applied.size === 0 && (await isEmpty(sql))) {
+    await applyBaseline(sql, dsql, journal.entries, applied, log);
+  }
   for (const { tag } of journal.entries) {
-    const statements = readFileSync(new URL(`${tag}.sql`, DIR), 'utf8')
-      .split('--> statement-breakpoint')
-      .map((s) => s.trim())
-      .filter(Boolean);
-    for (const [i, statement] of statements.entries()) {
+    for (const [i, statement] of readStatements(`${tag}.sql`).entries()) {
       if (applied.has(`${tag}#${i}`)) continue;
+      const t = Date.now();
       await apply(sql, statement, dsql);
       await sql`insert into __migrations (tag, statement) values (${tag}, ${i})`;
+      log?.(`${tag}#${i} ${Date.now() - t}ms`);
     }
   }
 
@@ -49,6 +63,63 @@ export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
   await backfillCategories(sql);
   await backfillCovers(sql);
   await backfillExpenseItems(sql);
+  log?.(`migrated in ${Date.now() - started}ms`);
+}
+
+/** A migration file's statements, split where drizzle-kit marks them. */
+function readStatements(file: string) {
+  return readFileSync(new URL(file, DIR), 'utf8')
+    .split('--> statement-breakpoint')
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** No tables but __migrations: nothing was applied, not even a statement a crash left unrecorded. */
+async function isEmpty(sql: Sql) {
+  const [row] = await sql<{ count: number }[]>`
+    select count(*)::int as count from information_schema.tables
+    where table_schema = 'public' and table_name <> '__migrations'`;
+  return row!.count === 0;
+}
+
+/**
+ * Applies drizzle/baseline.sql to an empty database: the tables one by one, then every index at
+ * once (on DSQL each is a background job; they build in parallel and are all waited for). Then
+ * records every statement of the migrations it covers, in one insert, and adds them to `applied`.
+ * A crash part-way leaves tables without records, so the next run takes the migrations path,
+ * which resumes from whatever exists. A baseline naming no known migration is skipped.
+ */
+async function applyBaseline(
+  sql: Sql,
+  dsql: boolean,
+  entries: { tag: string }[],
+  applied: Set<string>,
+  log?: (line: string) => void,
+) {
+  const [header, ...rest] = readStatements('baseline.sql');
+  const covers = /^-- covers: (\S+)/.exec(header ?? '')?.[1];
+  const upTo = entries.findIndex((e) => e.tag === covers);
+  if (upTo < 0) return log?.(`baseline skipped: it covers ${covers}, not in the journal`);
+  // The first chunk holds the header comments and the first statement.
+  const statements = [header!.replace(/^(--.*\n)+/, ''), ...rest];
+
+  const t = Date.now();
+  const indexes = statements.filter((s) => /^CREATE (UNIQUE )?INDEX /.test(s));
+  for (const statement of statements.filter((s) => !indexes.includes(s))) {
+    await apply(sql, statement, dsql);
+  }
+  log?.(`baseline: ${statements.length - indexes.length} tables in ${Date.now() - t}ms`);
+  const i = Date.now();
+  const waits = [];
+  for (const statement of indexes) waits.push(await submit(sql, statement, dsql));
+  await Promise.all(waits.map((wait) => wait()));
+  log?.(`baseline: ${indexes.length} indexes in ${Date.now() - i}ms`);
+
+  const rows = entries
+    .slice(0, upTo + 1)
+    .flatMap(({ tag }) => readStatements(`${tag}.sql`).map((_, statement) => ({ tag, statement })));
+  await sql`insert into __migrations ${sql(rows, 'tag', 'statement')}`;
+  for (const { tag, statement } of rows) applied.add(`${tag}#${statement}`);
 }
 
 /** SQLSTATEs of re-running a CREATE TABLE/INDEX, ADD COLUMN or ADD CONSTRAINT that committed. */
@@ -64,6 +135,16 @@ const ALREADY_EXISTS = new Set([
  * recorded as applied. An index left over from an earlier run must be built too.
  */
 export async function apply(sql: Sql, statement: string, dsql: boolean) {
+  await (
+    await submit(sql, statement, dsql)
+  )();
+}
+
+/**
+ * Runs one migration statement and returns what waits for it to take effect: on DSQL, an index's
+ * background build (or that of an index an earlier run left behind); otherwise nothing.
+ */
+async function submit(sql: Sql, statement: string, dsql: boolean): Promise<() => Promise<void>> {
   let jobId: string | undefined;
   try {
     const rows = await sql.begin((tx) => tx.unsafe(dsql ? toDsql(statement) : statement));
@@ -71,10 +152,13 @@ export async function apply(sql: Sql, statement: string, dsql: boolean) {
   } catch (error) {
     if (!ALREADY_EXISTS.has((error as { code?: string }).code ?? '')) throw error;
     const index = /^CREATE (?:UNIQUE )?INDEX "([^"]+)"/.exec(statement)?.[1];
-    if (dsql && index) await awaitExistingIndex(sql, index);
-    return;
+    return async () => {
+      if (dsql && index) await awaitExistingIndex(sql, index);
+    };
   }
-  if (jobId) await waitForJob(sql, jobId);
+  return async () => {
+    if (jobId) await waitForJob(sql, jobId);
+  };
 }
 
 /**

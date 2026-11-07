@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { TEMPLATES } from '@yallist/domain';
 import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -316,5 +318,46 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
       { expenseId: forMeat, itemId: meat },
       { expenseId: forIce, itemId: ice },
     ]);
+  });
+});
+
+/** Columns, constraints and indexes of the public schema, in a stable order. */
+async function schemaOf(sql: Sql) {
+  const columns = await sql`
+    select table_name, column_name, data_type, is_nullable, column_default
+    from information_schema.columns where table_schema = 'public'
+    order by table_name, column_name`;
+  const constraints = await sql`
+    select c.conrelid::regclass::text as table_name, c.conname, pg_get_constraintdef(c.oid) as def
+    from pg_constraint c join pg_namespace n on n.oid = c.connamespace
+    where n.nspname = 'public' order by 1, 2`;
+  const indexes = await sql`
+    select indexname, indexdef from pg_indexes where schemaname = 'public' order by indexname`;
+  return { columns, constraints, indexes };
+}
+
+describe('drizzle/baseline.sql', () => {
+  it('covers the latest migration (run `pnpm db:baseline` after `pnpm db:generate`)', () => {
+    const dir = new URL('../../drizzle/', import.meta.url);
+    const journal: { entries: { tag: string }[] } = JSON.parse(
+      readFileSync(new URL('meta/_journal.json', dir), 'utf8'),
+    );
+    const header = readFileSync(new URL('baseline.sql', dir), 'utf8').split('\n')[0];
+    expect(header).toBe(`-- covers: ${journal.entries.at(-1)!.tag}`);
+  });
+
+  it.skipIf(!DATABASE_URL)('builds the same schema as replaying every migration', async () => {
+    const replayed = await createTestDatabase();
+    const fromBaseline = await createTestDatabase();
+    try {
+      await migrate(replayed.sql, { dsql: false, baseline: false });
+      await migrate(fromBaseline.sql, { dsql: false });
+      expect(await schemaOf(fromBaseline.sql)).toEqual(await schemaOf(replayed.sql));
+      const count = (sql: Sql) => sql`select tag, statement from __migrations order by 1, 2`;
+      expect(await count(fromBaseline.sql)).toEqual(await count(replayed.sql));
+    } finally {
+      await replayed.drop();
+      await fromBaseline.drop();
+    }
   });
 });

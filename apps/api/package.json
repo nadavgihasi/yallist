@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
+    "db:baseline": "tsx src/db/baseline-generate.ts",
     "db:migrate": "tsx src/db/cli.ts",
     "feedback:retry": "tsx src/feedback-retry.ts",
     "pipeline:offer": "tsx src/pipeline-offer.ts"
