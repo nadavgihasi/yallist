@@ -93,7 +93,7 @@ export function PastTripRow({ data }: { data: TripSummary }) {
   const open = data.transfers.length;
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
-      <Pressable style={[styles.card, styles.past]} accessibilityRole="link">
+      <Pressable style={styles.past} accessibilityRole="link">
         <TripTile template={trip.template} />
         <View style={styles.texts}>
           <Text style={styles.progressText}>{trip.name}</Text>
@@ -125,7 +125,12 @@ const styles = StyleSheet.create({
   missing: { ...type.caption, color: colors.ink },
   progressText: { ...type.itemTitle, color: colors.ink },
   mine: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.brandStrong },
+  // One object, not `[card, past]`: an array style on the `Link asChild` Pressable reaches the DOM
+  // as indexed keys on web and crashes the home screen (YALLIST-APP-1).
   past: {
+    borderRadius: radius.card,
+    backgroundColor: colors.card,
+    overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',
     gap: space[4],
