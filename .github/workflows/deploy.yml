@@ -1,7 +1,6 @@
 name: Deploy
 
-# main is the only way changes reach AWS: CI, then global (account-wide, only when it changed), dev
-# and production.
+# main is the only way changes reach AWS: CI, then global (account-wide), dev and production.
 on:
   push:
     branches: [main]
@@ -24,33 +23,23 @@ jobs:
       contents: read
 
   # The next version from commit titles (docs/releases.md), for the builds. `release` tags it.
-  # Also whether global needs deploying. Runs alongside CI (it deploys nothing), so it adds no time.
   version:
+    needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: read
-      actions: read # the last successful deploy, for global-changed.sh
     outputs:
       version: ${{ steps.version.outputs.version }}
-      global: ${{ steps.global.outputs.changed }}
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          persist-credentials: false
       - id: version
         run: scripts/release.sh
-      - id: global
-        run: scripts/global-changed.sh
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
 
-  # The account budget and deploy roles rarely change: skipped when nothing in it did (~1 minute).
   global:
-    needs: [ci, version]
-    if: needs.version.outputs.global == 'true'
+    needs: ci
     runs-on: ubuntu-latest
     environment: global
     # Deploys take minutes; CloudFront updates can take ~15. Don't let a hung one hold the queue for 6 hours.
@@ -79,14 +68,14 @@ jobs:
         run: |
           echo "### ${{ github.job }}" >> "$GITHUB_STEP_SUMMARY"
           jq -r 'to_entries[] | "- \(.key): \(.value)"' infra/${{ github.job == 'global' && 'global' || 'app' }}/.sst/outputs.json >> "$GITHUB_STEP_SUMMARY"
-      # Apply database migrations, then open the GitHub issues that saved feedback is missing
-      # (docs/deploy.md, Feedback). One `sst shell` (the stage's linked resources) for both, so it
-      # starts once. The global stack has no database.
-      - name: Migrate ${{ github.job }} database and retry feedback issues
+      # Apply database migrations with the stage's linked resources. The global stack has no database.
+      - name: Migrate ${{ github.job }} database
         if: github.job != 'global'
-        run: >-
-          pnpm sst shell --stage ${{ github.job }} --
-          sh -c 'pnpm --filter @yallist/api db:migrate && pnpm --filter @yallist/api feedback:retry'
+        run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api db:migrate
+      # Open the GitHub issues that saved feedback is missing (docs/deploy.md, Feedback).
+      - name: Retry ${{ github.job }} feedback issues
+        if: github.job != 'global'
+        run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api feedback:retry
       # Smoke check: the API Lambda boots and the web app is served, so a broken dev stops production.
       - name: Smoke check ${{ github.job }}
         if: github.job != 'global'
@@ -95,11 +84,7 @@ jobs:
           curl -fsS --retry 5 --retry-all-errors -o /dev/null "$(jq -r .url infra/app/.sst/outputs.json)"
 
   dev:
-    needs: [ci, global, version]
-    # Runs when global deployed or was skipped as unchanged, never after a failure or cancel.
-    if: >-
-      !cancelled() && needs.ci.result == 'success' && needs.version.result == 'success' &&
-      (needs.global.result == 'success' || needs.global.result == 'skipped')
+    needs: [global, version]
     runs-on: ubuntu-latest
     environment: dev
     timeout-minutes: 30
