@@ -1,6 +1,6 @@
 import type { LatLng } from '@yallist/domain';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { I18nManager, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { currentLocation } from './currentLocation';
 import { MapFrame } from './MapFrame';
@@ -54,15 +54,19 @@ export function MeetupMap({
       setLocating('failed');
     }
   };
+  // Before the map opens it sits next to "בחירה במפה"; then it floats on the map, in sight
+  // without scrolling, as in map apps.
+  const onMap = open && !failed;
   const locateButton = (
     <PillButton
       label={locating === 'busy' ? he.links.locating : he.links.myLocation}
-      variant="soft"
-      size={open ? 'sm' : 'md'}
+      variant={onMap ? 'card' : 'soft'}
+      size={onMap ? 'sm' : 'md'}
       disabled={locating === 'busy'}
       icon={<Icon name="locate" size={18} color={colors.primaryStrong} />}
       {...testId('meetup-my-location')}
       onPress={locate}
+      style={onMap && [styles.onMap, ON_MAP_CORNER]}
     />
   );
 
@@ -163,8 +167,10 @@ export function MeetupMap({
               if (m.type === 'failed') setFailed(true);
             }}
           />
+          {locateButton}
         </View>
       )}
+      {failed && locateButton}
       <Text
         style={[styles.hint, (locating === 'denied' || locating === 'failed') && styles.error]}
         {...testId('meetup-point-state')}
@@ -177,21 +183,26 @@ export function MeetupMap({
               ? he.links.pointPicked
               : he.links.mapHint}
       </Text>
-      <View style={styles.footer}>
-        {locateButton}
-        {point && (
-          <PillButton
-            label={he.links.removePoint}
-            variant="quiet"
-            size="sm"
-            {...testId('meetup-point-remove')}
-            onPress={remove}
-          />
-        )}
-      </View>
+      {point && (
+        <PillButton
+          label={he.links.removePoint}
+          variant="quiet"
+          size="sm"
+          {...testId('meetup-point-remove')}
+          onPress={remove}
+          style={styles.remove}
+        />
+      )}
     </View>
   );
 }
+
+/**
+ * The map's top right corner, across from its zoom buttons (top left: the map page is LTR).
+ * React Native swaps left and right in RTL on Android and iOS, so there it's `left`.
+ */
+const ON_MAP_CORNER =
+  I18nManager.isRTL && Platform.OS !== 'web' ? { left: space[2] } : { right: space[2] };
 
 const styles = StyleSheet.create({
   startRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
@@ -216,7 +227,8 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.ground,
   },
-  footer: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  onMap: { position: 'absolute', top: space[2], borderWidth: 1, borderColor: colors.line },
+  remove: { alignSelf: 'flex-start' },
   hint: { ...type.caption, color: colors.inkMuted },
   error: { color: colors.brandStrong },
 });
