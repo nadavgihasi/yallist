@@ -100,9 +100,15 @@ export async function tripByToken(tx: Executor, token: string) {
 /**
  * Everything about the given trips that the app's trip screens need, in one snapshot. With
  * `photos`, for a caller who is an active member of every one of them, active members come with
- * their avatar's URL: only trip-mates see someone's photo.
+ * their avatar's URL: only trip-mates see someone's photo. `forMember` says the same caller may
+ * see the active members' payment phones, so they can pay each other.
  */
-export async function loadTrips(tx: Executor, tripIds: string[], photos?: ReceiptStore) {
+export async function loadTrips(
+  tx: Executor,
+  tripIds: string[],
+  photos?: ReceiptStore,
+  forMember = false,
+) {
   if (tripIds.length === 0) return [];
   const [
     tripRows,
@@ -126,6 +132,7 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
         status: tripMembers.status,
         color: profiles.avatarColor,
         avatarKey: profiles.avatarKey,
+        paymentPhone: profiles.paymentPhone,
         image: users.image,
       })
       .from(tripMembers)
@@ -188,11 +195,15 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
           tripId: _,
           avatarKey: _k,
           image: _i,
+          paymentPhone,
           ...member
         }): typeof member & {
           avatarUrl?: string;
+          paymentPhone?: string;
         } => ({
           ...member,
+          paymentPhone:
+            forMember && member.status === 'active' && paymentPhone ? paymentPhone : undefined,
           avatarUrl: member.status === 'active' ? avatars.get(member.userId) : undefined,
         }),
       ),

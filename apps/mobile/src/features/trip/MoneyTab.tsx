@@ -1,5 +1,6 @@
 import { useIsMutating } from '@tanstack/react-query';
-import { formatShekel } from '@yallist/domain';
+import { formatIsraeliMobile, formatShekel } from '@yallist/domain';
+import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -19,6 +20,11 @@ import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
+
+/** Opens the payment app on the receiver's number (E.164). */
+function payLink(app: 'bit' | 'paybox', e164: string): string {
+  return app === 'bit' ? `bit://pay?phone=${e164}` : `paybox://pay?phone=${e164}`;
+}
 
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
   const act = useTripAction(data.trip.id);
@@ -56,6 +62,18 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
   const unmarkPaid = () =>
     myUnconfirmed.forEach((p) => act({ type: 'deletePayment', paymentId: p.id }));
 
+  // Pay through Bit/PayBox only when everyone I owe has a phone; one number is enough for one app.
+  const payee = myOpen.length === 1 ? view.memberById.get(myOpen[0]!.to) : undefined;
+  const payPhone = payee?.paymentPhone;
+  const payVia = async (app: 'bit' | 'paybox') => {
+    if (!payPhone) return;
+    try {
+      await Linking.openURL(payLink(app, payPhone));
+    } catch {
+      showToast(he.money.payAppMissing(formatIsraeliMobile(payPhone)), 'error');
+    }
+  };
+
   return (
     <View style={styles.wrap}>
       <Card gap={space[1]}>
@@ -67,15 +85,39 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           </Text>
         )}
         {myOpen.length > 0 ? (
-          <PillButton
-            label={he.money.markPaid}
-            variant="soft"
-            size="md"
-            wide
-            style={styles.heroButton}
-            disabled={saving}
-            onPress={markPaid}
-          />
+          <>
+            {payPhone ? (
+              <View style={styles.payApps}>
+                <PillButton
+                  label={he.money.payWithBit}
+                  size="md"
+                  style={styles.payApp}
+                  disabled={saving}
+                  onPress={() => payVia('bit')}
+                />
+                <PillButton
+                  label={he.money.payWithPaybox}
+                  size="md"
+                  style={styles.payApp}
+                  disabled={saving}
+                  onPress={() => payVia('paybox')}
+                />
+              </View>
+            ) : (
+              payee && (
+                <Text style={styles.heroText}>{he.money.noPaymentPhone(payee.displayName)}</Text>
+              )
+            )}
+            <PillButton
+              label={he.money.markPaid}
+              variant="soft"
+              size="md"
+              wide
+              style={styles.heroButton}
+              disabled={saving}
+              onPress={markPaid}
+            />
+          </>
         ) : (
           myPaid.length > 0 && (
             <>
@@ -290,6 +332,8 @@ const styles = StyleSheet.create({
   heroTitle: { ...type.caption, color: colors.inkMuted },
   heroAmount: { ...type.bigNumber, color: colors.ink },
   heroText: { ...type.caption, color: colors.inkMuted },
+  payApps: { flexDirection: 'row', gap: space[2], marginTop: space[3] },
+  payApp: { flex: 1 },
   heroButton: { marginTop: space[3] },
   heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },
   paymentEnd: { alignItems: 'flex-end' },
