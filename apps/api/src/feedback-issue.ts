@@ -57,7 +57,7 @@ const anonymousId = (userId: string, key: string) =>
  * public: they carry no personal data (only an anonymous id), and the user's text is defanged
  * and labelled `untrusted`. Never throws: past the daily cap, when another sender has it, or
  * when GitHub fails, the request stays without an issue (a failure is retried on the next
- * deploy, see docs/deploy.md). With the `pipeline`, a feature request is then offered on Telegram.
+ * deploy, see docs/deploy.md). With the `pipeline`, a feature request or bug report is then offered on Telegram.
  */
 export async function openFeedbackIssue(
   db: Db,
