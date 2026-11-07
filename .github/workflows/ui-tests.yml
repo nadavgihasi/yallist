@@ -1,7 +1,8 @@
 name: UI tests
 
+# Pull requests run it from pr.yml.
 on:
-  pull_request:
+  workflow_call:
   push:
     branches: [main]
 
@@ -14,6 +15,7 @@ concurrency:
 
 # Maestro flows (apps/mobile/e2e) on the web export, against the local API on a fresh database.
 # One job exports the app, two shards run half the flows each, and `web` reports the result.
+# On PRs, pr.yml's `all-pass` is the required status and covers it.
 # See docs/plans/ui-tests.md.
 jobs:
   build:
@@ -90,7 +92,7 @@ jobs:
           retention-days: 14
           overwrite: true
 
-  # The one check to require: fails unless every shard passed.
+  # Fails unless every shard passed.
   web:
     needs: [build, shard]
     if: always()

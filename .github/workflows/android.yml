@@ -8,12 +8,19 @@ on:
         type: choice
         options: [dev, production]
         default: dev
-  pull_request:
-    paths:
-      - .github/workflows/android.yml
-      - apps/mobile/plugins/**
-      - apps/mobile/app.json
-      - apps/mobile/app.config.ts
+  # PRs call it from pr.yml when .github/workflows/android.yml, apps/mobile/plugins/**,
+  # apps/mobile/app.json or apps/mobile/app.config.ts change.
+  workflow_call:
+    secrets:
+      ANDROID_KEYSTORE_BASE64:
+        required: false
+      ANDROID_KEYSTORE_PASSWORD:
+        required: false
+      ANDROID_KEY_ALIAS:
+        required: false
+      # Not passed by pr.yml: only manual runs upload source maps.
+      SENTRY_AUTH_TOKEN:
+        required: false
 
 permissions:
   contents: read

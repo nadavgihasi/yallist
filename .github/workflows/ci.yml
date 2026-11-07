@@ -1,9 +1,8 @@
 name: CI
 
-# Pull requests run it directly (all-pass.yml waits on it for the required status). Pushes to main
-# run it from deploy.yml, which deploys only after it passes.
+# Pull requests run it from pr.yml (whose `all-pass` is the required status). Pushes to main run it
+# from deploy.yml, which deploys only after it passes.
 on:
-  pull_request:
   workflow_call:
 
 permissions:
