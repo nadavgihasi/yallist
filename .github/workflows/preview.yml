@@ -84,28 +84,43 @@ jobs:
           pnpm sst deploy --stage "$STAGE"
           jq -r '"url=\(.url)/", "api=\(.api)", "realtime=\(.realtime)"' \
             infra/app/.sst/outputs.json >> "$GITHUB_OUTPUT"
-      # The cluster starts empty; later pushes apply only new migrations.
+      # The cluster starts empty: its first run applies the baseline (apps/api/src/db/migrate.ts)
+      # and says so, which marks a new stage. Later pushes apply only new migrations.
       - name: Migrate the database
-        run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @yallist/api db:migrate
-      # A new stage's route takes up to a minute to reach CloudFront's edges after the deploy.
-      # Wait until the page's script loads too, not only its HTML, or the UI tests open a page
-      # that never renders (they used to start minutes later, after a slower first migration).
+        id: migrate
+        run: |
+          set -o pipefail
+          pnpm sst shell --stage "$STAGE" -- pnpm --filter @yallist/api db:migrate | tee "$RUNNER_TEMP/migrate.log"
+          if grep -q '^baseline: ' "$RUNNER_TEMP/migrate.log"; then echo "new=true" >> "$GITHUB_OUTPUT"; fi
+      # A new stage takes about a minute after its deploy to be fully served: its route on the
+      # shared CloudFront router, its AppSync realtime host. The UI tests used to start minutes
+      # later, after a slower first migration; started sooner, the first ones found a page that
+      # never rendered or missed a realtime event. So wait until the page's script loads and the
+      # realtime host answers, then, on a new stage only, a minute more.
       - name: Smoke check
         env:
           URL: ${{ steps.deploy.outputs.url }}
           API: ${{ steps.deploy.outputs.api }}
+          REALTIME: ${{ steps.deploy.outputs.realtime }}
+          NEW_STAGE: ${{ steps.migrate.outputs.new }}
         run: |
           curl -fsS --retry 5 --retry-all-errors "$API/health"
           origin=$(grep -oE '^https://[^/]+' <<< "$URL")
-          for _ in $(seq 36); do
+          ready() {
+            local script
             script=$(curl -fsS "$URL" | grep -oE 'src="[^"]*/_expo/static/js/[^"]+\.js"' | head -1 | cut -d'"' -f2 || true)
-            if [[ -n $script ]] && curl -fsS -o /dev/null "$origin$script"; then
-              echo "Serving $script"
+            [[ -n $script ]] && curl -fsS -o /dev/null "$origin$script" &&
+              # Any HTTP answer (unauthenticated, so 4xx) means its DNS and TLS are up.
+              [[ $(curl -sS -o /dev/null -w '%{http_code}' "https://$REALTIME/event" || true) != 000 ]]
+          }
+          for _ in $(seq 36); do
+            if ready; then
+              if [[ $NEW_STAGE == true ]]; then echo "New stage: settling for 60s" && sleep 60; fi
               exit 0
             fi
             sleep 5
           done
-          echo "::error::$URL didn't serve its script within 3 minutes."
+          echo "::error::$URL or $REALTIME wasn't served within 3 minutes."
           exit 1
       - name: Post the URL on the PR
         env:
