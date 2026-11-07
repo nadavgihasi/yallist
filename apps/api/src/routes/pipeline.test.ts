@@ -5,12 +5,16 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 
 import { createDb, type Db } from '../db/client';
 import { migrate } from '../db/migrate';
-import { MAX_RUNNING, type PipelineConfig } from '../pipeline';
+import { MAX_RUNNING, pipelineTelegram, type PipelineConfig } from '../pipeline';
 import { createTestDatabase, DATABASE_URL, signInAsGuest, testApp } from '../test-db';
 
 const OWNER = 42;
+const SECOND = 43;
+/** A group with the owner, a second approver and a member who isn't one (7). */
+const GROUP = -100500;
 const pipeline: PipelineConfig = {
-  telegram: { token: '1:abc', chatId: String(OWNER) },
+  telegram: { token: '1:abc', chatId: String(GROUP) },
+  approvers: [String(OWNER), String(SECOND)],
   telegramSecret: 'tg-secret',
   githubToken: 'gh-token',
   routine: { id: 'trig_01', token: 'sk-ant-oat01-x' },
@@ -97,8 +101,16 @@ describe.skipIf(!DATABASE_URL)('remote feature pipeline', () => {
       headers: { 'content-type': 'application/json', 'x-telegram-bot-api-secret-token': secret },
       body: JSON.stringify(update),
     });
-  const press = (data: string, from = OWNER) =>
-    telegram({ update_id: 1, callback_query: { id: 'q1', from: { id: from }, data } });
+  const press = (data: string, from = OWNER, chat = GROUP) =>
+    telegram({
+      update_id: 1,
+      callback_query: {
+        id: 'q1',
+        from: { id: from, first_name: from === OWNER ? 'Nadav' : 'Dana' },
+        message: { chat: { id: chat } },
+        data,
+      },
+    });
 
   const github = (event: string, payload: unknown, secret = 'gh-secret') => {
     const body = JSON.stringify(payload);
@@ -168,7 +180,7 @@ describe.skipIf(!DATABASE_URL)('remote feature pipeline', () => {
     );
     const [edit] = to('/editMessageText');
     expect(edit!.body).toMatchObject({ message_id: 500, reply_markup: { inline_keyboard: [] } });
-    expect(edit!.body.text).toContain(`✅ Approved · <a href="${SESSION}">session</a>`);
+    expect(edit!.body.text).toContain(`✅ Approved by Nadav · <a href="${SESSION}">session</a>`);
     expect(to('/comments')[0]!.body.body).toContain(`Session: ${SESSION}`);
     expect(to('/answerCallbackQuery').map((c) => c.body.text)).toEqual([
       'Approved',
@@ -185,39 +197,45 @@ describe.skipIf(!DATABASE_URL)('remote feature pipeline', () => {
     await press(`d:${id}`);
     const prompt = to('/sendMessage')[1]!;
     expect(prompt.body).toMatchObject({
-      text: 'Details for <b>#136</b>? Reply to this message.',
-      reply_markup: { force_reply: true, selective: true },
+      chat_id: String(GROUP),
+      text: 'Nadav: details for <b>#136</b>? Reply to this message.',
+      reply_markup: { force_reply: true },
     });
     expect(await state(id)).toMatchObject({
       pipeline_state: 'awaiting_details',
       telegram_prompt_id: 501,
     });
 
-    // A stranger's reply is ignored; the owner's approves.
-    const reply = (from: number) =>
+    // A non-approver's reply, or one in another chat, is ignored; any approver's approves.
+    const reply = (from: number, chat = GROUP) =>
       telegram({
         update_id: 2,
         message: {
-          from: { id: from },
+          chat: { id: chat },
+          from: { id: from, first_name: 'Dana' },
           text: 'Organizer only, in ניהול',
           reply_to_message: { message_id: 501 },
         },
       });
     await reply(7);
+    await reply(SECOND, SECOND);
     expect(fires()).toEqual([]);
-    await reply(OWNER);
+    await reply(SECOND);
     expect(fires()[0]!.body.text).toMatch(/owner_details \(.*\):\n {2}Organizer only, in ניהול$/);
     expect(await state(id)).toMatchObject({
       pipeline_state: 'approved',
       owner_details: 'Organizer only, in ניהול',
+      decided_by: `${SECOND} Dana`,
     });
+    expect(to('/editMessageText')[0]!.body.text).toContain('✅ Approved by Dana');
   });
 
   it('rejects, closing the issue as not planned', async () => {
     const id = await request();
-    await press(`r:${id}`);
+    await press(`r:${id}`, SECOND);
     expect(fires()).toEqual([]);
-    expect(to('/editMessageText')[0]!.body.text).toContain('❌ Rejected');
+    expect(to('/editMessageText')[0]!.body.text).toContain('❌ Rejected by Dana');
+    expect((await state(id)).decided_by).toBe(`${SECOND} Dana`);
     expect(calls.find((c) => c.method === 'PATCH')).toMatchObject({
       url: 'https://api.github.com/repos/nadavgihasi/yallist/issues/136',
       body: { state: 'closed', state_reason: 'not_planned' },
@@ -227,19 +245,42 @@ describe.skipIf(!DATABASE_URL)('remote feature pipeline', () => {
     expect(fires()).toEqual([]);
   });
 
-  it('ignores anyone but the owner, and a wrong secret', async () => {
+  it('ignores anyone but an approver in the pipeline chat, and a wrong secret', async () => {
     const id = await request();
     expect((await press(`a:${id}`, 7)).status).toBe(200);
+    expect((await press(`a:${id}`, OWNER, OWNER)).status).toBe(200);
+    expect(to('/answerCallbackQuery').map((c) => c.body.text)).toEqual([
+      'Only approvers can decide',
+      'Only approvers can decide',
+    ]);
     expect(
       (
         await telegram(
-          { callback_query: { id: 'q', from: { id: OWNER }, data: `a:${id}` } },
+          {
+            callback_query: {
+              id: 'q',
+              from: { id: OWNER },
+              message: { chat: { id: GROUP } },
+              data: `a:${id}`,
+            },
+          },
           'nope',
         )
       ).status,
     ).toBe(401);
     expect(fires()).toEqual([]);
     expect((await state(id)).pipeline_state).toBe('sent');
+  });
+
+  it('tells anyone the chat id and their user id on /chatid', async () => {
+    await telegram({
+      update_id: 3,
+      message: { chat: { id: -999 }, from: { id: 7 }, text: '/chatid@yallist_bot' },
+    });
+    expect(to('/sendMessage')[0]!.body).toEqual({
+      chat_id: -999,
+      text: 'Chat id: -999\nYour user id: 7',
+    });
   });
 
   it('gives the claim back when the fire fails, with the buttons', async () => {
@@ -323,5 +364,21 @@ describe('pipeline webhooks without the pipeline', () => {
     for (const path of ['/webhooks/telegram', '/webhooks/github']) {
       expect((await app.request(path, { method: 'POST', body: '{}' })).status).toBe(404);
     }
+  });
+});
+
+describe('pipelineTelegram', () => {
+  const bot = { token: '1:abc', chatId: '42' };
+
+  it('defaults to the alerts chat, with its id as the only approver', () => {
+    expect(pipelineTelegram(bot, null, null)).toEqual({ telegram: bot, approvers: ['42'] });
+  });
+
+  it('takes a pipeline chat and a list of approvers', () => {
+    expect(pipelineTelegram(bot, '-1001', ' 42, 43 ,x')).toEqual({
+      telegram: { token: '1:abc', chatId: '-1001' },
+      approvers: ['42', '43'],
+    });
+    expect(pipelineTelegram(null, '-1001', '42')).toBeNull();
   });
 });

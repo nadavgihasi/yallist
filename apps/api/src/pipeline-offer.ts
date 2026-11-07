@@ -3,7 +3,7 @@ import { Resource } from 'sst';
 import { findFeedback } from './dal/feedback';
 import { connect, createDb } from './db/client';
 import { telegramConfig } from './notify/telegram';
-import { offerRequest } from './pipeline';
+import { offerRequest, pipelineTelegram } from './pipeline';
 
 /**
  * Offers feature requests that are already issues on Telegram, e.g. ones sent before the pipeline
@@ -11,8 +11,13 @@ import { offerRequest } from './pipeline';
  * (docs/deploy.md). A request offered before is skipped.
  */
 const issues = process.argv.slice(2).map(Number);
-const telegram = telegramConfig(Resource.TelegramBotToken.value, Resource.TelegramChatId.value);
-if (!telegram || !issues.length || issues.some((n) => !Number.isInteger(n))) {
+const optional = (value: string) => (['', 'unset'].includes(value) ? null : value);
+const chat = pipelineTelegram(
+  telegramConfig(Resource.TelegramBotToken.value, Resource.TelegramChatId.value),
+  optional(Resource.TelegramPipelineChatId.value),
+  optional(Resource.TelegramApproverIds.value),
+);
+if (!chat || !issues.length || issues.some((n) => !Number.isInteger(n))) {
   console.error('Usage: pipeline:offer <issue>… (with the stage’s Telegram bot set)');
   process.exit(1);
 }
@@ -20,7 +25,7 @@ const sql = connect();
 const db = createDb(sql);
 // Only Telegram is used to offer; the other settings matter once a button is pressed.
 const config = {
-  telegram,
+  ...chat,
   telegramSecret: '',
   githubToken: null,
   routine: null,

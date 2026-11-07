@@ -4,7 +4,7 @@ import { Resource } from 'sst';
 import { createApp, withBasePath } from './app';
 import { feedbackToken } from './feedback-issue';
 import { telegramConfig } from './notify/telegram';
-import type { PipelineConfig } from './pipeline';
+import { pipelineTelegram, type PipelineConfig } from './pipeline';
 import { appSyncPublisher } from './realtime';
 import { s3ReceiptStore } from './receipts';
 import { db, liveAuth } from './runtime';
@@ -21,15 +21,20 @@ const telegramSecret = optional(Resource.TelegramWebhookSecret.value);
 const fireToken = optional(Resource.RoutineFireToken.value);
 const routineId = process.env.FEATURE_IMPLEMENTER_ROUTINE_ID;
 const githubToken = feedbackToken(Resource.GithubFeedbackToken.value);
+const pipelineChat = pipelineTelegram(
+  telegram,
+  optional(Resource.TelegramPipelineChatId.value),
+  optional(Resource.TelegramApproverIds.value),
+);
 
 /**
  * The remote feature pipeline (pipeline.ts): production only, since the bot has one webhook URL,
  * and only once the bot and its webhook secret exist. Without the routine, Approve only records.
  */
 const pipeline: PipelineConfig | null =
-  Resource.App.stage === 'production' && telegram && telegramSecret && githubToken
+  Resource.App.stage === 'production' && pipelineChat && telegramSecret && githubToken
     ? {
-        telegram,
+        ...pipelineChat,
         telegramSecret,
         githubToken,
         routine:

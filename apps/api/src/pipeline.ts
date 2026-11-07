@@ -20,8 +20,10 @@ import { FireError, fireRoutine, type Routine } from './routine';
  * preview are reported back from GitHub's webhook.
  */
 export interface PipelineConfig {
-  /** The bot and the owner's private chat; the chat id is also the only user allowed to press. */
+  /** The bot and the chat requests go to: your private chat with it, or a group. */
   telegram: Telegram;
+  /** Telegram user ids allowed to press the buttons and answer a details prompt. */
+  approvers: string[];
   /** The `secret_token` the bot's webhook was set with. */
   telegramSecret: string;
   /** GithubFeedbackToken, to comment on and close issues; null: only Telegram changes. */
@@ -30,6 +32,33 @@ export interface PipelineConfig {
   routine: Routine | null;
   /** The repo webhook's secret; null turns /webhooks/github off. */
   githubSecret: string | null;
+}
+
+/** Who pressed a button or replied, from Telegram's `from`. */
+export type Actor = { id: number; first_name?: string; username?: string };
+
+/** An actor's name for the chat: their first name, else their username, else their id. */
+const nameOf = (by: Actor) => escapeHtml(by.first_name || by.username || String(by.id), 64);
+
+/** An actor's record in the database: id and name, so a later rename doesn't lose who it was. */
+const recordOf = (by: Actor) => `${by.id} ${by.first_name || by.username || ''}`.trim();
+
+/**
+ * Where the pipeline talks and who may decide: the pipeline chat if one is set (e.g. a group with
+ * the people who approve), else the alerts chat; the approver ids if set, else the alerts chat id
+ * (in a private chat, the owner's user id). Null without a bot.
+ */
+export function pipelineTelegram(
+  telegram: Telegram | null,
+  pipelineChatId: string | null,
+  approverIds: string | null,
+) {
+  if (!telegram) return null;
+  const approvers = (approverIds ?? telegram.chatId)
+    .split(',')
+    .map((id) => id.trim())
+    .filter((id) => /^\d+$/.test(id));
+  return { telegram: { ...telegram, chatId: pipelineChatId ?? telegram.chatId }, approvers };
 }
 
 /** Runs at once (approved, without a PR or with an open one) before Approve waits. */
@@ -116,12 +145,19 @@ async function onGitHub(config: PipelineConfig, call: (token: string) => Promise
  * fires the routine. The claim comes first, since a fire can't be undone or deduplicated; a
  * failed fire gives the claim back and the buttons return with the error. Returns the toast.
  */
-export async function approve(db: Db, config: PipelineConfig, id: string, details: string | null) {
+export async function approve(
+  db: Db,
+  config: PipelineConfig,
+  id: string,
+  by: Actor,
+  details: string | null,
+) {
   const claimed = await transact(db, async (tx) => {
     if ((await countRunning(tx)) >= MAX_RUNNING) return 'busy' as const;
     return moveFeedback(tx, id, ['sent', 'awaiting_details'], {
       pipelineState: 'approved',
       approvedAt: new Date(),
+      decidedBy: recordOf(by),
       ...(details !== null && { ownerDetails: details }),
     });
   });
@@ -131,7 +167,10 @@ export async function approve(db: Db, config: PipelineConfig, id: string, detail
   const detailsLine = row.ownerDetails ? [quote(row.ownerDetails)] : [];
 
   if (!config.routine) {
-    await show(config, row, ['✅ Approved (no routine set up: nothing started)', ...detailsLine]);
+    await show(config, row, [
+      `✅ Approved by ${nameOf(by)} (no routine set up: nothing started)`,
+      ...detailsLine,
+    ]);
     await onGitHub(config, (token) =>
       commentOnIssue(token, row.githubIssueNumber!, approvalComment(row, null)),
     );
@@ -146,6 +185,7 @@ export async function approve(db: Db, config: PipelineConfig, id: string, detail
     const back = await moveFeedback(db, id, ['approved'], {
       pipelineState: 'sent',
       approvedAt: null,
+      decidedBy: null,
     });
     await show(
       config,
@@ -159,7 +199,7 @@ export async function approve(db: Db, config: PipelineConfig, id: string, detail
   const link = session.startsWith('https://')
     ? ` · <a href="${escapeHtml(session, Infinity)}">session</a>`
     : '';
-  await show(config, row, [`✅ Approved${link}`, ...detailsLine]);
+  await show(config, row, [`✅ Approved by ${nameOf(by)}${link}`, ...detailsLine]);
   await onGitHub(config, (token) =>
     commentOnIssue(token, row.githubIssueNumber!, approvalComment(row, session)),
   );
@@ -186,23 +226,32 @@ function approvalComment(row: Feedback, session: string | null) {
     .join('\n');
 }
 
-/** Approve + details: asks for the details with a reply prompt; the buttons stay. */
-export async function askDetails(db: Db, config: PipelineConfig, id: string) {
+/**
+ * Approve + details: asks for the details with a reply prompt; the buttons stay. Any approver's
+ * reply to it approves.
+ */
+export async function askDetails(db: Db, config: PipelineConfig, id: string, by: Actor) {
   const row = await moveFeedback(db, id, ['sent', 'awaiting_details'], {
     pipelineState: 'awaiting_details',
   });
   if (!row) return 'Already handled';
   const promptId = await sendTelegram(
     config.telegram,
-    `Details for <b>#${row.githubIssueNumber}</b>? Reply to this message.`,
+    `${nameOf(by)}: details for <b>#${row.githubIssueNumber}</b>? Reply to this message.`,
     { replyTo: row.telegramMessageId ?? undefined, forceReply: true },
   );
   await moveFeedback(db, id, ['awaiting_details'], { telegramPromptId: promptId });
   return 'Reply with the details';
 }
 
-/** The owner's reply to a details prompt: approves with it. */
-export async function answerPrompt(db: Db, config: PipelineConfig, promptId: number, text: string) {
+/** An approver's reply to a details prompt: approves with it, as them. */
+export async function answerPrompt(
+  db: Db,
+  config: PipelineConfig,
+  promptId: number,
+  by: Actor,
+  text: string,
+) {
   const row = await findFeedback(db, 'telegramPromptId', promptId);
   if (!row) return; // a reply to some other message in the chat, e.g. an alert
   if (row.pipelineState !== 'awaiting_details') {
@@ -211,18 +260,19 @@ export async function answerPrompt(db: Db, config: PipelineConfig, promptId: num
     });
     return;
   }
-  const toast = await approve(db, config, row.id, text.trim().slice(0, 4000));
+  const toast = await approve(db, config, row.id, by, text.trim().slice(0, 4000));
   if (toast !== 'Approved')
     await sendTelegram(config.telegram, escapeHtml(toast), { replyTo: promptId });
 }
 
 /** Rejects a request and closes its issue as not planned. */
-export async function reject(db: Db, config: PipelineConfig, id: string) {
+export async function reject(db: Db, config: PipelineConfig, id: string, by: Actor) {
   const row = await moveFeedback(db, id, ['sent', 'awaiting_details'], {
     pipelineState: 'rejected',
+    decidedBy: recordOf(by),
   });
   if (!row) return 'Already handled';
-  await show(config, row, ['❌ Rejected']);
+  await show(config, row, [`❌ Rejected by ${nameOf(by)}`]);
   await onGitHub(config, async (token) => {
     await commentOnIssue(
       token,

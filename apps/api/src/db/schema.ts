@@ -469,6 +469,8 @@ export const feedback = pgTable(
     /** The owner's instructions, sent with Approve + details. */
     ownerDetails: text('owner_details'),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
+    /** Who approved or rejected it: their Telegram user id and name. */
+    decidedBy: text('decided_by'),
     /** The feature implementer routine's session for this request, on claude.ai. */
     routineSessionUrl: text('routine_session_url'),
     /** The PR the session opened (head branch `claude/issue-<n>-…`). */
