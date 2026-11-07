@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useState, type ComponentRef, type Ref } from 'react';
 import { Platform, Share, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
@@ -35,7 +35,18 @@ async function shareLink(url: string) {
   }
 }
 
-export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
+export function PeopleTab({
+  data,
+  view,
+  me,
+  shareRef,
+}: {
+  data: TripData;
+  view: TripView;
+  me: string;
+  /** Lets the trip screen scroll the share button to the middle of the page. */
+  shareRef?: Ref<ComponentRef<typeof View>>;
+}) {
   const act = useTripAction(data.trip.id);
   // `${action}:${userId}` armed by a first tap; a second tap does it.
   const [confirming, setConfirming] = useState<string>();
@@ -92,14 +103,16 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
           <Text style={styles.title}>{he.people.inviteTitle}</Text>
           <Text style={styles.text}>{he.people.inviteText}</Text>
         </View>
-        <PillButton
-          label={he.people.share}
-          variant="soft"
-          wide
-          icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
-          {...testId('people-share')}
-          onPress={() => shareLink(link)}
-        />
+        <View ref={shareRef} collapsable={false}>
+          <PillButton
+            label={he.people.share}
+            variant="soft"
+            wide
+            icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
+            {...testId('people-share')}
+            onPress={() => shareLink(link)}
+          />
+        </View>
         {/* The link itself too, to copy by hand where sharing doesn't reach. */}
         <Text style={styles.link} selectable numberOfLines={1} {...testId('people-invite-link')}>
           {link}
