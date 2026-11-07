@@ -1,7 +1,7 @@
-import { meetupLinks } from '@yallist/domain';
+import { meetupLinks, parseMapLink } from '@yallist/domain';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
@@ -12,20 +12,26 @@ import { testId } from '@/lib/testId';
 import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
-/** The native app where one is installed (Waze, Google Maps, Photos); a new tab on web. */
-const open = (url: string) =>
+/**
+ * The native app where one is installed (Waze, Google Maps, Photos); a new tab on web, where
+ * expo-linking would replace the app's page instead.
+ */
+function open(url: string) {
+  if (Platform.OS === 'web') return void window.open(url, '_blank', 'noopener');
   Linking.openURL(url).catch(() => showToast(he.errors.failed, 'error'));
+}
 
 /**
- * The trip's meetup place, with buttons to navigate there, and its photo album. Organizers edit
+ * The trip's meetup place or its point on the map, with buttons to navigate there, and its photo album. Organizers edit
  * them; with neither set, they get a quiet button to add them and everyone else sees nothing.
  */
 export function TripLinks({ trip, organizer }: { trip: TripData['trip']; organizer: boolean }) {
-  const { meetupText, albumUrl } = trip;
+  const { meetupText, meetupPoint, albumUrl } = trip;
+  const meetup = meetupText !== undefined || meetupPoint !== undefined;
   const edit = () =>
     router.push({ pathname: '/trips/[tripId]/links', params: { tripId: trip.id } });
 
-  if (!meetupText && !albumUrl) {
+  if (!meetup && !albumUrl) {
     return organizer ? (
       <PillButton
         label={he.links.add}
@@ -39,15 +45,17 @@ export function TripLinks({ trip, organizer }: { trip: TripData['trip']; organiz
     ) : null;
   }
 
-  const links = meetupText ? meetupLinks(meetupText) : undefined;
+  const links = meetupLinks(meetupText, meetupPoint);
+  // A pasted link says nothing to read: it shows as "a place on the map", as a picked point does.
+  const placeName = meetupText && !parseMapLink(meetupText) ? meetupText : he.links.mapLink;
   return (
     <Card gap={space[3]}>
       <View style={styles.header}>
         <View style={styles.texts}>
-          <Text style={styles.title}>{meetupText ? he.links.meetup : he.links.albumLabel}</Text>
-          {meetupText && (
+          <Text style={styles.title}>{meetup ? he.links.meetup : he.links.albumLabel}</Text>
+          {meetup && (
             <Text style={styles.place} {...testId('trip-meetup-text')}>
-              {links && 'link' in links ? he.links.mapLink : meetupText}
+              {placeName}
             </Text>
           )}
         </View>

@@ -194,10 +194,15 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       expect(bad.status).toBe(400);
     });
 
-    it('sets the meetup place and photo album: organizers only, allowed links only', async () => {
+    it('sets the meetup place, its point and the photo album: organizers only, allowed links only', async () => {
       const { organizer, member, data } = await tripWithMember();
       const tripId = data.trip.id;
-      const patch = (user: Guest, json: { meetupText?: string | null; albumUrl?: string | null }) =>
+      type Links = {
+        meetupText?: string | null;
+        meetupPoint?: { lat: number; lng: number } | null;
+        albumUrl?: string | null;
+      };
+      const patch = (user: Guest, json: Links) =>
         client.trips[':tripId'].$patch({ param: { tripId }, json }, as(user));
       const album = 'https://photos.app.goo.gl/AbC123';
 
@@ -218,22 +223,34 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       ]) {
         expect((await patch(organizer, { albumUrl })).status).toBe(400);
       }
+      for (const meetupPoint of [
+        { lat: 91, lng: 35 },
+        { lat: 31, lng: -181 },
+        { lat: 31, lng: 35, zoom: 3 } as { lat: number; lng: number },
+      ]) {
+        expect((await patch(organizer, { meetupPoint })).status).toBe(400);
+      }
 
       const res = await patch(organizer, { meetupText: ' חניון עין גדי ', albumUrl: album });
       expect(res.status).toBe(200);
       expect(await res.json()).toMatchObject({ meetupText: 'חניון עין גדי', albumUrl: album });
       const link = 'https://maps.app.goo.gl/AbC123';
       expect((await patch(organizer, { meetupText: link })).status).toBe(200);
+      const meetupPoint = { lat: 31.461823, lng: 35.3881 };
+      expect((await patch(organizer, { meetupPoint })).status).toBe(200);
       // Every member sees them.
       expect((await (await detail(member, tripId)).json()).trip).toMatchObject({
         meetupText: link,
+        meetupPoint,
         albumUrl: album,
       });
       expect(await activityTypes(tripId)).toContain('trip_updated');
 
-      expect((await patch(organizer, { meetupText: null, albumUrl: null })).status).toBe(200);
+      const cleared = { meetupText: null, meetupPoint: null, albumUrl: null };
+      expect((await patch(organizer, cleared)).status).toBe(200);
       const { trip } = await (await detail(member, tripId)).json();
       expect(trip.meetupText).toBeUndefined();
+      expect(trip.meetupPoint).toBeUndefined();
       expect(trip.albumUrl).toBeUndefined();
     });
   });

@@ -1,4 +1,10 @@
-import { ALBUM_URL_MAX, isMeetupPlace, MEETUP_MAX, parseAlbumUrl } from '@yallist/domain';
+import {
+  ALBUM_URL_MAX,
+  isMeetupPlace,
+  MEETUP_MAX,
+  parseAlbumUrl,
+  type LatLng,
+} from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 
@@ -6,17 +12,22 @@ import { TextField } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { useCloseSheet } from '@/features/trip/closeSheet';
+import { MeetupMap } from '@/features/trip/map/MeetupMap';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { useTrip, useTripAction } from '@/state/trips';
 
-/** Sets the trip's meetup place and photo album (organizers); an empty field clears it. */
+/**
+ * Sets the trip's meetup place, its point on the map, and the photo album (organizers); an empty
+ * field clears it.
+ */
 export default function TripLinks() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const close = useCloseSheet(tripId);
   const data = useTrip(tripId);
   const act = useTripAction(tripId);
   const [meetup, setMeetup] = useState(data?.trip.meetupText ?? '');
+  const [point, setPoint] = useState<LatLng | undefined>(data?.trip.meetupPoint);
   const [album, setAlbum] = useState(data?.trip.albumUrl ?? '');
   if (!data) return null;
 
@@ -24,11 +35,17 @@ export default function TripLinks() {
   const albumUrl = album.trim() || null;
   const badMeetup = meetupText !== null && !isMeetupPlace(meetupText);
   const badAlbum = albumUrl !== null && !parseAlbumUrl(albumUrl);
+  const meetupPoint = point ?? null;
   const { trip } = data;
-  const changed = meetupText !== (trip.meetupText ?? null) || albumUrl !== (trip.albumUrl ?? null);
+  const before = trip.meetupPoint;
+  const changed =
+    meetupText !== (trip.meetupText ?? null) ||
+    albumUrl !== (trip.albumUrl ?? null) ||
+    meetupPoint?.lat !== before?.lat ||
+    meetupPoint?.lng !== before?.lng;
   const save = () => {
     if (badMeetup || badAlbum) return;
-    close(() => changed && act({ type: 'setTripLinks', meetupText, albumUrl }));
+    close(() => changed && act({ type: 'setTripLinks', meetupText, meetupPoint, albumUrl }));
   };
 
   return (
@@ -56,6 +73,11 @@ export default function TripLinks() {
         maxLength={MEETUP_MAX}
         error={badMeetup ? he.links.badMeetup : undefined}
         {...testId('trip-links-meetup')}
+      />
+      <MeetupMap
+        point={point}
+        onPoint={setPoint}
+        onName={(name) => !meetup.trim() && setMeetup(name.slice(0, MEETUP_MAX))}
       />
       <TextField
         label={he.links.albumLabel}

@@ -7,6 +7,7 @@ import {
   COVER_IDS,
   coverFor,
   isDone,
+  isLatLng,
   isMeetupPlace,
   MEETUP_MAX,
   parseAlbumUrl,
@@ -72,6 +73,11 @@ const updateTrip = z
       .trim()
       .max(MEETUP_MAX)
       .refine(isMeetupPlace, 'Not a place or a Google Maps or Waze link')
+      .nullable(),
+    meetupPoint: z
+      .object({ lat: z.number(), lng: z.number() })
+      .strict()
+      .refine(isLatLng, 'Not a point on the map')
       .nullable(),
     albumUrl: z
       .string()
@@ -179,14 +185,21 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
 
     .patch('/:tripId', validate('param', tripParam), validate('json', updateTrip), async (c) => {
       const { tripId } = c.req.valid('param');
-      const changes = c.req.valid('json');
+      const { meetupPoint, ...fields } = c.req.valid('json');
+      const changes = {
+        ...fields,
+        ...(meetupPoint !== undefined && {
+          meetupLat: meetupPoint?.lat ?? null,
+          meetupLng: meetupPoint?.lng ?? null,
+        }),
+      };
       const trip = await transact(db, async (tx) => {
         const current = await lockTrip(tx, tripId);
         await requireMember(tx, tripId, c.var.user.id, { organizer: true, lock: true });
         if (!datesInOrder({ ...current, ...changes })) throw fail(400, datesMessage.message);
         const updated = await setTrip(tx, tripId, changes);
         await logActivity(tx, tripId, c.var.user.id, 'trip_updated', {
-          fields: Object.keys(changes),
+          fields: Object.keys(c.req.valid('json')),
         });
         return updated;
       });

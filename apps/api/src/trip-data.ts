@@ -30,6 +30,10 @@ export function toTrip(row: typeof trips.$inferSelect) {
     status: row.status,
     requireApproval: row.requireApproval,
     meetupText: opt(row.meetupText),
+    meetupPoint:
+      row.meetupLat !== null && row.meetupLng !== null
+        ? { lat: row.meetupLat, lng: row.meetupLng }
+        : undefined,
     albumUrl: opt(row.albumUrl),
     createdAt: row.createdAt.toISOString(),
   };

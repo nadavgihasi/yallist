@@ -43,6 +43,7 @@ function trip(overrides: Partial<TripData> = {}): TripData {
       status: 'planning',
       requireApproval: false,
       meetupText: undefined,
+      meetupPoint: undefined,
       albumUrl: undefined,
       createdAt: '2026-10-24T00:00:00.000Z',
     },
@@ -242,20 +243,22 @@ describe('trip', () => {
     });
   });
 
-  it('sets and clears the meetup place and album at once', () => {
+  it('sets and clears the meetup place, its point and the album at once', () => {
     const album = 'https://photos.app.goo.gl/x';
+    const meetupPoint = { lat: 31.46, lng: 35.39 };
     const set = applyAction(
       trip(),
-      { type: 'setTripLinks', meetupText: 'עין גדי', albumUrl: album },
+      { type: 'setTripLinks', meetupText: 'עין גדי', meetupPoint, albumUrl: album },
       'me',
     );
-    expect(set.trip).toMatchObject({ meetupText: 'עין גדי', albumUrl: album });
+    expect(set.trip).toMatchObject({ meetupText: 'עין גדי', meetupPoint, albumUrl: album });
     const cleared = applyAction(
       set,
-      { type: 'setTripLinks', meetupText: null, albumUrl: null },
+      { type: 'setTripLinks', meetupText: null, meetupPoint: null, albumUrl: null },
       'me',
     );
     expect(cleared.trip.meetupText).toBeUndefined();
+    expect(cleared.trip.meetupPoint).toBeUndefined();
     expect(cleared.trip.albumUrl).toBeUndefined();
   });
 });

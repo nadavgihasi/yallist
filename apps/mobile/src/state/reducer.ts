@@ -4,6 +4,7 @@ import {
   type Claim,
   type CoverId,
   type ItemKind,
+  type LatLng,
   type ListKind,
 } from '@yallist/domain';
 
@@ -58,7 +59,12 @@ export type Action =
       placeText: string | undefined;
     }
   /** Null clears it. */
-  | { type: 'setTripLinks'; meetupText: string | null; albumUrl: string | null }
+  | {
+      type: 'setTripLinks';
+      meetupText: string | null;
+      meetupPoint: LatLng | null;
+      albumUrl: string | null;
+    }
   // Shopping runs (PACKING_SHOPPING_SPEC §4). Starting one needs the server's answer (the run's
   // id, what was skipped); the rest show at once and queue offline like any other change.
   | { type: 'startRun'; itemIds: string[] }
@@ -199,6 +205,7 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
         trip: {
           ...data.trip,
           meetupText: action.meetupText ?? undefined,
+          meetupPoint: action.meetupPoint ?? undefined,
           albumUrl: action.albumUrl ?? undefined,
         },
       };

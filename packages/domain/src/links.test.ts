@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { parseAlbumUrl, isMeetupPlace, parseMapLink, meetupLinks } from './links';
+import { isLatLng, isMeetupPlace, meetupLinks, parseAlbumUrl, parseMapLink } from './links';
 
 describe('meetupLinks', () => {
   it('searches a place in Waze and in Google Maps', () => {
@@ -20,6 +20,37 @@ describe('meetupLinks', () => {
   it('searches for text that only mentions a link', () => {
     expect(meetupLinks('javascript:alert(1)')).toHaveProperty('waze');
   });
+
+  it('navigates to a point picked on the map, whatever the place is called', () => {
+    const point = { lat: 31.4618234567, lng: 35.3881 };
+    const expected = {
+      waze: 'https://waze.com/ul?ll=31.461823,35.3881&navigate=yes',
+      maps: 'https://www.google.com/maps/search/?api=1&query=31.461823,35.3881',
+    };
+    expect(meetupLinks('חניון עין גדי', point)).toEqual(expected);
+    expect(meetupLinks(undefined, point)).toEqual(expected);
+    expect(meetupLinks('https://maps.app.goo.gl/AbC123', point)).toEqual(expected);
+  });
+
+  it('has nothing to open without a place or a point', () => {
+    expect(meetupLinks(undefined)).toBeUndefined();
+    expect(meetupLinks('  ')).toBeUndefined();
+  });
+});
+
+describe('isLatLng', () => {
+  it.each([
+    { lat: 31.46, lng: 35.39 },
+    { lat: -90, lng: 180 },
+    { lat: 0, lng: 0 },
+  ])('accepts %o', (p) => expect(isLatLng(p)).toBe(true));
+
+  it.each([
+    { lat: 91, lng: 0 },
+    { lat: 0, lng: -180.5 },
+    { lat: Number.NaN, lng: 0 },
+    { lat: 0, lng: Number.POSITIVE_INFINITY },
+  ])('rejects %o', (p) => expect(isLatLng(p)).toBe(false));
 });
 
 describe('parseMapLink', () => {

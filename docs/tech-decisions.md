@@ -38,6 +38,13 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 - Over-the-air updates: Hot Updater, self-hosted on S3 + CloudFront / Lambda@Edge.
 - Push notifications: Expo's free push service.
 
+## Maps
+
+- The meetup point is picked on a Leaflet map with OpenStreetMap tiles, and found by name with OpenStreetMap's Nominatim. Neither needs an API key or billing, unlike Google Maps.
+- One map page (`apps/mobile/src/features/trip/map/mapHtml.ts`) runs in a sandboxed iframe on web and in `react-native-webview` on Android. Leaflet loads from unpkg, pinned by its integrity hash.
+- OpenStreetMap's usage policies apply: credit on the map, the app named in the user agent on Android, and searches only when the user asks (no search-as-you-type). Heavy use would need a paid tile and search provider.
+- Navigation stays in Waze and Google Maps: the trip's buttons open the picked point there.
+
 ## Backend
 
 - API: Hono on AWS Lambda.

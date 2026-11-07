@@ -1,4 +1,4 @@
-/** Longest meetup place the API keeps: an address, or a pasted map link. */
+/** Longest meetup place the API keeps: a name or address, or a pasted map link. */
 export const MEETUP_MAX = 300;
 /** Longest photo album link the API keeps. */
 export const ALBUM_URL_MAX = 300;
@@ -49,11 +49,35 @@ export const parseMapLink = (text: string) => allowedUrl(text, MAP_HOSTS);
 export const isMeetupPlace = (text: string) =>
   text.trim().length > 0 && (!looksLikeUrl(text) || parseMapLink(text) !== undefined);
 
+/** A point on the map, in degrees (WGS 84). */
+export type LatLng = { lat: number; lng: number };
+
+/** A real point: finite, latitude within ±90 and longitude within ±180. */
+export const isLatLng = (p: LatLng) =>
+  Number.isFinite(p.lat) &&
+  Number.isFinite(p.lng) &&
+  Math.abs(p.lat) <= 90 &&
+  Math.abs(p.lng) <= 180;
+
+/** "lat,lng" to 6 decimals (about 10 cm), as Waze and Google Maps take it. */
+const latLng = ({ lat, lng }: LatLng) => `${+lat.toFixed(6)},${+lng.toFixed(6)}`;
+
 /**
- * Where the meetup's buttons go: a pasted map link opens as is; a place's name or address opens
- * as a search in Waze and in Google Maps.
+ * Where the meetup's buttons go. A point picked on the map opens there in Waze and in Google
+ * Maps; otherwise a pasted map link opens as is, and a place's name or address opens as a search.
  */
-export function meetupLinks(place: string): { link: string } | { waze: string; maps: string } {
+export function meetupLinks(
+  place: string | undefined,
+  point?: LatLng,
+): { link: string } | { waze: string; maps: string } | undefined {
+  if (point) {
+    const ll = latLng(point);
+    return {
+      waze: `https://waze.com/ul?ll=${ll}&navigate=yes`,
+      maps: `https://www.google.com/maps/search/?api=1&query=${ll}`,
+    };
+  }
+  if (!place?.trim()) return undefined;
   const link = parseMapLink(place);
   if (link) return { link };
   const query = encodeURIComponent(place.trim());

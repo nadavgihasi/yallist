@@ -11,6 +11,7 @@ import {
   boolean,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -168,6 +169,9 @@ export const trips = pgTable(
     requireApproval: boolean('require_approval').notNull().default(false),
     /** Where the group meets: a place's name or address, or a Google Maps or Waze link. */
     meetupText: text('meetup_text'),
+    /** The meetup point picked on the map, in degrees; both or neither. */
+    meetupLat: doublePrecision('meetup_lat'),
+    meetupLng: doublePrecision('meetup_lng'),
     /** A Google Photos album link. */
     albumUrl: text('album_url'),
     inviteToken: text('invite_token').notNull().unique(),
