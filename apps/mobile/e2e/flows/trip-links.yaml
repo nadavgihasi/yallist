@@ -1,5 +1,5 @@
-# An organizer sets the meetup place, marks it on the map, and sets the photo album; the trip shows
-# buttons to open them.
+# In the ניהול tab, an organizer sets the meetup place and marks it on the map, then, separately,
+# the photo album; each section then shows buttons to open it.
 appId: app.yallist
 url: ${WEB_URL}
 # A video per flow, kept even when it fails (onFlowComplete always runs).
@@ -11,21 +11,16 @@ tags: [trips]
 ---
 - runFlow: ../common/sign-in.yaml
 - runFlow: ../common/new-trip.yaml
-# Nothing set yet: organizers get a quiet way to add them.
+- tapOn:
+    id: trip-tab-people
+# Nothing set yet: organizers get a button to add each.
 - assertNotVisible:
     id: trip-meetup-waze
 - tapOn:
-    id: trip-links-add
+    id: trip-meetup-add
 - tapOn:
-    id: trip-links-meetup
+    id: trip-meetup-name
 - inputText: Ein Gedi parking
-# Only Google Photos links: anything else is refused before saving.
-- tapOn:
-    id: trip-links-album
-- inputText: https://example.com/album
-- assertVisible: צריך קישור לאלבום ב־Google Photos
-- eraseText: 30
-- inputText: https://photos.app.goo.gl/E2E
 # A tap on the map marks the point (no search: the flow doesn't depend on the place search). The
 # map page loads Leaflet first, so the tap is retried until the pin is down.
 - tapOn:
@@ -38,7 +33,7 @@ tags: [trips]
       - assertVisible:
           id: meetup-point-remove
 - tapOn:
-    id: trip-links-save
+    id: trip-meetup-save
 - assertVisible:
     id: trip-meetup-text
     text: Ein Gedi parking
@@ -46,18 +41,33 @@ tags: [trips]
     id: trip-meetup-waze
 - assertVisible:
     id: trip-meetup-maps
+# The album has its own sheet. Only Google Photos links: anything else is refused before saving.
+- tapOn:
+    id: trip-album-add
+- tapOn:
+    id: trip-album-url
+- inputText: https://example.com/album
+- assertVisible: צריך קישור לאלבום ב־Google Photos
+- eraseText: 30
+- inputText: https://photos.app.goo.gl/E2E
+- tapOn:
+    id: trip-album-save
 - assertVisible:
-    id: trip-album
+    id: trip-album-open
+- assertVisible:
+    id: trip-meetup-waze
 # Saved, not just shown: still there after a reload.
 - openLink: ${WEB_URL}
 - tapOn: E2E trip
+- tapOn:
+    id: trip-tab-people
 - assertVisible:
     id: trip-meetup-text
     text: Ein Gedi parking
 - assertVisible:
-    id: trip-album
+    id: trip-album-open
 # The point was saved too: the sheet opens on the map with the pin down.
 - tapOn:
-    id: trip-links-edit
+    id: trip-meetup-edit
 - assertVisible:
     id: meetup-point-remove

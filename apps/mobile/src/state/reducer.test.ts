@@ -243,23 +243,32 @@ describe('trip', () => {
     });
   });
 
-  it('sets and clears the meetup place, its point and the album at once', () => {
-    const album = 'https://photos.app.goo.gl/x';
+  it('sets and clears the meetup place and its point at once', () => {
     const meetupPoint = { lat: 31.46, lng: 35.39 };
     const set = applyAction(
-      trip(),
-      { type: 'setTripLinks', meetupText: 'עין גדי', meetupPoint, albumUrl: album },
+      trip({ trip: { ...trip().trip, albumUrl: 'https://photos.app.goo.gl/x' } }),
+      { type: 'setMeetup', meetupText: 'עין גדי', meetupPoint },
       'me',
     );
-    expect(set.trip).toMatchObject({ meetupText: 'עין גדי', meetupPoint, albumUrl: album });
+    expect(set.trip).toMatchObject({ meetupText: 'עין גדי', meetupPoint });
     const cleared = applyAction(
       set,
-      { type: 'setTripLinks', meetupText: null, meetupPoint: null, albumUrl: null },
+      { type: 'setMeetup', meetupText: null, meetupPoint: null },
       'me',
     );
     expect(cleared.trip.meetupText).toBeUndefined();
     expect(cleared.trip.meetupPoint).toBeUndefined();
-    expect(cleared.trip.albumUrl).toBeUndefined();
+    // The album is its own setting.
+    expect(cleared.trip.albumUrl).toBe('https://photos.app.goo.gl/x');
+  });
+
+  it('sets and clears the album at once', () => {
+    const album = 'https://photos.app.goo.gl/x';
+    const set = applyAction(trip(), { type: 'setAlbum', albumUrl: album }, 'me');
+    expect(set.trip.albumUrl).toBe(album);
+    expect(
+      applyAction(set, { type: 'setAlbum', albumUrl: null }, 'me').trip.albumUrl,
+    ).toBeUndefined();
   });
 });
 

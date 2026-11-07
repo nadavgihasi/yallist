@@ -25,7 +25,6 @@ import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
 import { PeopleTab } from '@/features/trip/PeopleTab';
 import { ReadinessHero } from '@/features/trip/ReadinessHero';
-import { TripLinks } from '@/features/trip/TripLinks';
 import { he, participants } from '@/i18n/he';
 import { formatRange } from '@/lib/dates';
 import { statusOf } from '@/lib/api';
@@ -245,7 +244,6 @@ export default function TripScreen() {
               .join(' · ')}
           </Text>
         </View>
-        <TripLinks trip={trip} organizer={organizer} />
 
         {!desktop && hero}
         <View style={desktop && styles.columns}>

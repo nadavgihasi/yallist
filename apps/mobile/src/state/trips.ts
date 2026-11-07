@@ -245,10 +245,12 @@ async function send(tripId: string, action: Action): Promise<unknown> {
         trip.$patch({ param, json: { ...json, placeText: json.placeText ?? null } }),
       );
     }
-    case 'setTripLinks': {
-      const { meetupText, meetupPoint, albumUrl } = action;
-      return parseResponse(trip.$patch({ param, json: { meetupText, meetupPoint, albumUrl } }));
+    case 'setMeetup': {
+      const { meetupText, meetupPoint } = action;
+      return parseResponse(trip.$patch({ param, json: { meetupText, meetupPoint } }));
     }
+    case 'setAlbum':
+      return parseResponse(trip.$patch({ param, json: { albumUrl: action.albumUrl } }));
     case 'startRun':
       return parseResponse(trip.runs.$post({ param, json: { itemIds: action.itemIds } }));
     case 'addToRun':

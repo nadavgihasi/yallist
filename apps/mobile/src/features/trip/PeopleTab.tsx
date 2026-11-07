@@ -15,6 +15,7 @@ import type { TripData, TripMember } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
 import { toAvatar, type TripView } from './derive';
+import { AlbumSection, MeetupSection } from './TripLinks';
 
 // The site invite links point to: this page's own on web, under its base path on a PR preview
 // (/pr-<n>); on native, the stage's site (android.yml) or the local Expo web server.
@@ -118,6 +119,9 @@ export function PeopleTab({
           {link}
         </Text>
       </Card>
+
+      <MeetupSection trip={data.trip} organizer={organizer} />
+      <AlbumSection trip={data.trip} organizer={organizer} />
 
       {organizer && pending.length > 0 && (
         <ListGroup title={he.people.pending}>
