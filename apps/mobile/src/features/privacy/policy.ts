@@ -74,8 +74,8 @@ export const policy: Record<'he' | 'en', Policy> = {
         title: 'מחיקת החשבון והמידע',
         lines: [
           'את החשבון מוחקים בעצמכם באפליקציה, בלי לפנות אלינו: במסך הפרופיל, ״מחיקת החשבון״. המחיקה מיידית: החשבון, הפרופיל (שם, תמונה וטלפון), חיבור ה-Google, המשובים ובקשות ההצטרפות לטיולים נמחקים, והחשבון מנותק בכל המכשירים.',
-          'אפשר למחוק את החשבון רק כשאין לך טיולים, כי טיול משותף לכל החברים. טיול שאתם מארגנים מוחקים בלשונית ״ניהול״ שלו, עם כל המידע שבו. מטיול שמישהו אחר מארגן, המארגן יכול להסיר אתכם.',
-          'בטיולים שהוסרת מהם, מה שעשית בהם (פריטים, הוצאות ותשלומים) נשאר אצל שאר החברים, בלי השם שלך: במקומו מופיע ״חשבון שנמחק״.',
+          'אפשר למחוק את החשבון רק כשאין לך טיולים, כי טיול משותף לכל החברים. בלשונית ״ניהול״ של כל טיול אפשר לצאת ממנו, ומארגנים יכולים גם למחוק אותו עם כל המידע שבו. מארגן/ת יחיד/ה של טיול לא יוצא/ת ממנו אלא מוחק/ת אותו.',
+          'בטיולים שיצאת מהם או שהוסרת מהם, מה שעשית בהם (פריטים, הוצאות ותשלומים) נשאר אצל שאר החברים, בלי השם שלך: במקומו מופיע ״חשבון שנמחק״.',
           'עותקים בגיבויים נמחקים תוך 7 ימים. issue ציבורי ב-GitHub שנוצר ממשוב לא נמחק עם החשבון.',
           'בכל זמן אפשר גם לשנות את השם ולהסיר את התמונה.',
         ],
@@ -142,8 +142,8 @@ export const policy: Record<'he' | 'en', Policy> = {
         title: 'Deleting your account and data',
         lines: [
           "You delete your account yourself, in the app, without contacting us: on the profile screen, “מחיקת החשבון” (delete account). It's immediate: your account, profile (name, photo and phone), Google sign-in link, feedback and requests to join trips are deleted, and you're signed out on every device.",
-          "You can delete your account once you're in no trip, since a trip is shared by all its members. Delete a trip you organize from its “ניהול” (manage) tab, with everything in it. From a trip someone else organizes, the organizer can remove you.",
-          'In trips you were removed from, what you did (items, expenses and payments) stays for the other members, without your name: it shows as “חשבון שנמחק” (deleted account).',
+          "You can delete your account once you're in no trip, since a trip is shared by all its members. Leave any trip from its “ניהול” (manage) tab; organizers can also delete it there, with everything in it. A trip's only organizer deletes it rather than leaving.",
+          'In trips you left or were removed from, what you did (items, expenses and payments) stays for the other members, without your name: it shows as “חשבון שנמחק” (deleted account).',
           "Copies in backups are gone within 7 days. A public GitHub issue made from your feedback isn't deleted with the account.",
           'You can also change your name and remove your photo at any time.',
         ],

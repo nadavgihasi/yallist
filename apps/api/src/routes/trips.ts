@@ -240,6 +240,24 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
       return c.json({ userId, status: 'removed' as const });
     })
 
+    // The caller leaves the trip, as if an organizer removed them: their run is cancelled and
+    // what they took is missing again; what they paid stays. The last organizer can't leave:
+    // they delete the trip, or make someone else organizer first.
+    .post('/:tripId/leave', validate('param', tripParam), async (c) => {
+      const { tripId } = c.req.valid('param');
+      const me = c.var.user.id;
+      await transact(db, async (tx) => {
+        await lockTrip(tx, tripId);
+        const member = await requireMember(tx, tripId, me, { lock: true });
+        await assertNotLastOrganizer(tx, member);
+        await setMember(tx, member, { status: 'removed' });
+        await cancelMemberRuns(tx, tripId, me);
+        await deleteMemberClaims(tx, tripId, me);
+        await logActivity(tx, tripId, me, 'member_left');
+      });
+      return c.json({ userId: me, status: 'removed' as const });
+    })
+
     .put(
       '/:tripId/members/:userId/role',
       validate('param', memberParam),

@@ -336,6 +336,41 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       expect((await detail(member, data.trip.id)).status).toBe(404);
       expect((await claim(member, data.trip.id, item.id, 1)).status).toBe(404);
     });
+
+    it('lets a member leave, dropping their claims; not the last organizer', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const leave = (user: Guest) =>
+        client.trips[':tripId'].leave.$post({ param: { tripId } }, as(user));
+      const item = data.items.find((i) => i.kind === 'single')!;
+      await claim(member, tripId, item.id, 1);
+
+      expect((await leave(organizer)).status).toBe(409);
+      const res = await leave(member);
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ userId: member.id, status: 'removed' });
+      expect((await detail(member, tripId)).status).toBe(404);
+      expect((await (await client.trips.$get({}, as(member))).json()).trips).toEqual([]);
+      const after = await (await detail(organizer, tripId)).json();
+      expect(after.claims).toEqual([]);
+      expect(after.members.find((m) => m.userId === member.id)?.status).toBe('removed');
+      expect(await activityTypes(tripId)).toContain('member_left');
+      // Gone already.
+      expect((await leave(member)).status).toBe(404);
+    });
+
+    it('lets an organizer leave once another member is organizer', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      await client.trips[':tripId'].members[':userId'].role.$put(
+        { ...memberPath(tripId, member.id), json: { role: 'organizer' } },
+        as(organizer),
+      );
+      expect(
+        (await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(organizer))).status,
+      ).toBe(200);
+      expect((await detail(member, tripId)).status).toBe(200);
+    });
   });
 
   describe('items and claims', () => {
