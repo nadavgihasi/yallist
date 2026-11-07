@@ -1,6 +1,5 @@
 /** Where privacy questions go. Deleting the account is in the app (profile screen). */
-// TODO: the real address.
-export const PRIVACY_EMAIL = 'privacy@example.com';
+export const PRIVACY_EMAIL = 'nadavgehasi@gmail.com';
 
 export interface Policy {
   title: string;
