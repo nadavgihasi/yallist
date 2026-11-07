@@ -16,7 +16,7 @@ export interface FeedbackConfig {
   stage: string;
   /** GitHub token for opening issues. Unset (or SST's `unset` placeholder): requests are only saved. */
   githubToken?: string;
-  /** Production only: offers feature requests on Telegram and serves the pipeline's webhooks. */
+  /** Production only: offers feature requests and bug reports on Telegram and serves the pipeline's webhooks. */
   pipeline?: PipelineConfig | null;
 }
 

@@ -1,0 +1,81 @@
+name: PR
+
+# Every check a pull request runs, as one workflow, so `all-pass` can need them all. It's the one
+# status to require for main: it fails if any of them failed or was cancelled, and passes when the
+# rest passed or were skipped (Android when its files didn't change, Preview on fork PRs).
+#
+# The called workflows keep their own concurrency groups; Preview's also has a `closed` run of
+# its own, which removes the PR's stage.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  ui-tests:
+    uses: ./.github/workflows/ui-tests.yml
+
+  preview:
+    uses: ./.github/workflows/preview.yml
+    permissions:
+      contents: read
+      id-token: write # OIDC token for the preview role
+      pull-requests: write # the sticky comment
+    secrets:
+      BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
+
+  # The Android build is slow, so it runs only when the files that shape the native project change.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: read
+    outputs:
+      android: ${{ steps.files.outputs.android }}
+    steps:
+      - id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          files=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/files" --paginate --jq '.[].filename')
+          pattern='^(\.github/workflows/(android|pr)\.yml|apps/mobile/plugins/.*|apps/mobile/app\.json|apps/mobile/app\.config\.ts)$'
+          if grep -qE "$pattern" <<< "$files"; then
+            echo "android=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "android=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  android:
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
+    uses: ./.github/workflows/android.yml
+    secrets:
+      ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+
+  all-pass:
+    needs: [ci, ui-tests, preview, changes, android]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Fail if any check failed or was cancelled
+        env:
+          RESULTS: ${{ toJSON(needs.*.result) }}
+          NEEDS: ${{ toJSON(needs) }}
+        run: |
+          jq -r 'to_entries[] | "\(.key): \(.value.result)"' <<< "$NEEDS"
+          if jq -e 'any(. == "failure" or . == "cancelled")' <<< "$RESULTS" > /dev/null; then
+            echo "::error::Not every check passed."
+            exit 1
+          fi
