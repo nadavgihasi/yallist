@@ -123,6 +123,11 @@ jobs:
       SST_SECRET_TelegramChatId: ${{ secrets.TELEGRAM_CHAT_ID }} # optional, alerts
       SST_SECRET_SentryDsn: ${{ secrets.SENTRY_DSN }} # optional, API errors
       SST_SECRET_SentryWebhookSecret: ${{ secrets.SENTRY_WEBHOOK_SECRET }} # optional
+      # optional, the remote feature pipeline (docs/deploy.md#remote-feature-pipeline-optional)
+      SST_SECRET_TelegramWebhookSecret: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+      SST_SECRET_RoutineFireToken: ${{ secrets.ROUTINE_FIRE_TOKEN }}
+      SST_SECRET_GithubWebhookSecret: ${{ secrets.FEEDBACK_WEBHOOK_SECRET }}
+      BUILD_ROUTINE_ID: ${{ vars.BUILD_ROUTINE_ID }}
       EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }} # optional, app errors
       # Source map uploads (web export and API bundle); skipped without the token.
       SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}

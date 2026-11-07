@@ -41,9 +41,12 @@ describe('sendTelegram', () => {
   });
 
   it('posts an HTML message to the chat', async () => {
-    const fetch = vi.fn(async (_url: string, _init: RequestInit) => new Response('{"ok":true}'));
+    const fetch = vi.fn(
+      async (_url: string, _init: RequestInit) =>
+        new Response('{"ok":true,"result":{"message_id":7}}'),
+    );
     vi.stubGlobal('fetch', fetch);
-    await sendTelegram({ token: '1:abc', chatId: '42' }, '<b>hi</b>');
+    expect(await sendTelegram({ token: '1:abc', chatId: '42' }, '<b>hi</b>')).toBe(7);
     expect(fetch).toHaveBeenCalledWith(
       'https://api.telegram.org/bot1:abc/sendMessage',
       expect.objectContaining({ method: 'POST' }),
@@ -53,6 +56,25 @@ describe('sendTelegram', () => {
       text: '<b>hi</b>',
       parse_mode: 'HTML',
       link_preview_options: { is_disabled: true },
+    });
+  });
+
+  it('sends buttons, or a reply that asks for one', async () => {
+    const fetch = vi.fn(
+      async (_url: string, _init: RequestInit) =>
+        new Response('{"ok":true,"result":{"message_id":8}}'),
+    );
+    vi.stubGlobal('fetch', fetch);
+    const telegram = { token: '1:abc', chatId: '42' };
+    await sendTelegram(telegram, 'pick', { buttons: [{ text: 'Yes', data: 'y:1' }] });
+    await sendTelegram(telegram, 'why?', { replyTo: 5, forceReply: true });
+    const [buttons, prompt] = fetch.mock.calls.map(([, init]) => JSON.parse(init.body as string));
+    expect(buttons.reply_markup).toEqual({
+      inline_keyboard: [[{ text: 'Yes', callback_data: 'y:1' }]],
+    });
+    expect(prompt).toMatchObject({
+      reply_parameters: { message_id: 5, allow_sending_without_reply: true },
+      reply_markup: { force_reply: true, selective: true },
     });
   });
 

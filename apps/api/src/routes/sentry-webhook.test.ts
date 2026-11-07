@@ -17,7 +17,10 @@ describe('POST /webhooks/sentry', () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it('forwards a signed alert to Telegram', async () => {
-    const fetch = vi.fn(async (_url: string, _init: RequestInit) => new Response('{"ok":true}'));
+    const fetch = vi.fn(
+      async (_url: string, _init: RequestInit) =>
+        new Response('{"ok":true,"result":{"message_id":7}}'),
+    );
     vi.stubGlobal('fetch', fetch);
     const app = sentryWebhookRoutes({ secret: 'secret', telegram });
     const res = await post(app, {

@@ -10,7 +10,8 @@ import {
 } from './dal/feedback';
 import type { Db } from './db/client';
 import { transact } from './db/tx';
-import { createIssue } from './github';
+import { breakMentions, createIssue } from './github';
+import { offerRequest, type PipelineConfig } from './pipeline';
 
 /** GitHub issues per day across all users; past it, requests are only saved. */
 export const ISSUE_LIMIT = 50;
@@ -34,9 +35,6 @@ export function feedbackToken(value: string | undefined) {
   return null;
 }
 
-/** Breaks @mentions (a zero-width space after the @), so an issue can't ping anyone. */
-const breakMentions = (text: string) => text.replaceAll('@', '@​');
-
 /**
  * User text as an inert code block: no links, images, mentions or markdown. The fence is longer
  * than any run of backticks in the text, so the text can't close it.
@@ -59,9 +57,14 @@ const anonymousId = (userId: string, key: string) =>
  * public: they carry no personal data (only an anonymous id), and the user's text is defanged
  * and labelled `untrusted`. Never throws: past the daily cap, when another sender has it, or
  * when GitHub fails, the request stays without an issue (a failure is retried on the next
- * deploy, see docs/deploy.md).
+ * deploy, see docs/deploy.md). With the `pipeline`, a feature request is then offered on Telegram.
  */
-export async function openFeedbackIssue(db: Db, row: Feedback, token: string): Promise<boolean> {
+export async function openFeedbackIssue(
+  db: Db,
+  row: Feedback,
+  token: string,
+  pipeline: PipelineConfig | null = null,
+): Promise<boolean> {
   try {
     const issued = await countIssuesSince(db, new Date(Date.now() - DAY_MS));
     if (issued >= ISSUE_LIMIT) return false;
@@ -87,6 +90,7 @@ export async function openFeedbackIssue(db: Db, row: Feedback, token: string): P
       throw err;
     });
     await setFeedbackIssue(db, row.id, number);
+    if (pipeline) await offerRequest(db, pipeline, { ...row, githubIssueNumber: number });
     return true;
   } catch (err) {
     console.error('Feedback issue not created', err);

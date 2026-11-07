@@ -10,7 +10,7 @@ One file per phase from the [SPEC build plan](../SPEC.md#11-build-plan), adapted
 | 0 — Foundation  | [phase-0-foundation.md](phase-0-foundation.md)                                 | Done                                    |
 | 1 — Backend     | [phase-1-backend.md](phase-1-backend.md)                                       | Done                                    |
 | PR previews     | [e2e-live-environments.md](e2e-live-environments.md)                           | Built                                   |
-| Remote pipeline | [remote-feature-pipeline.md](remote-feature-pipeline.md)                       | Design (Telegram + routine)             |
+| Remote pipeline | [remote-feature-pipeline.md](remote-feature-pipeline.md)                       | Built; setup by hand                    |
 | UI tests        | [ui-tests.md](ui-tests.md)                                                     | Web and previews; native planned        |
 | Email sign-in   | [email-signup.md](email-signup.md)                                             | Design; deferred, blocked on the domain |
 | UI plan         | [ui-plan.md](../design/plans/ui-plan.md)                                       | PRs 1–4 done                            |

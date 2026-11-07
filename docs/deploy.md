@@ -143,6 +143,48 @@ gh secret set FEEDBACK_GITHUB_TOKEN --env production
 
 A request without an issue (`github_issue_number` null: saved before the token existed, GitHub failed, or past the daily cap) is retried on every deploy: after migrations, deploy.yml runs `feedback:retry` ([feedback-retry.ts](../apps/api/src/feedback-retry.ts)), which opens the missing issues oldest first, within the same 50-a-day cap. Each sender claims a request (`github_issue_at`) before calling GitHub, so the API and overlapping runs never open an issue twice; a failed send drops its claim, and a claim left by a crash expires after 10 minutes. Without a token, the API and the retry log a warning and only save.
 
+#### Remote feature pipeline (optional)
+
+Production only ([plan](plans/remote-feature-pipeline.md)). After a feature request's issue is opened, the API sends it to the Telegram chat with **Approve**, **Approve + details** and **Reject** ([pipeline.ts](../apps/api/src/pipeline.ts)). Approve fires the **Build** routine with the request and your details; the session follows [.claude/routines/build.md](../.claude/routines/build.md), pushes `claude/issue-<n>-…` and opens a draft PR. The repo webhook then sends the PR link, the first preview URL and the merge as replies to the request's message. Reject closes the issue as not planned. At most 3 runs go at once (approved in the last day, or with an open PR).
+
+| SST secret / variable   | GitHub (production environment)  | Without it                                        |
+| ----------------------- | -------------------------------- | ------------------------------------------------- |
+| `TelegramWebhookSecret` | secret `TELEGRAM_WEBHOOK_SECRET` | Requests aren't offered; webhooks 404             |
+| `RoutineFireToken`      | secret `ROUTINE_FIRE_TOKEN`      | Approve records and comments, starts none         |
+| `BUILD_ROUTINE_ID`      | variable `BUILD_ROUTINE_ID`      | Same                                              |
+| `GithubWebhookSecret`   | secret `FEEDBACK_WEBHOOK_SECRET` | No PR or preview messages; `/webhooks/github` 404 |
+
+It also needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `FEEDBACK_GITHUB_TOKEN` (above, and [Monitoring](#setup-checklist)). `TELEGRAM_CHAT_ID` must be your **private chat** with the bot: the API accepts presses and replies only from the user whose id is the chat id. Turn on two-step verification in Telegram; your account is the approval key.
+
+1. **Telegram webhook.** Generate a secret, store it, and point the bot at production's API (the `api` output on the last Deploy run's summary). Telegram sends it back in `X-Telegram-Bot-Api-Secret-Token`.
+
+   ```sh
+   SECRET=$(openssl rand -hex 32)
+   gh secret set TELEGRAM_WEBHOOK_SECRET --env production --body "$SECRET"
+   curl -s "https://api.telegram.org/bot$TOKEN/setWebhook" \
+     -d url="https://<api>/webhooks/telegram" -d secret_token="$SECRET" \
+     -d allowed_updates='["message","callback_query"]'
+   ```
+
+   Re-run the deploy (or wait for the next) so the API has the secret. Requests sent before the pipeline aren't offered; offer the open ones by issue number:
+
+   ```sh
+   pnpm sst shell --stage production -- pnpm --filter @yallist/api pipeline:offer 124 135 136
+   ```
+
+2. **Cloud environment.** At [claude.ai/code](https://claude.ai/code), create a personal environment `yallist-agent`: network **Trusted**, no secrets, setup script `pnpm install --frozen-lockfile`.
+3. **Routine.** Create a routine **Build** on `nadavgihasi/yallist` in `yallist-agent`, no connectors, no schedule, with the prompt `Follow .claude/routines/build.md on main for the feature request in the fire payload.` Add an **API trigger**, generate its token (shown once) and note the routine id (`trig_…`):
+
+   ```sh
+   gh secret set ROUTINE_FIRE_TOKEN --env production   # paste the sk-ant-oat01-… token
+   gh variable set BUILD_ROUTINE_ID --env production --body trig_…
+   gh label create agent -R nadavgihasi/yallist --description "PR opened by the build routine"
+   ```
+
+4. **Repo webhook.** **Settings → Webhooks → Add webhook**: payload URL `https://<api>/webhooks/github`, content type `application/json`, a new secret (`openssl rand -hex 32`), events **Pull requests** and **Deployment statuses** only. Then `gh secret set FEEDBACK_WEBHOOK_SECRET --env production` with the same secret, and deploy.
+
+**Off switches:** pause the routine in claude.ai (fires fail, the buttons come back with the error); delete `ROUTINE_FIRE_TOKEN` (Approve starts nothing); delete `TELEGRAM_WEBHOOK_SECRET` (nothing is offered). Regenerating the routine token revokes the old one.
+
 ## Realtime
 
 An [AppSync Events](https://docs.aws.amazon.com/appsync/latest/eventapi/event-api-welcome.html) API per stage, `yallist-<stage>-realtime` ([realtime.ts](../apps/api/src/realtime.ts)), with one channel per trip: `/trips/<tripId>` in the `trips` namespace.
