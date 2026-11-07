@@ -6,7 +6,7 @@ import { telegramConfig } from './notify/telegram';
 import { offerRequest, pipelineTelegram } from './pipeline';
 
 /**
- * Offers feature requests that are already issues on Telegram, e.g. ones sent before the pipeline
+ * Offers feature requests and bug reports that are already issues on Telegram, e.g. ones sent before the pipeline
  * existed: `pnpm sst shell --stage production -- pnpm --filter @yallist/api pipeline:offer 135 136`
  * (docs/deploy.md). A request offered before is skipped.
  */
