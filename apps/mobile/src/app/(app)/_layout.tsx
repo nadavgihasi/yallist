@@ -19,14 +19,17 @@ export default function AppLayout() {
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}>
-      <Stack.Screen
-        name="feedback"
-        options={{
-          presentation: 'transparentModal',
-          animation: 'fade',
-          contentStyle: { backgroundColor: 'transparent' },
-        }}
-      />
+      {['feedback', 'delete-account'].map((name) => (
+        <Stack.Screen
+          key={name}
+          name={name}
+          options={{
+            presentation: 'transparentModal',
+            animation: 'fade',
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        />
+      ))}
     </Stack>
   );
 }

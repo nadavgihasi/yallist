@@ -15,15 +15,8 @@ tags: [profile]
     notVisible:
       id: loading
     timeout: 10000
-- scrollUntilVisible:
-    element:
-      id: profile-delete-account
 - tapOn:
     id: profile-delete-account
-# The confirm card opens at the bottom of the profile, below the fold.
-- scrollUntilVisible:
-    element:
-      id: delete-account-confirm
 - assertVisible: אי אפשר לבטל את זה.*
 - tapOn:
     id: delete-account-confirm
