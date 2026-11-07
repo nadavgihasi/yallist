@@ -9,8 +9,9 @@
 # Results go to $E2E_OUT (default: a temp dir): junit.xml, the API and web logs, and per flow
 # under maestro/ a video (startRecording/), screenshots on failure and Maestro's logs.
 #
-# CI splits the flows in two: E2E_SHARD=1 runs the flows tagged shard-1, E2E_SHARD=2 the rest
-# (new flows land there; tag one shard-1 when shard 2 gets longer). E2E_PREBUILT=1 serves an
+# CI splits the flows into E2E_SHARDS shards: E2E_SHARD=k (1..E2E_SHARDS) runs every
+# E2E_SHARDS-th flow of flows/*.yaml by name, starting at the k-th, so new flows spread over the
+# shards by themselves. E2E_PREBUILT=1 serves an
 # existing apps/mobile/dist, exported with EXPO_PUBLIC_API_URL=http://localhost:$API_PORT and
 # EXPO_PUBLIC_E2E as below, and no EXPO_PUBLIC_REALTIME_URL: there's no AppSync locally, so the
 # app doesn't subscribe to live updates (src/lib/realtime.ts).
@@ -29,12 +30,19 @@ run_flows() {
   local url=$1
   shift
   (($#)) || set -- apps/mobile/e2e
-  case ${E2E_SHARD:-} in
-    '') ;;
-    1) set -- --include-tags shard-1 "$@" ;;
-    2) set -- --exclude-tags shard-1 "$@" ;;
-    *) echo "E2E_SHARD must be 1 or 2" >&2 && exit 1 ;;
-  esac
+  if [[ -n ${E2E_SHARD:-} ]]; then
+    # This shard's flows, as a workspace config like e2e/config.yaml listing only them. Tags
+    # (--exclude-tags) still apply on top.
+    local shards=${E2E_SHARDS:-2} i=0 flow config=$OUT/shard-config.yaml
+    if ((E2E_SHARD < 1 || E2E_SHARD > shards)); then
+      echo "E2E_SHARD must be 1 to E2E_SHARDS ($shards)" >&2 && exit 1
+    fi
+    echo flows: >"$config"
+    for flow in apps/mobile/e2e/flows/*.yaml; do
+      if ((i++ % shards == E2E_SHARD - 1)); then echo "  - flows/${flow##*/}" >>"$config"; fi
+    done
+    set -- --config "$config" "$@"
+  fi
   # Recording needs Chrome DevTools for a Chrome version that Maestro 2.11.0 bundles (145–147).
   # Selenium Manager downloads that Chrome for Testing once (~/.cache/selenium).
   export SE_BROWSER_VERSION=${SE_BROWSER_VERSION:-147}

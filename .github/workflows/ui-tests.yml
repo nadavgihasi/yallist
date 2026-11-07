@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 # Maestro flows (apps/mobile/e2e) on the web export, against the local API on a fresh database.
-# One job exports the app, two shards run half the flows each, and `web` reports the result.
+# One job exports the app, four shards run a quarter of the flows each, and `web` reports the result.
 # See docs/plans/ui-tests.md.
 jobs:
   build:
@@ -49,7 +49,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         image: postgres:17
@@ -79,6 +79,7 @@ jobs:
         env:
           MAESTRO: ${{ steps.maestro.outputs.maestro }}
           E2E_SHARD: ${{ matrix.shard }}
+          E2E_SHARDS: 4 # the matrix's length
           E2E_PREBUILT: 1
           E2E_OUT: ${{ runner.temp }}/ui-tests
       # Videos, JUnit, screenshots on failure, Maestro, API and web logs. A rerun replaces them.

@@ -110,7 +110,7 @@ jobs:
             gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --body "$body"
           fi
 
-  # The UI tests (apps/mobile/e2e) against the preview, on two workers as in ui-tests.yml. No AWS
+  # The UI tests (apps/mobile/e2e) against the preview, on four workers as in ui-tests.yml. No AWS
   # role or secrets: they only browse the preview. Every flow signs in as a new guest, so the
   # shards share the preview's database without seeing each other's data.
   ui-shard:
@@ -120,7 +120,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v7
         with:
@@ -134,6 +134,7 @@ jobs:
           MAESTRO: ${{ steps.maestro.outputs.maestro }}
           E2E_WEB_URL: ${{ needs.deploy.outputs.url }}
           E2E_SHARD: ${{ matrix.shard }}
+          E2E_SHARDS: 4 # the matrix's length
           E2E_OUT: ${{ runner.temp }}/ui-tests
       # One name across attempts, so "Re-run failed jobs" replaces a shard's results.
       - uses: actions/upload-artifact@v7

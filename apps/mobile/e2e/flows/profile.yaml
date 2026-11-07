@@ -6,7 +6,7 @@ onFlowStart:
   - startRecording: ${MAESTRO_FILENAME}
 onFlowComplete:
   - stopRecording
-tags: [profile, shard-1]
+tags: [profile]
 ---
 - runFlow: ../common/sign-in.yaml
 - tapOn:
