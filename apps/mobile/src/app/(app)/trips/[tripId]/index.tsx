@@ -1,6 +1,6 @@
 import { formatShekel, type ListFilter } from '@yallist/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   Platform,
   Pressable,
@@ -68,6 +68,36 @@ export default function TripScreen() {
     setFilter('all');
   };
   const now = useToday();
+  // "Invite friends" opens the People tab and centers its share button, so the next step is clear.
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  const shareRef = useRef<ComponentRef<typeof View>>(null);
+  const viewportHeight = useRef(0);
+  const loaded = data !== undefined;
+  const [inviteTaps, setInviteTaps] = useState(0);
+  const invite = () => {
+    pickTab('people');
+    setInviteTaps((n) => n + 1);
+  };
+  useEffect(() => {
+    if (inviteTaps === 0 || tab !== 'people' || !loaded) return;
+    const frame = requestAnimationFrame(() => {
+      const share = shareRef.current;
+      const inner = scrollRef.current?.getInnerViewRef() as Parameters<
+        ComponentRef<typeof View>['measureLayout']
+      >[0];
+      if (!share || !inner) return;
+      share.measureLayout(
+        inner,
+        (_x, y, _w, h) =>
+          scrollRef.current?.scrollTo({
+            y: Math.max(0, y - (viewportHeight.current - h) / 2),
+            animated: true,
+          }),
+        () => {},
+      );
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [inviteTaps, tab, loaded]);
   // A sheet opened by URL hands its params to this screen underneath it. Clear them once this
   // screen is focused again: `router.setParams` targets the focused route, not necessarily this one.
   useFocusEffect(
@@ -122,7 +152,7 @@ export default function TripScreen() {
         setTab(view.missingIn('bring') >= view.missingIn('buy') ? 'bring' : 'buy');
         setFilter('missing');
       }}
-      onInvite={() => pickTab('people')}
+      onInvite={invite}
     />
   );
 
@@ -137,6 +167,8 @@ export default function TripScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView
+        ref={scrollRef}
+        onLayout={(e) => (viewportHeight.current = e.nativeEvent.layout.height)}
         contentContainerStyle={[
           styles.page,
           !desktop && styles.column,
@@ -156,7 +188,7 @@ export default function TripScreen() {
             label={he.trip.invite}
             variant="soft"
             icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
-            onPress={() => pickTab('people')}
+            onPress={invite}
           />
         </View>
         <Cover
@@ -227,7 +259,9 @@ export default function TripScreen() {
                 onFilter={setFilter}
               />
             )}
-            {tab === 'people' && <PeopleTab data={data} view={view} me={me.userId} />}
+            {tab === 'people' && (
+              <PeopleTab data={data} view={view} me={me.userId} shareRef={shareRef} />
+            )}
             {tab === 'money' && <MoneyTab data={data} view={view} me={me.userId} />}
           </View>
           {desktop && (
