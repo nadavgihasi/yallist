@@ -19,7 +19,7 @@ const webhookSecret = optional(Resource.SentryWebhookSecret.value);
 const telegram = telegramConfig(Resource.TelegramBotToken.value, Resource.TelegramChatId.value);
 const telegramSecret = optional(Resource.TelegramWebhookSecret.value);
 const fireToken = optional(Resource.RoutineFireToken.value);
-const routineId = process.env.BUILD_ROUTINE_ID;
+const routineId = process.env.FEATURE_IMPLEMENTER_ROUTINE_ID;
 const githubToken = feedbackToken(Resource.GithubFeedbackToken.value);
 
 /**

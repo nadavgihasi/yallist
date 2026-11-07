@@ -147,12 +147,12 @@ A request without an issue (`github_issue_number` null: saved before the token e
 
 Production only ([plan](plans/remote-feature-pipeline.md)). After a feature request's issue is opened, the API sends it to the Telegram chat with **Approve**, **Approve + details** and **Reject** ([pipeline.ts](../apps/api/src/pipeline.ts)). Approve fires the **yallist-feature-implementer** routine with the request and your details; the session follows [.claude/routines/feature-implementer.md](../.claude/routines/feature-implementer.md), pushes `claude/issue-<n>-…` and opens a draft PR. The repo webhook then sends the PR link, the first preview URL and the merge as replies to the request's message. Reject closes the issue as not planned. At most 3 runs go at once (approved in the last day, or with an open PR).
 
-| SST secret / variable   | GitHub (production environment)  | Without it                                        |
-| ----------------------- | -------------------------------- | ------------------------------------------------- |
-| `TelegramWebhookSecret` | secret `TELEGRAM_WEBHOOK_SECRET` | Requests aren't offered; webhooks 404             |
-| `RoutineFireToken`      | secret `ROUTINE_FIRE_TOKEN`      | Approve records and comments, starts none         |
-| `BUILD_ROUTINE_ID`      | variable `BUILD_ROUTINE_ID`      | Same                                              |
-| `GithubWebhookSecret`   | secret `FEEDBACK_WEBHOOK_SECRET` | No PR or preview messages; `/webhooks/github` 404 |
+| SST secret / variable            | GitHub (production environment)           | Without it                                        |
+| -------------------------------- | ----------------------------------------- | ------------------------------------------------- |
+| `TelegramWebhookSecret`          | secret `TELEGRAM_WEBHOOK_SECRET`          | Requests aren't offered; webhooks 404             |
+| `RoutineFireToken`               | secret `ROUTINE_FIRE_TOKEN`               | Approve records and comments, starts none         |
+| `FEATURE_IMPLEMENTER_ROUTINE_ID` | variable `FEATURE_IMPLEMENTER_ROUTINE_ID` | Same                                              |
+| `GithubWebhookSecret`            | secret `FEEDBACK_WEBHOOK_SECRET`          | No PR or preview messages; `/webhooks/github` 404 |
 
 It also needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `FEEDBACK_GITHUB_TOKEN` (above, and [Monitoring](#setup-checklist)). `TELEGRAM_CHAT_ID` must be your **private chat** with the bot: the API accepts presses and replies only from the user whose id is the chat id. Turn on two-step verification in Telegram; your account is the approval key.
 
@@ -177,7 +177,7 @@ It also needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `FEEDBACK_GITHUB_TOKE
 
    ```sh
    gh secret set ROUTINE_FIRE_TOKEN --env production   # paste the sk-ant-oat01-… token
-   gh variable set BUILD_ROUTINE_ID --env production --body trig_…
+   gh variable set FEATURE_IMPLEMENTER_ROUTINE_ID --env production --body trig_…
    gh label create agent -R nadavgihasi/yallist --description "PR opened by the feature implementer routine"
    ```
 
