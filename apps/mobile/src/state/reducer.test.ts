@@ -220,8 +220,24 @@ describe('trip', () => {
     );
   });
 
-  it('renames the trip at once', () => {
-    expect(applyAction(trip(), { type: 'renameTrip', name: 'דרום' }, 'me').trip.name).toBe('דרום');
+  it('edits name, dates and place at once', () => {
+    const edited = applyAction(
+      trip(),
+      {
+        type: 'editTrip',
+        name: 'דרום',
+        startsOn: '2030-01-02',
+        endsOn: '2030-01-04',
+        placeText: undefined,
+      },
+      'me',
+    ).trip;
+    expect(edited).toMatchObject({
+      name: 'דרום',
+      startsOn: '2030-01-02',
+      endsOn: '2030-01-04',
+      placeText: undefined,
+    });
   });
 });
 
