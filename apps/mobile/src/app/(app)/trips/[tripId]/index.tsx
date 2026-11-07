@@ -178,9 +178,29 @@ export default function TripScreen() {
           )}
         </Cover>
         <View style={styles.titles}>
-          <Text style={styles.title} accessibilityRole="header" {...testId('trip-title')}>
-            {trip.name}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text
+              style={[styles.title, styles.titleText]}
+              accessibilityRole="header"
+              {...testId('trip-title')}
+            >
+              {trip.name}
+            </Text>
+            {view.memberById.get(me.userId)?.role === 'organizer' && (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={he.renameTrip.edit}
+                {...testId('trip-rename-edit')}
+                onPress={() =>
+                  router.push({ pathname: '/trips/[tripId]/rename', params: { tripId } })
+                }
+                style={styles.titleEdit}
+                hitSlop={8}
+              >
+                <Icon name="pencil" size={18} color={colors.inkMuted} />
+              </Pressable>
+            )}
+          </View>
           <Text style={styles.caption}>
             {[
               formatRange(trip.startsOn, trip.endsOn),
@@ -300,6 +320,15 @@ const styles = StyleSheet.create({
   coverDesktop: { height: 220 },
   coverEdit: { position: 'absolute', bottom: space[3], end: space[3] },
   titles: { gap: space[1] },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  titleText: { flexShrink: 1 },
+  titleEdit: {
+    width: size.avatar,
+    height: size.avatar,
+    borderRadius: size.avatar / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   // Long unbroken words wrap at the column's width instead of overflowing it.
   title: { ...type.pageTitle, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },

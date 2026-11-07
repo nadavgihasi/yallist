@@ -239,6 +239,8 @@ async function send(tripId: string, action: Action): Promise<unknown> {
     }
     case 'setCover':
       return parseResponse(trip.$patch({ param, json: { cover: action.cover } }));
+    case 'renameTrip':
+      return parseResponse(trip.$patch({ param, json: { name: action.name } }));
     case 'startRun':
       return parseResponse(trip.runs.$post({ param, json: { itemIds: action.itemIds } }));
     case 'addToRun':

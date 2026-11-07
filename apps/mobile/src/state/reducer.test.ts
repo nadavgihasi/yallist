@@ -219,6 +219,10 @@ describe('trip', () => {
       'winter',
     );
   });
+
+  it('renames the trip at once', () => {
+    expect(applyAction(trip(), { type: 'renameTrip', name: 'דרום' }, 'me').trip.name).toBe('דרום');
+  });
 });
 
 describe('changes that need a server id', () => {
