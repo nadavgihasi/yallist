@@ -26,7 +26,7 @@ function open(url: string) {
 
 /**
  * A section of the ניהול tab: its title, what's set (`children`) and, for organizers, a button
- * to edit it. Unset, organizers get a line on what it's for and a button to add it; everyone else
+ * to edit it. Unset, organizers get one row: what it's for and a button to add it; everyone else
  * sees nothing.
  */
 function Section({
@@ -57,12 +57,35 @@ function Section({
 }) {
   if (!set && !organizer) return null;
   const edit = () => router.push({ pathname: `/trips/[tripId]/${sheet}`, params: { tripId } });
+  if (!set) {
+    // Unset: one compact row, so the tab stays short.
+    return (
+      <Card>
+        <View style={styles.header}>
+          <Icon name={icon} size={20} color={colors.inkMuted} />
+          <View style={styles.texts}>
+            <Text style={styles.title}>{title}</Text>
+            <Text style={styles.text}>{hint}</Text>
+          </View>
+          <PillButton
+            label={he.links.add}
+            accessibilityLabel={addLabel}
+            variant="soft"
+            size="sm"
+            icon={<Icon name="plus" size={16} color={colors.primaryStrong} />}
+            {...testId(`${id}-add`)}
+            onPress={edit}
+          />
+        </View>
+      </Card>
+    );
+  }
   return (
     <Card gap={space[3]}>
       <View style={styles.header}>
         <Icon name={icon} size={20} color={colors.inkMuted} />
-        <Text style={styles.title}>{title}</Text>
-        {set && organizer && (
+        <Text style={[styles.title, styles.grow]}>{title}</Text>
+        {organizer && (
           <PillButton
             label={he.links.edit}
             accessibilityLabel={editLabel}
@@ -74,21 +97,7 @@ function Section({
           />
         )}
       </View>
-      {set ? (
-        children
-      ) : (
-        <>
-          <Text style={styles.text}>{hint}</Text>
-          <PillButton
-            label={addLabel}
-            variant="soft"
-            icon={<Icon name="plus" size={16} color={colors.primaryStrong} />}
-            {...testId(`${id}-add`)}
-            onPress={edit}
-            style={styles.start}
-          />
-        </>
-      )}
+      {children}
     </Card>
   );
 }
@@ -176,9 +185,9 @@ export function AlbumSection({ trip, organizer }: { trip: Trip; organizer: boole
 
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  title: { ...type.itemTitle, color: colors.ink, flex: 1 },
+  texts: { flex: 1, gap: 2 },
+  title: { ...type.itemTitle, color: colors.ink },
   text: { ...type.caption, color: colors.inkMuted },
-  start: { alignSelf: 'flex-start' },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   grow: { flexGrow: 1 },
 });
