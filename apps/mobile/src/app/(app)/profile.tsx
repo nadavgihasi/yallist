@@ -29,8 +29,15 @@ import { initial } from '@/features/trip/derive';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { signInWithGoogle } from '@/lib/api';
-import { useAvatar, useProfile, useUpdateProfile, type Profile } from '@/state/profile';
+import {
+  useAvatar,
+  useDeleteAccount,
+  useProfile,
+  useUpdateProfile,
+  type Profile,
+} from '@/state/profile';
 import { useSession } from '@/state/store';
+import { useTrips } from '@/state/trips';
 import { avatarSize, colors, layout, radius, size, space, type } from '@/theme';
 import { useBreakpoint, type Breakpoint } from '@/theme/breakpoint';
 
@@ -256,6 +263,7 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
       </ListGroup>
 
       <SignOut guest={guest} />
+      <DeleteAccount />
       <VersionLine />
     </>
   );
@@ -376,6 +384,67 @@ function SignOut({ guest }: { guest: boolean }) {
   );
 }
 
+/**
+ * Deleting the account, for good, once the user is in no trip (the API checks too): trips are
+ * shared, so they delete theirs or are removed from them first.
+ */
+function DeleteAccount() {
+  const trips = useTrips();
+  const remove = useDeleteAccount();
+  const [confirming, setConfirming] = useState(false);
+  const inTrip = (trips.data?.trips.length ?? 0) > 0;
+
+  if (!confirming) {
+    return (
+      <PillButton
+        label={he.profile.deleteAccount}
+        variant="quiet"
+        disabled={trips.isFetching}
+        {...testId('profile-delete-account')}
+        // The cached list can be out of date (a trip just deleted, or a new one joined).
+        onPress={() => void trips.refetch().finally(() => setConfirming(true))}
+      />
+    );
+  }
+  return (
+    <Card gap={space[3]}>
+      {inTrip ? (
+        <Text
+          style={styles.rowLabel}
+          accessibilityRole="alert"
+          {...testId('delete-account-in-trip')}
+        >
+          {he.profile.deleteAccountInTrip}
+        </Text>
+      ) : (
+        <>
+          <Text style={styles.rowLabel} accessibilityRole="alert">
+            {he.profile.deleteAccountConfirm}
+          </Text>
+          <Text style={styles.warning}>{he.profile.deleteAccountWarning}</Text>
+        </>
+      )}
+      <View style={styles.actions}>
+        {!inTrip && (
+          <PillButton
+            label={he.profile.deleteAccountYes}
+            variant="danger"
+            icon={<Icon name="trash" size={18} color={colors.brandStrong} />}
+            disabled={remove.isPending}
+            {...testId('delete-account-confirm')}
+            onPress={() => remove.mutate()}
+          />
+        )}
+        <PillButton
+          label={he.profile.cancel}
+          variant="quiet"
+          onPress={() => setConfirming(false)}
+        />
+      </View>
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.ground },
   content: {
@@ -433,6 +502,7 @@ const styles = StyleSheet.create({
   rowTexts: { flex: 1, gap: space[1] },
   rowLabel: { ...type.itemTitle, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },
+  warning: { ...type.body, color: colors.brandStrong },
   error: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.brandStrong },
   actions: { flexDirection: 'row', gap: space[2] },
 });

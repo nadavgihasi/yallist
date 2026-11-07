@@ -1,4 +1,4 @@
-/** Where privacy questions and deletion requests go. */
+/** Where privacy questions go. Deleting the account is in the app (profile screen). */
 // TODO: the real address.
 export const PRIVACY_EMAIL = 'privacy@example.com';
 
@@ -15,12 +15,13 @@ export interface Policy {
  * The privacy policy (/privacy, linked from the Google Play listing), Hebrew and English. Keep
  * it true to the code: what the API stores (apps/api/src/db/schema.ts), the photos bucket and
  * region (infra/app), Sentry's scrubbing (packages/domain/src/scrub.ts) and feedback issues
- * (apps/api/src/feedback-issue.ts). Change `updated` with the text.
+ * (apps/api/src/feedback-issue.ts), deleting the account (deleteUser, apps/api/src/dal/profiles.ts).
+ * Change `updated` with the text.
  */
 export const policy: Record<'he' | 'en', Policy> = {
   he: {
     title: 'מדיניות פרטיות',
-    updated: 'עודכן: 27 באוקטובר 2026',
+    updated: 'עודכן: 7 בנובמבר 2026',
     intro:
       'Yallist היא רשימה משותפת לטיולים קבוצתיים: מי מביא מה, קניות והוצאות. כאן כתוב מה אנחנו שומרים, למה ומי רואה את זה. בקצרה: רק מה שהאפליקציה צריכה כדי לעבוד. אין פרסומות, אין כלי אנליטיקה, ואנחנו לא מוכרים מידע.',
     sections: [
@@ -64,16 +65,19 @@ export const policy: Record<'he' | 'en', Policy> = {
         lines: [
           'החשבון והפרופיל נשמרים כל עוד החשבון קיים.',
           'טיול נשמר עד שמארגן מוחק אותו. המחיקה מוחקת לכל החברים את הפריטים, ההוצאות, הקבלות וההיסטוריה של הטיול. מי שעוזב טיול או מוסר ממנו, מה שעשה בטיול נשאר בו.',
-          'חשבון אורח שיצאו ממנו כבר אי אפשר לפתוח שוב, אבל המידע שלו נשאר עד שמבקשים למחוק אותו.',
+          'חשבון אורח שיצאו ממנו כבר אי אפשר לפתוח שוב, וגם לא למחוק מהאפליקציה. כדי למחוק חשבון אורח, מוחקים אותו לפני היציאה.',
           'גיבויים של מסד הנתונים נשמרים 7 ימים.',
-          'משוב נשמר, וה-issue ב-GitHub נשאר ציבורי עד שנסיר אותו.',
+          'משוב נשמר עד שמוחקים את החשבון. ה-issue ב-GitHub נשאר ציבורי עד שנסיר אותו.',
         ],
       },
       {
         title: 'מחיקת החשבון והמידע',
         lines: [
-          'באפליקציה אפשר לשנות את השם, להסיר את התמונה, ולמחוק טיול שאתם מארגנים.',
-          `כדי למחוק את כל החשבון והמידע שלך, כתבו ל-${PRIVACY_EMAIL} עם שם התצוגה שלך, ומייל ה-Google אם נכנסת איתו (בחשבון אורח: גם שם של אחד הטיולים שלך). נמחק תוך 30 יום ונאשר במייל.`,
+          'את החשבון מוחקים בעצמכם באפליקציה, בלי לפנות אלינו: במסך הפרופיל, ״מחיקת החשבון״. המחיקה מיידית: החשבון, הפרופיל (שם, תמונה וטלפון), חיבור ה-Google, המשובים ובקשות ההצטרפות לטיולים נמחקים, והחשבון מנותק בכל המכשירים.',
+          'אפשר למחוק את החשבון רק כשאין לך טיולים, כי טיול משותף לכל החברים. טיול שאתם מארגנים מוחקים בלשונית ״ניהול״ שלו, עם כל המידע שבו. מטיול שמישהו אחר מארגן, המארגן יכול להסיר אתכם.',
+          'בטיולים שהוסרת מהם, מה שעשית בהם (פריטים, הוצאות ותשלומים) נשאר אצל שאר החברים, בלי השם שלך: במקומו מופיע ״חשבון שנמחק״.',
+          'עותקים בגיבויים נמחקים תוך 7 ימים. issue ציבורי ב-GitHub שנוצר ממשוב לא נמחק עם החשבון.',
+          'בכל זמן אפשר גם לשנות את השם ולהסיר את התמונה.',
         ],
       },
       {
@@ -85,7 +89,7 @@ export const policy: Record<'he' | 'en', Policy> = {
   },
   en: {
     title: 'Privacy policy',
-    updated: 'Updated: October 27, 2026',
+    updated: 'Updated: November 7, 2026',
     intro:
       "Yallist is a shared list for group trips: who brings what, shopping and expenses. This page says what we keep, why, and who sees it. In short: only what the app needs to work. No ads, no analytics, and we don't sell data.",
     sections: [
@@ -129,16 +133,19 @@ export const policy: Record<'he' | 'en', Policy> = {
         lines: [
           'Your account and profile are kept while the account exists.',
           "A trip is kept until an organizer deletes it. That deletes the trip's items, expenses, receipts and history for every member. If you leave a trip or are removed, what you did in it stays.",
-          "A guest account you've signed out of can't be opened again, but its data stays until you ask us to delete it.",
+          "A guest account you've signed out of can't be opened again, so it can't be deleted from the app either. To delete a guest account, delete it before signing out.",
           'Database backups are kept for 7 days.',
-          'Feedback is kept, and its GitHub issue stays public until we remove it.',
+          'Feedback is kept until you delete your account. Its GitHub issue stays public until we remove it.',
         ],
       },
       {
         title: 'Deleting your account and data',
         lines: [
-          'In the app you can change your name, remove your photo, and delete a trip you organize.',
-          `To delete your whole account and data, email ${PRIVACY_EMAIL} with your display name, and your Google email if you signed in with Google (for a guest account, also the name of a trip you're in). We'll delete it within 30 days and confirm by email.`,
+          "You delete your account yourself, in the app, without contacting us: on the profile screen, “מחיקת החשבון” (delete account). It's immediate: your account, profile (name, photo and phone), Google sign-in link, feedback and requests to join trips are deleted, and you're signed out on every device.",
+          "You can delete your account once you're in no trip, since a trip is shared by all its members. Delete a trip you organize from its “ניהול” (manage) tab, with everything in it. From a trip someone else organizes, the organizer can remove you.",
+          'In trips you were removed from, what you did (items, expenses and payments) stays for the other members, without your name: it shows as “חשבון שנמחק” (deleted account).',
+          "Copies in backups are gone within 7 days. A public GitHub issue made from your feedback isn't deleted with the account.",
+          'You can also change your name and remove your photo at any time.',
         ],
       },
       {

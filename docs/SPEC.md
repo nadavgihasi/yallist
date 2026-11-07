@@ -255,8 +255,7 @@ Ask before deciding these:
 - App name and domain (mockups use placeholders like "[הדומיין של האפליקציה]").
 - Whether Bit and PayBox offer usable deep links for payment.
 - Default quantities: fixed per template (Appendix A) or scaled by member count?
-- Account deletion: what happens to the user's claims and expenses in shared trips (anonymize vs. remove)?
-- Terms of use and privacy policy content.
+- Terms of use content (the privacy policy is at `/privacy`).
 
 ---
 

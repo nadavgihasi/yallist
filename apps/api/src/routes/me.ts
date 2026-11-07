@@ -11,7 +11,13 @@ import {
   isOwnAvatarKey,
   newAvatarKey,
 } from '../avatars';
-import { findProfile, lockProfile, updateProfile } from '../dal/profiles';
+import {
+  countActiveTrips,
+  deleteUser,
+  findProfile,
+  lockProfile,
+  updateProfile,
+} from '../dal/profiles';
 import type { Db } from '../db/client';
 import type { profiles } from '../db/schema';
 import { transact } from '../db/tx';
@@ -123,4 +129,18 @@ export const meRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
       const { profile, replaced } = await setAvatar(db, user.id, null);
       if (replaced) await deleteReceipt(photos, replaced);
       return c.json(await toMe(profile, user, photos));
+    })
+
+    // Deletes the account and the user's data, signing them out everywhere. Only once they're
+    // in no trip: trips are shared, so they delete theirs, or leave, first (dal deleteUser).
+    .delete('/', async (c) => {
+      const userId = c.var.user.id;
+      const photo = await transact(db, async (tx) => {
+        await lockProfile(tx, userId);
+        if ((await countActiveTrips(tx, userId)) > 0) throw fail(409, 'Still in a trip');
+        return deleteUser(tx, userId);
+      });
+      // After the commit, best effort, as when replacing a photo.
+      if (photo) await deleteReceipt(photos, photo);
+      return c.body(null, 204);
     });
