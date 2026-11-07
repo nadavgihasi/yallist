@@ -432,6 +432,14 @@ export const he = {
       flight: 'טיסה לחו״ל',
     },
   },
+  renameTrip: {
+    title: 'שם הטיול',
+    hint: 'מה שכולם יראו בכרטיס הטיול',
+    edit: 'שינוי שם הטיול',
+    label: 'שם הטיול',
+    placeholder: 'למשל: קמפינג בכנרת',
+    save: 'שמירה',
+  },
   join: {
     invited: 'הוזמנת לטיול',
     missing: 'מה עוד חסר',
