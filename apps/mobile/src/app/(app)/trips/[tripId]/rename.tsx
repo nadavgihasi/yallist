@@ -1,30 +1,45 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
-import { TextField } from '@/components/Fields';
+import { DateField } from '@/components/DateField';
+import { TextField, fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { useCloseSheet } from '@/features/trip/closeSheet';
 import { he } from '@/i18n/he';
+import { endAfterMovingStart } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useTrip, useTripAction } from '@/state/trips';
-import { colors } from '@/theme';
+import { colors, space } from '@/theme';
 
-/** Renames the trip (organizers): saves the trimmed name and closes the sheet, nothing if unchanged. */
-export default function RenameTrip() {
+/**
+ * Edits the trip's name, dates and place (organizers): saves the trimmed values and closes the
+ * sheet, nothing if unchanged. Moving the start keeps the end after it.
+ */
+export default function EditTrip() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const close = useCloseSheet(tripId);
   const data = useTrip(tripId);
   const act = useTripAction(tripId);
   const [name, setName] = useState(() => data?.trip.name ?? '');
+  const [startsOn, setStartsOn] = useState(() => data?.trip.startsOn ?? '');
+  const [endsOn, setEndsOn] = useState(() => data?.trip.endsOn ?? '');
+  const [place, setPlace] = useState(() => data?.trip.placeText ?? '');
   if (!data) return null;
 
   const trimmed = name.trim();
+  const placeText = place.trim() || undefined;
   const ready = trimmed.length > 0;
+  const changed =
+    trimmed !== data.trip.name ||
+    startsOn !== data.trip.startsOn ||
+    endsOn !== data.trip.endsOn ||
+    placeText !== data.trip.placeText;
   const save = () => {
     if (!ready) return;
-    close(() => trimmed !== data.trip.name && act({ type: 'renameTrip', name: trimmed }));
+    close(() => changed && act({ type: 'editTrip', name: trimmed, startsOn, endsOn, placeText }));
   };
 
   return (
@@ -44,17 +59,48 @@ export default function RenameTrip() {
         />
       }
     >
-      <TextField
-        label={he.renameTrip.label}
-        value={name}
-        onChangeText={setName}
-        placeholder={he.renameTrip.placeholder}
-        maxLength={80}
-        autoFocus
-        returnKeyType="done"
-        onSubmitEditing={save}
-        {...testId('trip-rename-name')}
-      />
+      <View style={styles.form}>
+        <TextField
+          label={he.renameTrip.label}
+          value={name}
+          onChangeText={setName}
+          placeholder={he.renameTrip.placeholder}
+          maxLength={80}
+          autoFocus
+          returnKeyType="done"
+          onSubmitEditing={save}
+          {...testId('trip-rename-name')}
+        />
+        <View style={styles.field}>
+          <Text style={fieldStyles.label}>{he.newTrip.when}</Text>
+          <View style={styles.dates}>
+            <DateField
+              label={he.newTrip.from}
+              value={startsOn}
+              onChange={(iso) => {
+                setEndsOn(endAfterMovingStart(startsOn, endsOn, iso));
+                setStartsOn(iso);
+              }}
+            />
+            <DateField label={he.newTrip.to} value={endsOn} min={startsOn} onChange={setEndsOn} />
+          </View>
+        </View>
+        <TextField
+          label={he.newTrip.where}
+          hint={he.newTrip.optional}
+          value={place}
+          onChangeText={setPlace}
+          placeholder={he.newTrip.wherePlaceholder}
+          maxLength={120}
+          {...testId('trip-edit-place')}
+        />
+      </View>
     </Sheet>
   );
 }
+
+const styles = StyleSheet.create({
+  form: { gap: space[4] },
+  field: { gap: space[2] },
+  dates: { flexDirection: 'row', gap: space[2] },
+});

@@ -50,7 +50,13 @@ export type Action =
   | { type: 'confirmPayment'; paymentId: string }
   | { type: 'approveMember' | 'declineMember' | 'removeMember'; userId: string }
   | { type: 'setCover'; cover: CoverId }
-  | { type: 'renameTrip'; name: string }
+  | {
+      type: 'editTrip';
+      name: string;
+      startsOn: string;
+      endsOn: string;
+      placeText: string | undefined;
+    }
   // Shopping runs (PACKING_SHOPPING_SPEC §4). Starting one needs the server's answer (the run's
   // id, what was skipped); the rest show at once and queue offline like any other change.
   | { type: 'startRun'; itemIds: string[] }
@@ -181,8 +187,10 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
     }
     case 'setCover':
       return { ...data, trip: { ...data.trip, cover: action.cover } };
-    case 'renameTrip':
-      return { ...data, trip: { ...data.trip, name: action.name } };
+    case 'editTrip': {
+      const { type: _type, ...fields } = action;
+      return { ...data, trip: { ...data.trip, ...fields } };
+    }
     case 'addToRun': {
       const item = data.items.find((i) => i.id === action.itemId);
       if (!item || data.claims.some((c) => c.itemId === item.id)) return data;
