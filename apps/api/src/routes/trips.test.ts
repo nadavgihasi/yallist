@@ -125,10 +125,13 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
 
     it("shows trip-mates each other's payment phone, and nobody else's", async () => {
       const { organizer, member, data } = await tripWithMember();
-      await sql`update profiles set payment_phone = '+972501234567' where id = ${member.id}`;
+      await sql`update profiles set payment_phone = '+972501234567', bit_link = 'https://www.bitpay.co.il/app/me/abc' where id = ${member.id}`;
 
       const seen = await (await detail(organizer, data.trip.id)).json();
       expect(seen.members.find((m) => m.userId === member.id)?.paymentPhone).toBe('+972501234567');
+      expect(seen.members.find((m) => m.userId === member.id)?.bitLink).toBe(
+        'https://www.bitpay.co.il/app/me/abc',
+      );
       // The organizer has none saved, so there is nothing to show.
       expect(seen.members.find((m) => m.userId === organizer.id)).not.toHaveProperty(
         'paymentPhone',
@@ -142,6 +145,7 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         as(stranger),
       );
       expect(JSON.stringify(await preview.json())).not.toContain('+972501234567');
+      expect(JSON.stringify(await preview.json())).not.toContain('bitpay.co.il/app/me/abc');
     });
 
     it('hides a trip from non-members and pending members', async () => {

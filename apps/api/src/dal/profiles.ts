@@ -119,6 +119,8 @@ export async function deleteUser(tx: Executor, userId: string) {
     displayName: DELETED_NAME,
     avatarKey: null,
     paymentPhone: null,
+    bitLink: null,
+    payboxLink: null,
   });
   await tx
     .update(users)
