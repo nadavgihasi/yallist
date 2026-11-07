@@ -2,6 +2,7 @@ import type { LatLng } from '@yallist/domain';
 import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { currentLocation } from './currentLocation';
 import { MapFrame } from './MapFrame';
 import { searchPlaces, type Place } from './searchPlaces';
 import type { MapHandle } from './types';
@@ -14,8 +15,8 @@ import { testId } from '@/lib/testId';
 import { colors, radius, space, type } from '@/theme';
 
 /**
- * Picks the meetup point: search for a place, or tap the map and drag the pin. Choosing a search
- * result also names the place when it has no name yet (`onName`).
+ * Picks the meetup point: search for a place, use the current location, or tap the map and drag
+ * the pin. Choosing a search result also names the place when it has no name yet (`onName`).
  */
 export function MeetupMap({
   point,
@@ -33,17 +34,50 @@ export function MeetupMap({
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<Place[] | undefined>();
   const [search, setSearch] = useState<'idle' | 'busy' | 'failed'>('idle');
+  const [locating, setLocating] = useState<'idle' | 'busy' | 'denied' | 'failed'>('idle');
+
+  const locate = async () => {
+    if (locating === 'busy') return;
+    setOpen(true);
+    setLocating('busy');
+    try {
+      const here = await currentLocation();
+      if (here === 'denied') {
+        setLocating('denied');
+        return;
+      }
+      onPoint(here);
+      // The map mounted with the press above; it shows the point once it has loaded.
+      map.current?.send({ type: 'show', ...here });
+      setLocating('idle');
+    } catch {
+      setLocating('failed');
+    }
+  };
+  const locateButton = (
+    <PillButton
+      label={locating === 'busy' ? he.links.locating : he.links.myLocation}
+      variant="soft"
+      size={open ? 'sm' : 'md'}
+      disabled={locating === 'busy'}
+      icon={<Icon name="locate" size={18} color={colors.primaryStrong} />}
+      {...testId('meetup-my-location')}
+      onPress={locate}
+    />
+  );
 
   if (!open) {
     return (
-      <PillButton
-        label={he.links.pickOnMap}
-        variant="soft"
-        icon={<Icon name="pin" size={18} color={colors.primaryStrong} />}
-        {...testId('meetup-map-open')}
-        onPress={() => setOpen(true)}
-        style={styles.start}
-      />
+      <View style={styles.startRow}>
+        <PillButton
+          label={he.links.pickOnMap}
+          variant="soft"
+          icon={<Icon name="pin" size={18} color={colors.primaryStrong} />}
+          {...testId('meetup-map-open')}
+          onPress={() => setOpen(true)}
+        />
+        {locateButton}
+      </View>
     );
   }
 
@@ -131,10 +165,20 @@ export function MeetupMap({
           />
         </View>
       )}
+      <Text
+        style={[styles.hint, (locating === 'denied' || locating === 'failed') && styles.error]}
+        {...testId('meetup-point-state')}
+      >
+        {locating === 'denied'
+          ? he.links.locationDenied
+          : locating === 'failed'
+            ? he.links.locationFailed
+            : point
+              ? he.links.pointPicked
+              : he.links.mapHint}
+      </Text>
       <View style={styles.footer}>
-        <Text style={styles.hint} {...testId('meetup-point-state')}>
-          {point ? he.links.pointPicked : he.links.mapHint}
-        </Text>
+        {locateButton}
         {point && (
           <PillButton
             label={he.links.removePoint}
@@ -150,7 +194,7 @@ export function MeetupMap({
 }
 
 const styles = StyleSheet.create({
-  start: { alignSelf: 'flex-start' },
+  startRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   wrap: { gap: space[3] },
   searchRow: { flexDirection: 'row', alignItems: 'flex-end', gap: space[2] },
   grow: { flex: 1 },
@@ -172,6 +216,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     backgroundColor: colors.ground,
   },
-  footer: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  hint: { ...type.caption, color: colors.inkMuted, flex: 1 },
+  footer: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  hint: { ...type.caption, color: colors.inkMuted },
+  error: { color: colors.brandStrong },
 });
