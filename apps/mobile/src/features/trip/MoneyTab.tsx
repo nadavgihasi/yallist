@@ -21,10 +21,8 @@ import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
 
-/** Opens the payment app on the receiver's number (E.164). */
-function payLink(app: 'bit' | 'paybox', e164: string): string {
-  return app === 'bit' ? `bit://pay?phone=${e164}` : `paybox://pay?phone=${e164}`;
-}
+/** Neither app documents a link that pays a phone number, so these only open the app (or its site). */
+const PAY_APP_URL = { bit: 'https://www.bitpay.co.il/', paybox: 'https://payboxapp.com/' } as const;
 
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
   const act = useTripAction(data.trip.id);
@@ -67,10 +65,18 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
   const payPhone = payee?.paymentPhone;
   const payVia = async (app: 'bit' | 'paybox') => {
     if (!payPhone) return;
+    const phone = formatIsraeliMobile(payPhone);
+    // The apps can't be aimed at a number, so hand it over on the clipboard to paste there.
     try {
-      await Linking.openURL(payLink(app, payPhone));
+      await navigator.clipboard?.writeText(phone);
+      showToast(he.money.phoneCopied(phone), 'success');
     } catch {
-      showToast(he.money.payAppMissing(formatIsraeliMobile(payPhone)), 'error');
+      showToast(he.money.payAppMissing(phone), 'neutral');
+    }
+    try {
+      await Linking.openURL(PAY_APP_URL[app]);
+    } catch {
+      showToast(he.money.payAppMissing(phone), 'neutral');
     }
   };
 
