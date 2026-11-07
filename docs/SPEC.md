@@ -56,7 +56,7 @@ Write these as migrations. Column names are suggestions; keep the semantics.
 
 **profiles** — `id` (= `auth.users.id`), `display_name`, `avatar_color`, `payment_phone` (nullable; shown to friends so they can pay via Bit/PayBox), notification prefs (`notify_updates`, `notify_day_before`, `notify_settle`, all default true), timestamps.
 
-**trips** — `id`, `name`, `starts_on`, `ends_on`, `place_text` (nullable, "עוד לא נבחר"), `template` (`camp|grill|zimmer|beach|blank`, also selects the cover scene), `currency` default `'ILS'`, `require_approval` bool default false, `invite_token` (unique, ≥128 bits of randomness, URL-safe), `status` (`planning|ended|archived`), `created_by`, timestamps.
+**trips** — `id`, `name`, `starts_on`, `ends_on`, `meetup_text`, `meetup_lat`, `meetup_lng` (nullable: where the group meets, a name or map link and a point on the map), `album_url` (nullable, a Google Photos link), `template` (`camp|grill|zimmer|beach|blank`, also selects the cover scene), `currency` default `'ILS'`, `require_approval` bool default false, `invite_token` (unique, ≥128 bits of randomness, URL-safe), `status` (`planning|ended|archived`), `created_by`, timestamps.
 
 **trip_members** — PK (`trip_id`, `user_id`), `role` (`organizer|member`), `status` (`pending|active|removed`), `display_name` (snapshot at join, editable), `joined_at`. The creator is an active organizer.
 
@@ -128,7 +128,7 @@ Treat the invite link as a bearer capability and the database as the enforcement
 
 - **RLS on every table.** Use stable `SECURITY DEFINER` helpers `is_active_member(trip_id)` and `is_organizer(trip_id)`; policies call them. Pending and removed members see nothing of the trip through normal table access.
 - **All multi-step or privileged writes go through RPCs** (security definer, explicit checks, `search_path` pinned):
-  - `create_trip(name, starts_on, ends_on, place_text, template)` → creates trip, organizer membership, items from `template_items`, random invite token.
+  - `create_trip(name, starts_on, ends_on, template)` → creates trip, organizer membership, items from `template_items`, random invite token.
   - `trip_preview(token)` → only name, dates, member count, missing count, and up to ~6 missing item names. Callable by anon. Used by the join page and link previews.
   - `join_trip(token, display_name)` → creates membership `active` or `pending` depending on `require_approval`. Idempotent for the same user.
   - `rotate_invite(trip_id)` → organizer only.

@@ -92,6 +92,13 @@
       "when": 1794080302028,
       "tag": "0012_meetup_point",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794085023378,
+      "tag": "0013_drop_place_text",
+      "breakpoints": true
     }
   ]
 }

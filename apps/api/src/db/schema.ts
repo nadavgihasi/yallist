@@ -158,7 +158,6 @@ export const trips = pgTable(
     name: text('name').notNull(),
     startsOn: date('starts_on').notNull(),
     endsOn: date('ends_on').notNull(),
-    placeText: text('place_text'),
     template: text('template', { enum: TEMPLATE_IDS }).notNull(),
     /**
      * Nullable only because DSQL can't add a column with a default: the API always sets it,

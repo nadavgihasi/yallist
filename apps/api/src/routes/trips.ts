@@ -45,7 +45,6 @@ const tripFields = {
   name: z.string().trim().min(1).max(80),
   startsOn: date,
   endsOn: date,
-  placeText: z.string().trim().max(120).nullable(),
   requireApproval: z.boolean(),
   cover: z.enum(COVER_IDS),
 };
@@ -56,7 +55,6 @@ const datesMessage = { message: 'endsOn is before startsOn', path: ['endsOn'] };
 const createTrip = z
   .object({
     ...tripFields,
-    placeText: tripFields.placeText.optional(),
     requireApproval: tripFields.requireApproval.optional(),
     // Defaults to the template's.
     cover: tripFields.cover.optional(),

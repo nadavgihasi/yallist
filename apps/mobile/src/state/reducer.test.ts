@@ -37,7 +37,6 @@ function trip(overrides: Partial<TripData> = {}): TripData {
       name: 'קמפינג',
       startsOn: '2026-11-13',
       endsOn: '2026-11-14',
-      placeText: undefined,
       template: 'camp',
       cover: 'camp',
       status: 'planning',
