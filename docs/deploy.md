@@ -380,3 +380,5 @@ pnpm sst remove --stage dev
 ```
 
 This deletes every dev resource, bucket contents included. Production is protected: `sst remove --stage production` refuses to run. To tear it down on purpose, set `protect: false` first.
+
+<!-- deploy timing probe 3 -->
