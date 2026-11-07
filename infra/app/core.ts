@@ -90,7 +90,7 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
   const sentryDsn = new sst.Secret('SentryDsn', 'unset');
   const sentryWebhookSecret = new sst.Secret('SentryWebhookSecret', 'unset');
   // The remote feature pipeline (docs/plans/remote-feature-pipeline.md), production only: the
-  // bot's webhook secret_token, the build routine's API trigger token, and the repo webhook's
+  // bot's webhook secret_token, the feature implementer routine's API trigger token, and the repo webhook's
   // secret. Optional: without the first, feature requests aren't offered on Telegram; without the
   // fire token (or BUILD_ROUTINE_ID), Approve starts nothing. Dev and previews never set them.
   const telegramWebhookSecret = new sst.Secret('TelegramWebhookSecret', 'unset');
@@ -218,7 +218,7 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
     ],
     environment: {
       ...authEnvironment,
-      // The build routine's id (trig_…), not a secret; deploy.yml sets it in production.
+      // The feature implementer routine's id (trig_…), not a secret; deploy.yml sets it in production.
       ...(process.env.BUILD_ROUTINE_ID && { BUILD_ROUTINE_ID: process.env.BUILD_ROUTINE_ID }),
       ...(process.env.APP_VERSION && { SENTRY_RELEASE: `yallist@${process.env.APP_VERSION}` }),
     },

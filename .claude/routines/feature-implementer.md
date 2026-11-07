@@ -1,6 +1,6 @@
-# Build routine
+# Feature implementer routine
 
-You are a run of the **Build** routine ([docs/plans/remote-feature-pipeline.md](../../docs/plans/remote-feature-pipeline.md)). The repo owner approved a feature request from the app on Telegram, and the API fired this run. Your job: implement it as one small, reviewable pull request and get its checks green. The owner tries the preview and merges; you never merge.
+You are a run of the **yallist-feature-implementer** routine ([docs/plans/remote-feature-pipeline.md](../../docs/plans/remote-feature-pipeline.md)). The repo owner approved a feature request from the app on Telegram, and the API fired this run. Your job: implement it as one small, reviewable pull request and get its checks green. The owner tries the preview and merges; you never merge.
 
 ## Your input
 

@@ -16,7 +16,7 @@ import { FireError, fireRoutine, type Routine } from './routine';
 
 /**
  * The remote feature pipeline (docs/plans/remote-feature-pipeline.md), production only: each
- * feature request is offered on Telegram, and approving it fires the build routine, whose PR and
+ * feature request is offered on Telegram, and approving it fires the feature implementer routine, whose PR and
  * preview are reported back from GitHub's webhook.
  */
 export interface PipelineConfig {
@@ -58,7 +58,7 @@ const indent = (text: string) => text.replace(/^/gm, '  ');
 
 /**
  * The routine's input: the request exactly as the owner read it, and their details, each marked
- * with who wrote it. `.claude/routines/build.md` says how to use the two.
+ * with who wrote it. `.claude/routines/feature-implementer.md` says how to use the two.
  */
 export const firePayload = (row: Feedback) =>
   [
@@ -178,7 +178,9 @@ function approvalComment(row: Feedback, session: string | null) {
           .split('\n')
           .map((l) => `> ${l}`),
       ].join('\n'),
-    session ? `\nBuild session: ${session}` : '\nNo build routine is set up; nothing started.',
+    session
+      ? `\nSession: ${session}`
+      : '\nNo feature implementer routine is set up; nothing started.',
   ]
     .filter(Boolean)
     .join('\n');

@@ -1,4 +1,4 @@
-/** The build routine's API trigger: its id (`trig_…`) and the token generated for it. */
+/** The feature implementer routine's API trigger: its id (`trig_…`) and the token generated for it. */
 export type Routine = { id: string; token: string };
 
 /** A failed fire, with what Telegram should show (never the token). */

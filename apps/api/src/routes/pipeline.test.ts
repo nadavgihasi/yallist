@@ -169,7 +169,7 @@ describe.skipIf(!DATABASE_URL)('remote feature pipeline', () => {
     const [edit] = to('/editMessageText');
     expect(edit!.body).toMatchObject({ message_id: 500, reply_markup: { inline_keyboard: [] } });
     expect(edit!.body.text).toContain(`✅ Approved · <a href="${SESSION}">session</a>`);
-    expect(to('/comments')[0]!.body.body).toContain(`Build session: ${SESSION}`);
+    expect(to('/comments')[0]!.body.body).toContain(`Session: ${SESSION}`);
     expect(to('/answerCallbackQuery').map((c) => c.body.text)).toEqual([
       'Approved',
       'Already handled',

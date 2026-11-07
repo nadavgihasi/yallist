@@ -431,7 +431,7 @@ export const PLATFORMS = ['ios', 'android', 'web'] as const;
 /**
  * Where a production feature request is in the remote pipeline
  * (docs/plans/remote-feature-pipeline.md): offered on Telegram, waiting for the owner's details,
- * approved (the build routine was fired; a PR may follow), rejected, or done (its PR closed).
+ * approved (the feature implementer routine was fired; a PR may follow), rejected, or done (its PR closed).
  */
 export const PIPELINE_STATES = [
   'sent',
@@ -469,7 +469,7 @@ export const feedback = pgTable(
     /** The owner's instructions, sent with Approve + details. */
     ownerDetails: text('owner_details'),
     approvedAt: timestamp('approved_at', { withTimezone: true }),
-    /** The build routine's session for this request, on claude.ai. */
+    /** The feature implementer routine's session for this request, on claude.ai. */
     routineSessionUrl: text('routine_session_url'),
     /** The PR the session opened (head branch `claude/issue-<n>-…`). */
     prNumber: integer('pr_number'),

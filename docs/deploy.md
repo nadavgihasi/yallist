@@ -145,7 +145,7 @@ A request without an issue (`github_issue_number` null: saved before the token e
 
 #### Remote feature pipeline (optional)
 
-Production only ([plan](plans/remote-feature-pipeline.md)). After a feature request's issue is opened, the API sends it to the Telegram chat with **Approve**, **Approve + details** and **Reject** ([pipeline.ts](../apps/api/src/pipeline.ts)). Approve fires the **Build** routine with the request and your details; the session follows [.claude/routines/build.md](../.claude/routines/build.md), pushes `claude/issue-<n>-…` and opens a draft PR. The repo webhook then sends the PR link, the first preview URL and the merge as replies to the request's message. Reject closes the issue as not planned. At most 3 runs go at once (approved in the last day, or with an open PR).
+Production only ([plan](plans/remote-feature-pipeline.md)). After a feature request's issue is opened, the API sends it to the Telegram chat with **Approve**, **Approve + details** and **Reject** ([pipeline.ts](../apps/api/src/pipeline.ts)). Approve fires the **yallist-feature-implementer** routine with the request and your details; the session follows [.claude/routines/feature-implementer.md](../.claude/routines/feature-implementer.md), pushes `claude/issue-<n>-…` and opens a draft PR. The repo webhook then sends the PR link, the first preview URL and the merge as replies to the request's message. Reject closes the issue as not planned. At most 3 runs go at once (approved in the last day, or with an open PR).
 
 | SST secret / variable   | GitHub (production environment)  | Without it                                        |
 | ----------------------- | -------------------------------- | ------------------------------------------------- |
@@ -173,12 +173,12 @@ It also needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `FEEDBACK_GITHUB_TOKE
    ```
 
 2. **Cloud environment.** At [claude.ai/code](https://claude.ai/code), create a personal environment `yallist-agent`: network **Trusted**, no secrets, setup script `pnpm install --frozen-lockfile`.
-3. **Routine.** Create a routine **Build** on `nadavgihasi/yallist` in `yallist-agent`, no connectors, no schedule, with the prompt `Follow .claude/routines/build.md on main for the feature request in the fire payload.` Add an **API trigger**, generate its token (shown once) and note the routine id (`trig_…`):
+3. **Routine.** Create a routine **yallist-feature-implementer** on `nadavgihasi/yallist` in `yallist-agent`, no connectors, no schedule, with the prompt `Follow .claude/routines/feature-implementer.md on main for the feature request in the fire payload.` Add an **API trigger**, generate its token (shown once) and note the routine id (`trig_…`):
 
    ```sh
    gh secret set ROUTINE_FIRE_TOKEN --env production   # paste the sk-ant-oat01-… token
    gh variable set BUILD_ROUTINE_ID --env production --body trig_…
-   gh label create agent -R nadavgihasi/yallist --description "PR opened by the build routine"
+   gh label create agent -R nadavgihasi/yallist --description "PR opened by the feature implementer routine"
    ```
 
 4. **Repo webhook.** **Settings → Webhooks → Add webhook**: payload URL `https://<api>/webhooks/github`, content type `application/json`, a new secret (`openssl rand -hex 32`), events **Pull requests** and **Deployment statuses** only. Then `gh secret set FEEDBACK_WEBHOOK_SECRET --env production` with the same secret, and deploy.
