@@ -42,7 +42,5 @@ jobs:
           enable-cache: true
           cache-dependency-glob: package.json
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm lint
-      - run: pnpm test
-      - run: pnpm format:check
+      # typecheck, lint, test and format:check at once (about half the time of one after another).
+      - run: scripts/ci-checks.sh

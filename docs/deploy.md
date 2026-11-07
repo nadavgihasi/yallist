@@ -16,7 +16,7 @@ Infrastructure is [SST](https://sst.dev), in two SST apps. Both live in the `@ya
 
 ## Deploys come from `main`
 
-[deploy.yml](../.github/workflows/deploy.yml) runs on every push to `main`. It first runs CI ([ci.yml](../.github/workflows/ci.yml), the same checks as pull requests) and stops if it fails. Then it deploys `global`, then `dev`, then `production`, each in the GitHub environment of the same name. Those environments only accept the `main` branch. Last, it tags the release ([releases.md](releases.md)).
+[deploy.yml](../.github/workflows/deploy.yml) runs on every push to `main`. It first runs CI ([ci.yml](../.github/workflows/ci.yml), the same checks as pull requests) and stops if it fails. Then it deploys `global`, then `dev`, then `production`, each in the GitHub environment of the same name. `global` is skipped when nothing it's built from (`infra/global`, the SST version, Node, deploy.yml) changed since the last successful deploy; run the workflow manually to deploy it anyway, e.g. after changing `BUDGET_EMAIL`. Those environments only accept the `main` branch. Last, it tags the release ([releases.md](releases.md)).
 
 - **Credentials:** jobs get them through GitHub OIDC. They assume the role in the repo variable `AWS_DEPLOY_ROLE_ARN`, so no AWS keys are stored in GitHub.
 - **Checks:** after each stage deploys and migrates, the job fetches the API's `/health` and the web app's URL. If dev fails, production doesn't deploy.
@@ -85,7 +85,7 @@ Aurora DSQL, one cluster per stage (`sst.aws.Dsql('Database')`), available in bo
 - **Schema:** [schema.ts](../apps/api/src/db/schema.ts), Drizzle, kept to DSQL's SQL subset: no enum types (text plus `CHECK`), no triggers or extensions, UUID keys, money in integer agorot. Foreign keys are enforced; they use `NO ACTION` because cascades count toward the 3,000-rows-per-transaction limit.
 - **Migrations:** after changing the schema, run `pnpm --filter @yallist/api db:generate` and commit the new file in `apps/api/drizzle/`. Never edit a migration that has been deployed.
 - **Runner:** [migrate.ts](../apps/api/src/db/migrate.ts) runs each statement in its own transaction (DSQL allows one DDL per transaction) and records it in `__migrations`, so a failed run resumes where it stopped. For DSQL it rewrites `CREATE INDEX` to `CREATE INDEX ASYNC` and adds `ALTER TABLE` constraints as `NOT VALID`. It then reloads `template_items` from `@yallist/domain` TEMPLATES.
-- **Deploys:** [deploy.yml](../.github/workflows/deploy.yml) runs the migrations after each stage deploys: `pnpm sst shell --stage <stage> -- pnpm --filter @yallist/api db:migrate`.
+- **Deploys:** [deploy.yml](../.github/workflows/deploy.yml) runs the migrations after each stage deploys, in `pnpm sst shell --stage <stage>`, followed by `feedback:retry` in the same shell.
 - **Local and tests:** with `DATABASE_URL` set, everything uses plain Postgres instead (DSQL has no emulator). The API tests migrate a throwaway database and skip without `DATABASE_URL`; CI provides a `postgres:17` service.
 
 ```sh
