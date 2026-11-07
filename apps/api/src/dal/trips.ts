@@ -133,8 +133,6 @@ export async function loadTrips(
         color: profiles.avatarColor,
         avatarKey: profiles.avatarKey,
         paymentPhone: profiles.paymentPhone,
-        bitLink: profiles.bitLink,
-        payboxLink: profiles.payboxLink,
         image: users.image,
       })
       .from(tripMembers)
@@ -198,24 +196,14 @@ export async function loadTrips(
           avatarKey: _k,
           image: _i,
           paymentPhone,
-          bitLink,
-          payboxLink,
           ...member
         }): typeof member & {
           avatarUrl?: string;
           paymentPhone?: string;
-          bitLink?: string;
-          payboxLink?: string;
         } => ({
           ...member,
-          // Payment details go to trip-mates only, and only for active members.
-          ...(forMember && member.status === 'active'
-            ? {
-                paymentPhone: paymentPhone ?? undefined,
-                bitLink: bitLink ?? undefined,
-                payboxLink: payboxLink ?? undefined,
-              }
-            : {}),
+          paymentPhone:
+            forMember && member.status === 'active' && paymentPhone ? paymentPhone : undefined,
           avatarUrl: member.status === 'active' ? avatars.get(member.userId) : undefined,
         }),
       ),

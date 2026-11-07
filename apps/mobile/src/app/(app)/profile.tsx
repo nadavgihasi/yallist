@@ -118,17 +118,6 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
     profile.paymentPhone ? formatIsraeliMobile(profile.paymentPhone) : '',
   );
   const [phoneError, setPhoneError] = useState(false);
-  const [bitLink, setBitLink] = useState(profile.bitLink ?? '');
-  const [payboxLink, setPayboxLink] = useState(profile.payboxLink ?? '');
-  const [linkError, setLinkError] = useState<'bitLink' | 'payboxLink'>();
-
-  // An empty field clears the link; anything else must be an https address.
-  const saveLink = (field: 'bitLink' | 'payboxLink', text: string) => {
-    const value = text.trim();
-    const valid = !value || /^https:\/\/\S+$/.test(value);
-    setLinkError(valid ? undefined : field);
-    if (valid && value !== (profile[field] ?? '')) update.mutate({ [field]: value || null });
-  };
 
   const saveName = () => {
     const trimmed = name.trim();
@@ -216,39 +205,6 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
           </Text>
         ) : (
           <Text style={styles.caption}>{he.profile.phoneHint}</Text>
-        )}
-        <TextField
-          label={he.profile.bitLink}
-          value={bitLink}
-          onChangeText={(text) => {
-            setBitLink(text);
-            setLinkError(undefined);
-          }}
-          onBlur={() => saveLink('bitLink', bitLink)}
-          placeholder="https://"
-          inputMode="url"
-          autoCapitalize="none"
-          style={styles.ltr}
-        />
-        <TextField
-          label={he.profile.payboxLink}
-          value={payboxLink}
-          onChangeText={(text) => {
-            setPayboxLink(text);
-            setLinkError(undefined);
-          }}
-          onBlur={() => saveLink('payboxLink', payboxLink)}
-          placeholder="https://"
-          inputMode="url"
-          autoCapitalize="none"
-          style={styles.ltr}
-        />
-        {linkError ? (
-          <Text style={styles.error} accessibilityLiveRegion="polite">
-            {he.profile.linkInvalid}
-          </Text>
-        ) : (
-          <Text style={styles.caption}>{he.profile.linkHint}</Text>
         )}
       </ListGroup>
     </>

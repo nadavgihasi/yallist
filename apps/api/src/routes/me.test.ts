@@ -67,26 +67,6 @@ describe.skipIf(!DATABASE_URL)('GET and PATCH /me', () => {
     expect(await cleared.json()).toMatchObject({ paymentPhone: null, displayName: 'דנה כהן' });
   });
 
-  it('saves payment links as https addresses, and clears them when empty', async () => {
-    const guest = await signInAsGuest(app, 'דנה');
-    const link = 'https://www.bitpay.co.il/app/me/A8E7643F-C1FB-6E39-00C5-8CF871E0E80C00C4';
-    const res = await patch(guest.headers, {
-      bitLink: ` ${link} `,
-      payboxLink: 'https://payboxapp.com/u/dana',
-    });
-    expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({
-      bitLink: link,
-      payboxLink: 'https://payboxapp.com/u/dana',
-    });
-
-    const cleared = await patch(guest.headers, { bitLink: '' });
-    expect(await cleared.json()).toMatchObject({
-      bitLink: null,
-      payboxLink: 'https://payboxapp.com/u/dana',
-    });
-  });
-
   it('keeps trip names as they were when joined', async () => {
     const guest = await signInAsGuest(app, 'old');
     const [trip] = await sql<{ id: string }[]>`
@@ -107,9 +87,6 @@ describe.skipIf(!DATABASE_URL)('GET and PATCH /me', () => {
     { avatarColor: '#000000' },
     { paymentPhone: '03-1234567' },
     { paymentPhone: 501234567 },
-    { bitLink: 'http://www.bitpay.co.il/app/me/x' },
-    { payboxLink: 'javascript:alert(1)' },
-    { payboxLink: 'not a link' },
     { notifyUpdates: 'yes' },
     { id: '00000000-0000-0000-0000-000000000000' },
   ])('rejects %o with 400', async (body) => {

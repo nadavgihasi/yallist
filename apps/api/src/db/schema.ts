@@ -143,9 +143,6 @@ export const profiles = pgTable('profiles', {
   avatarKey: text('avatar_key'),
   /** Shown to trip-mates so they can pay via Bit/PayBox. */
   paymentPhone: text('payment_phone'),
-  /** Their own personal payment pages, opened by trip-mates who owe them money. */
-  bitLink: text('bit_link'),
-  payboxLink: text('paybox_link'),
   notifyUpdates: boolean('notify_updates').notNull().default(true),
   notifyDayBefore: boolean('notify_day_before').notNull().default(true),
   notifySettle: boolean('notify_settle').notNull().default(true),

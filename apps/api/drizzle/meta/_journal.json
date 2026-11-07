@@ -78,13 +78,6 @@
       "when": 1794062594114,
       "tag": "0010_feedback_decided_by",
       "breakpoints": true
-    },
-    {
-      "idx": 11,
-      "version": "7",
-      "when": 1794077138584,
-      "tag": "0011_payment_links",
-      "breakpoints": true
     }
   ]
 }

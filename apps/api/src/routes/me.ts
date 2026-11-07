@@ -35,33 +35,10 @@ const paymentPhone = z
   })
   .nullable();
 
-/** Empty clears the link; anything else must be an https address (the app opens it as is). */
-const paymentLink = z
-  .string()
-  .trim()
-  .max(300)
-  .transform((text, ctx) => {
-    if (!text) return null;
-    let url: URL | undefined;
-    try {
-      url = new URL(text);
-    } catch {
-      url = undefined;
-    }
-    if (url?.protocol !== 'https:') {
-      ctx.addIssue({ code: 'custom', message: 'Not an https link' });
-      return z.NEVER;
-    }
-    return url.toString();
-  })
-  .nullable();
-
 const profileChanges = z.strictObject({
   displayName: z.string().trim().min(1).max(50).optional(),
   avatarColor: z.enum(AVATAR_COLORS).optional(),
   paymentPhone: paymentPhone.optional(),
-  bitLink: paymentLink.optional(),
-  payboxLink: paymentLink.optional(),
   notifyUpdates: z.boolean().optional(),
   notifyDayBefore: z.boolean().optional(),
   notifySettle: z.boolean().optional(),

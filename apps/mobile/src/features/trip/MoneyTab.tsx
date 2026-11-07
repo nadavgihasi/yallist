@@ -21,6 +21,9 @@ import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
 
+/** Neither app documents a link that pays a phone number, so these only open the app (or its site). */
+const PAY_APP_URL = { bit: 'https://www.bitpay.co.il/', paybox: 'https://payboxapp.com/' } as const;
+
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
   const act = useTripAction(data.trip.id);
   const [confirmDelete, setConfirmDelete] = useState<string>();
@@ -57,29 +60,23 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
   const unmarkPaid = () =>
     myUnconfirmed.forEach((p) => act({ type: 'deletePayment', paymentId: p.id }));
 
-  // Pay through Bit/PayBox only when I owe exactly one person: the links are theirs.
+  // Pay through Bit/PayBox only when everyone I owe has a phone; one number is enough for one app.
   const payee = myOpen.length === 1 ? view.memberById.get(myOpen[0]!.to) : undefined;
-  const payLinks = [
-    { key: 'bit', label: he.money.payWithBit, url: payee?.bitLink },
-    { key: 'paybox', label: he.money.payWithPaybox, url: payee?.payboxLink },
-  ].flatMap((x) => (x.url ? [{ key: x.key, label: x.label, url: x.url }] : []));
-  // Without a saved link, the number is still worth having: copy it to paste in the app.
   const payPhone = payee?.paymentPhone;
-  const copyPhone = async () => {
+  const payVia = async (app: 'bit' | 'paybox') => {
     if (!payPhone) return;
     const phone = formatIsraeliMobile(payPhone);
+    // The apps can't be aimed at a number, so hand it over on the clipboard to paste there.
     try {
       await navigator.clipboard?.writeText(phone);
       showToast(he.money.phoneCopied(phone), 'success');
     } catch {
-      showToast(he.money.phoneNumber(phone), 'neutral');
+      showToast(he.money.payAppMissing(phone), 'neutral');
     }
-  };
-  const openLink = async (url: string) => {
     try {
-      await Linking.openURL(url);
+      await Linking.openURL(PAY_APP_URL[app]);
     } catch {
-      showToast(he.money.payAppMissing, 'error');
+      showToast(he.money.payAppMissing(phone), 'neutral');
     }
   };
 
@@ -95,34 +92,26 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
         )}
         {myOpen.length > 0 ? (
           <>
-            {payLinks.length > 0 ? (
+            {payPhone ? (
               <View style={styles.payApps}>
-                {payLinks.map((x) => (
-                  <PillButton
-                    key={x.key}
-                    label={x.label}
-                    size="md"
-                    style={styles.payApp}
-                    disabled={saving}
-                    onPress={() => openLink(x.url)}
-                  />
-                ))}
+                <PillButton
+                  label={he.money.payWithBit}
+                  size="md"
+                  style={styles.payApp}
+                  disabled={saving}
+                  onPress={() => payVia('bit')}
+                />
+                <PillButton
+                  label={he.money.payWithPaybox}
+                  size="md"
+                  style={styles.payApp}
+                  disabled={saving}
+                  onPress={() => payVia('paybox')}
+                />
               </View>
             ) : (
               payee && (
-                <>
-                  <Text style={styles.heroText}>{he.money.noPayLink(payee.displayName)}</Text>
-                  {payPhone && (
-                    <PillButton
-                      label={he.money.copyPhone}
-                      variant="quiet"
-                      size="md"
-                      wide
-                      disabled={saving}
-                      onPress={copyPhone}
-                    />
-                  )}
-                </>
+                <Text style={styles.heroText}>{he.money.noPaymentPhone(payee.displayName)}</Text>
               )
             )}
             <PillButton
