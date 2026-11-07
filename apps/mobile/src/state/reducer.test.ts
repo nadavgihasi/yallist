@@ -223,7 +223,7 @@ describe('trip', () => {
     );
   });
 
-  it('edits name, dates and place at once', () => {
+  it('edits name and dates at once', () => {
     const edited = applyAction(
       trip(),
       {
@@ -231,7 +231,6 @@ describe('trip', () => {
         name: 'דרום',
         startsOn: '2030-01-02',
         endsOn: '2030-01-04',
-        placeText: undefined,
       },
       'me',
     ).trip;
@@ -239,7 +238,6 @@ describe('trip', () => {
       name: 'דרום',
       startsOn: '2030-01-02',
       endsOn: '2030-01-04',
-      placeText: undefined,
     });
   });
 

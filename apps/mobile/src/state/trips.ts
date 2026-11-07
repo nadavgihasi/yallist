@@ -241,9 +241,7 @@ async function send(tripId: string, action: Action): Promise<unknown> {
       return parseResponse(trip.$patch({ param, json: { cover: action.cover } }));
     case 'editTrip': {
       const { type: _type, ...json } = action;
-      return parseResponse(
-        trip.$patch({ param, json: { ...json, placeText: json.placeText ?? null } }),
-      );
+      return parseResponse(trip.$patch({ param, json }));
     }
     case 'setMeetup': {
       const { meetupText, meetupPoint } = action;

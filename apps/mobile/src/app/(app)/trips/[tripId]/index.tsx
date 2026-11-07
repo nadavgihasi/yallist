@@ -235,11 +235,7 @@ export default function TripScreen() {
             )}
           </View>
           <Text style={styles.caption}>
-            {[
-              formatRange(trip.startsOn, trip.endsOn),
-              trip.placeText,
-              participants(view.activeIds.length),
-            ]
+            {[formatRange(trip.startsOn, trip.endsOn), participants(view.activeIds.length)]
               .filter(Boolean)
               .join(' · ')}
           </Text>

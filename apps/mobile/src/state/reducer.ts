@@ -51,13 +51,7 @@ export type Action =
   | { type: 'confirmPayment'; paymentId: string }
   | { type: 'approveMember' | 'declineMember' | 'removeMember'; userId: string }
   | { type: 'setCover'; cover: CoverId }
-  | {
-      type: 'editTrip';
-      name: string;
-      startsOn: string;
-      endsOn: string;
-      placeText: string | undefined;
-    }
+  | { type: 'editTrip'; name: string; startsOn: string; endsOn: string }
   /** Null clears it. */
   | { type: 'setMeetup'; meetupText: string | null; meetupPoint: LatLng | null }
   | { type: 'setAlbum'; albumUrl: string | null }
