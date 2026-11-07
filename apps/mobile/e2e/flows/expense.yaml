@@ -6,7 +6,7 @@ onFlowStart:
   - startRecording: ${MAESTRO_FILENAME}
 onFlowComplete:
   - stopRecording
-tags: [money, shard-1]
+tags: [money]
 ---
 - runFlow: ../common/sign-in.yaml
 - runFlow: ../common/new-trip.yaml
