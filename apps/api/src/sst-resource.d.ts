@@ -17,7 +17,9 @@ declare module 'sst' {
     SentryDsn: { value: string };
     SentryWebhookSecret: { value: string };
     TelegramBotToken: { value: string };
+    TelegramApproverIds: { value: string };
     TelegramChatId: { value: string };
+    TelegramPipelineChatId: { value: string };
     TelegramWebhookSecret: { value: string };
     Web: { url: string };
   }

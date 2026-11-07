@@ -145,16 +145,32 @@ A request without an issue (`github_issue_number` null: saved before the token e
 
 #### Remote feature pipeline (optional)
 
-Production only ([plan](plans/remote-feature-pipeline.md)). After a feature request's issue is opened, the API sends it to the Telegram chat with **Approve**, **Approve + details** and **Reject** ([pipeline.ts](../apps/api/src/pipeline.ts)). Approve fires the **yallist-feature-implementer** routine with the request and your details; the session follows [.claude/routines/feature-implementer.md](../.claude/routines/feature-implementer.md), pushes `claude/issue-<n>-…` and opens a draft PR. The repo webhook then sends the PR link, the first preview URL and the merge as replies to the request's message. Reject closes the issue as not planned. At most 3 runs go at once (approved in the last day, or with an open PR).
+Production only ([plan](plans/remote-feature-pipeline.md)). After a feature request's issue is opened, the API sends it to the Telegram chat with **Approve**, **Approve + details** and **Reject** ([pipeline.ts](../apps/api/src/pipeline.ts)). Approve fires the **yallist-feature-implementer** routine with the request and your details; the session follows [.claude/routines/feature-implementer.md](../.claude/routines/feature-implementer.md), pushes `claude/issue-<n>-…` and opens a PR, ready for review. The repo webhook then sends the PR link, the first preview URL and the merge as replies to the request's message. Reject closes the issue as not planned. At most 3 runs go at once (approved in the last day, or with an open PR).
 
-| SST secret / variable            | GitHub (production environment)           | Without it                                        |
-| -------------------------------- | ----------------------------------------- | ------------------------------------------------- |
-| `TelegramWebhookSecret`          | secret `TELEGRAM_WEBHOOK_SECRET`          | Requests aren't offered; webhooks 404             |
-| `RoutineFireToken`               | secret `ROUTINE_FIRE_TOKEN`               | Approve records and comments, starts none         |
-| `FEATURE_IMPLEMENTER_ROUTINE_ID` | variable `FEATURE_IMPLEMENTER_ROUTINE_ID` | Same                                              |
-| `GithubWebhookSecret`            | secret `FEEDBACK_WEBHOOK_SECRET`          | No PR or preview messages; `/webhooks/github` 404 |
+| SST secret / variable            | GitHub (production environment)           | Without it                                          |
+| -------------------------------- | ----------------------------------------- | --------------------------------------------------- |
+| `TelegramWebhookSecret`          | secret `TELEGRAM_WEBHOOK_SECRET`          | Requests aren't offered; webhooks 404               |
+| `RoutineFireToken`               | secret `ROUTINE_FIRE_TOKEN`               | Approve records and comments, starts none           |
+| `FEATURE_IMPLEMENTER_ROUTINE_ID` | variable `FEATURE_IMPLEMENTER_ROUTINE_ID` | Same                                                |
+| `GithubWebhookSecret`            | secret `FEEDBACK_WEBHOOK_SECRET`          | No PR or preview messages; `/webhooks/github` 404   |
+| `TelegramPipelineChatId`         | variable `TELEGRAM_PIPELINE_CHAT_ID`      | Requests go to the alerts chat (`TELEGRAM_CHAT_ID`) |
+| `TelegramApproverIds`            | variable `TELEGRAM_APPROVER_IDS`          | Only the user whose id is `TELEGRAM_CHAT_ID`        |
 
-It also needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `FEEDBACK_GITHUB_TOKEN` (above, and [Monitoring](#setup-checklist)). `TELEGRAM_CHAT_ID` must be your **private chat** with the bot: the API accepts presses and replies only from the user whose id is the chat id. Turn on two-step verification in Telegram; your account is the approval key.
+It also needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `FEEDBACK_GITHUB_TOKEN` (above, and [Monitoring](#setup-checklist)). Presses and replies count only in the pipeline chat and only from an approver; anyone else gets "Only approvers can decide". The Telegram message and the `decided_by` column record who approved or rejected (the public issue comment doesn't name them). Every approver's Telegram account is an approval key: each should turn on two-step verification. Approved runs use your Claude plan and push as you.
+
+**More approvers.** Without the two variables, requests go to `TELEGRAM_CHAT_ID` (your private chat) and only you decide. To share:
+
+1. Create a Telegram group with the other approvers and add the bot.
+2. Send `/chatid` in the group: the bot answers with the group's id (negative) and your user id. Each approver sends `/chatid` too, for their user id.
+3. Set the variables and deploy (alerts stay in `TELEGRAM_CHAT_ID`):
+
+   ```sh
+   gh variable set TELEGRAM_PIPELINE_CHAT_ID --env production --body -100…
+   gh variable set TELEGRAM_APPROVER_IDS --env production --body "<your id>,<their id>"
+   gh workflow run deploy.yml --ref main
+   ```
+
+A group that becomes a supergroup (Telegram does this for some settings changes) gets a new id: send `/chatid` again and update the variable. Presses on requests offered in the old chat stop counting once the variable changes, so decide those before switching chats.
 
 1. **Telegram webhook.** Generate a secret, store it, and point the bot at production's API (the `api` output on the last Deploy run's summary). Telegram sends it back in `X-Telegram-Bot-Api-Secret-Token`.
 

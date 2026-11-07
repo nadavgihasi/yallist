@@ -69,7 +69,7 @@ export async function sendTelegram(
       reply_parameters: { message_id: replyTo, allow_sending_without_reply: true },
     }),
     ...(buttons && { reply_markup: keyboard(buttons) }),
-    ...(forceReply && { reply_markup: { force_reply: true, selective: true } }),
+    ...(forceReply && { reply_markup: { force_reply: true } }),
   });
   return message.message_id;
 }

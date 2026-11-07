@@ -96,6 +96,12 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
   const telegramWebhookSecret = new sst.Secret('TelegramWebhookSecret', 'unset');
   const routineFireToken = new sst.Secret('RoutineFireToken', 'unset');
   const githubWebhookSecret = new sst.Secret('GithubWebhookSecret', 'unset');
+  // Where the pipeline posts and who may decide (apps/api/src/pipeline.ts, pipelineTelegram):
+  // a chat id (e.g. a group with the approvers) and comma-separated Telegram user ids. Not
+  // secret (deploy.yml sets them from GitHub variables), but secrets so `sst shell` scripts get
+  // them too. Unset: the alerts chat, and its id as the only approver.
+  const telegramPipelineChatId = new sst.Secret('TelegramPipelineChatId', 'unset');
+  const telegramApproverIds = new sst.Secret('TelegramApproverIds', 'unset');
   const authEnvironment = { GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage] ?? 'unset' };
 
   // Realtime (apps/api/src/realtime.ts): an AppSync Events API with a channel per trip,
@@ -215,6 +221,8 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
       telegramWebhookSecret,
       routineFireToken,
       githubWebhookSecret,
+      telegramPipelineChatId,
+      telegramApproverIds,
     ],
     environment: {
       ...authEnvironment,

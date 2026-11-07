@@ -37,7 +37,7 @@ sequenceDiagram
   API->>R: fire {issue N, request, your details}
   API->>TG: buttons removed, "Approved, session <url>"
   R->>R: implement, pnpm checks
-  R->>GH: push claude/issue-N-…, draft PR "Closes #N"
+  R->>GH: push claude/issue-N-…, PR "Closes #N"
   GH->>API: webhook pull_request opened
   API->>TG: "PR #P for #N: <link>, preview deploying"
   GH->>CI: pull_request
@@ -48,7 +48,6 @@ sequenceDiagram
   alt check failed, rounds left
     R->>GH: fix, push
   end
-  R->>GH: PR ready
   TG->>GH: you merge (GitHub app)
 ```
 
@@ -161,9 +160,9 @@ Routines need a Pro, Max, Team or Enterprise plan; measure the first few runs ag
 | Q4  | More buttons                                     | Later: **Retry** on a blocked run, **Merge** on the preview message (needs a token with Contents and Pull requests write in the API, so it's left out for now).                                         |
 | Q5  | Notify on every preview redeploy                 | **No**, first success only; the PR has the sticky comment for later pushes.                                                                                                                             |
 
-**Built** in one PR (steps 2–4 together); step 3's setup and step 5 are by hand.
+**Built** in one PR (steps 2–4 together); step 3's setup and step 5 are by hand. Later: more approvers in a group chat (`TELEGRAM_PIPELINE_CHAT_ID`, `TELEGRAM_APPROVER_IDS`, [deploy.md](../deploy.md#remote-feature-pipeline-optional)), and the routine opens PRs ready for review instead of as drafts.
 
-**Unverified, check on the first runs:** whether a routine session watches its PR's activity like an interactive one (if not, it stops at the draft PR and you nudge it from the Claude app); whether `deployment_status` for a `pull_request` run includes `workflow_run.pull_requests` (fallback: look up the PR by the deployment's `ref`); whether the Claude GitHub App can push changes to `.github/workflows`.
+**Unverified, check on the first runs:** whether a routine session watches its PR's activity like an interactive one (if not, it stops at the opened PR and you nudge it from the Claude app); whether `deployment_status` for a `pull_request` run includes `workflow_run.pull_requests` (fallback: look up the PR by the deployment's `ref`); whether the Claude GitHub App can push changes to `.github/workflows`.
 
 ## Alternatives
 

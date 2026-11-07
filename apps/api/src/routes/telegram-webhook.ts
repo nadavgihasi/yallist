@@ -5,23 +5,34 @@ import { Hono } from 'hono';
 import type { Db } from '../db/client';
 import { callTelegram } from '../notify/telegram';
 import { reportError } from '../sentry';
-import { answerPrompt, approve, askDetails, reject, type PipelineConfig } from '../pipeline';
+import {
+  answerPrompt,
+  approve,
+  askDetails,
+  reject,
+  type Actor,
+  type PipelineConfig,
+} from '../pipeline';
 
+type Chat = { id: number };
 type Update = {
   callback_query?: {
     id: string;
-    from: { id: number };
+    from: Actor;
+    message?: { chat: Chat };
     data?: string;
   };
   message?: {
-    from?: { id: number };
+    chat: Chat;
+    from?: Actor;
     text?: string;
     reply_to_message?: { message_id: number };
   };
 };
 
 const ACTIONS = {
-  a: (db: Db, pipeline: PipelineConfig, id: string) => approve(db, pipeline, id, null),
+  a: (db: Db, pipeline: PipelineConfig, id: string, by: Actor) =>
+    approve(db, pipeline, id, by, null),
   d: askDetails,
   r: reject,
 };
@@ -34,9 +45,10 @@ const sameSecret = (given: string | undefined, secret: string) =>
 
 /**
  * The bot's webhook (setWebhook with `secret_token`, docs/deploy.md): button presses on a feature
- * request and replies to a details prompt. Only the owner counts: in their private chat with the
- * bot, the chat id is their user id. Everything else, and every failure, is answered 200 so
- * Telegram doesn't redeliver; each step is a conditional move, so a redelivery would be a no-op.
+ * request and replies to a details prompt, in the pipeline chat, from an approver; everything
+ * else is ignored. `/chatid` in any chat answers with the chat's id and the sender's user id, for
+ * setting up the pipeline chat and the approvers. Every update, and every failure, is answered 200
+ * so Telegram doesn't redeliver; each step is a conditional move, so a redelivery would be a no-op.
  */
 export const telegramWebhookRoutes = (db: Db, pipeline: PipelineConfig | null) =>
   new Hono().post('/', async (c) => {
@@ -45,25 +57,40 @@ export const telegramWebhookRoutes = (db: Db, pipeline: PipelineConfig | null) =
       return c.json({ error: 'Bad secret' }, 401);
     }
     const update: Update = await c.req.json<Update>().catch(() => ({}));
-    const owner = (from?: { id: number }) => String(from?.id) === pipeline.telegram.chatId;
+    const here = (chat?: Chat) => String(chat?.id) === pipeline.telegram.chatId;
+    const approver = (from?: Actor): from is Actor =>
+      !!from && pipeline.approvers.includes(String(from.id));
     try {
       const press = update.callback_query;
-      if (press && owner(press.from)) {
+      if (press && here(press.message?.chat) && approver(press.from)) {
         const [, action, id] = CALLBACK.exec(press.data ?? '') ?? [];
         let toast = 'Unknown button';
         try {
-          if (action && id) toast = await ACTIONS[action as keyof typeof ACTIONS](db, pipeline, id);
+          if (action && id) {
+            toast = await ACTIONS[action as keyof typeof ACTIONS](db, pipeline, id, press.from);
+          }
         } finally {
           await callTelegram(pipeline.telegram, 'answerCallbackQuery', {
             callback_query_id: press.id,
             text: toast,
           }).catch((err: unknown) => console.error('answerCallbackQuery failed', err));
         }
+      } else if (press) {
+        await callTelegram(pipeline.telegram, 'answerCallbackQuery', {
+          callback_query_id: press.id,
+          text: 'Only approvers can decide',
+        }).catch((err: unknown) => console.error('answerCallbackQuery failed', err));
       }
       const message = update.message;
+      if (message?.text && /^\/chatid(@\w+)?$/.test(message.text.trim())) {
+        await callTelegram(pipeline.telegram, 'sendMessage', {
+          chat_id: message.chat.id,
+          text: `Chat id: ${message.chat.id}\nYour user id: ${message.from?.id ?? '?'}`,
+        });
+      }
       const promptId = message?.reply_to_message?.message_id;
-      if (message?.text && promptId && owner(message.from)) {
-        await answerPrompt(db, pipeline, promptId, message.text);
+      if (message?.text && promptId && here(message.chat) && approver(message.from)) {
+        await answerPrompt(db, pipeline, promptId, message.from, message.text);
       }
     } catch (err) {
       console.error('Telegram update failed', err);

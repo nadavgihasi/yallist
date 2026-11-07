@@ -74,7 +74,7 @@ describe('sendTelegram', () => {
     });
     expect(prompt).toMatchObject({
       reply_parameters: { message_id: 5, allow_sending_without_reply: true },
-      reply_markup: { force_reply: true, selective: true },
+      reply_markup: { force_reply: true },
     });
   });
 

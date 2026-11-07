@@ -37,9 +37,9 @@ owner_details (written by the repo owner in Telegram when approving):
    ```
    (`pnpm lint` also runs workflow linters through `uvx`; skip them if `uvx` is missing: you don't touch workflows.) If Postgres is available, run the API tests against it with `DATABASE_URL`; CI does.
 5. **Push** to a branch named exactly `claude/issue-<issue>-<slug>` (a short English kebab-case slug), with commits in the repo's style (`feat(trips): let members leave a trip`). The API matches PRs to requests by this branch name.
-6. **Open a draft PR** to `main`: title like the commit; body with the spec and **Assumptions** at the top, then what changed and how it was tested, and `Closes #<issue>`. Add the label `agent`.
+6. **Open a PR** to `main`, ready for review (not a draft): title like the commit; body with the spec and **Assumptions** at the top, then what changed and how it was tested, and `Closes #<issue>`. Add the label `agent`.
 7. **Watch the PR.** Subscribe to its activity. CI (`check`) runs on every push; `preview.yml` deploys a preview and `ui-tests.yml` runs against it. When a check fails, read its log, reproduce locally where you can, fix, push. After 2 rounds still failing, comment on the PR with the failing check and what you tried, and stop.
-8. **Ready.** When `check` is green and the UI tests on the preview passed (or didn't run), mark the PR ready for review and stop. The owner gets the PR and preview links on Telegram.
+8. **Done.** When `check` is green and the UI tests on the preview passed (or didn't run), stop. The owner gets the PR and preview links on Telegram.
 
 ## Blocked
 
