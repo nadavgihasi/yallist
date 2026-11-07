@@ -9,7 +9,8 @@
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx src/db/cli.ts",
-    "feedback:retry": "tsx src/feedback-retry.ts"
+    "feedback:retry": "tsx src/feedback-retry.ts",
+    "pipeline:offer": "tsx src/pipeline-offer.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1156.0",

@@ -89,6 +89,13 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
   // webhook answers 404. Previews never set them.
   const sentryDsn = new sst.Secret('SentryDsn', 'unset');
   const sentryWebhookSecret = new sst.Secret('SentryWebhookSecret', 'unset');
+  // The remote feature pipeline (docs/plans/remote-feature-pipeline.md), production only: the
+  // bot's webhook secret_token, the feature implementer routine's API trigger token, and the repo webhook's
+  // secret. Optional: without the first, feature requests aren't offered on Telegram; without the
+  // fire token (or FEATURE_IMPLEMENTER_ROUTINE_ID), Approve starts nothing. Dev and previews never set them.
+  const telegramWebhookSecret = new sst.Secret('TelegramWebhookSecret', 'unset');
+  const routineFireToken = new sst.Secret('RoutineFireToken', 'unset');
+  const githubWebhookSecret = new sst.Secret('GithubWebhookSecret', 'unset');
   const authEnvironment = { GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage] ?? 'unset' };
 
   // Realtime (apps/api/src/realtime.ts): an AppSync Events API with a channel per trip,
@@ -205,9 +212,16 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
       sentryWebhookSecret,
       telegramBotToken,
       telegramChatId,
+      telegramWebhookSecret,
+      routineFireToken,
+      githubWebhookSecret,
     ],
     environment: {
       ...authEnvironment,
+      // The feature implementer routine's id (trig_…), not a secret; deploy.yml sets it in production.
+      ...(process.env.FEATURE_IMPLEMENTER_ROUTINE_ID && {
+        FEATURE_IMPLEMENTER_ROUTINE_ID: process.env.FEATURE_IMPLEMENTER_ROUTINE_ID,
+      }),
       ...(process.env.APP_VERSION && { SENTRY_RELEASE: `yallist@${process.env.APP_VERSION}` }),
     },
   } satisfies sst.aws.FunctionArgs;

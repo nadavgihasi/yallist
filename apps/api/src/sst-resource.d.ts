@@ -9,13 +9,16 @@ declare module 'sst' {
     BetterAuthSecret: { value: string };
     Database: { endpoint: string; region: string };
     GithubFeedbackToken: { value: string };
+    GithubWebhookSecret: { value: string };
     GoogleClientSecret: { value: string };
     Realtime: { http: string };
+    RoutineFireToken: { value: string };
     Receipts: { name: string };
     SentryDsn: { value: string };
     SentryWebhookSecret: { value: string };
     TelegramBotToken: { value: string };
     TelegramChatId: { value: string };
+    TelegramWebhookSecret: { value: string };
     Web: { url: string };
   }
 }

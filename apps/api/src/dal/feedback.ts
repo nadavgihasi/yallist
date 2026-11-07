@@ -1,6 +1,19 @@
-import { and, asc, count, eq, gt, isNull, lt, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  count,
+  eq,
+  gt,
+  inArray,
+  isNotNull,
+  isNull,
+  lt,
+  or,
+  sql,
+  type SQL,
+} from 'drizzle-orm';
 
-import { feedback } from '../db/schema';
+import { feedback, type PIPELINE_STATES } from '../db/schema';
 import type { Executor } from '../db/tx';
 
 /** How many requests the user sent since `since`, for the rate limit. */
@@ -62,5 +75,64 @@ export async function countIssuesSince(tx: Executor, since: Date) {
     .select({ n: count() })
     .from(feedback)
     .where(gt(feedback.githubIssueAt, since));
+  return row?.n ?? 0;
+}
+
+type PipelineState = (typeof PIPELINE_STATES)[number];
+
+/** The request with `column` equal to `value`; the pipeline's lookups (ids, issue, prompt, PR). */
+export async function findFeedback(
+  tx: Executor,
+  column: 'id' | 'githubIssueNumber' | 'telegramPromptId' | 'prNumber',
+  value: string | number,
+) {
+  const [row] = await tx.select().from(feedback).where(eq(feedback[column], value)).limit(1);
+  return row;
+}
+
+/**
+ * Moves a request along the pipeline: sets `values` only while its state is one of `from` (null:
+ * not in the pipeline yet) and `where` holds. The updated row, or undefined when another press,
+ * retry or webhook got there first; concurrent ones conflict on the row, so one wins.
+ */
+export async function moveFeedback(
+  tx: Executor,
+  id: string,
+  from: (PipelineState | null)[],
+  values: Partial<typeof feedback.$inferInsert>,
+  where?: SQL,
+) {
+  const states = from.filter((s) => s !== null);
+  const [row] = await tx
+    .update(feedback)
+    .set(values)
+    .where(
+      and(
+        eq(feedback.id, id),
+        or(
+          states.length ? inArray(feedback.pipelineState, states) : undefined,
+          from.includes(null) ? isNull(feedback.pipelineState) : undefined,
+        ),
+        where,
+      ),
+    )
+    .returning();
+  return row;
+}
+
+/**
+ * Approved requests whose run is still going: with an open PR, or approved in the last day (a run
+ * that opened no PR by then has stopped). Approving waits while there are too many.
+ */
+export async function countRunning(tx: Executor) {
+  const [row] = await tx
+    .select({ n: count() })
+    .from(feedback)
+    .where(
+      and(
+        eq(feedback.pipelineState, 'approved'),
+        or(isNotNull(feedback.prNumber), gt(feedback.approvedAt, sql`now() - interval '1 day'`)),
+      ),
+    );
   return row?.n ?? 0;
 }

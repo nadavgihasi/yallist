@@ -9,12 +9,15 @@ import type { Db } from '../db/client';
 import { FEEDBACK_KINDS, PLATFORMS } from '../db/schema';
 import { transact } from '../db/tx';
 import { feedbackToken, openFeedbackIssue } from '../feedback-issue';
+import type { PipelineConfig } from '../pipeline';
 
 export interface FeedbackConfig {
   /** The deployed stage, e.g. `dev`; recorded with each request. */
   stage: string;
   /** GitHub token for opening issues. Unset (or SST's `unset` placeholder): requests are only saved. */
   githubToken?: string;
+  /** Production only: offers feature requests on Telegram and serves the pipeline's webhooks. */
+  pipeline?: PipelineConfig | null;
 }
 
 /** Requests per user per hour. */
@@ -50,7 +53,7 @@ export const feedbackRoutes = (auth: Auth, db: Db, config: FeedbackConfig) => {
         return insertFeedback(tx, { ...input, userId, stage: config.stage });
       });
 
-      if (token) await openFeedbackIssue(db, row, token);
+      if (token) await openFeedbackIssue(db, row, token, config.pipeline);
       return c.json({ id: row.id }, 201);
     });
 };

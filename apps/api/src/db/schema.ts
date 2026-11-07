@@ -428,6 +428,18 @@ export const templateItems = pgTable(
 
 export const FEEDBACK_KINDS = ['feature', 'bug'] as const;
 export const PLATFORMS = ['ios', 'android', 'web'] as const;
+/**
+ * Where a production feature request is in the remote pipeline
+ * (docs/plans/remote-feature-pipeline.md): offered on Telegram, waiting for the owner's details,
+ * approved (the feature implementer routine was fired; a PR may follow), rejected, or done (its PR closed).
+ */
+export const PIPELINE_STATES = [
+  'sent',
+  'awaiting_details',
+  'approved',
+  'rejected',
+  'done',
+] as const;
 
 /** Feature requests and bug reports sent from the app; each is also a GitHub issue when possible. */
 export const feedback = pgTable(
@@ -448,11 +460,27 @@ export const feedback = pgTable(
      * flight (or after a crash mid-send), cleared if it failed. The daily issue cap counts these.
      */
     githubIssueAt: timestamp('github_issue_at', { withTimezone: true }),
+    /** Null until the request is offered on Telegram (production feature requests only). */
+    pipelineState: text('pipeline_state', { enum: PIPELINE_STATES }),
+    /** The Telegram message with the request and its buttons; later messages reply to it. */
+    telegramMessageId: integer('telegram_message_id'),
+    /** The "Details for #N?" prompt; the owner's reply to it carries the details. */
+    telegramPromptId: integer('telegram_prompt_id'),
+    /** The owner's instructions, sent with Approve + details. */
+    ownerDetails: text('owner_details'),
+    approvedAt: timestamp('approved_at', { withTimezone: true }),
+    /** The feature implementer routine's session for this request, on claude.ai. */
+    routineSessionUrl: text('routine_session_url'),
+    /** The PR the session opened (head branch `claude/issue-<n>-…`). */
+    prNumber: integer('pr_number'),
+    /** When the preview URL was sent; only the first successful deployment notifies. */
+    previewNotifiedAt: timestamp('preview_notified_at', { withTimezone: true }),
     createdAt: createdAt(),
   },
   (t) => [
     index('feedback_user_idx').on(t.userId, t.createdAt),
     oneOf('feedback_kind_check', t.kind, FEEDBACK_KINDS),
     oneOf('feedback_platform_check', t.platform, PLATFORMS),
+    oneOf('feedback_pipeline_state_check', t.pipelineState, PIPELINE_STATES),
   ],
 );
