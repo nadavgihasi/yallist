@@ -14,9 +14,8 @@ export interface Policy {
 /**
  * The privacy policy (/privacy, linked from the Google Play listing), Hebrew and English. Keep
  * it true to the code: what the API stores (apps/api/src/db/schema.ts), the photos bucket and
- * region (infra/app), Sentry's scrubbing (packages/domain/src/scrub.ts) and feedback issues
- * (apps/api/src/feedback-issue.ts), deleting the account (deleteUser, apps/api/src/dal/profiles.ts).
- * Change `updated` with the text.
+ * region (infra/app), Sentry's scrubbing (packages/domain/src/scrub.ts) and deleting the
+ * account (deleteUser, apps/api/src/dal/profiles.ts). Change `updated` with the text.
  */
 export const policy: Record<'he' | 'en', Policy> = {
   he: {
@@ -49,8 +48,7 @@ export const policy: Record<'he' | 'en', Policy> = {
         lines: [
           'החברים בטיול רואים את השם, התמונה או הצבע שלך, ואת מה שעשית בטיול: פריטים שלקחת, הוצאות, קבלות ותשלומים.',
           'מי שיש לו קישור הזמנה לטיול רואה תצוגה מקדימה: שם הטיול, התאריכים, מספר החברים וכמה פריטים חסרים. לא את שמות החברים.',
-          'משוב הופך ל-issue ציבורי ב-GitHub: הכותרת והטקסט, גרסת האפליקציה, הפלטפורמה וקוד אנונימי. בלי השם או פרטי החשבון שלך, אז לא כדאי לכתוב בו פרטים אישיים.',
-          'ספקים שמפעילים את השירות בשבילנו: Amazon Web Services (שרתים, מסד נתונים ותמונות), Google (רק בכניסה עם Google), Sentry (דיווחי שגיאות) ו-GitHub (משוב). התראות על שגיאות, מנוקות כמו למעלה, מגיעות למפתח ב-Telegram.',
+          'ספקים שמפעילים את השירות בשבילנו: Amazon Web Services (שרתים, מסד נתונים ותמונות), Google (רק בכניסה עם Google), ו-Sentry (דיווחי שגיאות). התראות על שגיאות, מנוקות כמו למעלה, מגיעות למפתח ב-Telegram.',
           'אף אחד אחר. אנחנו לא מוכרים ולא משתפים מידע לפרסום.',
         ],
       },
@@ -67,7 +65,7 @@ export const policy: Record<'he' | 'en', Policy> = {
           'טיול נשמר עד שמארגן מוחק אותו. המחיקה מוחקת לכל החברים את הפריטים, ההוצאות, הקבלות וההיסטוריה של הטיול. מי שעוזב טיול או מוסר ממנו, מה שעשה בטיול נשאר בו.',
           'חשבון אורח שיצאו ממנו כבר אי אפשר לפתוח שוב, וגם לא למחוק מהאפליקציה. כדי למחוק חשבון אורח, מוחקים אותו לפני היציאה.',
           'גיבויים של מסד הנתונים נשמרים 7 ימים.',
-          'משוב נשמר עד שמוחקים את החשבון. ה-issue ב-GitHub נשאר ציבורי עד שנסיר אותו.',
+          'משוב נשמר עד שמוחקים את החשבון.',
         ],
       },
       {
@@ -76,7 +74,7 @@ export const policy: Record<'he' | 'en', Policy> = {
           'את החשבון מוחקים בעצמכם באפליקציה, בלי לפנות אלינו: במסך הפרופיל, ״מחיקת החשבון״. המחיקה מיידית: החשבון, הפרופיל (שם, תמונה וטלפון), חיבור ה-Google, המשובים ובקשות ההצטרפות לטיולים נמחקים, והחשבון מנותק בכל המכשירים.',
           'אפשר למחוק את החשבון רק כשאין לך טיולים, כי טיול משותף לכל החברים. בלשונית ״ניהול״ של כל טיול אפשר לצאת ממנו, ומארגנים יכולים גם למחוק אותו עם כל המידע שבו. מארגן/ת יחיד/ה של טיול לא יוצא/ת ממנו אלא מוחק/ת אותו.',
           'בטיולים שיצאת מהם או שהוסרת מהם, מה שעשית בהם (פריטים, הוצאות ותשלומים) נשאר אצל שאר החברים, בלי השם שלך: במקומו מופיע ״חשבון שנמחק״.',
-          'עותקים בגיבויים נמחקים תוך 7 ימים. issue ציבורי ב-GitHub שנוצר ממשוב לא נמחק עם החשבון.',
+          'עותקים בגיבויים נמחקים תוך 7 ימים.',
           'בכל זמן אפשר גם לשנות את השם ולהסיר את התמונה.',
         ],
       },
@@ -117,8 +115,7 @@ export const policy: Record<'he' | 'en', Policy> = {
         lines: [
           'Members of your trips see your name, photo or color, and what you do in the trip: items you take, expenses, receipts and payments.',
           "Anyone with a trip's invite link sees a preview: the trip's name, dates, number of members and some missing items. Not the members' names.",
-          "Feedback becomes a public GitHub issue: the title and text, app version, platform and an anonymous code. Not your name or account details, so don't put personal details in it.",
-          'Providers that run the service for us: Amazon Web Services (servers, database and photos), Google (only with Google sign-in), Sentry (error reports) and GitHub (feedback). Error alerts, scrubbed as above, reach the developer on Telegram.',
+          'Providers that run the service for us: Amazon Web Services (servers, database and photos), Google (only with Google sign-in), and Sentry (error reports). Error alerts, scrubbed as above, reach the developer on Telegram.',
           "No one else. We don't sell or share data for advertising.",
         ],
       },
@@ -135,7 +132,7 @@ export const policy: Record<'he' | 'en', Policy> = {
           "A trip is kept until an organizer deletes it. That deletes the trip's items, expenses, receipts and history for every member. If you leave a trip or are removed, what you did in it stays.",
           "A guest account you've signed out of can't be opened again, so it can't be deleted from the app either. To delete a guest account, delete it before signing out.",
           'Database backups are kept for 7 days.',
-          'Feedback is kept until you delete your account. Its GitHub issue stays public until we remove it.',
+          'Feedback is kept until you delete your account.',
         ],
       },
       {
@@ -144,7 +141,7 @@ export const policy: Record<'he' | 'en', Policy> = {
           "You delete your account yourself, in the app, without contacting us: on the profile screen, “מחיקת החשבון” (delete account). It's immediate: your account, profile (name, photo and phone), Google sign-in link, feedback and requests to join trips are deleted, and you're signed out on every device.",
           "You can delete your account once you're in no trip, since a trip is shared by all its members. Leave any trip from its “ניהול” (manage) tab; organizers can also delete it there, with everything in it. A trip's only organizer deletes it rather than leaving.",
           'In trips you left or were removed from, what you did (items, expenses and payments) stays for the other members, without your name: it shows as “חשבון שנמחק” (deleted account).',
-          "Copies in backups are gone within 7 days. A public GitHub issue made from your feedback isn't deleted with the account.",
+          'Copies in backups are gone within 7 days.',
           'You can also change your name and remove your photo at any time.',
         ],
       },
