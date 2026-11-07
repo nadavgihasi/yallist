@@ -10,7 +10,7 @@ import { showToast } from '@/components/Toast';
 import { he, participants } from '@/i18n/he';
 import { invitePayload, inviteUrl } from '@/lib/invite';
 import { testId } from '@/lib/testId';
-import { useTripAction } from '@/state/trips';
+import { useExitTrip, useTripAction } from '@/state/trips';
 import type { TripData, TripMember } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
@@ -40,6 +40,9 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
   // `${action}:${userId}` armed by a first tap; a second tap does it.
   const [confirming, setConfirming] = useState<string>();
   const organizer = view.memberById.get(me)?.role === 'organizer';
+  const exit = useExitTrip(data.trip.id);
+  // The only organizer can't leave: the trip would have no one to run it (the API checks too).
+  const onlyOrganizer = organizer && view.active.filter((m) => m.role === 'organizer').length === 1;
   const pending = data.members.filter((m) => m.status === 'pending');
   const link = inviteUrl(WEB_URL, data.inviteToken);
 
@@ -143,6 +146,37 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
         })}
       </ListGroup>
 
+      {onlyOrganizer ? (
+        <Text style={styles.text}>{he.leaveTrip.lastOrganizer}</Text>
+      ) : confirming === 'leave' ? (
+        <Card gap={space[3]}>
+          <Text style={styles.text} accessibilityRole="alert">
+            {he.leaveTrip.warning}
+          </Text>
+          <View style={styles.actions}>
+            <PillButton
+              label={he.leaveTrip.confirm}
+              variant="danger"
+              disabled={exit.isPending}
+              {...testId('trip-leave-confirm')}
+              onPress={() => exit.mutate()}
+            />
+            <PillButton
+              label={he.profile.cancel}
+              variant="quiet"
+              onPress={() => setConfirming(undefined)}
+            />
+          </View>
+        </Card>
+      ) : (
+        <PillButton
+          label={he.leaveTrip.action}
+          variant="quiet"
+          {...testId('trip-leave')}
+          onPress={() => setConfirming('leave')}
+        />
+      )}
+
       {organizer && (
         <PillButton
           label={he.deleteTrip.action}
@@ -160,6 +194,7 @@ export function PeopleTab({ data, view, me }: { data: TripData; view: TripView; 
 
 const styles = StyleSheet.create({
   wrap: { gap: space[4] },
+  actions: { flexDirection: 'row', gap: space[2] },
   texts: { gap: space[1] },
   title: { ...type.itemTitle, color: colors.ink },
   text: { ...type.caption, color: colors.inkMuted },

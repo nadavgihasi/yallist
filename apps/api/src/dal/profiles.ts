@@ -1,7 +1,7 @@
-import { eq, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db/client';
-import { profiles } from '../db/schema';
+import { accounts, activity, feedback, profiles, sessions, tripMembers, users } from '../db/schema';
 import { transact, type Executor } from '../db/tx';
 
 export async function findProfile(tx: Executor, userId: string) {
@@ -57,6 +57,84 @@ const USER_COLUMNS = [
   ['feedback', 'user_id'],
   ['shopping_runs', 'shopper_id'],
 ] as const;
+
+/** The user's trips, as their home screen lists them: none, and the account can be deleted. */
+export async function countActiveTrips(tx: Executor, userId: string) {
+  const [row] = await tx
+    .select({ n: count() })
+    .from(tripMembers)
+    .where(and(eq(tripMembers.userId, userId), eq(tripMembers.status, 'active')));
+  return row?.n ?? 0;
+}
+
+/** Stands in for a deleted user's name wherever their rows stay (see deleteUser). */
+export const DELETED_NAME = 'חשבון שנמחק';
+
+/**
+ * Deletes the user: profile, Better Auth user (its sessions and accounts cascade), feedback and
+ * requests to join trips. The caller checks they're in no trip. Rows in trips they were removed
+ * from (what they brought, paid, were paid) are the other members' history, so they stay; then
+ * the user and profile stay too, as rows with no personal data, and their name in those trips
+ * becomes DELETED_NAME. Returns their photo's key, for the caller to delete once committed.
+ */
+export async function deleteUser(tx: Executor, userId: string) {
+  const id = sql.identifier;
+  const photo = (await findProfile(tx, userId))?.avatarKey ?? undefined;
+  await tx.delete(feedback).where(eq(feedback.userId, userId));
+  // A request to join is all they did in that trip: it goes, with its log entry.
+  const pending = await tx
+    .delete(tripMembers)
+    .where(and(eq(tripMembers.userId, userId), eq(tripMembers.status, 'pending')))
+    .returning({ tripId: tripMembers.tripId });
+  if (pending.length > 0) {
+    await tx.delete(activity).where(
+      and(
+        eq(activity.actor, userId),
+        inArray(
+          activity.tripId,
+          pending.map((p) => p.tripId),
+        ),
+      ),
+    );
+  }
+
+  let referenced = false;
+  for (const [table, column] of USER_COLUMNS) {
+    const rows = await tx.execute(
+      sql`select 1 from ${id(table)} where ${id(column)} = ${userId} limit 1`,
+    );
+    if (rows.length > 0) referenced = true;
+  }
+  if (!referenced) {
+    await tx.delete(profiles).where(eq(profiles.id, userId));
+    await tx.delete(users).where(eq(users.id, userId));
+    return photo;
+  }
+
+  await tx
+    .update(tripMembers)
+    .set({ displayName: DELETED_NAME })
+    .where(eq(tripMembers.userId, userId));
+  await updateProfile(tx, userId, {
+    displayName: DELETED_NAME,
+    avatarKey: null,
+    paymentPhone: null,
+  });
+  await tx
+    .update(users)
+    .set({
+      name: DELETED_NAME,
+      // Unique, and no one's: signing in with the same Google account makes a new user.
+      email: `deleted-${userId}@deleted.invalid`,
+      emailVerified: false,
+      image: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId));
+  await tx.delete(sessions).where(eq(sessions.userId, userId));
+  await tx.delete(accounts).where(eq(accounts.userId, userId));
+  return photo;
+}
 
 /**
  * Moves everything of user `from` to user `to` and deletes `from`'s profile. `to` keeps its own

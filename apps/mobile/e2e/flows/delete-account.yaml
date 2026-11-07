@@ -1,0 +1,25 @@
+# A user in no trip deletes their account from the profile: a warning, then back to login.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [profile]
+---
+- runFlow: ../common/sign-in.yaml
+- tapOn:
+    id: home-profile
+- extendedWaitUntil:
+    notVisible:
+      id: loading
+    timeout: 10000
+- tapOn:
+    id: profile-delete-account
+- assertVisible: אי אפשר לבטל את זה.*
+- tapOn:
+    id: delete-account-confirm
+- assertVisible: החשבון נמחק
+- assertVisible:
+    id: login-guest

@@ -103,6 +103,18 @@ export function useDeleteTrip(tripId: string) {
   });
 }
 
+/** The user leaves the trip (POST /trips/:id/leave), then goes home. */
+export function useExitTrip(tripId: string) {
+  const leave = useLeaveTrip(tripId);
+  return useMutation({
+    // Under the trip's key: its realtime refresh waits while this is pending.
+    mutationKey: [...tripKey(tripId), 'leave'],
+    mutationFn: () => parseResponse(api.trips[':tripId'].leave.$post({ param: { tripId } })),
+    onSuccess: () => leave(he.leaveTrip.left),
+    onError: () => showToast(he.errors.failed, 'error'),
+  });
+}
+
 export const useInvite = (token: string) =>
   useQuery({
     queryKey: ['invite', token],

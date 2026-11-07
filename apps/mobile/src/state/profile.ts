@@ -3,10 +3,10 @@ import { parseResponse, type InferRequestType, type InferResponseType } from 'ho
 
 import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
-import { api } from '@/lib/api';
+import { api, statusOf } from '@/lib/api';
 
 import { pickAvatar, uploadAvatar } from './avatar';
-import { useMe } from './store';
+import { useMe, useSession } from './store';
 import { tripsKey } from './trips';
 
 /** GET /me: the profile, and whether the user is a guest or signed in with Google. */
@@ -68,4 +68,25 @@ export function useAvatar() {
     onError: () => showToast(he.errors.failed, 'error'),
   });
   return { change, remove, busy: change.isPending || remove.isPending };
+}
+
+/**
+ * Deletes the account (DELETE /me), then signs out here: the server already ended every session.
+ * Refused while the user is in a trip.
+ */
+export function useDeleteAccount() {
+  const { signOut } = useSession();
+  return useMutation({
+    mutationFn: () => parseResponse(api.me.$delete()),
+    onSuccess: async () => {
+      // The (app) layout then redirects to the login screen.
+      await signOut();
+      showToast(he.profile.deleteAccountDone);
+    },
+    onError: (error) =>
+      showToast(
+        statusOf(error) === 409 ? he.profile.deleteAccountInTrip : he.errors.failed,
+        'error',
+      ),
+  });
 }

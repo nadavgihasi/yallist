@@ -56,6 +56,7 @@ export const he = {
     otherWays: 'דרכים אחרות להיכנס',
     google: 'המשך עם Google',
     googleSoon: 'כניסה עם Google בקרוב',
+    privacy: 'מדיניות פרטיות',
   },
   dates: {
     /** Screen-reader hint on a date field. */
@@ -221,6 +222,14 @@ export const he = {
     deleted: 'הטיול נמחק',
     /** A trip open on screen stopped loading with a 404: deleted, or we were removed from it. */
     gone: 'הטיול נמחק או שכבר אין לך גישה אליו',
+  },
+  leaveTrip: {
+    action: 'יציאה מהטיול',
+    confirm: 'כן, לצאת מהטיול',
+    warning: 'הפריטים שלקחת יחזרו להיות חסרים. ההוצאות והתשלומים שלך נשארים בטיול.',
+    left: 'יצאת מהטיול',
+    /** The trip's only organizer: there'd be no one to run it. */
+    lastOrganizer: 'את/ה המארגן/ת היחיד/ה של הטיול, אז אי אפשר לצאת ממנו. אפשר למחוק אותו.',
   },
   people: {
     inviteTitle: 'עוד חברים מצטרפים?',
@@ -479,9 +488,19 @@ export const he = {
       'נכנסת כאורח: אחרי ההתנתקות לא תהיה דרך לחזור לטיולים שלך. כדאי לחבר קודם חשבון Google.',
     signOutYes: 'כן, להתנתק',
     cancel: 'ביטול',
+    deleteAccount: 'מחיקת החשבון',
+    deleteAccountConfirm: 'למחוק את החשבון?',
+    deleteAccountWarning:
+      'אי אפשר לבטל את זה. השם, התמונה, הטלפון והמשובים שלך יימחקו, והחשבון ינותק בכל המכשירים.',
+    deleteAccountYes: 'כן, למחוק',
+    deleteAccountInTrip:
+      'אפשר למחוק את החשבון רק כשאין לך טיולים. בלשונית ״ניהול״ של כל טיול אפשר לצאת ממנו, או למחוק טיול שאת/ה המארגן/ת היחיד/ה שלו.',
+    deleteAccountDone: 'החשבון נמחק',
     feedback: 'משוב',
     suggest: "הצעת פיצ'ר",
     suggestHint: 'רעיון לשיפור או משהו שלא עובד',
+    privacy: 'מדיניות פרטיות',
+    privacyHint: 'מה נשמר, מי רואה ואיך מוחקים',
   },
   feedback: {
     title: { feature: "הצעת פיצ'ר", bug: 'דיווח על תקלה' },
