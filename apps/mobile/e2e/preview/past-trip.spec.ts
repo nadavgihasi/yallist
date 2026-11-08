@@ -19,8 +19,13 @@ test('home shows a past trip without crashing', async ({ page }) => {
   const dates = page.locator('input[type=date]').filter({ visible: true });
   await dates.nth(0).fill('2025-01-10');
   await dates.nth(1).fill('2025-01-12');
+  // The sheet closes at once and saves in the background; reloading home before the PATCH is done
+  // would cancel it.
+  const saved = page.waitForResponse(
+    (r) => r.request().method() === 'PATCH' && /\/trips\/[^/]+$/.test(new URL(r.url()).pathname),
+  );
   await page.locator('#trip-rename-save').click();
-  await expect(page.locator('#trip-rename-save')).toBeHidden();
+  expect((await saved).ok()).toBe(true);
 
   await page.goto('./');
   await expect(page.locator('#home-past-trip')).toBeVisible();
