@@ -73,3 +73,14 @@ describe('scrubEvent', () => {
     expect(() => scrubEvent(deep)).not.toThrow();
   });
 });
+
+describe('scrubEvent on shared references', () => {
+  it('does not walk a shared-reference graph exponentially', () => {
+    // 40 layers, each pointing twice at the next: 2^40 paths, 41 objects.
+    let node: Record<string, unknown> = { leaf: 'x' };
+    for (let i = 0; i < 40; i++) node = { a: node, b: node };
+    const start = Date.now();
+    scrubEvent(node);
+    expect(Date.now() - start).toBeLessThan(1000);
+  });
+});
