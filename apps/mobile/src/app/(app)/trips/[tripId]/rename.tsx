@@ -15,8 +15,9 @@ import { useTrip, useTripAction } from '@/state/trips';
 import { colors, space } from '@/theme';
 
 /**
- * Edits the trip's name, dates and place (organizers): saves the trimmed values and closes the
- * sheet, nothing if unchanged. Moving the start keeps the end after it.
+ * Edits the trip's name and dates (organizers): saves the trimmed name and closes the sheet,
+ * nothing if unchanged. Moving the start keeps the end after it. Where the group meets is its
+ * own section of the ניהול tab.
  */
 export default function EditTrip() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
@@ -26,20 +27,15 @@ export default function EditTrip() {
   const [name, setName] = useState(() => data?.trip.name ?? '');
   const [startsOn, setStartsOn] = useState(() => data?.trip.startsOn ?? '');
   const [endsOn, setEndsOn] = useState(() => data?.trip.endsOn ?? '');
-  const [place, setPlace] = useState(() => data?.trip.placeText ?? '');
   if (!data) return null;
 
   const trimmed = name.trim();
-  const placeText = place.trim() || undefined;
   const ready = trimmed.length > 0;
   const changed =
-    trimmed !== data.trip.name ||
-    startsOn !== data.trip.startsOn ||
-    endsOn !== data.trip.endsOn ||
-    placeText !== data.trip.placeText;
+    trimmed !== data.trip.name || startsOn !== data.trip.startsOn || endsOn !== data.trip.endsOn;
   const save = () => {
     if (!ready) return;
-    close(() => changed && act({ type: 'editTrip', name: trimmed, startsOn, endsOn, placeText }));
+    close(() => changed && act({ type: 'editTrip', name: trimmed, startsOn, endsOn }));
   };
 
   return (
@@ -85,15 +81,6 @@ export default function EditTrip() {
             <DateField label={he.newTrip.to} value={endsOn} min={startsOn} onChange={setEndsOn} />
           </View>
         </View>
-        <TextField
-          label={he.newTrip.where}
-          hint={he.newTrip.optional}
-          value={place}
-          onChangeText={setPlace}
-          placeholder={he.newTrip.wherePlaceholder}
-          maxLength={120}
-          {...testId('trip-edit-place')}
-        />
       </View>
     </Sheet>
   );

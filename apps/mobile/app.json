@@ -50,6 +50,12 @@
           "microphonePermission": false
         }
       ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Yallist צריכה את המיקום שלך כדי לסמן אותו כנקודת המפגש של הטיול."
+        }
+      ],
       "./plugins/withReleaseSigning",
       "@react-native-community/datetimepicker",
       "@sentry/react-native/expo"

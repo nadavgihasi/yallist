@@ -11,6 +11,7 @@ import {
   boolean,
   check,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -157,7 +158,6 @@ export const trips = pgTable(
     name: text('name').notNull(),
     startsOn: date('starts_on').notNull(),
     endsOn: date('ends_on').notNull(),
-    placeText: text('place_text'),
     template: text('template', { enum: TEMPLATE_IDS }).notNull(),
     /**
      * Nullable only because DSQL can't add a column with a default: the API always sets it,
@@ -166,6 +166,13 @@ export const trips = pgTable(
     cover: text('cover', { enum: COVER_IDS }),
     currency: text('currency').notNull().default('ILS'),
     requireApproval: boolean('require_approval').notNull().default(false),
+    /** Where the group meets: a place's name or address, or a Google Maps or Waze link. */
+    meetupText: text('meetup_text'),
+    /** The meetup point picked on the map, in degrees; both or neither. */
+    meetupLat: doublePrecision('meetup_lat'),
+    meetupLng: doublePrecision('meetup_lng'),
+    /** A Google Photos album link. */
+    albumUrl: text('album_url'),
     inviteToken: text('invite_token').notNull().unique(),
     status: text('status', { enum: TRIP_STATUSES }).notNull().default('planning'),
     createdBy: userRef('created_by').notNull(),

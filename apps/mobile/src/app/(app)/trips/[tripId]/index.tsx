@@ -133,6 +133,7 @@ export default function TripScreen() {
 
   const view = deriveTrip(data, me.userId);
   const { trip } = data;
+  const organizer = view.memberById.get(me.userId)?.role === 'organizer';
   const count = (l: 'bring' | 'buy') => view.items.filter((i) => i.list === l).length;
   const tabs = [
     { value: 'bring' as const, label: he.trip.tabCount(he.trip.tabs.bring, count('bring')) },
@@ -196,7 +197,7 @@ export default function TripScreen() {
           style={[styles.cover, desktop && styles.coverDesktop]}
           testID={`trip-hero-cover-${trip.cover}`}
         >
-          {view.memberById.get(me.userId)?.role === 'organizer' && (
+          {organizer && (
             <PillButton
               label={he.cover.changeShort}
               accessibilityLabel={he.cover.change}
@@ -234,11 +235,7 @@ export default function TripScreen() {
             )}
           </View>
           <Text style={styles.caption}>
-            {[
-              formatRange(trip.startsOn, trip.endsOn),
-              trip.placeText,
-              participants(view.activeIds.length),
-            ]
+            {[formatRange(trip.startsOn, trip.endsOn), participants(view.activeIds.length)]
               .filter(Boolean)
               .join(' · ')}
           </Text>
