@@ -21,7 +21,8 @@ export const API_TIMEOUT_SECONDS = 20;
 export const API_CORS: sst.aws.ApiGatewayV2Args['cors'] = {
   allowOrigins: ['*'],
   allowMethods: ['*'],
-  allowHeaders: ['content-type', 'authorization'],
+  // `sentry-trace` and `baggage` carry the app's trace into the API (apps/api/src/sentry.ts).
+  allowHeaders: ['content-type', 'authorization', 'sentry-trace', 'baggage'],
   maxAge: '1 day',
 };
 

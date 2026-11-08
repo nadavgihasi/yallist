@@ -2,3 +2,5 @@ packages:
   - apps/*
   - packages/*
   - infra
+patchedDependencies:
+  expo-router@58.0.26: patches/expo-router@58.0.26.patch

@@ -1,0 +1,20 @@
+diff --git a/build/views/Try.js b/build/views/Try.js
+index 3304a35ccbd2bce4a9d20bb06a657627f4fce925..402f23968fc2000b5f28a9ae50b01dae89ec2ad4 100644
+--- a/build/views/Try.js
++++ b/build/views/Try.js
+@@ -81,6 +81,15 @@ class Try extends _react().Component {
+             error
+         };
+     }
++    // Patched (yallist): hand React's component stack to the `catch` boundary on the error itself,
++    // so it can report which component crashed. Runs before the boundary's effects.
++    componentDidCatch(error, info) {
++        if (error && typeof error === 'object' && info && info.componentStack) {
++            try {
++                error.componentStack = info.componentStack;
++            } catch  {}
++        }
++    }
+     retry = ()=>{
+         return new Promise((resolve)=>{
+             this.setState({
