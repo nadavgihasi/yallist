@@ -93,7 +93,7 @@ export function PastTripRow({ data }: { data: TripSummary }) {
   const open = data.transfers.length;
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
-      <Pressable style={styles.past} accessibilityRole="link">
+      <Pressable style={styles.past} accessibilityRole="link" {...testId('home-past-trip')}>
         <TripTile template={trip.template} />
         <View style={styles.texts}>
           <Text style={styles.progressText}>{trip.name}</Text>
