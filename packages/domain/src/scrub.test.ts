@@ -49,4 +49,27 @@ describe('scrubEvent', () => {
       breadcrumbs: [{ message: 'tap', data: { label: '[he]', count: 3 } }],
     });
   });
+
+  it('survives circular references', () => {
+    const socket: Record<string, unknown> = { note: 'a@b.co' };
+    socket.self = socket;
+    const event = { extra: { socket, list: [socket] } };
+    expect(scrubEvent(event)).toEqual({
+      extra: {
+        socket: { note: '[email]', self: '[circular]' },
+        list: [{ note: '[email]', self: '[circular]' }],
+      },
+    });
+  });
+
+  it('keeps a node that is shared but not circular', () => {
+    const shared = { label: 'x' };
+    expect(scrubEvent({ a: shared, b: shared })).toEqual({ a: shared, b: shared });
+  });
+
+  it('survives very deep nesting', () => {
+    let deep: Record<string, unknown> = { leaf: true };
+    for (let i = 0; i < 20_000; i++) deep = { next: deep };
+    expect(() => scrubEvent(deep)).not.toThrow();
+  });
 });

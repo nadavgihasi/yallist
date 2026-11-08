@@ -37,16 +37,26 @@ const DROP = new Set(['user', 'cookies', 'headers', 'ip_address']);
  * under KEEP, and without user, cookies and headers. Use as beforeSend and beforeBreadcrumb.
  */
 export function scrubEvent<T>(event: T): T {
-  return scrub(event) as T;
+  return scrub(event, new Set(), 0) as T;
 }
 
-function scrub(value: unknown): unknown {
+/** Events can hold cycles (error causes, request and socket objects) or very deep graphs. */
+const MAX_DEPTH = 50;
+
+function scrub(value: unknown, ancestors: Set<object>, depth: number): unknown {
   if (typeof value === 'string') return scrubText(value);
-  if (Array.isArray(value)) return value.map(scrub);
   if (value === null || typeof value !== 'object') return value;
-  return Object.fromEntries(
-    Object.entries(value)
-      .filter(([key]) => !DROP.has(key))
-      .map(([key, child]) => [key, KEEP.has(key) ? child : scrub(child)]),
-  );
+  if (ancestors.has(value)) return '[circular]';
+  if (depth >= MAX_DEPTH) return '[truncated]';
+  ancestors.add(value);
+  try {
+    if (Array.isArray(value)) return value.map((child) => scrub(child, ancestors, depth + 1));
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(([key]) => !DROP.has(key))
+        .map(([key, child]) => [key, KEEP.has(key) ? child : scrub(child, ancestors, depth + 1)]),
+    );
+  } finally {
+    ancestors.delete(value);
+  }
 }
