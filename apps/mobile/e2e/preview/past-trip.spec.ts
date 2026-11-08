@@ -19,15 +19,15 @@ test('home shows a past trip without crashing', async ({ page }) => {
   const dates = page.locator('input[type=date]').filter({ visible: true });
   await dates.nth(0).fill('2025-01-10');
   await dates.nth(1).fill('2025-01-12');
-  // The sheet closes at once and saves in the background; reloading home before the PATCH is done
-  // would cancel it.
+  // The sheet closes at once and saves in the background.
   const saved = page.waitForResponse(
     (r) => r.request().method() === 'PATCH' && /\/trips\/[^/]+$/.test(new URL(r.url()).pathname),
   );
   await page.locator('#trip-rename-save').click();
   expect((await saved).ok()).toBe(true);
-
-  await page.goto('./');
+  // Home through the app, as a person goes back to it. Its trip list is the in-memory one the save
+  // just refreshed; a reload could restore the persisted list from before the save.
+  await page.getByRole('button', { name: 'חזרה לכל הטיולים' }).click();
   await expect(page.locator('#home-past-trip')).toBeVisible();
   await expect(page.locator('#home-past-trip')).toContainText('Past trip');
   await expect(page.locator('#error-retry')).toBeHidden();
