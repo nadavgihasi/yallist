@@ -18,7 +18,7 @@ import { runRoutes } from './routes/runs';
 import { sentryWebhookRoutes, type SentryWebhookConfig } from './routes/sentry-webhook';
 import { telegramWebhookRoutes } from './routes/telegram-webhook';
 import { tripRoutes } from './routes/trips';
-import { reportError } from './sentry';
+import { reportError, tracing } from './sentry';
 
 export function createApp(
   auth: Auth,
@@ -36,6 +36,7 @@ export function createApp(
   // Lambda. Deployed, API Gateway replaces these headers with its own (infra/app/core.ts);
   // locally, they're the ones the browser sees.
   return new Hono()
+    .use(tracing())
     .use(cors())
     .onError(async (err, c) => {
       if (err instanceof HTTPException) return c.json({ error: err.message }, err.status);
