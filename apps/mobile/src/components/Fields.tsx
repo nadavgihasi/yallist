@@ -19,9 +19,15 @@ const webRtl = Platform.OS === 'web' ? ({ dir: 'rtl' } as object) : {};
 export function TextField({
   label,
   hint,
+  error,
   style,
   ...input
-}: TextInputProps & { label: string; hint?: string }) {
+}: TextInputProps & {
+  label: string;
+  hint?: string;
+  /** Shown under the field, e.g. when the text isn't a link it takes. */
+  error?: string;
+}) {
   return (
     <View style={styles.wrap}>
       <Text style={styles.label}>
@@ -29,6 +35,11 @@ export function TextField({
         {hint && <Text style={styles.hint}> {hint}</Text>}
       </Text>
       <Input accessibilityLabel={label} {...input} style={[styles.input, style]} />
+      {error && (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {error}
+        </Text>
+      )}
     </View>
   );
 }

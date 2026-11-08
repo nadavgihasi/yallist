@@ -136,6 +136,22 @@ describe('apply on DSQL', () => {
     }, {});
     await expect(apply(sql, 'CREATE TABLE "a" (', true)).rejects.toThrow('syntax error');
   });
+
+  const noColumn = () => {
+    throw Object.assign(new Error('column "x" of relation "a" does not exist'), { code: '42703' });
+  };
+
+  it('accepts a column an earlier run dropped', async () => {
+    const { sql } = fakeDsql(noColumn, {});
+    await apply(sql, 'ALTER TABLE "a" DROP COLUMN "x";', true);
+  });
+
+  it('rethrows a missing column for anything but a DROP COLUMN', async () => {
+    const { sql } = fakeDsql(noColumn, {});
+    await expect(apply(sql, 'CREATE INDEX "a_idx" ON "a" ("x");', true)).rejects.toThrow(
+      'does not exist',
+    );
+  });
 });
 
 describe.skipIf(!DATABASE_URL)('migrate', () => {

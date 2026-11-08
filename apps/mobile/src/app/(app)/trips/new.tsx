@@ -52,7 +52,6 @@ export default function NewTrip() {
     () => KINDS.find((k) => k === params.template) ?? 'camp',
   );
   const [name, setName] = useState('');
-  const [place, setPlace] = useState('');
   const [startsOn, setStartsOn] = useState(() => addDays(today(), 14));
   const [endsOn, setEndsOn] = useState(() => addDays(today(), 15));
 
@@ -74,7 +73,6 @@ export default function NewTrip() {
         name: shownName,
         startsOn,
         endsOn: endsOn < startsOn ? startsOn : endsOn,
-        placeText: place.trim() || undefined,
         template,
         cover,
       },
@@ -179,13 +177,6 @@ export default function NewTrip() {
                   />
                 </View>
               </View>
-              <TextField
-                label={he.newTrip.where}
-                hint={he.newTrip.optional}
-                value={place}
-                onChangeText={setPlace}
-                placeholder={he.newTrip.wherePlaceholder}
-              />
             </Card>
 
             <View style={styles.card} accessibilityLiveRegion="polite">
