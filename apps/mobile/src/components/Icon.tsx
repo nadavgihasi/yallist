@@ -20,6 +20,10 @@ const ICONS = {
   /** In a circle: error toasts. */
   alert: ['M12 7.5V13', 'M12 16.5h.01'],
   close: ['M18 6 6 18', 'M6 6l12 12'],
+  /** locate: crosshairs, "where I am". */
+  locate: ['M12 2v3', 'M12 19v3', 'M2 12h3', 'M19 12h3'],
+  /** map-pin */
+  pin: ['M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21Z'],
   pencil: ['M12 20h9', 'M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z'],
   calendar: [
     'M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z',
@@ -97,6 +101,11 @@ const CIRCLES: Partial<Record<IconName, { cx: number; cy: number; r: number }[]>
   sun: [{ cx: 12, cy: 12, r: 4 }],
   camera: [{ cx: 12, cy: 13, r: 3 }],
   image: [{ cx: 9, cy: 9, r: 2 }],
+  pin: [{ cx: 12, cy: 9.5, r: 2.5 }],
+  locate: [
+    { cx: 12, cy: 12, r: 7 },
+    { cx: 12, cy: 12, r: 2.5 },
+  ],
   cart: [
     { cx: 9, cy: 19, r: 1.5 },
     { cx: 17, cy: 19, r: 1.5 },

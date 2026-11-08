@@ -23,12 +23,17 @@ export function toTrip(row: typeof trips.$inferSelect) {
     name: row.name,
     startsOn: row.startsOn,
     endsOn: row.endsOn,
-    placeText: opt(row.placeText),
     template: row.template,
     // Absent only on a trip the previous API version wrote mid-deploy, until the backfill.
     cover: row.cover ?? coverFor(row.template),
     status: row.status,
     requireApproval: row.requireApproval,
+    meetupText: opt(row.meetupText),
+    meetupPoint:
+      row.meetupLat !== null && row.meetupLng !== null
+        ? { lat: row.meetupLat, lng: row.meetupLng }
+        : undefined,
+    albumUrl: opt(row.albumUrl),
     createdAt: row.createdAt.toISOString(),
   };
 }
