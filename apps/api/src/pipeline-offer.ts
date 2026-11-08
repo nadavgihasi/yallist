@@ -30,6 +30,7 @@ const config = {
   githubToken: null,
   routine: null,
   githubSecret: null,
+  mergeToken: null,
 };
 for (const issue of issues) {
   const row = await findFeedback(db, 'githubIssueNumber', issue);

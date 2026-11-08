@@ -538,6 +538,12 @@ export const feedback = pgTable(
     prNumber: integer('pr_number'),
     /** When the preview URL was sent; only the first successful deployment notifies. */
     previewNotifiedAt: timestamp('preview_notified_at', { withTimezone: true }),
+    /** The PR commit offered for merging (its PR workflow passed); offered once per commit. */
+    mergeSha: text('merge_sha'),
+    /** The Telegram message with the Merge button for `mergeSha`. */
+    mergeMessageId: integer('merge_message_id'),
+    /** Who pressed Merge (Telegram id and name); set while merging, kept once merged. */
+    mergedBy: text('merged_by'),
     createdAt: createdAt(),
   },
   (t) => [

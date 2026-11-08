@@ -25,6 +25,7 @@ const pipelineChat = pipelineTelegram(
   telegram,
   optional(Resource.TelegramPipelineChatId.value),
   optional(Resource.TelegramApproverIds.value),
+  optional(Resource.TelegramMergerIds.value),
 );
 
 /**
@@ -40,6 +41,7 @@ const pipeline: PipelineConfig | null =
         routine:
           fireToken && routineId?.startsWith('trig_') ? { id: routineId, token: fireToken } : null,
         githubSecret: optional(Resource.GithubWebhookSecret.value),
+        mergeToken: optional(Resource.FeedbackMergeToken.value),
       }
     : null;
 const publish = appSyncPublisher(Resource.Realtime.http, process.env.AWS_REGION!);

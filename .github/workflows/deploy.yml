@@ -129,6 +129,8 @@ jobs:
       SST_SECRET_GithubWebhookSecret: ${{ secrets.FEEDBACK_WEBHOOK_SECRET }}
       SST_SECRET_TelegramPipelineChatId: ${{ vars.TELEGRAM_PIPELINE_CHAT_ID }}
       SST_SECRET_TelegramApproverIds: ${{ vars.TELEGRAM_APPROVER_IDS }}
+      SST_SECRET_FeedbackMergeToken: ${{ secrets.FEEDBACK_MERGE_TOKEN }}
+      SST_SECRET_TelegramMergerIds: ${{ vars.TELEGRAM_MERGER_IDS }}
       FEATURE_IMPLEMENTER_ROUTINE_ID: ${{ vars.FEATURE_IMPLEMENTER_ROUTINE_ID }}
       EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }} # optional, app errors
       # Source map uploads (web export and API bundle); skipped without the token.

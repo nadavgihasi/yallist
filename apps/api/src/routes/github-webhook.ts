@@ -4,7 +4,13 @@ import { Hono } from 'hono';
 
 import type { Db } from '../db/client';
 import { FEEDBACK_REPO } from '../github';
-import { previewDeployed, prClosed, prOpened, type PipelineConfig } from '../pipeline';
+import {
+  checksPassed,
+  previewDeployed,
+  prClosed,
+  prOpened,
+  type PipelineConfig,
+} from '../pipeline';
 import { reportError } from '../sentry';
 
 /** Whether `signature` (X-Hub-Signature-256) is `sha256=` and the hex HMAC of the raw body. */
@@ -37,15 +43,31 @@ type DeploymentStatusEvent = {
   workflow_run?: { pull_requests?: { number: number }[] } | null;
 };
 
+type WorkflowRunEvent = {
+  action: string;
+  workflow_run: {
+    name: string;
+    conclusion: string | null;
+    head_sha: string;
+    head_repository: { full_name: string } | null;
+    pull_requests: { number: number }[];
+  };
+};
+
+/** The workflow that runs every PR check and ends in `all-pass` (.github/workflows/pr.yml). */
+export const PR_WORKFLOW = 'PR';
+
 /** A deployment's PR: from its workflow run, or a `refs/pull/<n>/…` ref. */
 const deploymentPr = (event: DeploymentStatusEvent) =>
   event.workflow_run?.pull_requests?.[0]?.number ??
   Number(/^refs\/pull\/(\d+)\//.exec(event.deployment.ref)?.[1] ?? NaN);
 
 /**
- * The repo webhook (events: Pull requests, Deployment statuses; docs/deploy.md): tells the owner
- * on Telegram when an approved request's PR opens or closes and when its preview is up. It only
- * ever sends messages, never acts on GitHub, so a forged event could at most send a wrong one.
+ * The repo webhook (events: Pull requests, Deployment statuses, Workflow runs; docs/deploy.md):
+ * tells the pipeline chat when an approved request's PR opens or closes, when its preview is up,
+ * and when its PR workflow passed (with Merge). It never acts on GitHub itself: merging takes a
+ * press, and merges only the commit the offer named, so a forged event could at most send a
+ * wrong message.
  */
 export const githubWebhookRoutes = (db: Db, pipeline: PipelineConfig | null) =>
   new Hono().post('/', async (c) => {
@@ -76,6 +98,19 @@ export const githubWebhookRoutes = (db: Db, pipeline: PipelineConfig | null) =>
           if (action === 'closed') {
             await prClosed(db, pipeline, { number: pr.number, merged: !!pr.merged });
           }
+        }
+      }
+      if (event === 'workflow_run') {
+        const { action, workflow_run: run } = payload as WorkflowRunEvent;
+        const pr = run.pull_requests[0]?.number;
+        if (
+          action === 'completed' &&
+          run.name === PR_WORKFLOW &&
+          run.conclusion === 'success' &&
+          run.head_repository?.full_name === FEEDBACK_REPO &&
+          pr
+        ) {
+          await checksPassed(db, pipeline, { pr, sha: run.head_sha });
         }
       }
       if (event === 'deployment_status') {

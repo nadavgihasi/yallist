@@ -15,11 +15,15 @@ const GROUP = -100500;
 const pipeline: PipelineConfig = {
   telegram: { token: '1:abc', chatId: String(GROUP) },
   approvers: [String(OWNER), String(SECOND)],
+  mergers: [String(OWNER)],
   telegramSecret: 'tg-secret',
   githubToken: 'gh-token',
   routine: { id: 'trig_01', token: 'sk-ant-oat01-x' },
   githubSecret: 'gh-secret',
+  mergeToken: 'merge-token',
 };
+const SHA = 'a'.repeat(40);
+const NEWER = 'b'.repeat(40);
 const SESSION = 'https://claude.ai/code/session_01';
 
 type Call = { url: string; method: string; body: Record<string, unknown> };
@@ -33,6 +37,9 @@ describe.skipIf(!DATABASE_URL)('remote feature pipeline', () => {
   let calls: Call[];
   let fireStatus: number;
   let nextIssue: number;
+  /** The PR's head on GitHub, and how GitHub answers a merge. */
+  let head: string;
+  let mergeAnswer: Response | null;
 
   beforeAll(async () => {
     ({ sql, drop } = await createTestDatabase());
@@ -48,6 +55,8 @@ describe.skipIf(!DATABASE_URL)('remote feature pipeline', () => {
     calls = [];
     fireStatus = 200;
     nextIssue = 136;
+    head = SHA;
+    mergeAnswer = null;
     let nextMessage = 500;
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
       const url = input instanceof Request ? input.url : input.toString();
@@ -65,6 +74,16 @@ describe.skipIf(!DATABASE_URL)('remote feature pipeline', () => {
         const result = url.endsWith('/sendMessage') ? { message_id: nextMessage++ } : true;
         return Response.json({ ok: true, result });
       }
+      if (url.endsWith('/pulls/141') && method === 'GET') {
+        return Response.json({
+          state: 'open',
+          draft: false,
+          title: 'Leave and remove members',
+          head: { sha: head, ref: 'claude/issue-136-leave-trip' },
+        });
+      }
+      if (url.endsWith('/pulls/141/merge')) return mergeAnswer ?? Response.json({ merged: true });
+      if (method === 'DELETE') return new Response(null, { status: 204 });
       if (url.endsWith('/issues') && method === 'POST')
         return Response.json({ number: nextIssue++ }, { status: 201 });
       return Response.json({});
@@ -343,6 +362,157 @@ describe.skipIf(!DATABASE_URL)('remote feature pipeline', () => {
     expect((await state(id)).pipeline_state).toBe('done');
   });
 
+  const workflowRun = (sha: string, extra: object = {}) =>
+    github('workflow_run', {
+      action: 'completed',
+      workflow_run: {
+        name: 'PR',
+        conclusion: 'success',
+        head_sha: sha,
+        head_repository: { full_name: 'nadavgihasi/yallist' },
+        pull_requests: [{ number: 141 }],
+        ...extra,
+      },
+    });
+
+  /** An approved request with its PR opened; returns its id. */
+  async function withPr() {
+    const id = await request();
+    await press(`a:${id}`);
+    await pullRequest('opened');
+    return id;
+  }
+  const merges = () => to('/pulls/141/merge');
+  const lastEdit = () => to('/editMessageText').at(-1)!.body;
+
+  it('offers Merge once per commit when the PR workflow passes, and merges that commit', async () => {
+    const id = await withPr();
+    await workflowRun(SHA, { conclusion: 'failure' });
+    await workflowRun(SHA, { name: 'Deploy' });
+    expect(to('/sendMessage')).toHaveLength(2); // the offer and the PR link only
+    expect((await workflowRun(SHA)).status).toBe(204);
+    await workflowRun(SHA); // a re-run of the same commit
+    const offers = to('/sendMessage').slice(2);
+    expect(offers).toHaveLength(1);
+    expect(offers[0]!.body).toMatchObject({
+      reply_parameters: { message_id: 500 },
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: 'Merge', callback_data: `m:${id}` },
+            { text: 'Not now', callback_data: `n:${id}` },
+          ],
+        ],
+      },
+    });
+    expect(offers[0]!.body.text).toContain(
+      '<b>PR #141</b> passed every check on <code>aaaaaaa</code>',
+    );
+
+    // A second approver can't merge; the owner can, once.
+    await press(`m:${id}`, SECOND);
+    expect(merges()).toEqual([]);
+    await press(`m:${id}`);
+    await press(`m:${id}`);
+    expect(merges()).toHaveLength(1);
+    expect(merges()[0]!.body).toEqual({
+      sha: SHA,
+      merge_method: 'squash',
+      commit_title: 'Leave and remove members (#141)',
+    });
+    expect(
+      calls.some(
+        (c) =>
+          c.method === 'DELETE' && c.url.endsWith('/git/refs/heads/claude/issue-136-leave-trip'),
+      ),
+    ).toBe(true);
+    expect(lastEdit()).toMatchObject({ message_id: 502, reply_markup: { inline_keyboard: [] } });
+    expect(lastEdit().text).toContain('🚀 Merged by Nadav');
+    expect(to('/answerCallbackQuery').map((c) => c.body.text)).toEqual([
+      'Approved',
+      'Only the owner can merge',
+      'Merged',
+      'Already handled',
+    ]);
+    expect((await state(id)).merged_by).toBe(`${OWNER} Nadav`);
+  });
+
+  it('shows why GitHub refused, keeps the buttons, and supersedes an older offer', async () => {
+    const id = await withPr();
+    await workflowRun(SHA);
+    mergeAnswer = Response.json(
+      { message: 'Required status check "all-pass" is expected.' },
+      { status: 405 },
+    );
+    await press(`m:${id}`);
+    expect(lastEdit().text).toContain(
+      '⚠️ Not merged: Required status check &quot;all-pass&quot; is expected.',
+    );
+    expect(
+      (lastEdit().reply_markup as { inline_keyboard: unknown[][] }).inline_keyboard[0],
+    ).toHaveLength(2);
+    expect((await state(id)).merged_by).toBeNull();
+
+    // A newer commit on the PR: merging the offered one is refused before asking GitHub to merge.
+    head = NEWER;
+    await press(`m:${id}`);
+    expect(lastEdit().text).toContain('the PR has newer commits (bbbbbbb)');
+    expect(merges()).toHaveLength(1);
+
+    // The newer commit passes: the old offer loses its buttons, a new one comes.
+    await workflowRun(NEWER);
+    const superseded = to('/editMessageText').find((c) =>
+      String(c.body.text).includes('superseded'),
+    );
+    expect(superseded!.body).toMatchObject({
+      message_id: 502,
+      reply_markup: { inline_keyboard: [] },
+    });
+    expect(to('/sendMessage').at(-1)!.body.text).toContain('<code>bbbbbbb</code>');
+    mergeAnswer = null;
+    await press(`m:${id}`);
+    expect(merges().at(-1)!.body).toMatchObject({ sha: NEWER });
+  });
+
+  it('Not now takes the buttons off without merging', async () => {
+    const id = await withPr();
+    await workflowRun(SHA);
+    await press(`n:${id}`);
+    expect(lastEdit().text).toContain('⏸ Not now (Nadav)');
+    expect(lastEdit().reply_markup).toEqual({ inline_keyboard: [] });
+    await workflowRun(SHA);
+    expect(to('/sendMessage')).toHaveLength(3);
+    expect(merges()).toEqual([]);
+  });
+
+  it('offers no Merge without the merge token', async () => {
+    const plain = testApp(db, async () => {}, {
+      stage: 'production',
+      githubToken: 'gh-token',
+      pipeline: { ...pipeline, mergeToken: null },
+    });
+    await withPr();
+    const body = JSON.stringify({
+      action: 'completed',
+      workflow_run: {
+        name: 'PR',
+        conclusion: 'success',
+        head_sha: SHA,
+        head_repository: { full_name: 'nadavgihasi/yallist' },
+        pull_requests: [{ number: 141 }],
+      },
+    });
+    await plain.request('/webhooks/github', {
+      method: 'POST',
+      headers: {
+        'x-github-event': 'workflow_run',
+        'x-hub-signature-256': `sha256=${createHmac('sha256', 'gh-secret').update(body).digest('hex')}`,
+      },
+      body,
+    });
+    expect(to('/sendMessage')).toHaveLength(2);
+  });
+
   it('ignores PRs it did not start, and unsigned events', async () => {
     const id = await request();
     await pullRequest('opened'); // not approved yet
@@ -375,13 +545,23 @@ describe('pipelineTelegram', () => {
   const bot = { token: '1:abc', chatId: '42' };
 
   it('defaults to the alerts chat, with its id as the only approver', () => {
-    expect(pipelineTelegram(bot, null, null)).toEqual({ telegram: bot, approvers: ['42'] });
+    expect(pipelineTelegram(bot, null, null)).toEqual({
+      telegram: bot,
+      approvers: ['42'],
+      mergers: ['42'],
+    });
+  });
+
+  it('defaults the mergers to the alerts chat id, and takes a list', () => {
+    expect(pipelineTelegram(bot, '-1001', '42,43')!.mergers).toEqual(['42']);
+    expect(pipelineTelegram(bot, '-1001', '42,43', '43')!.mergers).toEqual(['43']);
   });
 
   it('takes a pipeline chat and a list of approvers', () => {
     expect(pipelineTelegram(bot, '-1001', ' 42, 43 ,x')).toEqual({
       telegram: { token: '1:abc', chatId: '-1001' },
       approvers: ['42', '43'],
+      mergers: ['42'],
     });
     expect(pipelineTelegram(null, '-1001', '42')).toBeNull();
   });

@@ -8,6 +8,7 @@ declare module 'sst' {
     App: { name: string; stage: string };
     BetterAuthSecret: { value: string };
     Database: { endpoint: string; region: string };
+    FeedbackMergeToken: { value: string };
     GithubFeedbackToken: { value: string };
     GithubWebhookSecret: { value: string };
     GoogleClientSecret: { value: string };
@@ -19,6 +20,7 @@ declare module 'sst' {
     TelegramBotToken: { value: string };
     TelegramApproverIds: { value: string };
     TelegramChatId: { value: string };
+    TelegramMergerIds: { value: string };
     TelegramPipelineChatId: { value: string };
     TelegramWebhookSecret: { value: string };
     Web: { url: string };

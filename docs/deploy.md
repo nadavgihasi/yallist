@@ -155,6 +155,8 @@ Production only ([plan](plans/remote-feature-pipeline.md)). After a feature requ
 | `GithubWebhookSecret`            | secret `FEEDBACK_WEBHOOK_SECRET`          | No PR or preview messages; `/webhooks/github` 404   |
 | `TelegramPipelineChatId`         | variable `TELEGRAM_PIPELINE_CHAT_ID`      | Requests go to the alerts chat (`TELEGRAM_CHAT_ID`) |
 | `TelegramApproverIds`            | variable `TELEGRAM_APPROVER_IDS`          | Only the user whose id is `TELEGRAM_CHAT_ID`        |
+| `FeedbackMergeToken`             | secret `FEEDBACK_MERGE_TOKEN`             | No Merge button; merge on GitHub                    |
+| `TelegramMergerIds`              | variable `TELEGRAM_MERGER_IDS`            | Only the user whose id is `TELEGRAM_CHAT_ID` merges |
 
 It also needs `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` and `FEEDBACK_GITHUB_TOKEN` (above, and [Monitoring](#setup-checklist)). Presses and replies count only in the pipeline chat and only from an approver; anyone else gets "Only approvers can decide". The Telegram message and the `decided_by` column record who approved or rejected (the public issue comment doesn't name them). Every approver's Telegram account is an approval key: each should turn on two-step verification. Approved runs use your Claude plan and push as you.
 
@@ -197,9 +199,19 @@ A group that becomes a supergroup (Telegram does this for some settings changes)
    gh label create agent -R nadavgihasi/yallist --description "PR opened by the feature implementer routine"
    ```
 
-4. **Repo webhook.** **Settings → Webhooks → Add webhook**: payload URL `https://<api>/webhooks/github`, content type `application/json`, a new secret (`openssl rand -hex 32`), events **Pull requests** and **Deployment statuses** only. Then `gh secret set FEEDBACK_WEBHOOK_SECRET --env production` with the same secret, and deploy.
+4. **Repo webhook.** **Settings → Webhooks → Add webhook**: payload URL `https://<api>/webhooks/github`, content type `application/json`, a new secret (`openssl rand -hex 32`), events **Pull requests**, **Deployment statuses** and **Workflow runs** only. Then `gh secret set FEEDBACK_WEBHOOK_SECRET --env production` with the same secret, and deploy.
 
-**Off switches:** pause the routine in claude.ai (fires fail, the buttons come back with the error); delete `ROUTINE_FIRE_TOKEN` (Approve starts nothing); delete `TELEGRAM_WEBHOOK_SECRET` (nothing is offered). Regenerating the routine token revokes the old one.
+5. **Merge from Telegram (optional).** When the `PR` workflow (every check, ending in `all-pass`) passes on an agent PR's commit, the bot replies under the request with **Merge** and **Not now** for that commit. Merge squash-merges exactly that commit (GitHub refuses if the PR moved on, a rule isn't met or it conflicts, and the bot shows why), marks a draft ready first, and deletes the branch. A newer commit that passes replaces the offer. Only mergers can press it: `TELEGRAM_MERGER_IDS` (comma-separated user ids), or without it the `TELEGRAM_CHAT_ID` user (you). `main`'s ruleset still applies: nothing red can be merged.
+   - Create a fine-grained token at [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new): only `nadavgihasi/yallist`, repository permissions **Contents: Read and write** and **Pull requests: Read and write**, nothing else. It can push to branches other than `main` (the ruleset protects `main`), so keep it out of everything but this secret.
+   - Add **Workflow runs** to the repo webhook's events (step 4), store the token and deploy:
+
+   ```sh
+   gh secret set FEEDBACK_MERGE_TOKEN --env production          # paste the token
+   gh variable set TELEGRAM_MERGER_IDS --env production --body "<ids>"   # optional; default: you
+   gh workflow run deploy.yml --ref main
+   ```
+
+**Off switches:** pause the routine in claude.ai (fires fail, the buttons come back with the error); delete `ROUTINE_FIRE_TOKEN` (Approve starts nothing); delete `TELEGRAM_WEBHOOK_SECRET` (nothing is offered); delete `FEEDBACK_MERGE_TOKEN` (no Merge button). Regenerating the routine token revokes the old one.
 
 ## Realtime
 
