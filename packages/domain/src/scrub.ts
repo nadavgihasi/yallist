@@ -37,26 +37,40 @@ const DROP = new Set(['user', 'cookies', 'headers', 'ip_address']);
  * under KEEP, and without user, cookies and headers. Use as beforeSend and beforeBreadcrumb.
  */
 export function scrubEvent<T>(event: T): T {
-  return scrub(event, new Set(), 0) as T;
+  return scrub(event, { ancestors: new Set(), done: new WeakMap(), budget: MAX_NODES }, 0) as T;
 }
 
 /** Events can hold cycles (error causes, request and socket objects) or very deep graphs. */
 const MAX_DEPTH = 50;
+/** Objects visited per event; a shared-reference graph must not turn into a long main-thread stall. */
+const MAX_NODES = 10_000;
 
-function scrub(value: unknown, ancestors: Set<object>, depth: number): unknown {
+interface State {
+  ancestors: Set<object>;
+  /** Each object is scrubbed once, however many paths reach it. */
+  done: WeakMap<object, unknown>;
+  budget: number;
+}
+
+function scrub(value: unknown, state: State, depth: number): unknown {
   if (typeof value === 'string') return scrubText(value);
   if (value === null || typeof value !== 'object') return value;
-  if (ancestors.has(value)) return '[circular]';
-  if (depth >= MAX_DEPTH) return '[truncated]';
-  ancestors.add(value);
+  if (state.ancestors.has(value)) return '[circular]';
+  if (state.done.has(value)) return state.done.get(value);
+  if (depth >= MAX_DEPTH || state.budget <= 0) return '[truncated]';
+  state.budget--;
+  state.ancestors.add(value);
   try {
-    if (Array.isArray(value)) return value.map((child) => scrub(child, ancestors, depth + 1));
-    return Object.fromEntries(
-      Object.entries(value)
-        .filter(([key]) => !DROP.has(key))
-        .map(([key, child]) => [key, KEEP.has(key) ? child : scrub(child, ancestors, depth + 1)]),
-    );
+    const out = Array.isArray(value)
+      ? value.map((child) => scrub(child, state, depth + 1))
+      : Object.fromEntries(
+          Object.entries(value)
+            .filter(([key]) => !DROP.has(key))
+            .map(([key, child]) => [key, KEEP.has(key) ? child : scrub(child, state, depth + 1)]),
+        );
+    state.done.set(value, out);
+    return out;
   } finally {
-    ancestors.delete(value);
+    state.ancestors.delete(value);
   }
 }
