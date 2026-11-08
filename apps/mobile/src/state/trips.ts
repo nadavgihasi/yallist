@@ -241,10 +241,14 @@ async function send(tripId: string, action: Action): Promise<unknown> {
       return parseResponse(trip.$patch({ param, json: { cover: action.cover } }));
     case 'editTrip': {
       const { type: _type, ...json } = action;
-      return parseResponse(
-        trip.$patch({ param, json: { ...json, placeText: json.placeText ?? null } }),
-      );
+      return parseResponse(trip.$patch({ param, json }));
     }
+    case 'setMeetup': {
+      const { meetupText, meetupPoint } = action;
+      return parseResponse(trip.$patch({ param, json: { meetupText, meetupPoint } }));
+    }
+    case 'setAlbum':
+      return parseResponse(trip.$patch({ param, json: { albumUrl: action.albumUrl } }));
     case 'startRun':
       return parseResponse(trip.runs.$post({ param, json: { itemIds: action.itemIds } }));
     case 'addToRun':

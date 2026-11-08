@@ -14,8 +14,8 @@ const DIR = new URL('../../drizzle/', import.meta.url);
  * item categories into trip_categories and gives trips without a cover their template's.
  * DSQL allows one DDL statement per transaction, so each statement runs and is recorded on its
  * own; a failed deploy resumes from the statement that failed. A statement can commit without
- * being recorded (a crash in between), so on the next run its "already exists" error means it
- * was applied.
+ * being recorded (a crash in between), so on the next run its "already exists" error (or, for a
+ * DROP COLUMN, "no such column") means it was applied.
  */
 export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
   await sql`create table if not exists __migrations (
@@ -57,6 +57,15 @@ const ALREADY_EXISTS = new Set([
   '42701', // duplicate_column
   '42710', // duplicate_object: constraints
 ]);
+/** The SQLSTATE of re-running a DROP COLUMN that committed: undefined_column. */
+const ALREADY_DROPPED = '42703';
+
+/** Whether `error` from running `statement` means an earlier run already applied it. */
+function alreadyApplied(statement: string, error: unknown) {
+  const code = (error as { code?: string }).code ?? '';
+  return ALREADY_EXISTS.has(code) || (code === ALREADY_DROPPED && isDropColumn(statement));
+}
+const isDropColumn = (statement: string) => /^ALTER TABLE "[^"]+" DROP COLUMN /.test(statement);
 
 /**
  * Runs one migration statement. On DSQL an index is built by a background job: wait for it, and
@@ -69,7 +78,7 @@ export async function apply(sql: Sql, statement: string, dsql: boolean) {
     const rows = await sql.begin((tx) => tx.unsafe(dsql ? toDsql(statement) : statement));
     jobId = (rows as { job_id?: string }[])[0]?.job_id;
   } catch (error) {
-    if (!ALREADY_EXISTS.has((error as { code?: string }).code ?? '')) throw error;
+    if (!alreadyApplied(statement, error)) throw error;
     const index = /^CREATE (?:UNIQUE )?INDEX "([^"]+)"/.exec(statement)?.[1];
     if (dsql && index) await awaitExistingIndex(sql, index);
     return;

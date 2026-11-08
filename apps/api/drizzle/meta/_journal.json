@@ -78,6 +78,27 @@
       "when": 1794062594114,
       "tag": "0010_feedback_decided_by",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794079435797,
+      "tag": "0011_trip_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1794080302028,
+      "tag": "0012_meetup_point",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1794085023378,
+      "tag": "0013_drop_place_text",
+      "breakpoints": true
     }
   ]
 }
