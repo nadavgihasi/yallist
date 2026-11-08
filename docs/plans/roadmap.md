@@ -1,8 +1,8 @@
 # Roadmap: what's still missing
 
-Gap analysis against [SPEC.md](../SPEC.md) and the [mockups](../design/README.md), as of 2026-11-07. **Done:** Phase 1 (auth #19, trips/members/invites/items/claims API #21, expenses/payments API #22, AppSync Events realtime #24, the app on the API with TanStack Query #26), editing items (#34), versioning from commit titles (#16, [releases.md](../releases.md)), design system v2 (#36, #37), trip categories (#38), the profile and settings screen (#45, #48, #49), feature requests from the app (#50), receipt photos (#52), profile photos (#103), trip covers (#105), [UI plan](../design/plans/ui-plan.md) PRs 1–4 (#92, #98, #97, #107), live trip updates in the app (#118), trip deletion (#122), packing spec steps 1 and 3 (#123, #126), the privacy policy, account deletion and leaving a trip (#134), and editing a trip's name, dates and place (#139, #142).
+Gap analysis against [SPEC.md](../SPEC.md) and the [mockups](../design/README.md), as of 2026-11-07. **Done:** Phase 1 (auth #19, trips/members/invites/items/claims API #21, expenses/payments API #22, AppSync Events realtime #24, the app on the API with TanStack Query #26), editing items (#34), versioning from commit titles (#16, [releases.md](../releases.md)), design system v2 (#36, #37), trip categories (#38), the profile and settings screen (#45, #48, #49), feature requests from the app (#50), receipt photos (#52), profile photos (#103), trip covers (#105), [UI plan](../design/plans/ui-plan.md) PRs 1–4 (#92, #98, #97, #107), live trip updates in the app (#118), trip deletion (#122), packing spec steps 1 and 3 (#123, #126), the privacy policy, account deletion and leaving a trip (#134), editing a trip's name, dates and place (#139, #142), and a meetup point and photo album link (#129).
 
-**Done, infra and tests:** PR previews with a repo-level stale cleanup ([design](e2e-live-environments.md), #91, #93–95, #119, #120), Maestro UI tests on every PR and its preview, sharded (#72, #90, #111), preview-only Playwright tests (#112), linters (#73), DSQL-safe migrations (#79, #108), production DB backups (#80), CloudWatch alarms to Telegram (#99) and Sentry, live in production (#101, #102; it caught the home-screen crash fixed in #150; alert automations to Telegram still pending, #106). Since 2026-10-27: every PR check runs from one workflow behind a single required all-pass job (#147); parallel checks, ~40% faster API tests and four auto-balanced UI test shards (#148); dependencies installed at session start (#143).
+**Done, infra and tests:** PR previews with a repo-level stale cleanup ([design](e2e-live-environments.md), #91, #93–95, #119, #120), Maestro UI tests on every PR and its preview, sharded (#72, #90, #111), preview-only Playwright tests (#112), linters (#73), DSQL-safe migrations (#79, #108), production DB backups (#80), CloudWatch alarms to Telegram (#99) and Sentry, live in production with replays and tracing (#101, #102, #160; it caught the home-screen crash fixed in #150; alert automations to Telegram still pending, #106). Since 2026-10-27: every PR check runs from one workflow behind a single required all-pass job (#147); parallel checks, ~40% faster API tests and four auto-balanced UI test shards (#148); dependencies installed at session start (#143).
 
 **Done, feature pipeline:** feature requests and bug reports from the app reach Telegram with Approve / Approve + details / Reject; approval fires the Claude Code feature-implementer routine, which opens the PR, and the bot replies with the PR, preview and merge ([design](remote-feature-pipeline.md), #137, #138, #146). Approvers can be a group (#144).
 
@@ -15,7 +15,7 @@ So the app has login (guest + Google on the API), My trips with covers and the n
 | 2 — Invite and join     | A group can actually form: share, join from WhatsApp          | 7          | L    | Domain decision (deferred)           |
 | 3 — Accounts and launch | Google on Android, email sign-up, deletion, legal: Play-ready | 7 (2 done) | L    | Terms content, domain                |
 | 4 — Faster lists        | Bulk add; personal premade lists applied to any trip          | 3          | M    | D10, D11                             |
-| Packing and shopping    | Packed state, my bag, shopping runs, essentials; trip links   | 5 (2 done) | L    | 3 open PRs; two need a rebase        |
+| Packing and shopping    | Packed state, my bag, shopping runs, essentials; trip links   | 5 (3 done) | L    | 2 open PRs need a rebase             |
 | 5 — Money, finished     | Edit expenses, receipts, settle up with payment phone         | 3 (1 done) | M    | —                                    |
 | 6 — Activity and push   | Feed, to-dos, notifications, day-before reminder              | 5          | L    | FCM credentials                      |
 | 7 — Offline, trip day   | Works at the campsite; "מה הגיע?" checklist                   | 2          | M    | —                                    |
@@ -25,20 +25,82 @@ So the app has login (guest + Google on the API), My trips with covers and the n
 
 ## Next milestones
 
-The phases above say _what_ is missing; the milestones say _in what order_. They cut across phases so each one ends in something a tester can feel. The critical path is Play's closed test: 12+ testers for 14 consecutive days before production access ([android.md](../android.md)), so M2 starts that clock as early as possible and M3–M5 happen while it runs.
+The phases below say _what_ is missing; the milestones say _in what order_. Revised on 2026-11-08 after five reviews (product, UX, design, QA, engineering), in [reviews/2026-11-08](reviews/2026-11-08/). They cut across phases so each one ends in something a tester can feel.
 
-| Milestone                         | Done when                                                                                                          | From                                                                                                                                                       | Needs                                |
-| --------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| **M1 — Clear the deck**           | No feature PR older than a week; every production error reaches Telegram; settling up needs no copy-paste guessing | Merge #129; rebase and merge #131, then #132 (closes #124); settle up (Phase 5, answers #151); Sentry alerts (#106); deflake realtime (Phase 9)            | —                                    |
-| **M2 — Closed testing starts**    | 12+ testers opted in on Play's closed track, with Google sign-in working in the Android app                        | Upload key; Google sign-in on Android; Play upload from CI; terms page and login per mockup; Play listing (data safety, content rating)                    | D5 terms text, a list of 12+ testers |
-| **M3 — Groups form on WhatsApp**  | A link pasted in WhatsApp shows a preview card; a friend joins in under a minute and lands in the app if installed | Custom domain; OG previews; invite sheet; join and pending pages; open-in-app button; App Links; participants and settings (Phase 2)                       | **D1 domain**                        |
-| **M4 — The group stays on track** | Someone who hasn't opened the app hears about claims, join requests, debts and the day before                      | Activity feed and screen, push tokens and registration, scheduled reminders (Phase 6, with #132's day-before text); edit expense, remind payment (Phase 5) | FCM credentials                      |
-| **M5 — Trip day and after**       | A whole trip runs at a campsite without signal; next year's trip is two taps                                       | Offline mutations, arrivals checklist (Phase 7); trip lifecycle, duplicate, summary (Phase 8)                                                              | —                                    |
-| **M6 — Public on Play**           | Production release on Play                                                                                         | Play production access (after M2's 14 days); OTA updates; license; rate limiting, token at rest and web code splitting from the [fix list](../fix-list.md) | D7 license, 14 days of M2            |
+**What the reviews changed:**
 
-**Why this order:** M2 needs no domain: Play accepts the privacy page on the CloudFront URL, and Google sign-in with the basic scopes needs no OAuth verification. So the clock can start before D1. M3 is what makes testers bring their friends, so it should land early in the 14 days. Email sign-up (Phase 3) waits until after M6 unless testers ask for it: every Android tester has a Google account. Phase 4 (faster lists) and in-app requests are side work for the [feature pipeline](remote-feature-pipeline.md) at any point; they don't block a milestone.
+- **The aha moment belongs to the invited friend:** they open the WhatsApp link, see what's missing, tap "עליי", and the organizer sees it live. Most of that (a better join page, an invite message that explains itself) needs no domain, so it moves into M2 instead of waiting on D1 in M3 ([product](reviews/2026-11-08/product.md) §1).
+- **Push reaches few members.** Testers are on Android, but their friends join on the web as guests, and there is no web push. M4 leads with one-tap WhatsApp messages and adds push second ([product](reviews/2026-11-08/product.md) §2, [engineering](reviews/2026-11-08/engineering.md) §1).
+- **The flows people use first have real bugs.** The invite shares a bare link, re-joining from a second browser adds the same person twice, "הזמנת חברים" doesn't invite, and a reloaded new-expense page splits to the payer only. M1 fixes them before testers arrive ([UX](reviews/2026-11-08/ux.md) §1, [QA](reviews/2026-11-08/qa.md) §1).
+- **#131 and #132 need privacy fixes before merging:** essentials and a removed member's private items survive account deletion, and private items are hidden by a per-query filter that a future query can forget ([engineering](reviews/2026-11-08/engineering.md) §0).
+- **There is nothing to measure the closed test with.** A weekly funnel digest to Telegram from the `activity` table goes into M2.
+- **Sizes corrected:** Sentry alerts (#106) is XS; Google sign-in on Android is M–L (no native module yet); M3 drops "participants and settings"; M5 is about three weeks; OTA is L.
 
-**Decide now:** D1 (the domain: registration and DNS take days and M3 needs it), D5 (terms text for M2), who the 12+ testers are. D7 (license) can wait until M6.
+| Milestone                                   | Done when                                                                                                                     | When (from 9 Nov)        |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------ |
+| **M1 — Money settles, invites explain**     | Settling up is copy, pay, "קיבלתי"; an expense can be fixed; an invite says what it is; no known P2 bug; #131 and #132 merged | W1                       |
+| **M2 — Real groups on the closed test**     | 3–4 real friend groups (12+ testers) on Play's closed track, each with a trip in the 14 days; Google sign-in on Android works | W2 (track opens ~20 Nov) |
+| **M3 — Links that look right**              | A link in WhatsApp shows a preview card and opens the app when installed                                                      | W3–W4                    |
+| **M4 — Reach people who aren't in the app** | A member who hasn't opened the app hears about debts and the day before, on WhatsApp or by push                               | W5–W6                    |
+| **M5 — Trip day and after**                 | A whole trip runs at a campsite without signal; next year's trip is two taps                                                  | W7–W9                    |
+| **M6 — Public on Play**                     | Production release, staged                                                                                                    | Apply ~4–7 Dec           |
+
+### M1 — Money settles, invites explain (W1)
+
+| Work                                                                                                                                                                               | From                    | Size | Who      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- | ---- | -------- |
+| Settle up: the receiver's payment phone on the debt card, one tap copies number and amount, "פתיחת Bit/PayBox", "קיבלתי". Reuses #152's `paymentPhone` API part. Answers #151.     | Phase 5, #151           | M    | Pipeline |
+| Edit expense (amount, payer, shares) and open an expense row; only the payer or an organizer deletes it                                                                            | Phase 5, UX §1          | S–M  | Pipeline |
+| Invite: share the SPEC §7 message with the link, a "העתקת קישור" button; "הזמנת חברים" opens the share directly                                                                    | UX §1                   | S    | Pipeline |
+| Same name on join: "זה את/ה?" before creating a second guest; organizers can remove the duplicate                                                                                  | UX §1                   | S    | Pipeline |
+| Bugs: split defaults to the payer after a reload; double-tap creates two trips; forms don't enforce the API's limits (name 80, ₪1M, qty 999); offline item adds don't show         | UX §1, QA §1            | S    | Pipeline |
+| Rebase #131, then #132, with the deletion fixes, a `sharedItems()` guard plus a test, and essentials claiming a matching shared "each" item (#124)                                 | Engineering §0, product | S+S  | Human    |
+| Sentry alert rules to Telegram (#106): console setup and the secret                                                                                                                | Phase 9                 | XS   | Human    |
+| Deflake realtime (#112): wait for a "subscribed" marker in E2E builds, plus a periodic refetch in the app                                                                          | QA §2                   | S    | Pipeline |
+| Spikes: Credential Manager in a small Expo module; `sst diff` of `StaticSite` → `sst.aws.Router`; upload key and the first AAB by hand (Play's signing SHA-1 only exists after it) | Engineering §2          | —    | Human    |
+
+### M2 — Real groups on the closed test (W2)
+
+| Work                                                                                                                                                                                    | From                | Size | Who      |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- | ---- | -------- |
+| Google sign-in on Android: local Expo module on `androidx.credentials`, `serverClientId` = the web client, links the guest and keeps their trips                                        | Phase 3             | M–L  | Human    |
+| Join page per mockup: who invited you, who's in, what's missing, claim right after joining; a note that a guest lives in this browser                                                   | Phase 2, UX §2      | M    | Pipeline |
+| Invite sheet without QR or link rotation: `wa.me`, editable message, "4 כבר בפנים"                                                                                                      | Phase 2             | S–M  | Pipeline |
+| Paste a list: one item per line, `×N` for quantity (bulk add API + sheet)                                                                                                               | Phase 4, product §3 | S+M  | Pipeline |
+| Weekly funnel digest to Telegram: trips, members, items, claims, joins, settled                                                                                                         | Product §4          | S    | Pipeline |
+| Token in SecureStore on native; API Gateway throttling                                                                                                                                  | Engineering §3 P0   | S    | Pipeline |
+| Terms page, login per mockup (Google first)                                                                                                                                             | Phase 3             | S    | Pipeline |
+| Play upload from CI to the closed track                                                                                                                                                 | Phase 9             | S    | Human    |
+| Play listing: 512px icon, 1024×500 feature graphic, 5 captioned Hebrew screenshots from a seeded trip, short description, data safety (including Sentry replays, #160), content rating  | Phase 9, design §8  | S    | Human    |
+| Release gate ([QA](reviews/2026-11-08/qa.md) §3): Android 10–16 on real devices, Google sign-in on a Play-signed build, RTL and font scaling, TalkBack basics, ≥99% crash-free sessions | QA                  | —    | Human    |
+
+**Measure:** a trip counts as started with 3+ members and 10+ items within 48 hours; paste-a-list used on half of new trips. Poll testers at days 7 and 14 ([product](reviews/2026-11-08/product.md) §4 has the 7 questions).
+
+### M3 — Links that look right (W3–W4, needs D1)
+
+Custom domain (keep the old CloudFront and API URLs working for installed APKs); move dev and prod to `sst.aws.Router` with a Lambda on `/j/*` for OG tags; the OG image (1200×630, safe for a square crop); "open in the app"; Android App Links with `assetlinks.json` (upload and Play fingerprints); the join page's approval switch and live pending state (polling as the fallback). Design tokens (UI plan PR 10) land first, so the new screens add no hard-coded values. **Measure:** 60%+ of opened links lead to a join, median under 60 seconds.
+
+### M4 — Reach people who aren't in the app (W5–W6)
+
+First, one-tap WhatsApp messages: "who owes whom" from the money tab and the day-before "what's still on you" (#132's text). Then an activity strip (last 3 events) and the activity screen. Then push for app users: Expo push with FCM v1, sent asynchronously, tokens pruned on `DeviceNotRegistered`, permission asked in context; the day-before reminder on EventBridge Scheduler in `Asia/Jerusalem` with a sent log; the payment reminder. **Measure:** coverage the day before departure vs three days before.
+
+### M5 — Trip day and after (W7–W9)
+
+Persisted offline mutations with client-generated IDs and idempotent creates, an offline banner and "ממתין" chips, conflicts shown on reconnect; trip lifecycle, duplicate with new dates, the trip summary. Carpool only if the testers rank it first. The arrivals checklist is cut (D15).
+
+### M6 — Public on Play (~4–7 Dec)
+
+Production access after M2's 14 days, staged rollout, Better Auth rate limiting, license (D7), web code splitting (helps the join page; could move up), QA's M6 gate (Play crash and ANR thresholds, upgrade and migration testing). OTA updates come after production (D16).
+
+### Alongside every milestone
+
+- **Design:** one "עליי" control instead of four row endings; a `danger` token so orange stops meaning error, delete and "you owe"; one shared `IconButton` at 44px; v2 frames with empty, loading and error states for invite, join, pending, activity, offline and summary; push icon and notification copy. Dark mode is deferred ([design](reviews/2026-11-08/design.md)).
+- **Tests:** UI flows for settle-up, approve/decline, remove/leave, the join page as a new guest, input limits and offline; web flows at phone width; a CI check for colliding migration numbers, which parallel pipeline PRs keep hitting ([QA](reviews/2026-11-08/qa.md) §2, [engineering](reviews/2026-11-08/engineering.md) §3).
+- **Pipeline vs human:** small, well-scoped items go to the feature pipeline; the privacy rebases, native sign-in, Play signing, the domain and Router, App Links, push architecture and offline mutations need a person first ([engineering](reviews/2026-11-08/engineering.md) §4).
+
+**Cut or deferred:** the arrivals checklist (duplicates packed; the packing spec's own open question 1), "my lists" (essentials plus duplicate trip cover it), QR and link rotation, "make organizer" and the full settings screen, dark mode. Unequal splits stay out until testers ask (SPEC §1).
+
+**Decide now:** D1 (domain: M3 needs it, and DNS takes days), D5 (terms text for M2), and recruit testers as 3–4 friend groups that each have a trip inside the 14 days.
 
 ## Phase 2 — Invite and join
 
@@ -82,11 +144,11 @@ The phases above say _what_ is missing; the milestones say _in what order_. They
 | `feat: my bag and private items`       | Open (#131) | Spec §8 step 2       | `private_owner_id` and its access rules, `add_private_item`, `myBag`, the third segment, screens 6.2 and 6.3.                            | Step 1  | M    |
 | `feat: shopping runs`                  | Done (#126) | Spec §8 step 3       | Claim many buy items, check them off in the store, one expense for the run (`shopping_runs`, `expense_items`).                           | —       | L    |
 | `feat: essentials, suggestions, nudge` | Open (#132) | Spec §8 step 4, #124 | `user_essentials`, `set_essentials`, copied into new and joined trips, `suggestions`, screen 6.4, the day-before text.                   | Step 2  | M    |
-| `feat: trip links`                     | Open (#129) | New                  | Meetup location and a Google Photos album link on the trip.                                                                              | —       | S    |
+| `feat: trip links`                     | Done (#129) | New                  | Meetup location and a Google Photos album link on the trip.                                                                              | —       | S    |
 
 **From in-app requests, done:** every "each" item under אצלי (#115, #110), list labels renamed to ציוד and קניות (#117, #114), organizers delete a trip (#122, #121), members opening their invite link go to the trip (#127, #125), organizers edit the trip's name, dates and place (#139, #142).
 
-**Open since 2026-10-27:** #129 (trip links) merges cleanly; #131 (my bag) and #132 (essentials, stacked on #131) conflict with main and need a rebase, #131 first.
+**Open since 2026-10-27:** #131 (my bag) and #132 (essentials, stacked on #131) conflict with main and need a rebase, #131 first, plus deletion fixes ([engineering review](reviews/2026-11-08/engineering.md) §0).
 
 ## Phase 5 — Money, finished
 
@@ -108,10 +170,10 @@ The phases above say _what_ is missing; the milestones say _in what order_. They
 
 ## Phase 7 — Offline and trip day
 
-| PR                                  | Status | Ref                | Scope                                                                                                                                                                                                                                                                         | Depends    | Size |
-| ----------------------------------- | ------ | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---- |
-| `feat(app): offline mutations`      | P      | §6, `OfflineV2`    | Persisted, paused mutations that resume in order; "אין קליטה" banner with queued count; "ממתין" chips; rollback with a Hebrew message on 409. Today the query cache persists but queued changes live only in memory (#61), so closing the app with changes queued loses them. | App on API | M    |
-| `feat(api,app): arrivals checklist` | M      | §1, §8 `OfflineV2` | `PUT …/items/:id/arrived`; `/trips/[tripId]/arrivals` with "עוד בדרך" / "הגיעו", linked from the trip screen during the trip dates; works offline.                                                                                                                            | Previous   | M    |
+| PR                                  | Status    | Ref                | Scope                                                                                                                                                                                                                                                                         | Depends    | Size |
+| ----------------------------------- | --------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | ---- |
+| `feat(app): offline mutations`      | P         | §6, `OfflineV2`    | Persisted, paused mutations that resume in order; "אין קליטה" banner with queued count; "ממתין" chips; rollback with a Hebrew message on 409. Today the query cache persists but queued changes live only in memory (#61), so closing the app with changes queued loses them. | App on API | M    |
+| `feat(api,app): arrivals checklist` | Cut (D15) | §1, §8 `OfflineV2` | `PUT …/items/:id/arrived`; `/trips/[tripId]/arrivals` with "עוד בדרך" / "הגיעו", linked from the trip screen during the trip dates; works offline.                                                                                                                            | Previous   | M    |
 
 ## Phase 8 — After the trip
 
@@ -154,3 +216,5 @@ The phases above say _what_ is missing; the milestones say _in what order_. They
 | D12 | **SMS / WhatsApp sign-in codes**                                            | **Out** (user decision, [email-signup.md](email-signup.md)).                                                                                                                                                                                                                                              |
 | D13 | **Pin GitHub Actions by SHA** (fix list)                                    | **Dropped**: #88 closed on purpose.                                                                                                                                                                                                                                                                       |
 | D14 | **KMS key for IAM Identity Center**                                         | **Removed** for cost.                                                                                                                                                                                                                                                                                     |
+| D15 | **Arrivals checklist**                                                      | **Cut** (2026-11-08 reviews): it duplicates packed, and the packing spec asks whether to drop `arrived_at`.                                                                                                                                                                                               |
+| D16 | **OTA updates before production**                                           | **After production.** Hot Updater is L (native plugin, runtime fingerprints, source maps per bundle); closed-track builds from CI are enough during the test. The product review wanted it in M2.                                                                                                         |
