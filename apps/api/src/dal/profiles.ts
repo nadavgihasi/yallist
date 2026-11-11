@@ -1,7 +1,16 @@
 import { and, count, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db/client';
-import { accounts, activity, feedback, profiles, sessions, tripMembers, users } from '../db/schema';
+import {
+  accounts,
+  activity,
+  bagItems,
+  feedback,
+  profiles,
+  sessions,
+  tripMembers,
+  users,
+} from '../db/schema';
 import { transact, type Executor } from '../db/tx';
 
 export async function findProfile(tx: Executor, userId: string) {
@@ -56,6 +65,7 @@ const USER_COLUMNS = [
   ['activity', 'actor'],
   ['feedback', 'user_id'],
   ['shopping_runs', 'shopper_id'],
+  ['bag_items', 'user_id'],
 ] as const;
 
 /** The user's trips, as their home screen lists them: none, and the account can be deleted. */
@@ -71,8 +81,8 @@ export async function countActiveTrips(tx: Executor, userId: string) {
 export const DELETED_NAME = 'חשבון שנמחק';
 
 /**
- * Deletes the user: profile, Better Auth user (its sessions and accounts cascade), feedback and
- * requests to join trips. The caller checks they're in no trip. Rows in trips they were removed
+ * Deletes the user: profile, Better Auth user (its sessions and accounts cascade), feedback, bag
+ * and requests to join trips. The caller checks they're in no trip. Rows in trips they were removed
  * from (what they brought, paid, were paid) are the other members' history, so they stay; then
  * the user and profile stay too, as rows with no personal data, and their name in those trips
  * becomes DELETED_NAME. Returns their photo's key, for the caller to delete once committed.
@@ -81,6 +91,7 @@ export async function deleteUser(tx: Executor, userId: string) {
   const id = sql.identifier;
   const photo = (await findProfile(tx, userId))?.avatarKey ?? undefined;
   await tx.delete(feedback).where(eq(feedback.userId, userId));
+  await tx.delete(bagItems).where(eq(bagItems.userId, userId));
   // A request to join is all they did in that trip: it goes, with its log entry.
   const pending = await tx
     .delete(tripMembers)
@@ -177,6 +188,11 @@ export async function mergeUser(db: Db, from: string, to: string) {
       where a.shopper_id = ${from} and a.active and exists (
         select 1 from shopping_runs b
         where b.trip_id = a.trip_id and b.shopper_id = ${to} and b.active)`);
+    // The account's bag keeps its own row for a name both bags hold.
+    await tx.execute(sql`
+      delete from bag_items a where a.user_id = ${from} and exists (
+        select 1 from bag_items b
+        where b.user_id = ${to} and b.name = a.name and b.deleted_at is null)`);
     for (const [table, key] of USER_KEYED) {
       await tx.execute(sql`
         delete from ${id(table)} a where a.user_id = ${from} and exists (

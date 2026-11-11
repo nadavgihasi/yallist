@@ -49,6 +49,19 @@ export interface Claim {
   inCart?: boolean;
   /** In the claimer's bag; the whole claim, not each unit. */
   packed?: boolean;
+  /**
+   * Not claimed by hand: the item is in the claimer's bag (התיק שלי), so they have it. Only on
+   * per-person bring items, and only until it's packed, when it becomes an ordinary claim.
+   */
+  fromBag?: boolean;
+}
+
+/** An item in the user's bag (התיק שלי): something they always have at home. */
+export interface BagItem {
+  id: string;
+  name: string;
+  /** At least 1. */
+  quantity: number;
 }
 
 export interface Expense {

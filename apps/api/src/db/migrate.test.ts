@@ -174,6 +174,7 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
       '__migrations',
       'accounts',
       'activity',
+      'bag_items',
       'claims',
       'expense_items',
       'expense_shares',

@@ -1,3 +1,4 @@
+export * from './bag';
 export * from './coverage';
 export * from './covers';
 export * from './links';

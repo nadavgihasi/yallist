@@ -48,7 +48,7 @@ run_flows() {
   export SE_BROWSER_VERSION=${SE_BROWSER_VERSION:-147}
   # A tall phone-width window: the phone layout, with nothing below the fold (taps don't scroll).
   MAESTRO_CLI_NO_ANALYTICS=1 MAESTRO_CLI_ANALYSIS_NOTIFICATION_DISABLED=true \
-    "${MAESTRO:-maestro}" test -p web --headless --screen-size 500x1400 \
+    "${MAESTRO:-maestro}" test -p web --headless --screen-size 500x1600 \
     -e WEB_URL="$url" --test-output-dir "$OUT/maestro" \
     --format junit --output "$OUT/junit.xml" "$@"
 }

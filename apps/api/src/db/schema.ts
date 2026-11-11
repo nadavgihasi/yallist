@@ -493,3 +493,25 @@ export const feedback = pgTable(
     oneOf('feedback_pipeline_state_check', t.pipelineState, PIPELINE_STATES),
   ],
 );
+
+/**
+ * "My bag" (התיק שלי): what the user always has at home. A per-person bring item of the same
+ * name counts as theirs in every trip (dal/bag.ts). Removing one only sets `deletedAt`, so a
+ * trip that already ended keeps what the bag held then. Names are unique among a user's live
+ * rows, enforced in code under the profile's lock (DSQL has no partial unique index).
+ */
+export const bagItems = pgTable(
+  'bag_items',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: userRef('user_id').notNull(),
+    name: text('name').notNull(),
+    quantity: integer('quantity').notNull(),
+    createdAt: createdAt(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (t) => [
+    index('bag_items_user_idx').on(t.userId),
+    positive('bag_items_quantity_check', t.quantity),
+  ],
+);
