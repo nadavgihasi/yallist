@@ -6,6 +6,7 @@ import type { Auth } from './auth';
 import type { Db } from './db/client';
 import type { Publish } from './realtime';
 import type { ReceiptStore } from './receipts';
+import { bagRoutes } from './routes/bag';
 import { categoryRoutes } from './routes/categories';
 import { feedbackRoutes, type FeedbackConfig } from './routes/feedback';
 import { githubWebhookRoutes } from './routes/github-webhook';
@@ -50,6 +51,7 @@ export function createApp(
     .route('/webhooks/sentry', sentryWebhookRoutes(sentryWebhook))
     .route('/webhooks/telegram', telegramWebhookRoutes(db, feedback.pipeline ?? null))
     .route('/webhooks/github', githubWebhookRoutes(db, feedback.pipeline ?? null))
+    .route('/me/bag', bagRoutes(auth, db, notify))
     .route('/me', meRoutes(auth, db, receipts))
     .route('/feedback', feedbackRoutes(auth, db, feedback))
     .use('/trips/:tripId/*', async (c, next) => {

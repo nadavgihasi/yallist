@@ -26,9 +26,10 @@ import { showToast } from '@/components/Toast';
 import { VersionLine } from '@/components/VersionLine';
 import { GoogleButton } from '@/features/auth/GoogleButton';
 import { initial } from '@/features/trip/derive';
-import { he } from '@/i18n/he';
+import { he, itemsCount } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { signInWithGoogle } from '@/lib/api';
+import { useBag } from '@/state/bag';
 import { useAvatar, useProfile, useUpdateProfile, type Profile } from '@/state/profile';
 import { useSession } from '@/state/store';
 import { avatarSize, colors, layout, radius, size, space, type } from '@/theme';
@@ -183,6 +184,8 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
         />
       </Card>
 
+      <BagLink />
+
       <ListGroup title={he.profile.payments}>
         <TextField
           label={he.profile.phone}
@@ -323,6 +326,34 @@ function Photo({ profile }: { profile: Profile }) {
   );
 }
 
+/** Opens my bag (התיק שלי), with how many items it has. */
+function BagLink() {
+  const bag = useBag().data;
+  return (
+    <Pressable
+      accessibilityRole="link"
+      onPress={() => router.push('/bag')}
+      style={(state: WebState) => [
+        styles.bagLink,
+        (state.hovered || state.pressed) && styles.hover,
+        state.focused && styles.focus,
+      ]}
+      {...testId('profile-bag')}
+    >
+      <View style={styles.bagIcon}>
+        <Icon name="bag" size={24} color={colors.primaryStrong} />
+      </View>
+      <View style={styles.rowTexts}>
+        <Text style={styles.rowLabel}>{he.bag.title}</Text>
+        <Text style={styles.caption}>
+          {bag && bag.length > 0 ? he.bag.row(itemsCount(bag.length)) : he.bag.rowEmpty}
+        </Text>
+      </View>
+      <Icon name="chevronEnd" size={20} color={colors.inkMuted} />
+    </Pressable>
+  );
+}
+
 /** A row in a settings card: label and optional hint at the start, a control at the end. */
 function SettingRow({
   label,
@@ -436,6 +467,23 @@ const styles = StyleSheet.create({
   ltr: { writingDirection: 'ltr', textAlign: 'right' },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
   linkRow: { borderRadius: radius.input },
+  bagLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[3],
+    minHeight: 72,
+    paddingHorizontal: space[5],
+    borderRadius: radius.card,
+    backgroundColor: colors.card,
+  },
+  bagIcon: {
+    width: size.avatar,
+    height: size.avatar,
+    borderRadius: size.avatar / 2,
+    backgroundColor: colors.primaryTint,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   rowTexts: { flex: 1, gap: space[1] },
   rowLabel: { ...type.itemTitle, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },

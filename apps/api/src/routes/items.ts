@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
 import { logActivity } from '../dal/activity';
+import { bagMarks, inBag } from '../dal/bag';
 import { lockCategory } from '../dal/categories';
 import { lockClaims, setClaim, setPacked } from '../dal/claims';
 import { findPurchase } from '../dal/expenses';
@@ -189,7 +190,13 @@ export const itemRoutes = (auth: Auth, db: Db) =>
         const me = c.var.user.id;
         await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
-          await lockItem(tx, tripId, itemId);
+          const item = await lockItem(tx, tripId, itemId);
+          // A per-person item in my bag is mine without a claim (dal/bag.ts): packing stores
+          // one, and unpacking drops it again, so the bag goes on deciding.
+          const fromBag = bagMarks(item) && (await inBag(tx, me, item.name));
+          const had = (await lockClaims(tx, itemId)).find((cl) => cl.userId === me);
+          if (fromBag && !had && packed) await setClaim(tx, itemId, me, 1, undefined);
+          else if (fromBag && had && !packed) return setClaim(tx, itemId, me, 0, had);
           if (!(await setPacked(tx, itemId, me, packed))) throw fail(409, 'Not claimed by you');
         });
         return c.json({ itemId, userId: me, packed });

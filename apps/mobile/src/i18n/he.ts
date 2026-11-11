@@ -552,6 +552,53 @@ export const he = {
     privacy: 'מדיניות פרטיות',
     privacyHint: 'מה נשמר, מי רואה ואיך מוחקים',
   },
+  /** My bag (התיק שלי): what you always have at home, marked by itself in every trip. */
+  bag: {
+    title: 'התיק שלי',
+    intro: 'מה שתמיד יש לך בבית. בכל טיול זה מסומן לבד, ונשאר רק לארוז.',
+    /** The profile row: `9 פריטים · מסומנים לבד בכל טיול`. */
+    row: (count: string) => `${count} · מסומנים לבד בכל טיול`,
+    rowEmpty: 'מה שתמיד יש לך, מסומן לבד בכל טיול',
+    back: 'חזרה',
+    add: 'הוספת פריט',
+    addLabel: 'שם הפריט',
+    addPlaceholder: 'למשל: פנס ראש',
+    addSave: 'הוספה',
+    exists: 'כבר יש בתיק',
+    less: (name: string) => `פחות ${name}`,
+    more: (name: string) => `עוד ${name}`,
+    remove: (name: string) => `הסרת ${name} מהתיק`,
+    empty: {
+      title: 'התיק עוד ריק',
+      text: 'מוסיפים מה שתמיד יש לך, כמו שק שינה או פנס, ובכל טיול זה מסומן לבד.',
+    },
+    /** Item rows in a trip. */
+    inBag: 'בתיק שלך',
+    mineFromBag: 'עליך · מהתיק',
+    /** A per-person item covered by the bag: `5 פריטים סומנו מהתיק שלך. נשאר רק לארוז.` */
+    marked: (n: number) =>
+      `${n === 1 ? 'פריט אחד סומן' : `${n} פריטים סומנו`} מהתיק שלך. נשאר רק לארוז.`,
+    /** Common items in the bag that nobody brings yet. */
+    offerTitle: (n: number) => `${n === 1 ? 'פריט אחד' : `${n} פריטים`} כבר בתיק שלך`,
+    offerText: (names: string) => `${names}. מסמנים שהם עליך?`,
+    offerAll: 'הכול עליי',
+    offerChoose: 'בוחרים',
+    offerDismiss: 'לא עכשיו',
+    chooseTitle: 'מה עליך?',
+    chooseCaption: 'יש לך בתיק, ועוד אין מי שמביא.',
+    /** A qty item the bag has only part of: `יש לך 2 מתוך 4`. */
+    partOf: (have: number, needed: number) => `יש לך ${have} מתוך ${needed}`,
+    chooseSave: (n: number) => (n === 1 ? 'פריט אחד עליי' : `${n} פריטים עליי`),
+    pickOne: 'בוחרים לפחות פריט אחד',
+    taken: (n: number) => (n === 1 ? 'פריט אחד סומן עליך' : `${n} פריטים סומנו עליך`),
+    undo: 'ביטול',
+    /** The end of the trip: what you brought that isn't in the bag. */
+    endTitle: (n: number) => `הבאת ${n === 1 ? 'דבר אחד' : `${n} דברים`} שעוד לא בתיק שלך`,
+    endText: 'בוחרים מה להוסיף לתיק. בטיול הבא זה מסומן לבד.',
+    endSave: (count: number) => (count === 1 ? 'הוספה לתיק' : `הוספת ${count} לתיק`),
+    endLater: 'לא עכשיו',
+    added: 'נוסף לתיק',
+  },
   feedback: {
     title: { feature: "הצעת פיצ'ר", bug: 'דיווח על תקלה' },
     kind: 'מה רוצים לשלוח?',

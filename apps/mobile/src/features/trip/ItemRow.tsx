@@ -1,4 +1,12 @@
-import { claimCap, packingStatus, type Claim, type Item, type Packing } from '@yallist/domain';
+import {
+  bagItemFor,
+  claimCap,
+  packingStatus,
+  type BagItem,
+  type Claim,
+  type Item,
+  type Packing,
+} from '@yallist/domain';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarStack } from '@/components/Avatar';
@@ -27,6 +35,7 @@ export function ItemRow({
   claims,
   view,
   me,
+  bag = [],
   onOpen,
   onClaim,
   onPack,
@@ -35,12 +44,21 @@ export function ItemRow({
   claims: readonly Claim[];
   view: TripView;
   me: string;
+  /** My bag: a bring item of the same name is marked, or offered, as mine. */
+  bag?: readonly BagItem[];
   onOpen: () => void;
   onClaim: (quantity: number) => void;
   onPack: (packed: boolean) => void;
 }) {
   const status = view.status(item);
-  const line = statusLine(item, status, claims, view, me);
+  const line = bagLine(
+    item,
+    statusLine(item, status, claims, view, me),
+    status.kind,
+    bag,
+    me,
+    claims,
+  );
   const qty = quantityText(item, claims);
   const packed = packedText(item, claims, view.activeIds);
   const mine = view.myQuantity(item.id);
@@ -51,8 +69,10 @@ export function ItemRow({
   // Bought is a brand check too (HANDOFF.md color rule).
   const ring = bought ? 'done' : RING[packingStatus(item, claims, view.activeIds).status];
   let action = null;
+  // In my bag, a per-person item is mine by itself: what's left is packing it (the ring).
+  const fromBag = item.kind === 'each' && !!myClaim && inMyBag(item, bag);
   if (item.kind === 'each' && !bought) {
-    action = (
+    action = fromBag ? null : (
       <PillButton
         label={he.trip.have}
         variant={mine ? 'solid' : 'soft'}
@@ -128,6 +148,29 @@ export function ItemRow({
       {action}
     </View>
   );
+}
+
+const inMyBag = (item: Item, bag: readonly BagItem[]) =>
+  item.list === 'bring' && bagItemFor(bag, item.name) !== undefined;
+
+/**
+ * The status line where my bag has the item: `בתיק שלך` on a per-person item it marks,
+ * `עליך · מהתיק` on a common one I took, and `· בתיק שלך` on one nobody brings yet.
+ */
+function bagLine(
+  item: Item,
+  line: ReturnType<typeof statusLine>,
+  status: string,
+  bag: readonly BagItem[],
+  me: string,
+  claims: readonly Claim[],
+): ReturnType<typeof statusLine> {
+  if (!inMyBag(item, bag)) return line;
+  const mine = claims.some((c) => c.itemId === item.id && c.userId === me);
+  if (item.kind === 'each') return mine ? { label: he.bag.inBag, tone: 'mine' } : line;
+  if (status === 'mine') return { label: he.bag.mineFromBag, tone: 'mine' };
+  if (status === 'missing') return { ...line, detail: he.bag.inBag };
+  return line;
 }
 
 const styles = StyleSheet.create({

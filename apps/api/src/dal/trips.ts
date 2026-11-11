@@ -21,6 +21,7 @@ import {
 import type { Executor, Tx } from '../db/tx';
 import type { ReceiptStore } from '../receipts';
 import { toCategory, toExpense, toItem, toTrip } from '../trip-data';
+import { bagClaims, bagMarks, bagRowsFor } from './bag';
 import { listCategories } from './categories';
 
 export async function insertTrip(tx: Executor, values: typeof trips.$inferInsert) {
@@ -172,12 +173,37 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
       .orderBy(asc(shoppingRuns.startedAt)),
   ]);
 
+  // Per-person bring items count as had by whoever has them in their bag (dal/bag.ts).
+  const bagRows = await bagRowsFor(
+    tx,
+    [...new Set(memberRows.filter((m) => m.status === 'active').map((m) => m.userId))],
+    [...new Set(itemRows.filter(bagMarks).map((i) => i.name))],
+  );
+
   const avatars = new Map<string, string | undefined>();
   if (photos) {
     const active = memberRows.filter((m) => m.status === 'active');
     const urls = await Promise.all(active.map((m) => avatarUrl(photos, m)));
     active.forEach((m, i) => avatars.set(m.userId, urls[i]));
   }
+  const claimsOf = (trip: (typeof tripRows)[number]) => {
+    const stored = claimRows
+      .filter((c) => c.tripId === trip.id)
+      .map(({ claim }): Claim => ({
+        itemId: claim.itemId,
+        userId: claim.userId,
+        quantity: claim.quantity,
+        arrived: claim.arrivedAt !== null,
+        runId: claim.runId ?? undefined,
+        inCart: claim.inCartAt ? true : undefined,
+        packed: claim.packedAt !== null,
+      }));
+    const activeIds = memberRows
+      .filter((m) => m.tripId === trip.id && m.status === 'active')
+      .map((m) => m.userId);
+    const tripItems = itemRows.filter((i) => i.tripId === trip.id);
+    return [...stored, ...bagClaims(trip, activeIds, tripItems, stored, bagRows)];
+  };
   return tripRows.map((trip) => ({
     trip: toTrip(trip),
     inviteToken: trip.inviteToken,
@@ -198,17 +224,7 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
       ),
     categories: categoryRows.filter((c) => c.tripId === trip.id).map(toCategory),
     items: itemRows.filter((i) => i.tripId === trip.id).map(toItem),
-    claims: claimRows
-      .filter((c) => c.tripId === trip.id)
-      .map(({ claim }): Claim => ({
-        itemId: claim.itemId,
-        userId: claim.userId,
-        quantity: claim.quantity,
-        arrived: claim.arrivedAt !== null,
-        runId: claim.runId ?? undefined,
-        inCart: claim.inCartAt ? true : undefined,
-        packed: claim.packedAt !== null,
-      })),
+    claims: claimsOf(trip),
     expenses: expenseRows
       .filter((e) => e.tripId === trip.id)
       .map((e) =>

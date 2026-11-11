@@ -99,6 +99,13 @@
       "when": 1794085023378,
       "tag": "0013_drop_place_text",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1794416903868,
+      "tag": "0014_bag_items",
+      "breakpoints": true
     }
   ]
 }

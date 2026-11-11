@@ -16,10 +16,12 @@ import { PillButton } from '@/components/PillButton';
 import { Progress } from '@/components/Progress';
 import { he, packedCount } from '@/i18n/he';
 import { testId } from '@/lib/testId';
+import { useBag } from '@/state/bag';
 import { useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
+import { BagCards } from './BagCards';
 import type { TripView } from './derive';
 import { ItemRow } from './ItemRow';
 import { groupSummary } from './labels';
@@ -45,6 +47,8 @@ export function ListTab({
 }) {
   const tripId = data.trip.id;
   const act = useTripAction(tripId);
+  // Only the bring list: there's nothing to buy of what's already at home.
+  const bag = useBag().data ?? [];
   const listItems = view.items.filter((i) => i.list === list);
   const shown = (f: ListFilter) =>
     filterItems(listItems, f, data.claims, data.expenses, view.activeIds, me);
@@ -83,6 +87,7 @@ export function ListTab({
   return (
     <View style={styles.wrap}>
       {list === 'buy' && <ShopBanner data={data} view={view} me={me} />}
+      {list === 'bring' && <BagCards data={data} view={view} me={me} bag={bag} />}
       {progress && progress.total > 0 && (
         <Card gap={space[2]}>
           <Text style={styles.progress} {...testId('bring-progress')}>
@@ -170,6 +175,7 @@ export function ListTab({
               claims={data.claims}
               view={view}
               me={me}
+              bag={list === 'bring' ? bag : undefined}
               onOpen={() =>
                 router.push({
                   pathname: '/trips/[tripId]/items/[itemId]',
