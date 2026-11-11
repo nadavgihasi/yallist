@@ -1,13 +1,15 @@
-import type { BagItem } from '@yallist/domain';
+import { heldCatalogNames, sameItem, type BagItem } from '@yallist/domain';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CatalogPicker } from '@/components/CatalogPicker';
 import { EmptyState } from '@/components/EmptyState';
 import { TextField } from '@/components/Fields';
 import { FLOATING_CLEARANCE, FloatingAction } from '@/components/FloatingAction';
 import { Icon, type IconName } from '@/components/Icon';
+import { ItemIcon } from '@/components/ItemIcon';
 import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { Skeleton } from '@/components/Skeleton';
@@ -111,7 +113,7 @@ function AddItem({
 }) {
   const [name, setName] = useState('');
   const trimmed = name.trim();
-  const exists = bag.some((b) => b.name === trimmed);
+  const exists = bag.some((b) => sameItem(b.name, trimmed));
   const add = () => {
     if (!trimmed || exists) return;
     onAdd(trimmed);
@@ -132,6 +134,15 @@ function AddItem({
         error={exists ? he.bag.exists : undefined}
         {...testId('bag-add-name')}
       />
+      <CatalogPicker
+        query={name}
+        list="bring"
+        exclude={heldCatalogNames(bag.map((b) => b.name))}
+        onPick={(entry) => {
+          onAdd(entry.name);
+          setName('');
+        }}
+      />
       <View style={styles.actions}>
         <PillButton
           label={he.bag.addSave}
@@ -150,6 +161,7 @@ function BagRow({ item, onQuantity }: { item: BagItem; onQuantity: (quantity: nu
   const last = item.quantity === 1;
   return (
     <View style={styles.row}>
+      <ItemIcon name={item.name} />
       <Text style={styles.name}>{item.name}</Text>
       <View style={styles.stepper}>
         <Step

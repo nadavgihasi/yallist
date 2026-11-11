@@ -141,6 +141,18 @@ describe.skipIf(!DATABASE_URL)('my bag', () => {
     expect((await pack(organizer, tripId, each.id, true)).status).toBe(409);
   });
 
+  it("matches an item by the catalog's other names and spellings", async () => {
+    const { organizer, member, tripId, each } = await trip();
+    // `שקי שינה` is `שק שינה` to the catalog: the bag marks the trip's item all the same.
+    await add(member, { name: 'שקי שינה' });
+    expect((await detail(organizer, tripId)).claims).toEqual([
+      { itemId: each.id, userId: member.id, quantity: 1, packed: false, fromBag: true },
+    ]);
+    // And it is the same item when added again under another name.
+    await add(member, { name: 'שק שינה' });
+    expect((await bag(member)).map((b) => b.name)).toEqual(['שקי שינה']);
+  });
+
   it('follows the bag in open trips, but never unpacks', async () => {
     const { member, tripId, each } = await trip();
     const [item] = (await (await add(member, { name: 'שק שינה' })).json()).items;

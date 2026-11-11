@@ -307,6 +307,10 @@ export const he = {
     title: 'עריכת פריט',
     save: 'שמירת השינויים',
   },
+  catalog: {
+    results: 'הצעות מהקטלוג',
+    categories: 'קטגוריות בקטלוג',
+  },
   addItem: {
     title: 'פריט חדש',
     what: 'מה צריך?',

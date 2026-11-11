@@ -1,4 +1,4 @@
-import type { Claim } from '@yallist/domain';
+import { itemKey, sameItem, type Claim } from '@yallist/domain';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { bagItems, type items, type trips } from '../db/schema';
@@ -15,7 +15,7 @@ export const listBag = (tx: Executor, userId: string) =>
     .orderBy(asc(bagItems.createdAt), asc(bagItems.name));
 
 /**
- * Adds the entries whose names aren't in the bag yet; returns the rows added. The caller holds
+ * Adds the entries whose items aren't in the bag yet (the catalog knows an item's other names); returns the rows added. The caller holds
  * the profile's lock, so two adds of one name can't both get in.
  */
 export async function addToBag(
@@ -23,11 +23,12 @@ export async function addToBag(
   userId: string,
   entries: readonly { name: string; quantity: number }[],
 ) {
-  const have = new Set((await listBag(tx, userId)).map((b) => b.name));
+  const have = new Set((await listBag(tx, userId)).map((b) => itemKey(b.name)));
   const fresh = [];
   for (const entry of entries) {
-    if (have.has(entry.name)) continue;
-    have.add(entry.name);
+    const key = itemKey(entry.name);
+    if (have.has(key)) continue;
+    have.add(key);
     fresh.push(entry);
   }
   if (fresh.length === 0) return [];
@@ -56,24 +57,20 @@ export async function removeFromBag(tx: Executor, userId: string, id: string) {
   return rows.length > 0;
 }
 
-/** Whether the user's bag holds an item of that name now. */
+/** Whether the user's bag holds that item now, under any name the catalog gives it. */
 export async function inBag(tx: Executor, userId: string, name: string) {
-  const [row] = await tx
-    .select({ id: bagItems.id })
-    .from(bagItems)
-    .where(and(live(userId), eq(bagItems.name, name)))
-    .limit(1);
-  return row !== undefined;
+  const rows = await tx.select({ name: bagItems.name }).from(bagItems).where(live(userId));
+  return rows.some((row) => sameItem(row.name, name));
 }
 
-/** Bag rows, removed ones too, of these users with these names: what `bagClaims` reads. */
-export const bagRowsFor = (tx: Executor, userIds: string[], names: string[]) =>
-  userIds.length === 0 || names.length === 0
+/**
+ * Bag rows, removed ones too, of these users: what `bagClaims` reads. All of a bag, not the rows
+ * of given names, since an item's other names (`גריל` for `מנגל`) are matched in `bagClaims`.
+ */
+export const bagRowsFor = (tx: Executor, userIds: string[]) =>
+  userIds.length === 0
     ? Promise.resolve([])
-    : tx
-        .select()
-        .from(bagItems)
-        .where(and(inArray(bagItems.userId, userIds), inArray(bagItems.name, names)));
+    : tx.select().from(bagItems).where(inArray(bagItems.userId, userIds));
 
 /** A per-person bring item: the only kind the bag marks by itself (everyone brings their own). */
 export const bagMarks = (item: Pick<typeof items.$inferSelect, 'list' | 'kind'>) =>
@@ -107,7 +104,7 @@ export function bagClaims(
         .filter(
           (userId) =>
             !claims.some((c) => c.itemId === item.id && c.userId === userId) &&
-            held.some((b) => b.userId === userId && b.name === item.name),
+            held.some((b) => b.userId === userId && sameItem(b.name, item.name)),
         )
         .map((userId) => ({ itemId: item.id, userId, quantity: 1, packed: false, fromBag: true })),
     );

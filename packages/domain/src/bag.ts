@@ -1,9 +1,10 @@
+import { itemKey, sameItem } from './catalog';
 import { claimsFor } from './coverage';
 import type { BagItem, Claim, Item } from './types';
 
-/** The bag's item for a trip item: matched by exact name. */
+/** The bag's item for a trip item: the same item by name (the catalog knows its other names). */
 export const bagItemFor = (bag: readonly BagItem[], name: string) =>
-  bag.find((b) => b.name === name);
+  bag.find((b) => sameItem(b.name, name));
 
 export interface BagSuggestion {
   item: Item;
@@ -41,11 +42,11 @@ export function broughtNotInBag(
   bag: readonly BagItem[],
   me: string,
 ): { name: string; quantity: number }[] {
-  const seen = new Set(bag.map((b) => b.name));
+  const seen = new Set(bag.map((b) => itemKey(b.name)));
   return items.flatMap((item) => {
     const claim = claims.find((c) => c.itemId === item.id && c.userId === me);
-    if (!claim || claim.fromBag || item.list !== 'bring' || seen.has(item.name)) return [];
-    seen.add(item.name);
+    if (!claim || claim.fromBag || item.list !== 'bring' || seen.has(itemKey(item.name))) return [];
+    seen.add(itemKey(item.name));
     return [{ name: item.name, quantity: item.kind === 'each' ? 1 : claim.quantity }];
   });
 }
