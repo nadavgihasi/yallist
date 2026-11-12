@@ -243,4 +243,31 @@ describe.skipIf(!DATABASE_URL)('assigning an item to another member', () => {
     expect((await claim(a, tripId, buy.id, { quantity: 0, userId: b.id })).status).toBe(409);
     expect(await claimsOf(a, tripId, buy.id)).toMatchObject([{ userId: b.id }]);
   });
+
+  it('leaves who has a bought item alone', async () => {
+    const { a, b, c, tripId } = await trip();
+    const items = (await (await client.trips[':tripId'].$get({ param: { tripId } }, as(a))).json())
+      .items;
+    const buy = items.find((i) => i.list === 'buy' && i.kind === 'single')!;
+    await claim(b, tripId, buy.id, { quantity: 1 });
+    const bought = await client.trips[':tripId'].expenses.$post(
+      {
+        param: { tripId },
+        json: { description: 'x', amountAgorot: 100, shares: [b.id], itemId: buy.id },
+      },
+      as(b),
+    );
+    expect(bought.status).toBe(201);
+
+    for (const json of [
+      { quantity: 1, userId: c.id, from: b.id },
+      { quantity: 0, userId: b.id },
+      { quantity: 1, from: b.id },
+    ]) {
+      const res = await claim(a, tripId, buy.id, json);
+      expect(res.status).toBe(409);
+      expect(await res.json()).toEqual({ error: 'Already bought' });
+    }
+    expect(await claimsOf(a, tripId, buy.id)).toMatchObject([{ userId: b.id }]);
+  });
 });

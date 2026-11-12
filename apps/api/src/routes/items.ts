@@ -202,6 +202,9 @@ export const itemRoutes = (auth: Auth, db: Db) =>
             moved?.userId === me ? undefined : moved,
           ];
           if (othersClaims.some((cl) => cl?.runId)) throw fail(409, 'In a shopping run');
+          // A bought item is done: who got it is no one else's to change.
+          const forOthers = assigning || (moved !== undefined && moved.userId !== me);
+          if (forOthers && (await findPurchase(tx, itemId))) throw fail(409, 'Already bought');
           if (moved) {
             await setClaim(tx, itemId, moved.userId, 0, moved);
             current = current.filter((cl) => cl !== moved);
