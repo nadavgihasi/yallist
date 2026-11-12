@@ -1,3 +1,5 @@
+import { formatShekel } from '@yallist/domain';
+
 import { rtl } from '@/lib/bidi';
 
 /** All user-facing strings. Hebrew only for v1; another locale is a sibling file with the same shape. */
@@ -239,7 +241,7 @@ export const he = {
     approve: 'אישור',
     decline: 'דחייה',
     remove: 'הסרה',
-    confirmRemove: 'להסיר?',
+    confirmRemove: 'כן, להסיר',
     confirmDecline: 'לדחות?',
     removed: (name: string) => `${name} כבר לא בטיול`,
     noItems: 'עוד בלי פריטים',
@@ -690,4 +692,17 @@ export function peopleNames(names: string[]): string {
 export function joinNames(names: string[]): string {
   if (names.length <= 1) return names.join('');
   return `${names.slice(0, -1).join(', ')} ו${names[names.length - 1]}`;
+}
+
+/**
+ * Asked before removing a member. With money open, says how much and that it stays: they lose
+ * access to the trip, the debt stays in its money.
+ */
+export function removeWarning(name: string, balanceAgorot: number): string {
+  const ask = `להסיר את ${name} מהטיול?`;
+  if (balanceAgorot === 0) return ask;
+  const amount = formatShekel(Math.abs(balanceAgorot));
+  const debt =
+    balanceAgorot < 0 ? `${name} חייב/ת לקבוצה ${amount}.` : `הקבוצה חייבת ל${name} ${amount}.`;
+  return `${ask} ${debt} החוב נשאר בהעברות של הטיול, אבל ל${name} לא תהיה יותר גישה אליו.`;
 }
