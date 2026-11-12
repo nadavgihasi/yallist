@@ -18,5 +18,8 @@ tags: [trip]
     id: trip-hero-share
 - tapOn:
     id: trip-hero-invite
-# The people tab, with the invite link.
-- assertVisible: שיתוף הקישור
+# The invite sheet, with the message it will send and its link.
+- assertVisible:
+    id: invite-message
+- assertVisible:
+    id: invite-share

@@ -220,6 +220,16 @@ export const he = {
       `חסרים ל${trip} (${dates}): ${names}. מי מביא? ${link}`,
     allCovered: (trip: string, link: string) => `הכול מכוסה ל${trip} 🎉 ${link}`,
   },
+  /** The invite sheet: every "invite friends" button opens it. */
+  invite: {
+    title: 'הזמנת חברים',
+    subtitle: 'זו ההודעה שתישלח, עם הקישור לטיול',
+    message: (trip: string, dates: string, link: string) =>
+      `בואו ל${trip} (${dates})! מצטרפים מהקישור, בלי הורדה, ורואים מי מביא מה: ${link}`,
+    send: 'שליחת ההזמנה',
+    copyLink: 'העתקת הקישור בלבד',
+    messageCopied: 'ההודעה הועתקה, אפשר להדביק בוואטסאפ',
+  },
   deleteTrip: {
     action: 'מחיקת טיול',
     title: 'למחוק את הטיול?',
@@ -241,7 +251,6 @@ export const he = {
   people: {
     inviteTitle: 'עוד חברים מצטרפים?',
     inviteText: 'שולחים את הקישור בוואטסאפ, וכל אחד מצטרף מהדפדפן.',
-    share: 'שיתוף הקישור',
     copied: 'הקישור הועתק',
     pending: 'מחכים לאישור',
     approve: 'אישור',
@@ -451,6 +460,8 @@ export const he = {
   /** The meetup place and the photo album: sections of the ניהול tab and their sheets. */
   links: {
     meetup: 'נקודת מפגש',
+    /** The meetup point at the top of the trip. */
+    meetupAt: (place: string) => `נפגשים: ${place}`,
     /** A pasted map link or a point on the map stands in for the place's name. */
     mapLink: 'מיקום במפה',
     waze: 'פתיחה ב־Waze',
@@ -462,7 +473,7 @@ export const he = {
     meetupEmpty: 'איפה כולם נפגשים, עם ניווט ב־Waze או במפות',
     addMeetup: 'הוספת נקודת מפגש',
     editMeetup: 'עריכת נקודת המפגש',
-    meetupSubtitle: 'כל המשתתפים יראו אותה בלשונית ״ניהול״',
+    meetupSubtitle: 'כל המשתתפים יראו אותה בראש הטיול ובלשונית ״ניהול״',
     meetupName: 'שם המקום',
     meetupHint: 'או כתובת, או קישור מ־Google Maps או Waze',
     meetupPlaceholder: 'חניון עין גדי',
@@ -471,7 +482,7 @@ export const he = {
     albumEmpty: 'אלבום משותף לתמונות מהטיול ב־Google Photos',
     addAlbum: 'הוספת אלבום',
     editAlbum: 'עריכת האלבום',
-    albumSubtitle: 'כל המשתתפים יוכלו לפתוח אותו מלשונית ״ניהול״',
+    albumSubtitle: 'כל המשתתפים יוכלו לפתוח אותו מראש הטיול ומלשונית ״ניהול״',
     albumLink: 'קישור לאלבום',
     albumHint: 'מ־Google Photos',
     badAlbum: 'צריך קישור לאלבום ב־Google Photos',
@@ -522,6 +533,8 @@ export const he = {
   },
   join: {
     invited: 'הוזמנת לטיול',
+    /** Who's already in, under the trip on the join page. */
+    whoIsIn: (names: string) => `${names} כבר בטיול`,
     missing: 'מה עוד חסר',
     nameLabel: 'איך קוראים לך?',
     join: 'הצטרפות לטיול',
@@ -541,6 +554,16 @@ export const he = {
     toStart: 'למסך הפתיחה',
     /** Opening the invite link to a trip you're already in, on the way to it. */
     alreadyIn: 'כבר יש לך מקום בטיול הזה',
+  },
+  /** The trip, once, right after joining it (JoinedPrompt). */
+  joined: {
+    title: 'ברוכים הבאים לטיול!',
+    text: (n: number) =>
+      n === 1
+        ? 'פריט אחד עוד בלי מישהו שמביא אותו. בוחרים מה מביאים, וכולם רואים.'
+        : `${n} פריטים עוד בלי מישהו שמביא אותם. בוחרים מה מביאים, וכולם רואים.`,
+    pick: 'בחירת מה להביא',
+    later: 'אחר כך',
   },
   profile: {
     title: 'הפרופיל שלי',

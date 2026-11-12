@@ -1,6 +1,6 @@
 import { formatShekel, type ListFilter } from '@yallist/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   Platform,
   Pressable,
@@ -21,10 +21,12 @@ import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { Skeleton } from '@/components/Skeleton';
 import { deriveTrip } from '@/features/trip/derive';
+import { JoinedPrompt } from '@/features/trip/JoinedPrompt';
 import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
 import { PeopleTab } from '@/features/trip/PeopleTab';
 import { ReadinessHero } from '@/features/trip/ReadinessHero';
+import { TripLinksBar } from '@/features/trip/TripLinks';
 import { he, participants } from '@/i18n/he';
 import { formatRange } from '@/lib/dates';
 import { statusOf } from '@/lib/api';
@@ -48,6 +50,8 @@ export default function TripScreen() {
     itemId?: string;
     list?: string;
     categoryId?: string;
+    /** Set by the join page: we just got in, so ask once what we'll bring. */
+    joined?: string;
   }>();
   const { tripId, itemId, list, categoryId } = params;
   const query = useTripQuery(tripId);
@@ -68,36 +72,8 @@ export default function TripScreen() {
     setFilter('all');
   };
   const now = useToday();
-  // "Invite friends" opens the People tab and centers its share button, so the next step is clear.
-  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
-  const shareRef = useRef<ComponentRef<typeof View>>(null);
-  const viewportHeight = useRef(0);
-  const loaded = data !== undefined;
-  const [inviteTaps, setInviteTaps] = useState(0);
-  const invite = () => {
-    pickTab('people');
-    setInviteTaps((n) => n + 1);
-  };
-  useEffect(() => {
-    if (inviteTaps === 0 || tab !== 'people' || !loaded) return;
-    const frame = requestAnimationFrame(() => {
-      const share = shareRef.current;
-      const inner = scrollRef.current?.getInnerViewRef() as Parameters<
-        ComponentRef<typeof View>['measureLayout']
-      >[0];
-      if (!share || !inner) return;
-      share.measureLayout(
-        inner,
-        (_x, y, _w, h) =>
-          scrollRef.current?.scrollTo({
-            y: Math.max(0, y - (viewportHeight.current - h) / 2),
-            animated: true,
-          }),
-        () => {},
-      );
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [inviteTaps, tab, loaded]);
+  // Every "invite friends" button opens the invite sheet, which shows what will be sent.
+  const invite = () => router.push({ pathname: '/trips/[tripId]/invite', params: { tripId } });
   // A sheet opened by URL hands its params to this screen underneath it. Clear them once this
   // screen is focused again: `router.setParams` targets the focused route, not necessarily this one.
   useFocusEffect(
@@ -168,8 +144,6 @@ export default function TripScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView
-        ref={scrollRef}
-        onLayout={(e) => (viewportHeight.current = e.nativeEvent.layout.height)}
         contentContainerStyle={[
           styles.page,
           !desktop && styles.column,
@@ -189,6 +163,7 @@ export default function TripScreen() {
             label={he.trip.invite}
             variant="soft"
             icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
+            {...testId('trip-invite')}
             onPress={invite}
           />
         </View>
@@ -220,8 +195,20 @@ export default function TripScreen() {
               .filter(Boolean)
               .join(' · ')}
           </Text>
+          <TripLinksBar trip={trip} onMeetup={() => pickTab('people')} />
         </View>
 
+        {params.joined && (
+          <JoinedPrompt
+            tripId={tripId}
+            view={view}
+            onPick={(next) => {
+              setTab(next);
+              setFilter('missing');
+            }}
+            onDone={() => router.setParams({ joined: undefined })}
+          />
+        )}
         {!desktop && hero}
         <View style={desktop && styles.columns}>
           <View style={[styles.main, desktop && styles.mainDesktop]}>
@@ -238,7 +225,7 @@ export default function TripScreen() {
               />
             )}
             {tab === 'people' && (
-              <PeopleTab data={data} view={view} me={me.userId} shareRef={shareRef} />
+              <PeopleTab data={data} view={view} me={me.userId} onInvite={invite} />
             )}
             {tab === 'money' && <MoneyTab data={data} view={view} me={me.userId} />}
           </View>

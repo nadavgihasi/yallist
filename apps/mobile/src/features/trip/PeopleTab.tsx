@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
-import { useState, type ComponentRef, type Ref } from 'react';
-import { Platform, Share, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
@@ -9,7 +9,6 @@ import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, participants, removeWarning } from '@/i18n/he';
 import { formatRange } from '@/lib/dates';
-import { invitePayload, inviteUrl } from '@/lib/invite';
 import { testId } from '@/lib/testId';
 import { useExitTrip, useTripAction } from '@/state/trips';
 import type { TripData, TripMember } from '@/state/types';
@@ -18,36 +17,17 @@ import { colors, space, type } from '@/theme';
 import { toAvatar, type TripView } from './derive';
 import { AlbumSection, MeetupSection } from './TripLinks';
 
-// The site invite links point to: this page's own on web, under its base path on a PR preview
-// (/pr-<n>); on native, the stage's site (android.yml) or the local Expo web server.
-const WEB_URL =
-  Platform.OS === 'web'
-    ? `${window.location.origin}${process.env.EXPO_BASE_URL ?? ''}`
-    : (process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:8081');
-
-/** Shares the invite link; where the browser can't share, copies it. */
-async function shareLink(url: string) {
-  try {
-    await Share.share(invitePayload(url, Platform.OS));
-  } catch (e) {
-    // Closing the share sheet isn't a failure: don't copy behind the user's back.
-    if (e instanceof Error && e.name === 'AbortError') return;
-    await navigator.clipboard?.writeText(url);
-    showToast(he.people.copied);
-  }
-}
-
 export function PeopleTab({
   data,
   view,
   me,
-  shareRef,
+  onInvite,
 }: {
   data: TripData;
   view: TripView;
   me: string;
-  /** Lets the trip screen scroll the share button to the middle of the page. */
-  shareRef?: Ref<ComponentRef<typeof View>>;
+  /** Opens the invite sheet. */
+  onInvite: () => void;
 }) {
   const act = useTripAction(data.trip.id);
   // `${action}:${userId}` armed by a first tap; a second tap does it.
@@ -57,7 +37,6 @@ export function PeopleTab({
   // The only organizer can't leave: the trip would have no one to run it (the API checks too).
   const onlyOrganizer = organizer && view.active.filter((m) => m.role === 'organizer').length === 1;
   const pending = data.members.filter((m) => m.status === 'pending');
-  const link = inviteUrl(WEB_URL, data.inviteToken);
 
   const taken = (userId: string) => {
     const ids = new Set(data.claims.filter((c) => c.userId === userId).map((c) => c.itemId));
@@ -100,25 +79,23 @@ export function PeopleTab({
 
   return (
     <View style={styles.wrap}>
+      {/* First: what every member needs on the day, before managing anything. */}
+      <MeetupSection trip={data.trip} organizer={organizer} />
+      <AlbumSection trip={data.trip} organizer={organizer} />
+
       <Card>
         <View style={styles.texts}>
           <Text style={styles.title}>{he.people.inviteTitle}</Text>
           <Text style={styles.text}>{he.people.inviteText}</Text>
         </View>
-        <View ref={shareRef} collapsable={false}>
-          <PillButton
-            label={he.people.share}
-            variant="soft"
-            wide
-            icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
-            {...testId('people-share')}
-            onPress={() => shareLink(link)}
-          />
-        </View>
-        {/* The link itself too, to copy by hand where sharing doesn't reach. */}
-        <Text style={styles.link} selectable numberOfLines={1} {...testId('people-invite-link')}>
-          {link}
-        </Text>
+        <PillButton
+          label={he.trip.invite}
+          variant="soft"
+          wide
+          icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
+          {...testId('people-invite')}
+          onPress={onInvite}
+        />
       </Card>
 
       {organizer && (
@@ -148,9 +125,6 @@ export function PeopleTab({
           </View>
         </Card>
       )}
-
-      <MeetupSection trip={data.trip} organizer={organizer} />
-      <AlbumSection trip={data.trip} organizer={organizer} />
 
       {organizer && pending.length > 0 && (
         <ListGroup title={he.people.pending}>
@@ -281,7 +255,6 @@ const styles = StyleSheet.create({
   texts: { gap: space[1] },
   title: { ...type.itemTitle, color: colors.ink },
   text: { ...type.caption, color: colors.inkMuted },
-  link: { ...type.caption, color: colors.inkMuted, textAlign: 'center', writingDirection: 'ltr' },
   member: { gap: space[2] },
   confirm: { gap: space[2], paddingStart: 44 + space[3] },
   person: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },

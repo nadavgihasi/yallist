@@ -19,7 +19,7 @@ export interface Policy {
 export const policy: Record<'he' | 'en', Policy> = {
   he: {
     title: 'מדיניות פרטיות',
-    updated: 'עודכן: 7 בנובמבר 2026',
+    updated: 'עודכן: 12 בנובמבר 2026',
     intro:
       'Yallist היא רשימה משותפת לטיולים קבוצתיים: מי מביא מה, קניות והוצאות. כאן כתוב מה אנחנו שומרים, למה ומי רואה את זה. בקצרה: רק מה שהאפליקציה צריכה כדי לעבוד. אין פרסומות, אין כלי אנליטיקה, ואנחנו לא מוכרים מידע.',
     sections: [
@@ -46,7 +46,7 @@ export const policy: Record<'he' | 'en', Policy> = {
         title: 'מי רואה מה',
         lines: [
           'החברים בטיול רואים את השם, התמונה או הצבע שלך, ואת מה שעשית בטיול: פריטים שלקחת, הוצאות, קבלות ותשלומים.',
-          'מי שיש לו קישור הזמנה לטיול רואה תצוגה מקדימה: שם הטיול, התאריכים, מספר החברים וכמה פריטים חסרים. לא את שמות החברים.',
+          'מי שיש לו קישור הזמנה לטיול רואה תצוגה מקדימה: שם הטיול, התאריכים, מספר החברים, השמות והצבעים של החברים (לא התמונות שלהם) וכמה פריטים חסרים.',
           'ספקים שמפעילים את השירות בשבילנו: Amazon Web Services (שרתים, מסד נתונים ותמונות), Google (רק בכניסה עם Google), ו-Sentry (דיווחי שגיאות). התראות על שגיאות, מנוקות כמו למעלה, מגיעות למפתח ב-Telegram.',
           'אף אחד אחר. אנחנו לא מוכרים ולא משתפים מידע לפרסום.',
         ],
@@ -86,7 +86,7 @@ export const policy: Record<'he' | 'en', Policy> = {
   },
   en: {
     title: 'Privacy policy',
-    updated: 'Updated: November 7, 2026',
+    updated: 'Updated: November 12, 2026',
     intro:
       "Yallist is a shared list for group trips: who brings what, shopping and expenses. This page says what we keep, why, and who sees it. In short: only what the app needs to work. No ads, no analytics, and we don't sell data.",
     sections: [
@@ -113,7 +113,7 @@ export const policy: Record<'he' | 'en', Policy> = {
         title: 'Who sees what',
         lines: [
           'Members of your trips see your name, photo or color, and what you do in the trip: items you take, expenses, receipts and payments.',
-          "Anyone with a trip's invite link sees a preview: the trip's name, dates, number of members and some missing items. Not the members' names.",
+          "Anyone with a trip's invite link sees a preview: the trip's name, dates, number of members, the members' names and colors (not their photos) and some missing items.",
           'Providers that run the service for us: Amazon Web Services (servers, database and photos), Google (only with Google sign-in), and Sentry (error reports). Error alerts, scrubbed as above, reach the developer on Telegram.',
           "No one else. We don't sell or share data for advertising.",
         ],

@@ -25,7 +25,7 @@ function open(url: string) {
 }
 
 /**
- * A section of the ניהול tab: its title, what's set (`children`) and, for organizers, a button
+ * A section of the ניהול tab (at its top, so members find it): its title, what's set (`children`) and, for organizers, a button
  * to edit it. Unset, organizers get one row: what it's for and a button to add it; everyone else
  * sees nothing.
  */
@@ -183,7 +183,45 @@ export function AlbumSection({ trip, organizer }: { trip: Trip; organizer: boole
   );
 }
 
+/**
+ * The meetup point and the album at the top of the trip, for every member, once set: the place
+ * opens the ניהול tab (`onMeetup`), where its Waze and Maps buttons are; the album opens itself.
+ * Nothing when neither is set.
+ */
+export function TripLinksBar({ trip, onMeetup }: { trip: Trip; onMeetup: () => void }) {
+  const { meetupText, meetupPoint, albumUrl } = trip;
+  const meetup = meetupLinks(meetupText, meetupPoint) !== undefined;
+  if (!meetup && !albumUrl) return null;
+  const place = meetupText && !parseMapLink(meetupText) ? meetupText : he.links.mapLink;
+  return (
+    <View style={styles.row}>
+      {meetup && (
+        <PillButton
+          label={he.links.meetupAt(place)}
+          variant="soft"
+          size="sm"
+          icon={<Icon name="pin" size={16} color={colors.primaryStrong} />}
+          {...testId('trip-bar-meetup')}
+          onPress={onMeetup}
+          style={styles.shrink}
+        />
+      )}
+      {albumUrl && (
+        <PillButton
+          label={he.links.albumLabel}
+          variant="soft"
+          size="sm"
+          icon={<Icon name="image" size={16} color={colors.primaryStrong} />}
+          {...testId('trip-bar-album')}
+          onPress={() => open(albumUrl)}
+        />
+      )}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  shrink: { flexShrink: 1 },
   header: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   texts: { flex: 1, gap: 2 },
   title: { ...type.itemTitle, color: colors.ink },

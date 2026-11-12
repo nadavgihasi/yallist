@@ -49,3 +49,14 @@ export async function openWhatsApp(
   }
   await openURL(url);
 }
+
+/**
+ * The invite message, exactly as the invite sheet shows it and shares it: `בואו לקמפינג בכנרת
+ * (8–9 בנובמבר)! מצטרפים מהקישור, בלי הורדה, ורואים מי מביא מה: {link}`. The link once, inside it.
+ */
+export function inviteMessage(
+  trip: { name: string; startsOn: string; endsOn: string },
+  link: string,
+): string {
+  return he.invite.message(trip.name, days(trip.startsOn, trip.endsOn), ltr(link));
+}

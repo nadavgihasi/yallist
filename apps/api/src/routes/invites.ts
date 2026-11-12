@@ -15,6 +15,9 @@ import type { Publish } from '../realtime';
 /** The signed-in caller's place in the trip, as the invite preview tells them. */
 type Membership = { status: 'active' | 'pending'; tripId: string } | { status: 'none' };
 
+/** How many members the invite preview names; `memberCount` counts them all. */
+const PREVIEW_MEMBERS = 8;
+
 const tokenParam = z.object({ token: z.string().min(1).max(64) });
 
 /** The invite link: a bearer capability for joining one trip (SPEC §5). */
@@ -46,7 +49,13 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
         memberCount: activeIds.length,
         missingCount: missing.length,
         missingItems: missing.slice(0, 6).map((i) => i.name),
-        // Only for a signed-in caller; a stranger learns nothing about who's in.
+        // Who's in, so a joiner sees whose trip it is: display names and avatar colors only (no
+        // ids, no photos, which only trip-mates see), the first few to join.
+        members: data.members
+          .filter((m) => m.status === 'active')
+          .slice(0, PREVIEW_MEMBERS)
+          .map((m) => ({ name: m.displayName, color: m.color })),
+        // Only for a signed-in caller: their own place in the trip.
         ...(membership && { membership }),
       });
     })

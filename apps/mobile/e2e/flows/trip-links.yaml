@@ -1,5 +1,5 @@
 # In the ניהול tab, an organizer sets the meetup place and marks it on the map, then, separately,
-# the photo album; each section then shows buttons to open it.
+# the photo album; each section then shows buttons to open it, and the trip's top shows both.
 appId: app.yallist
 url: ${WEB_URL}
 # A video per flow, kept even when it fails (onFlowComplete always runs).
@@ -56,11 +56,14 @@ tags: [trips]
     id: trip-album-open
 - assertVisible:
     id: trip-meetup-waze
-# Saved, not just shown: still there after a reload.
+# Saved, not just shown: still there after a reload, at the top of the trip for every member
+# too; its place opens the ניהול tab.
 - openLink: ${WEB_URL}
 - tapOn: E2E trip
+- assertVisible:
+    id: trip-bar-album
 - tapOn:
-    id: trip-tab-people
+    id: trip-bar-meetup
 - assertVisible:
     id: trip-meetup-text
     text: Ein Gedi parking

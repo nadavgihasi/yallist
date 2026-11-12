@@ -3,6 +3,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { AvatarStack } from '@/components/Avatar';
 import { Callout } from '@/components/Callout';
 import { Cover } from '@/components/Cover';
 import { EmptyState, StateScreen } from '@/components/EmptyState';
@@ -12,17 +13,19 @@ import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { GoogleButton } from '@/features/auth/GoogleButton';
 import { andMore, he, joiningAs, missingItems, participants } from '@/i18n/he';
+import { initial } from '@/features/trip/derive';
 import { signInAsGuest, signInWithGoogle, statusOf, type AuthResult } from '@/lib/api';
 import { rtl } from '@/lib/bidi';
 import { formatRange } from '@/lib/dates';
+import { inviteToken, whoIsIn } from '@/lib/invite';
 import { testId } from '@/lib/testId';
 import { useSession } from '@/state/store';
 import { joinTrip, tripsKey, useInvite } from '@/state/trips';
-import { colors, layout, radius, space, type } from '@/theme';
+import { avatarSize, colors, layout, radius, space, type } from '@/theme';
 
 /** Invite links land here (JoinV2): a preview anyone can see, then sign in and join. */
 export default function Join() {
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const token = inviteToken(useLocalSearchParams<{ token: string }>().token);
   const { me, signIn } = useSession();
   const queryClient = useQueryClient();
   const invite = useInvite(token);
@@ -45,15 +48,19 @@ export default function Join() {
     gcTime: 0,
   });
 
-  const open = (tripId: string) => {
+  /** To the trip; `joined` when we just got in, so it asks once what we'll bring. */
+  const open = (tripId: string, joined = false) => {
     void queryClient.invalidateQueries({ queryKey: tripsKey });
-    router.replace({ pathname: '/trips/[tripId]', params: { tripId } });
+    router.replace({
+      pathname: '/trips/[tripId]',
+      params: joined ? { tripId, joined: '1' } : { tripId },
+    });
   };
 
   const approvedTrip = recheck.data?.status === 'active' ? recheck.data.tripId : undefined;
   // Once, when an organizer approves.
   useEffect(() => {
-    if (approvedTrip) open(approvedTrip);
+    if (approvedTrip) open(approvedTrip, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `open` is new every render
   }, [approvedTrip]);
 
@@ -77,7 +84,7 @@ export default function Join() {
     }
     try {
       const result = await joinTrip(token);
-      if (result.status === 'active') return open(result.tripId);
+      if (result.status === 'active') return open(result.tripId, true);
       setState('pending');
     } catch (error) {
       const status = statusOf(error);
@@ -161,6 +168,21 @@ export default function Join() {
         <Text style={styles.meta}>
           {formatRange(trip.startsOn, trip.endsOn)} · {participants(trip.memberCount)}
         </Text>
+        {trip.members.length > 0 && (
+          <View style={styles.members} {...testId('join-members')}>
+            <AvatarStack
+              people={trip.members.map((m) => ({ initial: initial(m.name), color: m.color }))}
+              max={5}
+              size={avatarSize.md}
+            />
+            <Text style={[styles.meta, styles.names]}>
+              {whoIsIn(
+                trip.members.map((m) => m.name),
+                trip.memberCount,
+              )}
+            </Text>
+          </View>
+        )}
         {trip.missingCount > 0 && (
           <View style={styles.missing}>
             <Text style={styles.missingTitle}>{missingItems(trip.missingCount)}</Text>
@@ -240,6 +262,9 @@ const styles = StyleSheet.create({
   cover: { height: 120, margin: -space[5], marginBottom: space[2] },
   name: { ...type.pageTitle, color: colors.ink },
   meta: { ...type.caption, color: colors.inkMuted },
+  members: { flexDirection: 'row', alignItems: 'center', gap: space[3], marginTop: space[1] },
+  // Hebrew order even when the first name is Latin (`Dana ונועה כבר בטיול`).
+  names: { flex: 1, writingDirection: 'rtl' },
   missing: { gap: space[1], marginTop: space[2] },
   missingTitle: { ...type.itemTitle, color: colors.ink },
   note: { ...type.caption, color: colors.inkMuted, textAlign: 'center' },
