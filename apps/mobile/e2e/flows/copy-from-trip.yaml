@@ -1,0 +1,35 @@
+# Copying from a previous trip: a new trip's empty list offers it; the earlier trip's items come
+# ticked, one is unticked, and the rest are added in one go.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [items]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- runFlow:
+    file: ../common/add-item.yaml
+    env:
+      ITEM: מחצלת
+- runFlow:
+    file: ../common/add-item.yaml
+    env:
+      ITEM: פנס ראש
+- tapOn: חזרה לכל הטיולים
+- runFlow: ../common/new-trip.yaml
+- assertVisible: הרשימה ריקה
+- tapOn:
+    id: empty-copy
+- tapOn:
+    id: copy-trip-.*
+- assertVisible: מחצלת
+- tapOn: פנס ראש
+- tapOn:
+    id: copy-save
+- assertVisible: פריט אחד נוסף
+- assertVisible: מחצלת
+- assertNotVisible: פנס ראש

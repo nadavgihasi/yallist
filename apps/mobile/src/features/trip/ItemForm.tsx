@@ -21,7 +21,7 @@ import type { NewItemInput } from '@/state/reducer';
 import { useTrip } from '@/state/trips';
 import { colors, fonts } from '@/theme';
 
-import { BulkAddLink } from './bulk/BulkAddSheet';
+import { AddManyLinks } from './bulk/AddManyLinks';
 import {
   COUNTER_FROM,
   duplicateOf,
@@ -241,7 +241,7 @@ export function ItemForm({
             </Text>
           </View>
         )}
-        {!item && <BulkAddLink tripId={tripId} list={list} text={name} />}
+        {!item && <AddManyLinks tripId={tripId} list={list} text={name} />}
         {!item && <CatalogPicker query={name} list={list} exclude={taken} onPick={pick} />}
       </View>
 
