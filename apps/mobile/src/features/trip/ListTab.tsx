@@ -20,6 +20,7 @@ import { useBag } from '@/state/bag';
 import { useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
+import { useBreakpoint } from '@/theme/breakpoint';
 
 import { BagCards } from './BagCards';
 import { CopyFromTripButton } from './bulk/AddManyLinks';
@@ -50,6 +51,8 @@ export function ListTab({
   const act = useTripAction(tripId);
   // Only the bring list: there's nothing to buy of what's already at home.
   const bag = useBag().data ?? [];
+  // Phone and tablet: a little tighter, as the trip screen around it, so the list starts higher.
+  const tight = useBreakpoint() !== 'desktop';
   const listItems = view.items.filter((i) => i.list === list);
   const shown = (f: ListFilter) =>
     filterItems(listItems, f, data.claims, data.expenses, view.activeIds, me);
@@ -86,7 +89,7 @@ export function ListTab({
   const progress = list === 'bring' && listProgress(listItems, data.claims, view.activeIds);
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, tight && styles.wrapTight]}>
       {list === 'buy' && <ShopBanner data={data} view={view} me={me} />}
       {list === 'bring' && <BagCards data={data} view={view} me={me} bag={bag} />}
       {progress && progress.total > 0 && (
@@ -223,6 +226,7 @@ export function ListTab({
 
 const styles = StyleSheet.create({
   wrap: { gap: space[4] },
+  wrapTight: { gap: space[3] },
   filters: { gap: space[2] },
   chips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space[2] },
   header: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 36 },

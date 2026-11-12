@@ -89,7 +89,7 @@ export function ReadinessHero({
   }
 
   return (
-    <Card gap={space[4]}>
+    <Card gap={space[3]}>
       <View style={styles.top}>
         <View style={styles.texts}>
           <Countdown startsOn={trip.startsOn} endsOn={trip.endsOn} now={now} variant="hero" />
