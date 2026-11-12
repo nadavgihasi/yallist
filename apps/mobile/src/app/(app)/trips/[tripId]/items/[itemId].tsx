@@ -24,6 +24,7 @@ import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
+import { repricedPurchase } from '@/state/reducer';
 import { useMe } from '@/state/store';
 import { useTripAction, useTripQuery } from '@/state/trips';
 import type { TripData } from '@/state/types';
@@ -131,10 +132,9 @@ function ItemSheetBody({
       if (latest !== undefined && latest !== original)
         act({ type: 'setNote', itemId: item.id, note: latest });
       if (edited) {
-        // Expenses aren't edited in place: the new one replaces the old.
-        const { id, ...expense } = edited;
-        act({ type: 'deleteExpense', expenseId: id });
-        act({ type: 'addExpense', expense });
+        // Expenses aren't edited in place: the new one, still this item's, replaces the old.
+        act({ type: 'deleteExpense', expenseId: edited.id });
+        act({ type: 'addExpense', expense: repricedPurchase(edited, item.id) });
       }
     };
     // Only on unmount: compare against the note as it was when the sheet opened.
