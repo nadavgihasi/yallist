@@ -31,18 +31,21 @@ export function FilterChip({
   );
 }
 
-/** Person toggle chip (who shares an expense). */
+/** Person toggle chip (who shares an expense), with an optional count. A long name is cut short. */
 export function PersonChip({
   person,
   name,
+  count,
   selected,
   onPress,
 }: {
   person: AvatarPerson;
   name: string;
+  count?: number;
   selected: boolean;
   onPress: () => void;
 }) {
+  const color = selected ? colors.primaryStrong : colors.inkMuted;
   return (
     <Pressable
       accessibilityRole="checkbox"
@@ -55,9 +58,10 @@ export function PersonChip({
       ]}
     >
       <Avatar person={person} ring={false} dimmed={!selected} />
-      <Text style={[type.buttonSm, { color: selected ? colors.primaryStrong : colors.inkMuted }]}>
+      <Text style={[type.buttonSm, styles.personName, { color }]} numberOfLines={1}>
         {name}
       </Text>
+      {count !== undefined && <Text style={[type.buttonSm, { color }]}>({count})</Text>}
     </Pressable>
   );
 }
@@ -109,7 +113,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   count: { ...type.caption, opacity: 0.8 },
-  person: { paddingStart: 6 },
+  person: { paddingStart: 6, maxWidth: '100%' },
+  personName: { flexShrink: 1 },
   suggestion: { maxWidth: 220, backgroundColor: colors.ground },
   plus: { color: colors.inkMuted },
   suggestionLabel: { flexShrink: 1, color: colors.ink },

@@ -36,3 +36,12 @@ export function assignTap(
   const cap = claimCap(item, claims, userId);
   return cap > 0 ? { ...who, quantity: cap } : undefined;
 }
+
+/**
+ * Who has the single item in their shopping run, when that's someone else: then no chip in the
+ * picker does anything, and it says why.
+ */
+export const othersRun = (item: Item, claims: readonly Claim[], me: string) =>
+  item.kind === 'single'
+    ? claimsFor(item.id, claims).find((c) => c.runId && c.userId !== me)?.userId
+    : undefined;

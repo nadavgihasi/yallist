@@ -6,7 +6,7 @@ import { fieldStyles } from '@/components/Fields';
 import { he } from '@/i18n/he';
 import { colors, fonts } from '@/theme';
 
-import { assignTap, type Assignment } from './assign';
+import { assignTap, othersRun, type Assignment } from './assign';
 import type { TripView } from './derive';
 
 /**
@@ -34,8 +34,10 @@ export function AssignPicker({
   const full =
     item.kind === 'qty' &&
     view.activeIds.some((id) => quantityOf(id) === 0 && !assignTap(item, claims, id, me));
-  const hint =
-    mine?.assignedBy && mine.assignedBy !== me
+  const shopper = othersRun(item, claims, me);
+  const hint = shopper
+    ? he.item.assignInRun(view.displayNameOf(shopper))
+    : mine?.assignedBy && mine.assignedBy !== me
       ? he.item.assignedBy(view.displayNameOf(mine.assignedBy))
       : full
         ? he.item.assignFull
@@ -46,16 +48,12 @@ export function AssignPicker({
       <View style={styles.chips} accessibilityLabel={title}>
         {view.activeIds.map((id) => {
           const quantity = quantityOf(id);
-          const name = view.nameOf(id);
           return (
             <PersonChip
               key={id}
               person={view.avatarOf(id)}
-              name={
-                item.kind === 'qty' && quantity > 0
-                  ? he.item.assignedQuantity(name, quantity)
-                  : name
-              }
+              name={view.nameOf(id)}
+              count={item.kind === 'qty' && quantity > 0 ? quantity : undefined}
               selected={quantity > 0}
               onPress={() => {
                 const assignment = assignTap(item, claims, id, me);

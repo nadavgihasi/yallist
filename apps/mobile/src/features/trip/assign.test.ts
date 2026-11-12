@@ -1,7 +1,7 @@
 import type { Claim, Item } from '@yallist/domain';
 import { describe, expect, it } from 'vitest';
 
-import { assignTap, canAssign } from './assign';
+import { assignTap, canAssign, othersRun } from './assign';
 
 const tent: Item = {
   id: 'tent',
@@ -51,6 +51,10 @@ describe('the "who brings it" picker', () => {
     const inRun = [has('tent', 'dana', 1, 'run')];
     expect(assignTap(tent, inRun, 'ron', 'me')).toBeUndefined();
     expect(assignTap(tent, inRun, 'dana', 'me')).toBeUndefined();
+    // ...and the picker says whose run it's in.
+    expect(othersRun(tent, inRun, 'me')).toBe('dana');
+    expect(othersRun(tent, [has('tent', 'me', 1, 'run')], 'me')).toBeUndefined();
+    expect(othersRun(tent, [has('tent', 'dana')], 'me')).toBeUndefined();
     // My own run's claim is mine to hand over.
     expect(assignTap(tent, [has('tent', 'me', 1, 'run')], 'ron', 'me')).toEqual({
       userId: 'ron',
