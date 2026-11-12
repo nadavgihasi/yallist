@@ -10,9 +10,13 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { ChipGroup, FilterChip, SuggestionChip } from '@/components/Chips';
+import { PillButton } from '@/components/PillButton';
 import { ItemIcon } from '@/components/ItemIcon';
 import { he } from '@/i18n/he';
 import { colors, radius, space, type } from '@/theme';
+
+/** How many items of a category show at once; the rest come with "more". */
+const PAGE = 24;
 
 /**
  * The catalog under a name field. While something is typed: the items that match, to tap (the
@@ -36,6 +40,7 @@ export function CatalogPicker({
   browse?: boolean;
 }) {
   const [open, setOpen] = useState<string>();
+  const [shown, setShown] = useState(PAGE);
   const typed = normalizeName(query).length > 0;
 
   if (typed) {
@@ -77,15 +82,26 @@ export function CatalogPicker({
             key={c.id}
             label={`${c.icon} ${c.name}`}
             selected={open === c.name}
-            onPress={() => setOpen(open === c.name ? undefined : c.name)}
+            onPress={() => {
+              setOpen(open === c.name ? undefined : c.name);
+              setShown(PAGE);
+            }}
           />
         ))}
       </ChipGroup>
       {items.length > 0 && (
         <View style={styles.wrap}>
-          {items.map((i) => (
+          {items.slice(0, shown).map((i) => (
             <SuggestionChip key={i.name} label={`${i.icon} ${i.name}`} onPress={() => onPick(i)} />
           ))}
+          {items.length > shown && (
+            <PillButton
+              label={he.catalog.more(items.length - shown)}
+              variant="quiet"
+              size="sm"
+              onPress={() => setShown(shown + PAGE)}
+            />
+          )}
         </View>
       )}
     </View>

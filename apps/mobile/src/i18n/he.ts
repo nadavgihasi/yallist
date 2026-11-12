@@ -310,6 +310,7 @@ export const he = {
   catalog: {
     results: 'הצעות מהקטלוג',
     categories: 'קטגוריות בקטלוג',
+    more: (left: number) => `עוד ${left} פריטים`,
   },
   addItem: {
     title: 'פריט חדש',

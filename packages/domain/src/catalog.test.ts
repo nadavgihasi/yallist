@@ -24,7 +24,7 @@ describe('CATALOG', () => {
       expect(known.has(item.category), item.name).toBe(true);
       expect(item.name.length).toBeLessThanOrEqual(80);
     }
-    expect(CATALOG.length).toBeGreaterThan(200);
+    expect(CATALOG.length).toBeGreaterThanOrEqual(5000);
   });
 
   it('has items in every category', () => {
@@ -47,10 +47,10 @@ describe('CATALOG', () => {
       for (const item of items) expect(findCatalogItem(item.name), item.name).toBeDefined();
   });
 
-  it('never lets a name or an alias belong to two items', () => {
+  it('never lets a name or a synonym belong to two items', () => {
     const owner = new Map<string, string>();
     for (const item of CATALOG)
-      for (const key of [item.name, ...item.aliases].map(normalizeName)) {
+      for (const key of [item.name, ...item.synonyms].map(normalizeName)) {
         const other = owner.get(key);
         expect(other === undefined || other === item.name, `${key}: ${other} / ${item.name}`).toBe(
           true,
@@ -71,18 +71,29 @@ describe('normalizeName', () => {
 
 describe('searchCatalog', () => {
   it('finds by the start of the name, best first', () => {
-    const [first, ...rest] = searchCatalog('מנג');
+    const [first, ...rest] = searchCatalog('מנג', { list: 'bring' });
     expect(first?.name).toBe('מנגל');
     expect(rest.length).toBeLessThanOrEqual(7);
   });
 
-  it('finds by another name', () => {
+  it('finds by a synonym', () => {
     expect(searchCatalog('גריל')[0]?.name).toBe('מנגל');
-    expect(searchCatalog('סטייק').map((i) => i.name)).toContain('בשר לעל האש');
+  });
+
+  it('never offers another item for what was typed', () => {
+    // A related item is not a synonym: mango is not pineapple.
+    const names = searchCatalog('מנגו', { limit: 50 }).map((i) => i.name);
+    expect(names).toContain('מנגו');
+    expect(names).not.toContain('אננס');
+    expect(names.every((n) => n.includes('מנגו'))).toBe(true);
+  });
+
+  it('finds a singular for a plural', () => {
+    expect(searchCatalog('עגבניה')[0]?.name).toBe('עגבניות');
   });
 
   it('finds by a later word', () => {
-    expect(searchCatalog('שינה').map((i) => i.name)).toContain('שק שינה');
+    expect(searchCatalog('שינה', { limit: 50 }).map((i) => i.name)).toContain('שק שינה');
   });
 
   it('puts the list being added to first and drops what the list has', () => {

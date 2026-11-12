@@ -1,8 +1,9 @@
+import { CATALOG_SOURCES } from './catalog-data';
 import type { ItemKind, ListKind } from './types';
 
 /** A group of catalog items. Its list is where its items belong: what to bring or what to buy. */
 export interface CatalogCategory {
-  /** Stable id, never shown. */
+  /** Stable id, never shown; the data files group their items under it. */
   id: string;
   /** Shown, and the name of the trip category the item lands in. */
   name: string;
@@ -13,7 +14,7 @@ export interface CatalogCategory {
 export interface CatalogItem {
   /** The canonical name: what a trip item and my bag are matched by, so always the same spelling. */
   name: string;
-  /** An emoji: one picture per item, drawn by the system on every platform. */
+  /** An emoji: a picture per item, drawn by the system on every platform. */
   icon: string;
   category: string;
   list: ListKind;
@@ -21,17 +22,12 @@ export interface CatalogItem {
   kind: ItemKind;
   /** The count for `qty`. */
   quantityNeeded: number;
-  /** Other names people type for it. */
-  aliases: string[];
+  /**
+   * Other names for this very item (`גריל` for `מנגל`). Never a related item: `מנגו` is not an
+   * alias of `אננס`. A name or synonym belongs to one item only.
+   */
+  synonyms: string[];
 }
-
-interface Options {
-  kind?: ItemKind;
-  qty?: number;
-  aliases?: string[];
-}
-
-type Entry = [name: string, icon: string, options?: Options];
 
 const cat = (id: string, name: string, icon: string, list: ListKind): CatalogCategory => ({
   id,
@@ -41,431 +37,115 @@ const cat = (id: string, name: string, icon: string, list: ListKind): CatalogCat
 });
 
 export const CATALOG_CATEGORIES: CatalogCategory[] = [
+  // What to bring.
   cat('cooking', 'בישול ועל האש', '🔥', 'bring'),
   cat('sleeping', 'לינה', '⛺', 'bring'),
   cat('seating', 'ישיבה וצל', '🪑', 'bring'),
   cat('tableware', 'כלים וסכו״ם', '🍽️', 'bring'),
+  cat('kitchen', 'ציוד מטבח', '🍳', 'bring'),
   cat('clothes', 'ביגוד והנעלה', '👕', 'bring'),
   cat('hygiene', 'היגיינה וטיפוח', '🧴', 'bring'),
   cat('health', 'עזרה ראשונה ובריאות', '🩹', 'bring'),
-  cat('light', 'תאורה וכלים', '🔦', 'bring'),
+  cat('light', 'תאורה וניווט', '🔦', 'bring'),
+  cat('tools', 'כלי עבודה', '🔧', 'bring'),
   cat('tech', 'חשמל וטכנולוגיה', '🔌', 'bring'),
   cat('water', 'ים ובריכה', '🏖️', 'bring'),
+  cat('sports', 'ספורט וטיולים', '🥾', 'bring'),
+  cat('winter', 'שלג וחורף', '⛷️', 'bring'),
+  cat('wheels', 'רכב ואופניים', '🚗', 'bring'),
+  cat('fishing', 'דיג', '🎣', 'bring'),
   cat('fun', 'משחקים ובידור', '🎲', 'bring'),
+  cat('kids', 'ילדים ותינוקות', '🍼', 'bring'),
+  cat('pets', 'חיות מחמד', '🐕', 'bring'),
+  cat('party', 'מסיבה ואירוח', '🎉', 'bring'),
   cat('docs', 'מסמכים וכסף', '🪪', 'bring'),
   cat('general', 'כללי', '🎒', 'bring'),
+  // What to buy.
   cat('meat', 'בשר', '🥩', 'buy'),
+  cat('fish', 'דגים ופירות ים', '🐟', 'buy'),
   cat('bread', 'לחם וסלטים', '🥖', 'buy'),
+  cat('bakery', 'מאפים ועוגות', '🥐', 'buy'),
   cat('veg', 'ירקות', '🥬', 'buy'),
   cat('fruit', 'פירות', '🍉', 'buy'),
+  cat('nuts', 'אגוזים ופירות יבשים', '🥜', 'buy'),
   cat('dairy', 'חלב וביצים', '🥚', 'buy'),
+  cat('cheese', 'גבינות', '🧀', 'buy'),
+  cat('breakfast', 'ארוחת בוקר', '🥣', 'buy'),
+  cat('pantry', 'מזווה', '🍚', 'buy'),
+  cat('spices', 'תבלינים', '🌶️', 'buy'),
+  cat('sauces', 'רטבים ושמנים', '🫒', 'buy'),
+  cat('canned', 'שימורים ומוכנים', '🥫', 'buy'),
+  cat('frozen', 'קפואים וגלידות', '🍦', 'buy'),
+  cat('snacks', 'חטיפים וממתקים', '🍫', 'buy'),
   cat('drinks', 'שתייה', '🥤', 'buy'),
+  cat('coffee', 'קפה ותה', '☕', 'buy'),
   cat('alcohol', 'אלכוהול', '🍺', 'buy'),
-  cat('snacks', 'חטיפים וקינוחים', '🍫', 'buy'),
-  cat('pantry', 'מזווה ותבלינים', '🧂', 'buy'),
-  cat('disposable', 'חד־פעמי וניקיון', '🧻', 'buy'),
+  cat('cleaning', 'ניקיון וחד־פעמי', '🧻', 'buy'),
+  cat('care', 'מוצרי טיפוח', '🧼', 'buy'),
+  cat('pharmacy', 'בית מרקחת', '💊', 'buy'),
+  cat('baby', 'מוצרי תינוקות', '👶', 'buy'),
 ];
-
-const some = (qty: number, aliases?: string[]): Options => ({ qty, aliases });
-const as = (...aliases: string[]): Options => ({ aliases });
-const eachAs = (...aliases: string[]): Options => ({ kind: 'each', aliases });
-
-const BY_CATEGORY: Record<string, Entry[]> = {
-  cooking: [
-    ['מנגל', '🔥', as('גריל')],
-    ['פחמים', '⚫', as('פחם', 'גחלים')],
-    ['הדלקה לפחמים', '🧯', as('מדליק', 'מצית אש', 'קוביות הדלקה')],
-    ['מפוח למנגל', '💨', as('מניפה')],
-    ['מלקחיים', '🥢'],
-    ['רשת לצלייה', '♨️', as('סבכה', 'גריל רשת')],
-    ['שיפודים', '🍢', as('שפודים')],
-    ['גזייה ובלון גז', '⛽', as('גזייה', 'בלון גז', 'פתילייה')],
-    ['סיר ומחבת', '🍳', as('סיר', 'מחבת', 'סיר בישול', 'סירים')],
-    ['קומקום חשמלי', '🫖', as('קומקום')],
-    ['פלטה', '🔥'],
-    ['קרש חיתוך וסכין', '🔪', as('קרש חיתוך', 'סכין')],
-    ['פותחן', '🍾', as('פותחן קופסאות', 'פותחן בקבוקים')],
-    ['צידנית', '🧊', as('צידניות', 'קולר', 'קופסת קרח')],
-    ['פינג׳אן', '☕', as('קנקן קפה', 'בריקי')],
-    ['גפרורים', '🔥'],
-    ['כפפות חום', '🧤', as('כפפות לגריל')],
-  ],
-  sleeping: [
-    ['אוהלים', '⛺', some(2, ['אוהל'])],
-    ['שק שינה', '🛌', eachAs('שקי שינה')],
-    ['מזרן', '🛏️', eachAs('מזרן שטח', 'מזרני שינה')],
-    ['מזרן מתנפח', '🛏️', eachAs('מזרן אוויר')],
-    ['משאבה למזרן', '🫧', as('משאבת אוויר')],
-    ['כרית', '🛌', eachAs('כריות', 'כרית נסיעה')],
-    ['שמיכה', '🛌', eachAs('שמיכות')],
-    ['ציוד לאוהל', '🔨', as('יתדות', 'יתד', 'פטיש לאוהל')],
-    ['אטמי אוזניים', '👂', eachAs('אטמים', 'אפרכסת')],
-    ['ערסל', '🪢'],
-    ['שמיכת פליז', '🧸', eachAs('פליז')],
-  ],
-  seating: [
-    ['כיסאות מתקפלים', '🪑', some(8, ['כיסא', 'כיסאות', 'כסאות', 'כיסא מתקפל'])],
-    ['מחצלות', '🧺', as('מחצלת', 'שטיח פיקניק', 'שטיח')],
-    ['שולחן מתקפל', '🪵', as('שולחן', 'שולחן קמפינג')],
-    ['צילייה', '⛱️', as('סככה', 'גזיבו', 'אוהל צל', 'שמשייה')],
-    ['כיסאות חוף', '🏖️', some(6, ['כיסא חוף', 'כיסא נוח', 'כיסא קמפינג'])],
-    ['כריות ישיבה', '🛋️', as('כרית ישיבה')],
-  ],
-  tableware: [
-    ['צלחות וסכו״ם', '🍽️', as('צלחות', 'סכו״ם', 'סכום')],
-    ['כוסות', '🥛', as('כוס')],
-    ['כוסות יין', '🍷', as('כוס יין')],
-    ['קערות', '🥣', as('קערה')],
-    ['מגש הגשה', '🍽️', as('מגש')],
-    ['ספל', '☕', eachAs('כוס קפה', 'ספלים', 'כוס תרמית')],
-    ['תרמוס', '🫗', as('תרמוס חם')],
-    ['בקבוק מים', '🚰', eachAs('מימייה', 'בקבוק שתייה', 'בקבוקי מים')],
-    ['קופסאות אחסון', '🥡', as('תבניות אחסון', 'טאפרוור')],
-    ['מגבות נייר', '🧻'],
-    ['מטלית', '🧽', as('מטלית כלים', 'ספוג')],
-    ['סבון כלים', '🫧'],
-  ],
-  clothes: [
-    ['בגדים להחלפה', '👕', eachAs('בגדים', 'חולצות', 'תחתונים')],
-    ['גרביים', '🧦', eachAs('גרב')],
-    ['מכנסיים', '👖', eachAs('מכנס', 'ג׳ינס')],
-    ['מעיל', '🧥', eachAs('ג׳קט', 'מעיל גשם', 'ז׳קט')],
-    ['סווטשירט', '🧶', eachAs('קפוצ׳ון', 'סוודר', 'פליס')],
-    ['כובע', '🧢', eachAs('כובע שמש', 'כובע מצחייה', 'כובע רחב שוליים')],
-    ['כובע צמר', '🧶', eachAs('צעיף', 'כפפות')],
-    ['נעלי הליכה', '🥾', eachAs('נעלי טיול', 'נעליים', 'נעלי ספורט')],
-    ['כפכפים', '🩴', eachAs('סנדלים', 'נעלי בית')],
-    ['בגד ים', '🩱', eachAs('בגדי ים', 'בגד־ים')],
-    ['משקפי שמש', '🕶️', eachAs()],
-    ['פיג׳מה', '😴', eachAs('פיג׳מות')],
-    ['חליפת גשם', '☔', eachAs('פונצ׳ו', 'פונצ׳ו גשם')],
-    ['בגדים חמים', '🧣', eachAs('בגדי חורף')],
-  ],
-  hygiene: [
-    ['מגבת', '🧖', eachAs('מגבות', 'מגבת רחצה')],
-    ['מגבת חוף', '🏖️', eachAs('מגבות חוף')],
-    ['מברשת שיניים ומשחה', '🪥', eachAs('מברשת שיניים', 'משחת שיניים')],
-    ['שמפו וסבון', '🧼', eachAs('שמפו', 'סבון', 'סבון גוף')],
-    ['דאודורנט', '🧴', eachAs('דיאודורנט')],
-    ['קרם הגנה', '🧴', as('קרם שיזוף', 'קרם הגנה מהשמש', 'סאן בלוק')],
-    ['קרם לחות', '🧴', eachAs('קרם ידיים', 'קרם גוף')],
-    ['דוחה יתושים', '🦟', as('קרם נגד יתושים', 'ספריי יתושים', 'מדביר')],
-    ['מסרק', '🪮', eachAs('מברשת שיער', 'גומיות', 'גומיות לשיער')],
-    ['ג׳ל חיטוי', '🧴', as('אלכוג׳ל', 'חיטוי ידיים')],
-    ['תחבושות היגייניות', '🩸', eachAs('טמפונים', 'מוצרי היגיינה')],
-    ['מכשיר גילוח', '🪒', eachAs('סכין גילוח')],
-  ],
-  health: [
-    ['ערכת עזרה ראשונה', '🩹', as('עזרה ראשונה', 'ערכת חבישה', 'תחבושות')],
-    ['תרופות אישיות', '💊', eachAs('תרופות', 'כדורים', 'תרופה')],
-    ['משחה לעקיצות', '🧴', as('אלוורה', 'ג׳ל אלוורה', 'משחה')],
-    ['פלסטרים', '🩹', as('פלסטר')],
-    ['מד חום', '🌡️', as('מדחום')],
-    ['מסכות', '😷', eachAs('מסכה', 'מסכת פנים')],
-    ['אינהלר', '🫁', eachAs('משאף')],
-    ['שקיות לבחילה', '🤢', as('שקיות הקאה', 'כדורי בחילה', 'שקיות נסיעה')],
-  ],
-  light: [
-    ['פנס ראש', '🔦', eachAs('פנס מצח', 'פנס קדמי')],
-    ['פנס', '🔦', as('פנס יד', 'פנס כיס', 'פנסים')],
-    ['פנס אוהל', '🏮', as('פנס שולחן', 'לדים', 'מנורת אוהל')],
-    ['סוללות', '🔋', as('סוללה', 'סוללות AA', 'סוללות AAA')],
-    ['נרות', '🕯️', as('נר', 'נרות ריחניים')],
-    ['שרשרת אורות', '✨', as('שרשרת לדים', 'אורות', 'קישוט אורות')],
-    ['סכין אולר', '🗡️', as('אולר', 'סכין שוויצרית', 'מולטי־טול')],
-    ['חבל', '🪢', as('חבלים', 'חוט', 'קשירה')],
-    ['סרט הדבקה', '🩹', as('דבק', 'דבק חזק', 'דאקט טייפ')],
-    ['פטיש', '🔨', as('פטיש ומסמרים', 'פטישון')],
-    ['מקדחה', '🪛', as('מברג')],
-    ['מגרפה', '🧹', as('את', 'מטאטא', 'כף')],
-    ['כף חפירה', '🪣', as('חפירה', 'את חפירה')],
-  ],
-  tech: [
-    ['מטען לטלפון', '🔌', eachAs('מטען', 'כבל טעינה', 'מטענים')],
-    ['סוללת גיבוי', '🔋', eachAs('פאוור בנק', 'בנק כוח', 'פאוור־בנק')],
-    ['רמקול', '🔊', as('רמקול בלוטות׳', 'בומבוקס', 'מוזיקה')],
-    ['אוזניות', '🎧', eachAs('אוזניות בלוטות׳')],
-    ['מאריך חשמל', '🔌', as('מפצל חשמל', 'כבל מאריך', 'מפצל')],
-    ['גנרטור', '⚡', as('מחולל', 'ג׳נרטור')],
-    ['מצלמה', '📷', as('מצלמת אקשן', 'גו־פרו', 'GoPro')],
-    ['חצובה', '🎥', as('חצובה למצלמה', 'מקל סלפי')],
-    ['לוח סולארי', '☀️', as('פאנל סולארי', 'מטען סולארי')],
-    ['מצפן', '🧭'],
-    ['משקפת', '🔭', as('משקפות', 'טלסקופ')],
-  ],
-  water: [
-    ['משקפי ים', '🥽', eachAs('משקפות שחייה', 'משקפי שחייה', 'משקפת ים')],
-    ['שנורקל', '🤿', eachAs('שנורקלים', 'סנפירים', 'סנפיר')],
-    ['מטקות', '🏓', as('מטקה', 'כדור מטקות', 'מחבטי חוף')],
-    ['כדור', '⚽', as('כדורגל', 'כדורעף', 'כדור חוף', 'כדורסל')],
-    ['מצוף', '🛟', eachAs('גלגל ים', 'גלגל הצלה', 'מצופים')],
-    ['מזרון ים', '🏊', as('מזרן ים', 'מזרון מתנפח לים', 'סירה מתנפחת')],
-    ['גלשן', '🏄', as('סאפ', 'סאפ בורד', 'גלשן סאפ')],
-    ['חולצת שחייה', '🏊', eachAs('חולצת לייקרה', 'חליפת צלילה', 'חליפת גלישה')],
-    ['נעלי ים', '🩴', eachAs('נעלי מים')],
-    ['כובע ים', '👒', eachAs('כובע שחייה')],
-    ['קרם לאחר שיזוף', '🧴', as('קרם אחרי שמש', 'משחה לכוויות שמש')],
-    ['דלי וכף חול', '🪣', as('דלי', 'צעצועי חול', 'צעצועי ים')],
-    ['שקית לבגדים רטובים', '🛍️', as('שקית רטובים', 'שקית אטומה')],
-    ['בריכה מתנפחת', '🏊', as('בריכה')],
-    ['בגדי שחייה לילדים', '🩲', eachAs('חיתולי שחייה')],
-  ],
-  fun: [
-    ['משחקי קופסה', '🎲', as('משחק קופסא', 'משחקי שולחן', 'משחקי חברה')],
-    ['קלפים', '🃏', as('חפיסת קלפים', 'פוקר')],
-    ['שש בש', '🎲', as('שש־בש', 'שש בש ושחמט', 'שח', 'שחמט')],
-    ['גיטרה', '🎸', as('כלי נגינה', 'כלי נגינה אקוסטי', 'תוף', 'חליל')],
-    ['פריסבי', '🥏', as('צלחת מעופפת', 'פריזבי')],
-    ['בלונים', '🎈', as('בלון', 'קישוטים')],
-    ['ספר', '📖', eachAs('ספרים', 'ספר קריאה', 'מגזין')],
-    ['קלמר וצבעים', '🖍️', as('צבעים', 'מחברת', 'ציור', 'עפרונות')],
-    ['חכה', '🎣', as('חכות', 'ציוד דיג')],
-    ['עפיפון', '🪁', as('עפיפונים')],
-    ['דגל', '🏳️', as('דגלים')],
-    ['ג׳נגה', '🧱', as('ג׳ינגה', 'לגו')],
-  ],
-  docs: [
-    ['תעודת זהות', '🪪', eachAs('ת.ז', 'ת״ז', 'דרכון', 'תעודה מזהה')],
-    ['רישיון נהיגה', '🪪', eachAs('רישיון')],
-    ['ארנק', '👛', eachAs('כסף', 'כרטיס אשראי', 'כרטיסי אשראי')],
-    ['כסף מזומן', '💵', eachAs('מזומן', 'שקל', 'מטבעות')],
-    ['מפתחות', '🔑', eachAs('מפתח', 'מפתחות הבית', 'מפתחות לרכב')],
-    ['כרטיס קופת חולים', '🏥', eachAs('כרטיס חבר', 'כרטיס חולים')],
-    ['הזמנה לצימר', '🏡', as('אישור הזמנה', 'אישור הזמנה לצימר', 'כרטיסים')],
-    ['פנקס חיסונים', '💉', eachAs('תעודת חיסון', 'חיסונים')],
-    ['ביטוח נסיעות', '📄', eachAs('פוליסה')],
-    ['תוכנית טיול', '🗺️', as('תכנון מסלול', 'מסלול')],
-    ['טלפון', '📱', eachAs('פלאפון', 'נייד')],
-    ['משקפיים', '👓', eachAs('משקפי ראייה')],
-  ],
-  general: [
-    ['תיק גב', '🎒', eachAs('תרמיל', 'תיק', 'תיק יום', 'תיק קטן')],
-    ['תיק צד', '👜', eachAs('פאוץ׳', 'ארנק קטן')],
-    ['שקיות', '🛍️', as('שקית', 'שקיות ניילון', 'שקיות קניות')],
-    ['תיק קניות', '🛒', as('סל קניות', 'עגלת קניות')],
-    ['קסדה', '⛑️', eachAs('קסדות', 'קסדת אופניים')],
-    ['ציוד לחיית מחמד', '🐕', as('כלב', 'מזון לכלב', 'רצועה', 'רצועה לכלב', 'חתול')],
-    ['ציוד לתינוק', '🍼', as('בקבוק לתינוק', 'חיתולים', 'מוצץ', 'עגלה', 'עגלת תינוק')],
-    ['מטריה', '☂️', as('מטריות')],
-    ['שעון', '⌚', eachAs('שעון חכם', 'שעון יד')],
-  ],
-  meat: [
-    ['בשר לעל האש', '🥩', as('בשר', 'סטייקים', 'אנטריקוט', 'בשר לגריל', 'בשר טחון')],
-    ['פרגיות', '🍗', as('עוף', 'כנפיים', 'חזה עוף', 'שוקיים', 'עופות')],
-    ['נקניקיות', '🌭', as('נקניק', 'נקניקיה', 'נקניקיות עוף', 'נקניקיות בקר')],
-    ['המבורגרים', '🍔', as('המבורגר', 'קציצות', 'קבב', 'קבבים')],
-    ['בשר לערב', '🥩', as('בשר ערב')],
-    ['דג', '🐟', as('דגים', 'סלמון', 'פילה דג', 'דג שלם', 'סול')],
-    ['צלעות', '🍖', as('ריבס', 'צלעות טלה', 'צלעות בקר')],
-    ['כבד', '🥩', as('כבד עוף', 'קורקבנים', 'לבבות', 'לבבות עוף')],
-    ['שניצל', '🍗', as('שניצלים', 'נגטס')],
-    ['טופו', '🌱', as('בשר צמחי', 'המבורגר צמחי', 'צמחוני', 'טבעוני', 'סייטן')],
-  ],
-  bread: [
-    ['פיתות', '🫓', as('פיתה', 'לאפות', 'לאפה')],
-    ['לחם', '🍞', as('כיכר לחם', 'לחם פרוס', 'לחם קל')],
-    ['לחמניות', '🥖', as('לחמנייה', 'באגט', 'בגטים')],
-    ['לחמים ומאפים', '🥐', as('מאפים', 'בורקס', 'קרואסון', 'מאפה')],
-    ['חלה', '🥖', as('חלות', 'חלה לשבת')],
-    ['טורטיות', '🌯', as('טורטייה', 'טורטיה', 'לחם דק')],
-    ['סלטים ומטבלים', '🥗', as('סלטים', 'מטבלים', 'סלט', 'מטבל')],
-    ['חומוס', '🫘', as('חומוס מוכן')],
-    ['טחינה', '🥜', as('טחינה גולמית', 'טחינה מוכנה')],
-    ['זיתים', '🫒', as('זית', 'זיתים ירוקים', 'זיתים שחורים')],
-    ['חמוצים', '🥒', as('מלפפון חמוץ', 'מלפפונים חמוצים', 'כבוש', 'כבושים')],
-    ['קרקרים', '🍘', as('קרקר', 'מצות', 'מצה', 'פתיתים')],
-    ['כריכים', '🥪', as('סנדוויץ׳', 'סנדוויצ׳ים', 'כריך', 'טוסט')],
-    ['פסטה', '🍝', as('ספגטי', 'פנה', 'מקרוני')],
-    ['אורז', '🍚', as('אורז לבן', 'אורז בסמטי')],
-    ['קוסקוס', '🥘', as('בורגול', 'קינואה')],
-  ],
-  veg: [
-    ['ירקות', '🥦', as('ירקות לסלט', 'ירקות לגריל', 'ירקות טריים')],
-    ['עגבניות', '🍅', as('עגבנייה', 'עגבניות שרי', 'שרי')],
-    ['מלפפונים', '🥒', as('מלפפון')],
-    ['בצל', '🧅', as('בצלים', 'בצל ירוק', 'בצל סגול', 'שאלוט')],
-    ['שום', '🧄', as('שיני שום', 'ראש שום')],
-    ['פלפלים', '🫑', as('פלפל', 'פלפל חריף', 'פלפל אדום', 'פלפל ירוק', 'פלפל צהוב')],
-    ['גזר', '🥕', as('גזרים', 'גזר ננסי')],
-    ['תפוחי אדמה', '🥔', as('תפוח אדמה', 'ת״א', 'בטטה', 'בטטות', 'תפו״א')],
-    ['תירס', '🌽', as('קלח תירס', 'קלחי תירס')],
-    ['פטריות', '🍄', as('שמפיניון', 'פטרייה', 'פורטבלו')],
-    ['חסה', '🥬', as('חסות', 'עלים', 'עלי חסה', 'שומר')],
-    ['קישואים', '🥒', as('קישוא', 'זוקיני')],
-    ['דלעת', '🎃', as('דלעת מבושלת', 'דלורית')],
-    ['ברוקולי', '🥦', as('כרובית', 'כרוב ניצנים')],
-    ['אבוקדו', '🥑', as('אבוקדו בשל', 'אבוקדו קשה')],
-    ['לימון', '🍋', as('לימונים', 'מיץ לימון')],
-    ['חריף', '🌶️', as('צ׳ילי', 'פלפל צ׳ילי', 'חריפים')],
-  ],
-  fruit: [
-    ['אבטיח', '🍉', as('אבטיחים', 'מלון', 'מלונים')],
-    ['פירות', '🍎', as('פירות העונה', 'פרי', 'פירות טריים')],
-    ['תפוחים', '🍎', as('תפוח', 'תפוח עץ')],
-    ['בננות', '🍌', as('בננה')],
-    ['ענבים', '🍇', as('ענב')],
-    ['תפוזים', '🍊', as('תפוז', 'מנדרינות', 'קלמנטינות', 'אשכוליות', 'אשכולית')],
-    ['אגסים', '🍐', as('אגס')],
-    ['אפרסקים', '🍑', as('אפרסק', 'נקטרינות', 'נקטרינה', 'שזיפים', 'שזיף', 'משמש', 'משמשים')],
-    ['תותים', '🍓', as('תות', 'תות שדה', 'פירות יער', 'אוכמניות')],
-    ['דובדבנים', '🍒', as('דובדבן', 'דבדבנים')],
-    ['אננס', '🍍', as('מנגו', 'פפאיה', 'פירות טרופיים')],
-    ['קיווי', '🥝', as('קיוי')],
-    ['תמרים', '🌴', as('תמר', 'מג׳הול', 'תמרי מג׳הול')],
-    ['פירות יבשים', '🥜', as('צימוקים', 'משמש מיובש', 'חמניות', 'חמוציות')],
-    ['אגוזים', '🌰', as('שקדים', 'בוטנים', 'קשיו', 'פיסטוק', 'אגוזי מלך', 'פקאן')],
-  ],
-  dairy: [
-    ['ביצים', '🥚', as('ביצה', 'חבילת ביצים', 'ביצים קשות')],
-    ['חלב', '🥛', as('חלב טרי', 'חלב קוטג׳', 'חלב סויה', 'חלב שקדים', 'חלב שיבולת שועל')],
-    ['גבינות וממרחים', '🧀', as('גבינות', 'גבינה', 'ממרחים', 'גבינת שמנת', 'גבינה לבנה')],
-    ['גבינה צהובה', '🧀', as('צהובה', 'גבינה מגורדת', 'מוצרלה', 'פרמזן')],
-    ['קוטג׳', '🥣', as('קוטג', 'שמנת חמוצה', 'שמנת')],
-    ['יוגורט', '🥣', as('יוגורטים', 'מעדן חלב', 'מעדנים', 'לבן', 'לבנה')],
-    ['חמאה', '🧈', as('מרגרינה', 'ממרח חמאה')],
-    ['קפה וחלב', '☕', as('קפה ויום', 'קפה ותה')],
-    [
-      'קפה',
-      '☕',
-      as('קפה שחור', 'קפה נמס', 'נס קפה', 'קפה טורקי', 'אספרסו', 'קפסולות', 'קפסולות קפה'),
-    ],
-    ['תה', '🍵', as('תה ירוק', 'תה צמחים', 'שקיות תה', 'נענע לתה', 'תה נענע')],
-    ['סוכר', '🍬', as('ממתיק', 'סוכרזית', 'דבש', 'סירופ מייפל')],
-    ['שמנת לקפה', '🥛', as('קרם', 'מחלבה')],
-    [
-      'גבינת פטה',
-      '🧀',
-      as('פטה', 'בולגרית', 'גבינה בולגרית', 'חלומי', 'גבינת עזים', 'גבינה לגריל'),
-    ],
-    ['שוקו', '🍫', as('חלב שוקו', 'שוקולית', 'שוקו בשקית')],
-    ['דגני בוקר', '🥣', as('קורנפלקס', 'גרנולה', 'שיבולת שועל', 'דייסה', 'מוזלי')],
-    ['ריבה', '🍯', as('ריבות', 'נוטלה', 'ממרח שוקולד', 'חמאת בוטנים', 'שוקולד למריחה')],
-  ],
-  drinks: [
-    ['מים', '💧', as('שישיית מים', 'מים מינרליים', 'מים לשתייה', 'מי עדן')],
-    ['שתייה קלה', '🥤', as('קולה', 'ספרייט', 'פאנטה', 'שתייה', 'משקאות קלים', 'משקאות', 'שתיה')],
-    ['מיץ', '🧃', as('מיצים', 'מיץ תפוזים', 'מיץ ענבים', 'תרכיז', 'סירופ', 'ויטמינצ׳יק')],
-    ['מים מוגזים', '🫧', as('סודה', 'סודה מים', 'סודה קלאב', 'מים עם גז', 'שוופס')],
-    ['קרח', '🧊', as('קוביות קרח', 'שקי קרח', 'שק קרח')],
-    ['משקה אנרגיה', '⚡', as('אנרגיה', 'רדבול', 'איזוטוני', 'משקה ספורט')],
-    ['לימונדה', '🍋', as('לימונענע', 'ברד', 'ברד לימון')],
-    ['תה קר', '🧋', as('אייס טי', 'קפה קר', 'נסטי', 'פיוז׳ טי')],
-  ],
-  alcohol: [
-    ['בירות', '🍺', as('בירה', 'בירות ושתייה קלה', 'בירה קרה', 'גולדסטאר', 'קורונה', 'ביר')],
-    ['יין', '🍷', as('יין אדום', 'יין לבן', 'יין רוזה', 'בקבוק יין', 'יינות', 'בקבוקי יין')],
-    [
-      'וודקה',
-      '🍸',
-      as('ויסקי', 'ג׳ין', 'רום', 'טקילה', 'אלכוהול חריף', 'ערק', 'עראק', 'משקאות חריפים'),
-    ],
-    ['קוקטייל', '🍹', as('קוקטיילים', 'סנגריה', 'ספריץ', 'אפרול', 'שמפניה', 'פרוסקו', 'יין מבעבע')],
-  ],
-  snacks: [
-    ['חטיפים', '🥨', as('חטיף', 'במבה', 'ביסלי', 'צ׳יפס', 'שקדי מרק', 'פרינגלס')],
-    ['מרשמלו', '🍡', as('מרשמלוז', 'מרשמלו לצלייה')],
-    ['שוקולד', '🍫', as('שוקולדים', 'חטיפי שוקולד', 'קינדר', 'שוקולד מריר', 'חטיף שוקולד')],
-    ['עוגה', '🍰', as('עוגות', 'עוגייה', 'מאפינס', 'בראוניז', 'בראוני')],
-    ['גלידה', '🍦', as('קרטיב', 'קרטיבים', 'ארטיק', 'ארטיקים', 'גלידות', 'קסטה')],
-    ['ממתקים', '🍬', as('סוכריות', 'סוכריה', 'מסטיק', 'סוכריות גומי', 'גומי')],
-    ['נשנושים', '🍿', as('פופקורן', 'פיצוחים', 'גרעינים', 'גרעיני חמניות', 'גרעינים שחורים')],
-    [
-      'חטיפי אנרגיה',
-      '🍫',
-      as('חטיף אנרגיה', 'חטיפי דגנים', 'חטיף בריאות', 'חטיף גרנולה', 'חטיפי חלבון'),
-    ],
-    ['סופגניות', '🍩', as('דונאטס', 'סופגנייה', 'דונאט', 'פנקייק', 'פנקייקים', 'וופל', 'וופלים')],
-    ['עוגיות', '🍪', as('ביסקוויט', 'ביסקוויטים', 'עוגיות שוקולד', 'עוגיות חמאה', 'פתי בר')],
-  ],
-  pantry: [
-    ['מלח', '🧂', as('מלח גס', 'מלח ים', 'מלח ופלפל', 'פלפל שחור', 'תבלינים')],
-    ['שמן', '🫒', as('שמן זית', 'שמן קנולה', 'שמן לבישול', 'שמן לטיגון', 'שמן לגריל')],
-    [
-      'קטשופ',
-      '🍅',
-      as(
-        'קטשופ ומיונז',
-        'מיונז',
-        'חרדל',
-        'רוטב',
-        'רטבים',
-        'סומסום',
-        'בארבקיו',
-        'ברביקיו',
-        'רוטב ברביקיו',
-      ),
-    ],
-    ['רוטב סויה', '🥢', as('סויה', 'צ׳ילי מתוק', 'סיראצ׳ה', 'רוטב חריף', 'שאטה')],
-    ['קמח', '🌾', as('קמח לבן', 'קמח מלא', 'שמרים', 'אבקת אפייה', 'סוכר חום')],
-    [
-      'תבלין לבשר',
-      '🌶️',
-      as('תבלין', 'תבלין בשר', 'פפריקה', 'כמון', 'כורכום', 'אורגנו', 'זעתר', 'סומאק', 'שום גרוס'),
-    ],
-    [
-      'שימורים',
-      '🥫',
-      as(
-        'שימורי תירס',
-        'שימורי טונה',
-        'טונה',
-        'שעועית אדומה',
-        'חומוס שימורים',
-        'עגבניות מרוסקות',
-        'קופסת שימורים',
-      ),
-    ],
-    [
-      'מרק',
-      '🍜',
-      as('מרק אינסטנט', 'אבקת מרק', 'קוסקוס מוכן', 'אטריות', 'נודלס', 'אטריות אינסטנט'),
-    ],
-    ['פיצה', '🍕', as('בצק פיצה', 'רוטב פיצה', 'בצק', 'בצק עלים', 'בצק מוכן')],
-    ['תבשילים', '🍲', as('צ׳ולנט', 'חמין', 'קדירה', 'ארוחה מוכנה', 'תבשיל')],
-    [
-      'חומץ',
-      '🍶',
-      as('חומץ בלסמי', 'חומץ תפוחים', 'לימון ושמן', 'ויניגרט', 'רוטב לסלט', 'רוטב סלט'),
-    ],
-    ['אבקת קקאו', '🍫', as('קקאו', 'אבקת שוקו', 'וניל', 'תמצית וניל', 'סוכר וניל')],
-  ],
-  disposable: [
-    ['צלחות חד־פעמיות', '🍽️', as('צלחות חד פעמיות', 'צלחות נייר', 'צלחות פלסטיק')],
-    ['כוסות חד־פעמיות', '🥤', as('כוסות חד פעמיות', 'כוסות נייר', 'כוסות פלסטיק')],
-    ['סכו״ם חד־פעמי', '🍴', as('סכום חד פעמי', 'סכו״ם פלסטיק', 'מזלג', 'כפיות', 'כפית', 'מזלגות')],
-    ['מפיות', '🧻', as('מפית', 'מפיות נייר', 'נייר מגבת')],
-    ['מפת שולחן', '🧺', as('מפה', 'מפה חד פעמית', 'מפות נייר')],
-    ['שקיות אשפה', '🗑️', as('שקיות זבל גדולות', 'שקית אשפה', 'שקיות זבל', 'שק אשפה')],
-    ['נייר אפייה', '📜', as('נייר אפיה', 'נייר פרגמנט', 'ניילון נצמד', 'ניילון')],
-    ['אלומיניום', '🪙', as('נייר אלומיניום', 'רדיד', 'רדיד אלומיניום', 'תבניות אלומיניום')],
-    ['נוזל כלים', '🧴', as('סבון לכלים', 'ספוג כלים', 'ספוגים', 'סקוטש')],
-    ['נייר טואלט', '🧻', as('טואלט', 'נייר שירותים')],
-    ['שקיות פריזר', '🛍️', as('שקיות zip', 'שקיות סגירה', 'שקית זיפ')],
-    ['קשים', '🥤', as('קש', 'קשיות', 'קשית', 'קשים לשתייה')],
-    ['מקלות שיניים', '🪥', as('קיסמים', 'קיסם', 'חוט דנטלי')],
-    ['נרות ליום הולדת', '🎂', as('נרות יום הולדת', 'נר יום הולדת')],
-  ],
-};
 
 const categories = new Map(CATALOG_CATEGORIES.map((c) => [c.id, c]));
 
-const toItem = (categoryId: string, [name, icon, options = {}]: Entry): CatalogItem => {
-  const category = categories.get(categoryId)!;
-  return {
-    name,
-    icon,
-    category: category.name,
-    list: category.list,
-    kind: options.kind ?? (options.qty ? 'qty' : 'single'),
-    quantityNeeded: options.qty ?? 1,
-    aliases: options.aliases ?? [],
-  };
-};
+/**
+ * The data files list items in a line each, under `@category` headings:
+ *
+ *     @cooking
+ *     🔥: מנגל=גריל, פחמים:⚫, צידניות*2, מלקחיים
+ *
+ * `icon:` before the items is theirs; `name:icon` overrides it for one; `=a/b` are synonyms;
+ * `*each` is a per-person item and `*4` a quantity.
+ */
+const ITEM = /^([^:=*]+)(?::([^=*]+))?(?:=([^*]+))?(?:\*(each|\d+))?$/;
 
-/** Every built-in item, grouped by category in the order of CATALOG_CATEGORIES. */
-export const CATALOG: CatalogItem[] = CATALOG_CATEGORIES.flatMap((c) =>
-  (BY_CATEGORY[c.id] ?? []).map((entry) => toItem(c.id, entry)),
-);
+export function parseCatalog(source: string): CatalogItem[] {
+  const items: CatalogItem[] = [];
+  let category: CatalogCategory | undefined;
+  for (const raw of source.split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    if (line.startsWith('@')) {
+      category = categories.get(line.slice(1).trim());
+      if (!category) throw new Error(`Unknown catalog category: ${line}`);
+      continue;
+    }
+    const colon = line.indexOf(':');
+    if (!category || colon < 0) throw new Error(`Catalog line outside a category: ${line}`);
+    const icon = line.slice(0, colon).trim();
+    for (const token of line.slice(colon + 1).split(',')) {
+      const text = token.trim();
+      if (!text) continue;
+      const match = ITEM.exec(text);
+      if (!match) throw new Error(`Bad catalog item: ${text}`);
+      const [, name, own, synonyms, count] = match;
+      items.push({
+        name: name!.trim(),
+        icon: own?.trim() || icon,
+        category: category.name,
+        list: category.list,
+        kind: count === 'each' ? 'each' : count ? 'qty' : 'single',
+        quantityNeeded: count && count !== 'each' ? Number(count) : 1,
+        synonyms: synonyms ? synonyms.split('/').map((s) => s.trim()) : [],
+      });
+    }
+  }
+  return items;
+}
+
+/**
+ * Every built-in item, in the order of the data files. A name or synonym that an earlier item
+ * already has is dropped, so one never belongs to two items.
+ */
+export const CATALOG: CatalogItem[] = (() => {
+  const taken = new Set<string>();
+  return CATALOG_SOURCES.flatMap(parseCatalog).flatMap((item) => {
+    const keys = [item.name, ...item.synonyms].map(normalizeName);
+    if (keys.some((k) => taken.has(k))) return [];
+    keys.forEach((k) => taken.add(k));
+    return [item];
+  });
+})();
 
 /**
  * A text as the catalog compares it: no niqqud, quotes, dashes or case, final letters as regular
@@ -474,7 +154,7 @@ export const CATALOG: CatalogItem[] = CATALOG_CATEGORIES.flatMap((c) =>
 export function normalizeName(text: string): string {
   return text
     .normalize('NFKC')
-    .replace(/[\u0591-\u05bd\u05bf\u05c1\u05c2\u05c4\u05c5\u05c7]/g, '')
+    .replace(/[֑-ׇֽֿׁׂׅׄ]/g, '')
     .replace(/["'`״׳’‘“”.]/g, '')
     .replace(/[-־_/]/g, ' ')
     .replace(/ך/g, 'כ')
@@ -487,51 +167,77 @@ export function normalizeName(text: string): string {
     .trim();
 }
 
+/** A word without its plural or feminine ending, so `עגבניה` finds `עגבניות`. For searching only. */
+function stem(word: string): string {
+  for (const end of ['ות', 'ים', 'ה', 'ת', 'י']) {
+    if (word.length >= end.length + 3 && word.endsWith(end)) return word.slice(0, -end.length);
+  }
+  return word;
+}
+
 interface Indexed {
   item: CatalogItem;
   name: string;
   words: string[];
-  aliases: string[];
-  aliasWords: string[];
+  stems: string[];
+  synonyms: string[];
+  synonymWords: string[];
+  synonymStems: string[];
 }
 
 const INDEX: Indexed[] = CATALOG.map((item) => {
   const name = normalizeName(item.name);
-  const aliases = item.aliases.map(normalizeName);
+  const synonyms = item.synonyms.map(normalizeName);
+  const words = name.split(' ');
+  const synonymWords = synonyms.flatMap((s) => s.split(' '));
   return {
     item,
     name,
-    words: name.split(' '),
-    aliases,
-    aliasWords: aliases.flatMap((a) => a.split(' ')),
+    words,
+    stems: words.map(stem),
+    synonyms,
+    synonymWords,
+    synonymStems: synonymWords.map(stem),
   };
 });
 
-/** First entry wins when a name or alias is shared: the earlier category, then the earlier item. */
+/** First entry wins when a name or synonym is shared (a test keeps that from happening). */
 const BY_NAME = new Map<string, CatalogItem>();
 for (const { item, name } of INDEX) if (!BY_NAME.has(name)) BY_NAME.set(name, item);
-const BY_ALIAS = new Map<string, CatalogItem>();
-for (const { item, aliases } of INDEX)
-  for (const alias of aliases) if (!BY_ALIAS.has(alias)) BY_ALIAS.set(alias, item);
+const BY_SYNONYM = new Map<string, CatalogItem>();
+for (const { item, synonyms } of INDEX)
+  for (const synonym of synonyms) if (!BY_SYNONYM.has(synonym)) BY_SYNONYM.set(synonym, item);
 
 /** The item of that name, or that goes by it; undefined for what the catalog doesn't know. */
 export function findCatalogItem(name: string): CatalogItem | undefined {
   const key = normalizeName(name);
-  return key ? (BY_NAME.get(key) ?? BY_ALIAS.get(key)) : undefined;
+  return key ? (BY_NAME.get(key) ?? BY_SYNONYM.get(key)) : undefined;
 }
 
 /** A picture for an item: the catalog's, by name; undefined when the catalog doesn't know it. */
 export const catalogIcon = (name: string): string | undefined => findCatalogItem(name)?.icon;
 
-/** Lower is a better match; undefined for none. Every word typed has to start some word. */
-function score(entry: Indexed, query: string, tokens: string[]): number | undefined {
+/** Whether every typed word starts one of the words, or one of their stems. */
+const startsWords = (tokens: string[], stems: string[], words: string[], wordStems: string[]) =>
+  tokens.every((t, i) => {
+    const s = stems[i]!;
+    return words.some((w, j) => w.startsWith(t) || wordStems[j]!.startsWith(s));
+  });
+
+/** Lower is a better match; undefined for none. */
+function score(
+  entry: Indexed,
+  query: string,
+  tokens: string[],
+  stems: string[],
+): number | undefined {
   if (entry.name === query) return 0;
   if (entry.name.startsWith(query)) return 1;
-  if (entry.aliases.includes(query)) return 2;
-  if (tokens.every((t) => entry.words.some((w) => w.startsWith(t)))) return 3;
-  if (entry.aliases.some((a) => a.startsWith(query))) return 4;
-  if (tokens.every((t) => entry.aliasWords.some((w) => w.startsWith(t)))) return 5;
-  if (query.length >= 2 && entry.name.includes(query)) return 6;
+  if (entry.synonyms.includes(query)) return 2;
+  if (startsWords(tokens, stems, entry.words, entry.stems)) return 3;
+  if (entry.synonyms.some((s) => s.startsWith(query))) return 4;
+  if (startsWords(tokens, stems, entry.synonymWords, entry.synonymStems)) return 5;
+  if (query.length >= 3 && entry.name.includes(query)) return 6;
   return undefined;
 }
 
@@ -550,10 +256,11 @@ export function searchCatalog(
   const query = normalizeName(text);
   if (!query) return [];
   const tokens = query.split(' ');
+  const stems = tokens.map(stem);
   const hits: { item: CatalogItem; rank: number; order: number }[] = [];
   INDEX.forEach((entry, order) => {
     if (exclude?.has(entry.item.name)) return;
-    const s = score(entry, query, tokens);
+    const s = score(entry, query, tokens, stems);
     if (s === undefined) return;
     hits.push({
       item: entry.item,
@@ -562,7 +269,7 @@ export function searchCatalog(
     });
   });
   return hits
-    .sort((a, b) => a.rank - b.rank || a.order - b.order)
+    .sort((a, b) => a.rank - b.rank || a.item.name.length - b.item.name.length || a.order - b.order)
     .slice(0, limit)
     .map((h) => h.item);
 }
@@ -573,8 +280,8 @@ export const catalogCategoryItems = (name: string): CatalogItem[] =>
 
 /**
  * What identifies an item across trips and my bag: the catalog's name when the catalog knows it
- * (so `גריל` and `מנגל`, or `אוהל` and `אוהלים`, are one item), otherwise the name as typed,
- * normalized. Spelling, quotes and case never keep two same items apart.
+ * (so `גריל` and `מנגל` are one item), otherwise the name as typed, normalized. Spelling, quotes
+ * and case never keep two same items apart.
  */
 export const itemKey = (name: string): string => normalizeName(findCatalogItem(name)?.name ?? name);
 
