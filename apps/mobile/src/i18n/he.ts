@@ -332,6 +332,8 @@ export const he = {
     claimEach: 'יש לי כבר',
     /** Characters typed out of the most a name takes: `72/80`. */
     count: (n: number, max: number) => `${n}/${max}`,
+    /** A typed name the catalog knows: `מהקטלוג: פנס ראש · תאורה וניווט`. */
+    fromCatalog: (name: string, category: string) => `מהקטלוג: ${name} · ${category}`,
     failed: 'הפריט לא נשמר. מה שכתבת נשאר כאן, אפשר לנסות שוב.',
     cta: (name: string, list: 'bring' | 'buy') =>
       name

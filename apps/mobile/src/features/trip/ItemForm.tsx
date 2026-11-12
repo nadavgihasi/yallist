@@ -1,4 +1,5 @@
 import {
+  findCatalogItem,
   heldCatalogNames,
   type CatalogItem,
   type Item,
@@ -21,12 +22,16 @@ import type { NewItemInput } from '@/state/reducer';
 import { useTrip } from '@/state/trips';
 import { colors, fonts } from '@/theme';
 
-import { COUNTER_FROM, ITEM_NAME_MAX } from './addItem';
+import {
+  COUNTER_FROM,
+  fillFromCatalog,
+  ITEM_NAME_MAX,
+  NEW,
+  toSave,
+  type Draft,
+} from './addItem';
 
 const KINDS: ItemKind[] = ['single', 'qty', 'each'];
-
-/** Marks the "new category" chip as the picked category. */
-const NEW = 'new';
 
 /**
  * The add-item sheet, also used to edit an item: `item` prefills it. Claiming is only offered
@@ -60,6 +65,8 @@ export function ItemForm({
   const [claim, setClaim] = useState(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  // How many or the category set by hand: a catalog name typed in full then doesn't override them.
+  const [chosen, setChosen] = useState(false);
 
   if (!data) return null;
 
@@ -70,38 +77,38 @@ export function ItemForm({
   const picked =
     category === NEW || categories.some((c) => c.id === category) ? category : undefined;
   const newCategory = newName.trim();
-  // Typing an existing name picks that category instead of making a second one.
-  const existing = categories.find((c) => c.name.toLowerCase() === newCategory.toLowerCase());
   const trimmed = name.trim();
   // Only suggest what this list doesn't have yet.
   const taken = heldCatalogNames(data.items.filter((i) => i.list === list).map((i) => i.name));
   const valid = !!trimmed && trimmed.length <= ITEM_NAME_MAX && (picked !== NEW || !!newCategory);
 
-  // A catalog item fills in the rest: its list, how it's counted and its category (the trip's own
-  // if it has one of that name, otherwise a new one, unless one is already picked).
+  const draft: Draft = { list, name, kind, qty, category, newName };
+  // A new item's name typed in full as the catalog has it (or another name for it) saves as if its
+  // suggestion was tapped; the match shows under the field so that's no surprise.
+  const fill = !item && !chosen;
+  const match = fill ? findCatalogItem(trimmed) : undefined;
+
+  // A catalog item fills in the rest: its list, how it's counted and its category.
   const pick = (entry: CatalogItem) => {
-    setName(entry.name);
-    setList(entry.list);
-    setKind(entry.kind);
-    if (entry.kind === 'qty') setQty(entry.quantityNeeded);
-    const own = data.categories.find((c) => c.list === entry.list && c.name === entry.category);
-    if (own) setCategory(own.id);
-    else if (picked === undefined) {
-      setCategory(NEW);
-      setNewName(entry.category);
-    }
+    const next = fillFromCatalog(draft, entry, data.categories);
+    setName(next.name);
+    setList(next.list);
+    setKind(next.kind);
+    setQty(next.qty);
+    setCategory(next.category);
+    setNewName(next.newName);
   };
+  const choose =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      set(value);
+      setChosen(true);
+    };
 
   const submit = () => {
     if (!valid || saving) return;
-    const quantityNeeded = kind === 'qty' ? qty : 1;
-    const creating = picked === NEW && !existing;
-    const categoryId = picked === NEW ? (existing?.id ?? null) : (picked ?? null);
-    const result = onSubmit(
-      { list, name: trimmed, kind, quantityNeeded, categoryId },
-      claim,
-      creating ? newCategory : undefined,
-    );
+    const save = toSave(draft, data.categories, fill);
+    const result = onSubmit(save.item, claim, save.newCategory);
     if (!result) return;
     setSaving(true);
     setFailed(false);
@@ -173,6 +180,14 @@ export function ItemForm({
             {he.addItem.failed}
           </Text>
         )}
+        {match && (
+          <View style={styles.match} {...testId('item-form-match')}>
+            <Icon name="check" size={16} color={colors.primaryStrong} strokeWidth={2.5} />
+            <Text style={styles.matchText} numberOfLines={1}>
+              {he.addItem.fromCatalog(match.name, match.category)}
+            </Text>
+          </View>
+        )}
         {!item && <CatalogPicker query={name} list={list} exclude={taken} onPick={pick} />}
       </View>
 
@@ -191,7 +206,7 @@ export function ItemForm({
                 key={k}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: selected }}
-                onPress={() => setKind(k)}
+                onPress={() => choose(setKind)(k)}
                 style={[styles.kind, selected && styles.kindOn]}
               >
                 <Text style={styles.kindLabel}>{label}</Text>
@@ -207,7 +222,7 @@ export function ItemForm({
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={he.addItem.more}
-                onPress={() => setQty(qty + 1)}
+                onPress={() => choose(setQty)(qty + 1)}
                 style={styles.qtyButton}
               >
                 <Icon name="plus" size={20} />
@@ -217,7 +232,7 @@ export function ItemForm({
                 accessibilityRole="button"
                 accessibilityLabel={he.addItem.less}
                 disabled={qty <= 2}
-                onPress={() => setQty(qty - 1)}
+                onPress={() => choose(setQty)(qty - 1)}
                 style={[styles.qtyButton, qty <= 2 && { opacity: 0.35 }]}
               >
                 <Icon name="minus" size={20} />
@@ -235,24 +250,24 @@ export function ItemForm({
               key={c.id}
               label={c.name}
               selected={c.id === picked}
-              onPress={() => setCategory(c.id)}
+              onPress={() => choose(setCategory)(c.id)}
             />
           ))}
           <FilterChip
             label={he.trip.uncategorized}
             selected={picked === undefined}
-            onPress={() => setCategory(undefined)}
+            onPress={() => choose(setCategory)(undefined)}
           />
           <FilterChip
             label={`+ ${he.addItem.newCategory}`}
             selected={picked === NEW}
-            onPress={() => setCategory(NEW)}
+            onPress={() => choose(setCategory)(NEW)}
           />
         </ChipGroup>
         {picked === NEW && (
           <Input
             value={newName}
-            onChangeText={setNewName}
+            onChangeText={choose(setNewName)}
             placeholder={he.category.placeholder}
             accessibilityLabel={he.category.name}
             maxLength={40}
@@ -274,6 +289,8 @@ export function ItemForm({
 
 const styles = StyleSheet.create({
   field: { gap: 10 },
+  match: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6 },
+  matchText: { flexShrink: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
   labelRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   counter: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted, marginStart: 'auto' },
   input: {
