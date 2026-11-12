@@ -127,15 +127,20 @@ export function buyQuantity(item: Item): string {
 }
 
 /**
- * "Each pays" for an amount split equally between `shareCount` people: the largest share
- * (`perPersonPreview`), so every place that shows it shows the same number.
+ * "Each pays" for an amount split equally between `shareCount` people. When it doesn't divide to
+ * the agora, some pay an agora more (`splitEqually`): both amounts, so nobody is shown a share
+ * that isn't theirs (₪412.90 by 3: `₪137.63 או ₪137.64`).
  */
 export function perPersonText(
   amountAgorot: number | undefined,
   shareCount: number,
 ): string | undefined {
-  const share = amountAgorot ? perPersonPreview(amountAgorot, shareCount) : undefined;
-  return share === undefined ? undefined : formatShekel(share);
+  const largest = amountAgorot ? perPersonPreview(amountAgorot, shareCount) : undefined;
+  if (!amountAgorot || largest === undefined) return undefined;
+  const smallest = Math.floor(amountAgorot / shareCount);
+  return smallest === largest
+    ? formatShekel(largest)
+    : he.money.oneOf(formatShekel(smallest), formatShekel(largest));
 }
 
 export function groupSummary(missing: number): string {
