@@ -15,6 +15,7 @@ test('home shows a past trip without crashing', async ({ page }) => {
   await newTrip(page, 'Past trip');
 
   // Moves it into the past: the edit sheet's start date has no minimum, unlike a new trip's.
+  await page.locator('#trip-tab-people').click();
   await page.locator('#trip-rename-edit').click();
   const dates = page.locator('input[type=date]').filter({ visible: true });
   await dates.nth(0).fill('2025-01-10');
