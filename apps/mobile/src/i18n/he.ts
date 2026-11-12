@@ -161,6 +161,8 @@ export const he = {
     have: 'יש לי',
     pack: 'סימון כארוז',
     unpack: 'סימון כלא ארוז',
+    /** The dashed ring of an unclaimed row: "אני אביא: כיסאות". */
+    ringClaim: (action: string, name: string) => `${action}: ${name}`,
     coveredCount: (done: number, total: number) => `${done} מתוך ${total} מסודרים`,
     plusOne: 'אני אביא עוד אחד',
     minusOne: 'אחד פחות',

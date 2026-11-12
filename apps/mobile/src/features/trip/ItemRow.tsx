@@ -22,6 +22,7 @@ import { colors, space, type } from '@/theme';
 import type { TripView } from './derive';
 import { ClaimStepper } from './ClaimStepper';
 import { TONE_COLOR, packedText, quantityText, statusLine } from './labels';
+import { noteLine, ringClaim } from './rowActions';
 
 /** Dashed while something is still missing, a ring once covered, a brand check once packed. */
 const RING: Record<Packing, RingState> = { missing: 'open', covered: 'held', packed: 'done' };
@@ -65,6 +66,9 @@ export function ItemRow({
   const packed = packedText(item, claims, view.activeIds);
   const mine = view.myQuantity(item.id);
   const myClaim = claims.find((c) => c.itemId === item.id && c.userId === me);
+  // Nobody has it (or not all of it) and I have none of it: the dashed ring claims it.
+  const ringQuantity = ringClaim(item, status, claims, me);
+  const note = noteLine(item.note);
 
   // Once bought (it has an expense), claims are settled: show who has it instead of controls.
   const bought = status.kind === 'bought';
@@ -127,6 +131,16 @@ export function ItemRow({
         >
           <StatusRing state={myClaim.packed ? 'done' : ring} label={he.status.packed} />
         </Pressable>
+      ) : ringQuantity !== undefined ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={he.trip.ringClaim(claimLabel(item), item.name)}
+          {...testId('item-ring-claim')}
+          onPress={() => onClaim(ringQuantity)}
+          style={styles.toggle}
+        >
+          <StatusRing state={ring} />
+        </Pressable>
       ) : (
         <StatusRing state={ring} label={line.label} />
       )}
@@ -148,11 +162,26 @@ export function ItemRow({
           {!!line.detail && <Text style={styles.detail}> · {line.detail}</Text>}
           {!!packed && <Text style={styles.detail}> · {packed}</Text>}
         </Text>
+        {!!note && (
+          <Text style={styles.note} numberOfLines={1} {...testId('item-note')}>
+            {note}
+          </Text>
+        )}
       </Pressable>
       {action}
     </View>
   );
 }
+
+/** What the row's claim control says, which the ring does too: on a qty item, the stepper's +. */
+const claimLabel = (item: Item) =>
+  item.kind === 'each'
+    ? he.trip.have
+    : item.kind === 'qty'
+      ? he.trip.plusOne
+      : item.list === 'buy'
+        ? he.trip.claimBuy
+        : he.trip.claimBring;
 
 const inMyBag = (item: Item, bag: readonly BagItem[]) =>
   item.list === 'bring' && bagItemFor(bag, item.name) !== undefined;
@@ -194,4 +223,5 @@ const styles = StyleSheet.create({
   status: { ...type.caption },
   mine: { fontFamily: type.itemTitle.fontFamily },
   detail: { fontFamily: type.caption.fontFamily, color: colors.inkMuted },
+  note: { ...type.caption, color: colors.inkMuted },
 });

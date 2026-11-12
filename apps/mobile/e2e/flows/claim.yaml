@@ -1,4 +1,4 @@
-# Claim an item from the list, then release it.
+# Claim an item from the list, then release it; then claim it again with its dashed ring.
 appId: app.yallist
 url: ${WEB_URL}
 # A video per flow, kept even when it fails (onFlowComplete always runs).
@@ -22,3 +22,7 @@ tags: [items]
     id: item-release
 - assertVisible:
     id: item-claim
+- tapOn:
+    id: item-ring-claim
+- assertVisible:
+    id: item-release
