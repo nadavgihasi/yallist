@@ -69,6 +69,8 @@ function ShopRunBody({
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
 
   const [forgotten, setForgotten] = useState('');
+  // Typing a forgotten item: the keyboard lifts the checkout button onto the field, so it hides.
+  const [typing, setTyping] = useState(false);
 
   // What's left by category, as on the buy list; what's in the cart sinks to its own section.
   const { groups, inCart } = shopList(view.runClaims(runId), view.items, data.categories);
@@ -216,6 +218,8 @@ function ShopRunBody({
               returnKeyType="done"
               submitBehavior="submit"
               onSubmitEditing={addForgotten}
+              onFocus={() => setTyping(true)}
+              onBlur={() => setTyping(false)}
               style={styles.forgotInput}
               {...testId('shop-forgot-name')}
             />
@@ -236,14 +240,19 @@ function ShopRunBody({
             ))}
           </ListGroup>
         )}
+        {/* The last rows scroll clear of the checkout button. */}
         <View style={{ height: FLOATING_CLEARANCE + insets.bottom }} />
       </ScrollView>
-      <FloatingAction
-        label={he.shop.checkout}
-        icon="check"
-        testID="shop-checkout"
-        onPress={() => router.push({ pathname: '/trips/[tripId]/shop/finish', params: { tripId } })}
-      />
+      {!typing && (
+        <FloatingAction
+          label={he.shop.checkout}
+          icon="check"
+          testID="shop-checkout"
+          onPress={() =>
+            router.push({ pathname: '/trips/[tripId]/shop/finish', params: { tripId } })
+          }
+        />
+      )}
     </View>
   );
 }
