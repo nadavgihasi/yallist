@@ -129,6 +129,11 @@ export default function TripScreen() {
         setTab(view.missingIn('bring') >= view.missingIn('buy') ? 'bring' : 'buy');
         setFilter('missing');
       }}
+      onMine={() => {
+        const mineIn = (l: 'bring' | 'buy') => view.mine.filter((i) => i.list === l).length;
+        setTab(mineIn('bring') >= mineIn('buy') ? 'bring' : 'buy');
+        setFilter('mine');
+      }}
       onInvite={invite}
     />
   );

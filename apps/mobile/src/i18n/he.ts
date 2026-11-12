@@ -214,6 +214,8 @@ export const he = {
       `${count}: ${names.map(rtl).join(', ')}${more ? '…' : ''}`,
     solo: 'לבד פה בינתיים · הזמנת חברים',
     share: 'שליחת מה שחסר בוואטסאפ',
+    /** The capped `אצלך:` line opens the list on `אצלי`. */
+    mineLabel: (names: string) => `אצלך: ${names}. הצגת כל מה שאצלך`,
   },
   share: {
     missing: (trip: string, dates: string, names: string, link: string) =>
@@ -800,6 +802,11 @@ export function missingNames(names: string[], missing: number): string {
   const more = missing - names.length;
   const list = names.map(rtl).join(', ');
   return more > 0 ? `${list} ${andMore(more)}` : list;
+}
+
+/** `אוהל, קפה, קרח`, then `אוהל, קפה, קרח ועוד 11` past `max`. */
+export function firstNames(names: string[], max = 3): string {
+  return missingNames(names.slice(0, max), names.length);
 }
 
 /** `דנה, אבי ונועה`, then `דנה, אבי ועוד 2` past three. */

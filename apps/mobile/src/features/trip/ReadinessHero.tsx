@@ -6,8 +6,7 @@ import { Countdown } from '@/components/Countdown';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { ProgressRing } from '@/components/ProgressRing';
-import { he, missingCount, openTransfers, peopleNames } from '@/i18n/he';
-import { rtl } from '@/lib/bidi';
+import { firstNames, he, missingCount, openTransfers, peopleNames } from '@/i18n/he';
 import { countdown } from '@/lib/dates';
 import { missingMessage, openWhatsApp } from '@/lib/share';
 import { testId } from '@/lib/testId';
@@ -38,6 +37,7 @@ export function ReadinessHero({
   me,
   now,
   onMissing,
+  onMine,
   onInvite,
 }: {
   data: TripData;
@@ -45,6 +45,8 @@ export function ReadinessHero({
   me: string;
   now: string;
   onMissing: () => void;
+  /** Opens the list on what's mine: the line names only the first few. */
+  onMine: () => void;
   onInvite: () => void;
 }) {
   const { trip } = data;
@@ -55,6 +57,8 @@ export function ReadinessHero({
     .sort((a, b) => (a.list === b.list ? 0 : a.list === 'bring' ? -1 : 1))
     .map((i) => i.name);
   const solo = view.active.length === 1;
+  // The first few and `ועוד 11`, not every name over three lines.
+  const mineNames = firstNames(view.mine.map((i) => i.name));
   const myTransfers = view.transfers.filter((t) => t.from === me || t.to === me).length;
 
   let action;
@@ -90,10 +94,18 @@ export function ReadinessHero({
         <View style={styles.texts}>
           <Countdown startsOn={trip.startsOn} endsOn={trip.endsOn} now={now} variant="hero" />
           {view.mine.length > 0 && (
-            <Text style={styles.mine}>
-              {he.home.mine}
-              {view.mine.map((i) => rtl(i.name)).join(', ')}
-            </Text>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={he.hero.mineLabel(mineNames)}
+              {...testId('trip-hero-mine')}
+              onPress={onMine}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Text style={styles.mine} numberOfLines={2}>
+                {he.home.mine}
+                {mineNames}
+              </Text>
+            </Pressable>
           )}
           {!solo && (
             <AvatarStack
