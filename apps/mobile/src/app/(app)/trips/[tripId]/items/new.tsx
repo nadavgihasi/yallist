@@ -1,5 +1,5 @@
 import type { ListKind } from '@yallist/domain';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { saved } from '@/features/trip/addItem';
 import { useCloseSheet } from '@/features/trip/closeSheet';
@@ -23,6 +23,13 @@ export default function AddItem() {
           claim: claim ? item.quantityNeeded : 0,
           newCategory,
         }).then(() => close())
+      }
+      // The item the list already has, instead of this sheet.
+      onOpen={(itemId) =>
+        router.replace({
+          pathname: '/trips/[tripId]/items/[itemId]',
+          params: { tripId: params.tripId, itemId },
+        })
       }
       onClose={close}
     />

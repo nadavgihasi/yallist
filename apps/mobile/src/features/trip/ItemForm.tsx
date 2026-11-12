@@ -24,6 +24,7 @@ import { colors, fonts } from '@/theme';
 
 import {
   COUNTER_FROM,
+  duplicateOf,
   fillFromCatalog,
   ITEM_NAME_MAX,
   NEW,
@@ -44,6 +45,7 @@ export function ItemForm({
   list: initialList = 'bring',
   categoryId: initialCategory,
   onSubmit,
+  onOpen,
   onClose,
 }: {
   tripId: string;
@@ -53,6 +55,8 @@ export function ItemForm({
   categoryId?: string;
   /** A promise keeps the sheet saving until it settles; a rejection shows on the name field. */
   onSubmit: (item: NewItemInput, claim: boolean, newCategory?: string) => Promise<void> | void;
+  /** Opens an item the list already has, offered when the new one would be a duplicate. */
+  onOpen?: (itemId: string) => void;
   onClose: () => void;
 }) {
   const data = useTrip(tripId);
@@ -67,6 +71,8 @@ export function ItemForm({
   const [failed, setFailed] = useState(false);
   // How many or the category set by hand: a catalog name typed in full then doesn't override them.
   const [chosen, setChosen] = useState(false);
+  // Added though the list has it: the duplicate warning was answered.
+  const [anyway, setAnyway] = useState(false);
 
   if (!data) return null;
 
@@ -87,6 +93,9 @@ export function ItemForm({
   // suggestion was tapped; the match shows under the field so that's no surprise.
   const fill = !item && !chosen;
   const match = fill ? findCatalogItem(trimmed) : undefined;
+  const save = toSave(draft, data.categories, fill);
+  // A new item the list already has (by any of its names) warns before it goes in twice.
+  const duplicate = !item && !anyway && trimmed ? duplicateOf(data.items, save.item) : undefined;
 
   // A catalog item fills in the rest: its list, how it's counted and its category.
   const pick = (entry: CatalogItem) => {
@@ -105,9 +114,9 @@ export function ItemForm({
       setChosen(true);
     };
 
-  const submit = () => {
-    if (!valid || saving) return;
-    const save = toSave(draft, data.categories, fill);
+  const submit = (force = false) => {
+    if (!valid || saving || (duplicate && !force)) return;
+    if (force) setAnyway(true);
     const result = onSubmit(save.item, claim, save.newCategory);
     if (!result) return;
     setSaving(true);
@@ -136,8 +145,8 @@ export function ItemForm({
           {...testId('item-form-save')}
           size="lg"
           wide
-          disabled={!valid || saving}
-          onPress={submit}
+          disabled={!valid || saving || !!duplicate}
+          onPress={() => submit()}
         />
       }
     >
@@ -165,9 +174,10 @@ export function ItemForm({
           onChangeText={(text) => {
             setName(text);
             setFailed(false);
+            setAnyway(false);
           }}
           maxLength={ITEM_NAME_MAX}
-          onSubmitEditing={submit}
+          onSubmitEditing={() => submit()}
           returnKeyType="done"
           placeholder={he.addItem.placeholder[list]}
           accessibilityLabel={he.addItem.what}
@@ -179,6 +189,31 @@ export function ItemForm({
           <Text style={fieldStyles.error} accessibilityLiveRegion="polite">
             {he.addItem.failed}
           </Text>
+        )}
+        {duplicate && (
+          <View style={styles.duplicate} {...testId('item-form-duplicate')}>
+            <Text style={fieldStyles.error} accessibilityLiveRegion="polite">
+              {he.addItem.duplicate(duplicate.name, duplicate.list)}
+            </Text>
+            <View style={styles.duplicateActions}>
+              {onOpen && (
+                <PillButton
+                  label={he.addItem.openExisting}
+                  size="sm"
+                  variant="quiet"
+                  onPress={() => onOpen(duplicate.id)}
+                  {...testId('item-form-open-existing')}
+                />
+              )}
+              <PillButton
+                label={he.addItem.addAnyway}
+                size="sm"
+                variant="quiet"
+                onPress={() => submit(true)}
+                {...testId('item-form-add-anyway')}
+              />
+            </View>
+          </View>
         )}
         {match && (
           <View style={styles.match} {...testId('item-form-match')}>
@@ -289,6 +324,8 @@ export function ItemForm({
 
 const styles = StyleSheet.create({
   field: { gap: 10 },
+  duplicate: { gap: 6 },
+  duplicateActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   match: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6 },
   matchText: { flexShrink: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
   labelRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },

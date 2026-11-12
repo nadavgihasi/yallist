@@ -334,6 +334,11 @@ export const he = {
     count: (n: number, max: number) => `${n}/${max}`,
     /** A typed name the catalog knows: `מהקטלוג: פנס ראש · תאורה וניווט`. */
     fromCatalog: (name: string, category: string) => `מהקטלוג: ${name} · ${category}`,
+    /** The list already has it, maybe by another name: `כבר יש ״מנגל״ ברשימת ההבאה`. */
+    duplicate: (name: string, list: 'bring' | 'buy') =>
+      `כבר יש ״${name}״ ב${list === 'bring' ? 'רשימת ההבאה' : 'רשימת הקניות'}`,
+    openExisting: 'לפריט הקיים',
+    addAnyway: 'להוסיף בכל זאת',
     failed: 'הפריט לא נשמר. מה שכתבת נשאר כאן, אפשר לנסות שוב.',
     cta: (name: string, list: 'bring' | 'buy') =>
       name

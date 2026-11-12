@@ -1,9 +1,9 @@
-import { findCatalogItem, type Category } from '@yallist/domain';
+import { findCatalogItem, type Category, type Item } from '@yallist/domain';
 import { describe, expect, it } from 'vitest';
 
 import type { Action } from '@/state/reducer';
 
-import { fillFromCatalog, NEW, saved, toSave, type Draft } from './addItem';
+import { duplicateOf, fillFromCatalog, NEW, saved, toSave, type Draft } from './addItem';
 
 const add: Action = {
   type: 'addItem',
@@ -96,5 +96,31 @@ describe('fillFromCatalog', () => {
     const mine: Category = { id: 'mine', list: 'bring', name: 'שלי', position: 1 };
     const draft = { ...typed('פנס ראש'), category: 'mine' };
     expect(fillFromCatalog(draft, findCatalogItem('פנס ראש')!, [mine]).category).toBe('mine');
+  });
+});
+
+describe('duplicateOf', () => {
+  const item = (id: string, name: string, list: Item['list'] = 'bring'): Item => ({
+    id,
+    list,
+    position: 0,
+    name,
+    kind: 'single',
+    quantityNeeded: 1,
+  });
+  const items = [item('tent', 'אוהל'), item('grill', 'מנגל'), item('water', 'מים', 'buy')];
+
+  it('finds the same name again', () => {
+    expect(duplicateOf(items, { list: 'bring', name: 'אוהל' })?.id).toBe('tent');
+    expect(duplicateOf(items, { list: 'bring', name: ' אוהל ' })?.id).toBe('tent');
+  });
+
+  it('finds another name for an item the list has', () => {
+    expect(duplicateOf(items, { list: 'bring', name: 'גריל' })?.id).toBe('grill');
+  });
+
+  it('only looks in the list being added to', () => {
+    expect(duplicateOf(items, { list: 'bring', name: 'מים' })).toBeUndefined();
+    expect(duplicateOf(items, { list: 'bring', name: 'כיסא' })).toBeUndefined();
   });
 });

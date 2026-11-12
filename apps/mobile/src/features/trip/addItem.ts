@@ -1,7 +1,9 @@
 import {
   findCatalogItem,
+  sameItem,
   type CatalogItem,
   type Category,
+  type Item,
   type ItemKind,
   type ListKind,
 } from '@yallist/domain';
@@ -100,3 +102,12 @@ export function toSave(
     newCategory: picked === NEW && !existing ? newName : undefined,
   };
 }
+
+/**
+ * The item a list already has under that name, or another name of it (`גריל` for `מנגל`): the same
+ * check my bag makes, so both screens agree on what's a duplicate.
+ */
+export const duplicateOf = (
+  items: readonly Item[],
+  { list, name }: Pick<NewItemInput, 'list' | 'name'>,
+): Item | undefined => items.find((i) => i.list === list && sameItem(i.name, name));
