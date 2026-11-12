@@ -146,6 +146,36 @@ describe.skipIf(!DATABASE_URL)('bulk add', () => {
     expect((await res.json()).added).toHaveLength(BULK_MAX_ITEMS);
   });
 
+  it('adds each name once when two members add the same batch at once', async () => {
+    const { organizer, tripId, inviteToken } = await trip();
+    const member = await signInAsGuest(app, 'member');
+    await client.invites[':token'].join.$post(
+      { param: { token: inviteToken }, json: {} },
+      as(member),
+    );
+    const batch = [
+      item('מחצלת', { category: 'ישיבה' }),
+      item('כיסאות', { kind: 'qty', quantityNeeded: 4, category: 'ישיבה' }),
+      item('קרח', { list: 'buy', category: 'קפואים' }),
+    ];
+    const results = await Promise.all([
+      bulk(organizer, tripId, batch),
+      bulk(member, tripId, batch),
+      bulk(organizer, tripId, batch),
+    ]);
+    const bodies = await Promise.all(results.map((r) => r.json()));
+    expect(results.map((r) => r.status)).toEqual([201, 201, 201]);
+    expect(bodies.flatMap((b) => b.added)).toHaveLength(3);
+    expect(bodies.flatMap((b) => b.skipped)).toHaveLength(6);
+
+    const data = await detail(organizer, tripId);
+    const names = data.items.map((i) => i.name).sort();
+    expect(names).toEqual(['כיסאות', 'מחצלת', 'מנגל', 'קרח'].sort());
+    // And each new category once.
+    expect(data.categories.filter((c) => c.name === 'ישיבה')).toHaveLength(1);
+    expect(data.categories.filter((c) => c.name === 'קפואים')).toHaveLength(1);
+  });
+
   it('is for active members of the trip only', async () => {
     const { tripId, inviteToken } = await trip();
     const stranger = await signInAsGuest(app, 'stranger');
