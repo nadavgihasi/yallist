@@ -22,6 +22,7 @@ import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
 import { BagCards } from './BagCards';
+import { CopyFromTripButton } from './bulk/AddManyLinks';
 import type { TripView } from './derive';
 import { ItemRow } from './ItemRow';
 import { groupSummary } from './labels';
@@ -134,6 +135,7 @@ export function ListTab({
                 />
               ))}
             </View>
+            <CopyFromTripButton tripId={tripId} />
           </EmptyState>
         ) : filter === 'mine' ? (
           <EmptyState

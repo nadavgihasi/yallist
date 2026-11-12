@@ -1,11 +1,9 @@
 import { BULK_MAX_ITEMS, bulkToAdd, heldCatalogNames, type ListKind } from '@yallist/domain';
-import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { SegmentedControl } from '@/components/Controls';
 import { Input, fieldStyles } from '@/components/Fields';
-import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { showToast } from '@/components/Toast';
@@ -16,6 +14,7 @@ import { useTrip } from '@/state/trips';
 import { colors, fonts, space, type } from '@/theme';
 
 import { useCloseSheet } from '../closeSheet';
+import { CopyLink } from './AddManyLinks';
 import { BulkPreview } from './BulkPreview';
 import { bulkEntries, bulkSummary, togglePicked } from './bulkState';
 import { SuggestionPicker } from './SuggestionPicker';
@@ -129,32 +128,8 @@ export function BulkAddSheet({
       />
 
       <BulkPreview entries={entries} list={list} />
+      <CopyLink tripId={tripId} />
     </Sheet>
-  );
-}
-
-/** The add-item sheet's way into bulk mode, taking along what's typed so far. */
-export function BulkAddLink({
-  tripId,
-  list,
-  text,
-}: {
-  tripId: string;
-  list: ListKind;
-  text: string;
-}) {
-  return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={() =>
-        router.replace({ pathname: '/trips/[tripId]/items/bulk', params: { tripId, list, text } })
-      }
-      style={styles.link}
-      {...testId('bulk-open')}
-    >
-      <Icon name="plus" size={16} color={colors.primaryStrong} strokeWidth={2.5} />
-      <Text style={styles.linkLabel}>{he.bulk.open}</Text>
-    </Pressable>
   );
 }
 
@@ -178,12 +153,4 @@ const styles = StyleSheet.create({
     color: colors.brandStrong,
     textAlign: 'center',
   },
-  link: {
-    minHeight: space.touch,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space[2],
-    alignSelf: 'flex-start',
-  },
-  linkLabel: { ...type.buttonSm, color: colors.primaryStrong },
 });

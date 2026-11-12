@@ -1,5 +1,5 @@
 import { bulkKey, type BulkItem } from '@yallist/domain';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { items, tripCategories, type LISTS } from '../db/schema';
 import type { Tx } from '../db/tx';
@@ -75,4 +75,31 @@ export async function addItems(tx: Tx, tripId: string, createdBy: string, batch:
   // In list order: `returning` doesn't promise the insert's.
   added.sort((a, b) => a.list.localeCompare(b.list) || a.position - b.position);
   return { added, skipped };
+}
+
+/**
+ * Another trip's items as new items for a trip: what they are (name, list, count, unit, category
+ * by name), never what happened to them there (claims, purchases, notes). Only live items of that
+ * trip, in list order; ids that aren't one are left out.
+ */
+export async function copyableItems(
+  tx: Tx,
+  fromTripId: string,
+  itemIds: string[],
+): Promise<BulkItem[]> {
+  const rows = await tx
+    .select({ item: items, category: tripCategories.name })
+    .from(items)
+    .leftJoin(tripCategories, eq(tripCategories.id, items.categoryId))
+    .where(and(eq(items.tripId, fromTripId), inArray(items.id, itemIds), isNull(items.deletedAt)))
+    .orderBy(asc(items.list), asc(items.position));
+  return rows.map(({ item, category }) => ({
+    list: item.list,
+    name: item.name,
+    kind: item.kind,
+    quantityNeeded: item.quantityNeeded,
+    unit: item.unit,
+    displayQty: item.displayQty,
+    category,
+  }));
 }

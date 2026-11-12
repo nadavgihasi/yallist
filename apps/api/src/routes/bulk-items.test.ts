@@ -197,4 +197,134 @@ describe.skipIf(!DATABASE_URL)('bulk add', () => {
     });
     expect(anonymous.status).toBe(401);
   });
+
+  describe('copy from another trip', () => {
+    const copy = (user: Guest, tripId: string, fromTripId: string, itemIds: string[]) =>
+      client.trips[':tripId'].items.copy.$post(
+        { param: { tripId }, json: { fromTripId, itemIds } },
+        as(user),
+      );
+    async function blankTrip(user: Guest) {
+      const res = await client.trips.$post(
+        { json: { name: 'הבא', startsOn: '2099-02-01', endsOn: '2099-02-02', template: 'blank' } },
+        as(user),
+      );
+      return (await res.json()).trip.id;
+    }
+
+    /** A past trip with items on both lists, claimed, bought and with a note. */
+    async function pastTrip() {
+      const { organizer, tripId, inviteToken } = await trip();
+      await bulk(organizer, tripId, [
+        item('כיסאות', { kind: 'qty', quantityNeeded: 6, category: 'ישיבה' }),
+        item('שק שינה', { kind: 'each', category: 'לינה' }),
+        item('אבטיח', { list: 'buy', category: 'פירות', unit: 'יח׳', displayQty: '2 גדולים' }),
+      ]);
+      const data = await detail(organizer, tripId);
+      const id = (name: string) => data.items.find((i) => i.name === name)!.id;
+      const param = (name: string) => ({ param: { tripId, itemId: id(name) } });
+      await client.trips[':tripId'].items[':itemId'].claim.$put(
+        { ...param('כיסאות'), json: { quantity: 6 } },
+        as(organizer),
+      );
+      await client.trips[':tripId'].items[':itemId'].$patch(
+        { ...param('אבטיח'), json: { note: 'מהשוק' } },
+        as(organizer),
+      );
+      const bought = await client.trips[':tripId'].expenses.$post(
+        {
+          param: { tripId },
+          json: {
+            description: 'אבטיח',
+            amountAgorot: 3000,
+            shares: [organizer.id],
+            itemId: id('אבטיח'),
+          },
+        },
+        as(organizer),
+      );
+      expect(bought.status).toBe(201);
+      return { organizer, tripId, inviteToken, ids: data.items.map((i) => i.id), id };
+    }
+
+    it('copies what the items are, not what happened to them', async () => {
+      const past = await pastTrip();
+      const next = await blankTrip(past.organizer);
+      const res = await copy(past.organizer, next, past.tripId, past.ids);
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body.added.map((i) => i.name)).toEqual(['מנגל', 'כיסאות', 'שק שינה', 'אבטיח']);
+
+      const data = await detail(past.organizer, next);
+      const named = (name: string) => data.items.find((i) => i.name === name)!;
+      const categoryOf = (name: string) =>
+        data.categories.find((c) => c.id === named(name).categoryId)?.name;
+      expect(named('כיסאות')).toMatchObject({ kind: 'qty', quantityNeeded: 6 });
+      expect(named('שק שינה').kind).toBe('each');
+      expect(named('אבטיח')).toMatchObject({ list: 'buy', unit: 'יח׳', displayQty: '2 גדולים' });
+      expect(named('אבטיח').note).toBeUndefined();
+      expect([categoryOf('מנגל'), categoryOf('כיסאות'), categoryOf('אבטיח')]).toEqual([
+        'בישול',
+        'ישיבה',
+        'פירות',
+      ]);
+      expect(data.claims).toEqual([]);
+      expect(data.expenses).toEqual([]);
+      expect((await activity(next)).at(-1)).toMatchObject({
+        type: 'items_added',
+        payload: { count: 4, fromTripId: past.tripId },
+      });
+      // The past trip is as it was.
+      expect((await detail(past.organizer, past.tripId)).claims).toHaveLength(1);
+    });
+
+    it('copies only the picked items, and skips what the trip has', async () => {
+      const past = await pastTrip();
+      const next = await blankTrip(past.organizer);
+      await bulk(past.organizer, next, [item('גריל')]);
+      const res = await copy(past.organizer, next, past.tripId, [
+        past.id('מנגל'),
+        past.id('אבטיח'),
+      ]);
+      expect(await res.json()).toMatchObject({ skipped: ['מנגל'] });
+      const names = (await detail(past.organizer, next)).items.map((i) => i.name);
+      expect(names.sort()).toEqual(['אבטיח', 'גריל']);
+    });
+
+    it('only from a trip I am an active member of', async () => {
+      const past = await pastTrip();
+      // Someone else, in a trip of their own: not a member of the past trip.
+      const stranger = await signInAsGuest(app, 'stranger');
+      const theirs = await blankTrip(stranger);
+      expect((await copy(stranger, theirs, past.tripId, past.ids)).status).toBe(404);
+
+      // A member who left it can't either.
+      const member = await signInAsGuest(app, 'member');
+      await client.invites[':token'].join.$post(
+        { param: { token: past.inviteToken }, json: {} },
+        as(member),
+      );
+      const mine = await blankTrip(member);
+      expect((await copy(member, mine, past.tripId, [past.id('מנגל')])).status).toBe(201);
+      await client.trips[':tripId'].leave.$post({ param: { tripId: past.tripId } }, as(member));
+      expect((await copy(member, mine, past.tripId, [past.id('אבטיח')])).status).toBe(404);
+      expect((await detail(member, mine)).items.map((i) => i.name)).toEqual(['מנגל']);
+
+      // Nor into a trip I'm not in.
+      expect((await copy(past.organizer, theirs, past.tripId, past.ids)).status).toBe(404);
+      expect((await detail(stranger, theirs)).items).toEqual([]);
+    });
+
+    it("ignores ids that aren't the source trip's, and refuses copying a trip into itself", async () => {
+      const past = await pastTrip();
+      const next = await blankTrip(past.organizer);
+      const other = await trip();
+      const otherIds = (await detail(other.organizer, other.tripId)).items.map((i) => i.id);
+      const res = await copy(past.organizer, next, past.tripId, otherIds);
+      expect(await res.json()).toEqual({ added: [], skipped: [] });
+
+      expect((await copy(past.organizer, past.tripId, past.tripId, past.ids)).status).toBe(400);
+      expect((await copy(past.organizer, next, past.tripId, [])).status).toBe(400);
+    });
+  });
 });
