@@ -1,3 +1,4 @@
+import { canonicalUnit } from './amount';
 import { findCatalogItem, itemKey } from './catalog';
 import type { ItemKind, ListKind } from './types';
 
@@ -54,6 +55,10 @@ const EMOJI_MARKER =
 // WhatsApp's bold, italic and strikethrough around the whole line: "*מחצלת*".
 const FORMATTED = /^([*_~])(.+)\1$/;
 
+// The amount as the buy form writes it, so the item edits there and shows the same: `2 ק"ג` and
+// `2 קילו` are `2 ק״ג`.
+const amountText = (amount: string, unit: string) => `${amount} ${canonicalUnit(unit)}`;
+
 const clampQuantity = (n: number) => Math.min(Math.max(n, 1), ITEM_QUANTITY_MAX);
 
 /** One line or comma-separated part; undefined when nothing is left of it. */
@@ -70,11 +75,17 @@ export function parseBulkLine(text: string): BulkLine | undefined {
   if (!line || line.endsWith(':')) return undefined;
   const leadingAmount = LEADING_AMOUNT.exec(line);
   if (leadingAmount) {
-    return { name: leadingAmount[3]!.trim(), amount: `${leadingAmount[1]} ${leadingAmount[2]}` };
+    return {
+      name: leadingAmount[3]!.trim(),
+      amount: amountText(leadingAmount[1]!, leadingAmount[2]!),
+    };
   }
   const trailingAmount = TRAILING_AMOUNT.exec(line);
   if (trailingAmount) {
-    return { name: trailingAmount[1]!.trim(), amount: `${trailingAmount[2]} ${trailingAmount[3]}` };
+    return {
+      name: trailingAmount[1]!.trim(),
+      amount: amountText(trailingAmount[2]!, trailingAmount[3]!),
+    };
   }
   const trailing = TRAILING.exec(line);
   if (trailing) {

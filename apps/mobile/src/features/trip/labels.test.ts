@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { TripData } from '@/state/types';
 
 import { deriveTrip } from './derive';
-import { perPersonText, statusLine } from './labels';
+import { buyItemText, perPersonText, statusLine } from './labels';
 
 // The theme pulls in react-native, which these unit tests don't run.
 vi.mock('@/theme', () => ({ colors: {} }));
@@ -84,5 +84,29 @@ describe('statusLine for a bought item', () => {
   it('shows the price of an item bought on its own', () => {
     const alone: Expense = { ...run('ron'), itemIds: ['i0'], amountAgorot: 1290 };
     expect(line(alone).detail).toBe('₪12.90, רון');
+  });
+});
+
+describe('buyItemText', () => {
+  const buy = (over: Partial<Item>): Item => ({
+    id: 'i',
+    list: 'buy',
+    position: 0,
+    name: 'Coca Cola',
+    kind: 'single',
+    quantityNeeded: 1,
+    ...over,
+  });
+
+  it('keeps an English name and the amount each in its own direction', () => {
+    // RLI name PDI, then FSI amount PDI: the `2` doesn't join `Coca Cola`; a no-break space keeps
+    // the amount on one line.
+    expect(buyItemText(buy({ displayQty: '2 ליטר' }), ' · ')).toBe(
+      '\u2067Coca Cola\u2069 · \u20682\u00a0ליטר\u2069',
+    );
+  });
+
+  it('is the name alone without an amount', () => {
+    expect(buyItemText(buy({}), ' ')).toBe('Coca Cola');
   });
 });

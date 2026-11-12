@@ -187,6 +187,22 @@ describe('editItem', () => {
     expect(next.items).toEqual([chairs, { ...meat, ...changes }]);
   });
 
+  it('sets or clears a buy item’s amount, and keeps it when left out', () => {
+    const changes = { ...meat, categoryId: null, displayQty: '2 ק״ג' };
+    const set = applyAction(trip(), { type: 'editItem', itemId: 'meat', changes }, 'me');
+    expect(set.items[1]!.displayQty).toBe('2 ק״ג');
+    const cleared = { ...changes, displayQty: null };
+    expect(
+      applyAction(set, { type: 'editItem', itemId: 'meat', changes: cleared }, 'me').items[1]!
+        .displayQty,
+    ).toBeUndefined();
+    const kept = { ...changes, displayQty: undefined };
+    expect(
+      applyAction(set, { type: 'editItem', itemId: 'meat', changes: kept }, 'me').items[1]!
+        .displayQty,
+    ).toBe('2 ק״ג');
+  });
+
   it('moves the item out of its category, or waits for a new one', () => {
     const changes = { ...chairs, categoryId: null };
     const out = applyAction(trip(), { type: 'editItem', itemId: 'chairs', changes }, 'me');

@@ -10,7 +10,7 @@ import { Sheet } from '@/components/Sheet';
 import { showToast } from '@/components/Toast';
 import { useCloseSheet } from '@/features/trip/closeSheet';
 import { deriveTrip } from '@/features/trip/derive';
-import { buyQuantity } from '@/features/trip/labels';
+import { buyItemText, buyQuantity } from '@/features/trip/labels';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { useMe } from '@/state/store';
@@ -132,8 +132,8 @@ function StartRunBody({ data }: { data: TripData }) {
           {taken.map(({ item, holder }) => (
             <View key={item.id} style={styles.takenRow}>
               <Avatar person={view.avatarOf(holder)} size={avatarSize.sm} />
-              <Text style={[styles.name, styles.muted, styles.regular]}>
-                {[item.name, buyQuantity(item)].filter(Boolean).join(' ')}
+              <Text style={[styles.name, styles.muted, styles.regular, styles.rtl]}>
+                {buyItemText(item, ' ')}
               </Text>
               <Text style={styles.qty}>{view.nameOf(holder)}</Text>
             </View>
@@ -163,6 +163,8 @@ const styles = StyleSheet.create({
   name: { ...type.itemTitle, color: colors.ink, flex: 1 },
   muted: { color: colors.inkMuted },
   regular: { fontFamily: type.body.fontFamily },
+  // A name in English next to its amount still reads right to left (`buyItemText`).
+  rtl: { writingDirection: 'rtl' },
   qty: { ...type.caption, color: colors.inkMuted },
   takenRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 40 },
 });

@@ -1,3 +1,4 @@
+export * from './amount';
 export * from './bag';
 export * from './bulk';
 export * from './catalog';

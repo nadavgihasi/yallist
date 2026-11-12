@@ -20,6 +20,8 @@ export interface NewItemInput {
   quantityNeeded: number;
   /** Null: uncategorized. */
   categoryId: string | null;
+  /** A buy item's amount (`2 ק״ג`); null: none. Left out, it stays as it is. */
+  displayQty?: string | null;
 }
 
 export interface NewExpenseInput {
@@ -146,6 +148,10 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
                 ...changes,
                 // A new category has no id yet: the item stays where it is until the API answers.
                 categoryId: newCategory ? i.categoryId : (changes.categoryId ?? undefined),
+                displayQty:
+                  changes.displayQty === undefined
+                    ? i.displayQty
+                    : (changes.displayQty ?? undefined),
               }
             : i,
         ),
