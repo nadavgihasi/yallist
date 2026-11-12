@@ -30,3 +30,22 @@ export function missingMessage(
   const more = missing.length > MAX_NAMES ? ` ${andMore(missing.length - MAX_NAMES)}` : '';
   return he.share.missing(trip.name, days(trip.startsOn, trip.endsOn), `${names}${more}`, url);
 }
+
+/**
+ * Opens WhatsApp with `text` ready to send: on web in a new tab, since following the link the way
+ * expo-linking does would replace the app's own page; on native, in the WhatsApp app. Rejects
+ * where native can't open it, so the caller can fall back to the share sheet.
+ */
+export async function openWhatsApp(
+  text: string,
+  os: string,
+  openURL: (url: string) => Promise<unknown>,
+  win: Pick<Window, 'open'> = window,
+): Promise<void> {
+  const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+  if (os === 'web') {
+    win.open(url, '_blank', 'noopener');
+    return;
+  }
+  await openURL(url);
+}

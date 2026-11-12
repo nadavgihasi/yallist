@@ -1,5 +1,5 @@
 import * as Linking from 'expo-linking';
-import { Pressable, Share, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarStack } from '@/components/Avatar';
 import { Countdown } from '@/components/Countdown';
@@ -7,18 +7,22 @@ import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { ProgressRing } from '@/components/ProgressRing';
 import { he, missingCount, openTransfers, peopleNames } from '@/i18n/he';
+import { rtl } from '@/lib/bidi';
 import { countdown } from '@/lib/dates';
-import { missingMessage } from '@/lib/share';
+import { missingMessage, openWhatsApp } from '@/lib/share';
 import { testId } from '@/lib/testId';
 import type { TripData } from '@/state/types';
 import { colors, radius, size, space, type } from '@/theme';
 
 import { toAvatar, type TripView } from './derive';
 
-/** WhatsApp first: that's where the group is (#51). The share sheet if it can't open. */
+/**
+ * WhatsApp first: that's where the group is (#51); in a new tab on web. The share sheet if it
+ * can't open.
+ */
 async function shareToWhatsApp(text: string) {
   try {
-    await Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text)}`);
+    await openWhatsApp(text, Platform.OS, Linking.openURL);
   } catch {
     await Share.share({ message: text }).catch(() => {});
   }
@@ -88,7 +92,7 @@ export function ReadinessHero({
           {view.mine.length > 0 && (
             <Text style={styles.mine}>
               {he.home.mine}
-              {view.mine.map((i) => i.name).join(', ')}
+              {view.mine.map((i) => rtl(i.name)).join(', ')}
             </Text>
           )}
           {!solo && (

@@ -22,6 +22,8 @@ import { testId } from '@/lib/testId';
 import type { TripSummary } from '@/state/types';
 import { colors, radius, space, type } from '@/theme';
 
+import { pastTripState } from './pastTrip';
+
 /**
  * An upcoming trip: its scene with the countdown, then name and dates, a ring with what's missing
  * and what's mine, and who's in. `now` comes from `useToday()`. The `next` trip also names the
@@ -86,11 +88,15 @@ export function TripCard({
   );
 }
 
-/** A past trip as one row; the check means everyone's settled up. */
+/**
+ * A past trip as one row, ending with my open transfers, how much got arranged (`0/24`) or, once
+ * everything was arranged and I'm settled up, a check.
+ */
 export function PastTripRow({ data }: { data: TripSummary }) {
   const { trip } = data;
   // Already only the transfers I'm part of.
   const open = data.transfers.length;
+  const state = pastTripState(data);
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
       <Pressable style={styles.past} accessibilityRole="link" {...testId('home-past-trip')}>
@@ -101,8 +107,10 @@ export function PastTripRow({ data }: { data: TripSummary }) {
             {monthName(trip.startsOn)} · {participants(data.members.length)}
           </Text>
         </View>
-        {open > 0 ? (
+        {state === 'transfers' ? (
           <Text style={styles.mine}>{openTransfers(open)}</Text>
+        ) : state === 'partial' ? (
+          <ProgressRing done={data.doneCount} total={data.itemCount} />
         ) : (
           <StatusRing state="done" label={he.money.settled} />
         )}

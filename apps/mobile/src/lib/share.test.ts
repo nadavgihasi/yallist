@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { missingMessage } from './share';
+import { missingMessage, openWhatsApp } from './share';
 
 const LRI = '⁦';
 const PDI = '⁩';
@@ -28,5 +28,32 @@ describe('missingMessage', () => {
 
   it('celebrates once nothing is missing', () => {
     expect(missingMessage(trip, [], link)).toBe(`הכול מכוסה לקמפינג בכנרת 🎉 ${LRI}${link}${PDI}`);
+  });
+});
+
+describe('openWhatsApp', () => {
+  const url = 'https://wa.me/?text=%D7%97%D7%A1%D7%A8%20%D7%A7%D7%A8%D7%97';
+
+  it('opens a new tab on web, keeping the app in its own', async () => {
+    const openURL = vi.fn(() => Promise.resolve());
+    const win = { open: vi.fn(() => null) };
+    await openWhatsApp('חסר קרח', 'web', openURL, win);
+    expect(win.open).toHaveBeenCalledWith(url, '_blank', 'noopener');
+    expect(openURL).not.toHaveBeenCalled();
+  });
+
+  it('opens the WhatsApp app on native', async () => {
+    const openURL = vi.fn(() => Promise.resolve());
+    const win = { open: vi.fn(() => null) };
+    await openWhatsApp('חסר קרח', 'android', openURL, win);
+    expect(openURL).toHaveBeenCalledWith(url);
+    expect(win.open).not.toHaveBeenCalled();
+  });
+
+  it('rejects where native cannot open it', async () => {
+    const openURL = vi.fn(() => Promise.reject(new Error('no app')));
+    await expect(
+      openWhatsApp('x', 'android', openURL, { open: vi.fn(() => null) }),
+    ).rejects.toThrow();
   });
 });

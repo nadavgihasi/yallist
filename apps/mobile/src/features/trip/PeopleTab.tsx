@@ -7,7 +7,7 @@ import { Icon } from '@/components/Icon';
 import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
-import { he, participants } from '@/i18n/he';
+import { he, participants, removeWarning } from '@/i18n/he';
 import { formatRange } from '@/lib/dates';
 import { invitePayload, inviteUrl } from '@/lib/invite';
 import { testId } from '@/lib/testId';
@@ -174,19 +174,56 @@ export function PeopleTab({
 
       <ListGroup title={participants(view.activeIds.length)}>
         {view.active.map((m) => {
+          const removing = confirming === `remove:${m.userId}`;
           return (
-            <View key={m.userId} style={styles.person}>
-              <Avatar person={toAvatar(m)} size={44} />
-              <View style={styles.personBody}>
-                {name(m)}
-                <Text style={styles.chipText}>{taken(m.userId)}</Text>
+            <View key={m.userId} style={styles.member}>
+              <View style={styles.person}>
+                <Avatar person={toAvatar(m)} size={44} />
+                <View style={styles.personBody}>
+                  {name(m)}
+                  <Text style={styles.chipText}>{taken(m.userId)}</Text>
+                </View>
+                {organizer && m.userId !== me && !removing && (
+                  <PillButton
+                    label={he.people.remove}
+                    variant="quiet"
+                    size="sm"
+                    {...testId('people-remove')}
+                    onPress={() => setConfirming(`remove:${m.userId}`)}
+                  />
+                )}
               </View>
-              {organizer &&
-                m.userId !== me &&
-                confirmButton('remove', m.userId, he.people.remove, he.people.confirmRemove, () => {
-                  act({ type: 'removeMember', userId: m.userId });
-                  showToast(he.people.removed(view.displayNameOf(m.userId)));
-                })}
+              {/* Removing asks first, saying what they owe or are owed: they lose access to it. */}
+              {removing && (
+                <View style={styles.confirm}>
+                  <Text
+                    style={styles.text}
+                    accessibilityRole="alert"
+                    {...testId('people-remove-warning')}
+                  >
+                    {removeWarning(view.displayNameOf(m.userId), data.balances[m.userId] ?? 0)}
+                  </Text>
+                  <View style={styles.actions}>
+                    <PillButton
+                      label={he.people.confirmRemove}
+                      variant="danger"
+                      size="sm"
+                      {...testId('people-remove-confirm')}
+                      onPress={() => {
+                        act({ type: 'removeMember', userId: m.userId });
+                        showToast(he.people.removed(view.displayNameOf(m.userId)));
+                        setConfirming(undefined);
+                      }}
+                    />
+                    <PillButton
+                      label={he.profile.cancel}
+                      variant="quiet"
+                      size="sm"
+                      onPress={() => setConfirming(undefined)}
+                    />
+                  </View>
+                </View>
+              )}
             </View>
           );
         })}
@@ -245,6 +282,8 @@ const styles = StyleSheet.create({
   title: { ...type.itemTitle, color: colors.ink },
   text: { ...type.caption, color: colors.inkMuted },
   link: { ...type.caption, color: colors.inkMuted, textAlign: 'center', writingDirection: 'ltr' },
+  member: { gap: space[2] },
+  confirm: { gap: space[2], paddingStart: 44 + space[3] },
   person: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
   personBody: { flex: 1, gap: space[1] },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
