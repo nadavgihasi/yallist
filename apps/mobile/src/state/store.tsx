@@ -46,6 +46,13 @@ const persistOptions = {
   dehydrateOptions: { shouldDehydrateMutation: () => false },
 };
 
+/**
+ * What the cache restored is shown at once, but never taken as fresh: it was saved up to a
+ * second after its last change (the persister's throttle) and keeps its fetch time, so a reload
+ * within `staleTime` of a change would otherwise show the screen from before it, and not refetch.
+ */
+const refetchRestored = () => void queryClient.invalidateQueries();
+
 interface SessionContext {
   me?: Me;
   signIn: (result: AuthResult) => Promise<void>;
@@ -99,7 +106,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   if (session === undefined) return <Loader line={he.states.boot} />;
   return (
-    <PersistQueryClientProvider client={queryClient} persistOptions={persistOptions}>
+    <PersistQueryClientProvider
+      client={queryClient}
+      persistOptions={persistOptions}
+      onSuccess={refetchRestored}
+    >
       <Context.Provider value={{ me: session?.me, signIn, signOut }}>{children}</Context.Provider>
     </PersistQueryClientProvider>
   );
