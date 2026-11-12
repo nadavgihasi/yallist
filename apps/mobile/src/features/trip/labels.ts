@@ -73,13 +73,22 @@ export function statusLine(
     case 'inProgress':
       return { label: s.inProgress, detail: holders(status.holderIds), tone: 'ok' };
     case 'bought': {
-      const amount = formatShekel(status.expense.amountAgorot);
+      const { amountAgorot, paidBy, itemIds = [] } = status.expense;
+      const amount = formatShekel(amountAgorot);
+      const byMe = paidBy === me;
+      // A shopping run's one amount is the run's total, never this item's price.
+      if (itemIds.length > 1) {
+        return {
+          label: s.bought,
+          detail: byMe
+            ? s.boughtInMyRun(itemIds.length, amount)
+            : s.boughtInRun(view.displayNameOf(paidBy), itemIds.length, amount),
+          tone: 'success',
+        };
+      }
       return {
         label: s.bought,
-        detail:
-          status.expense.paidBy === me
-            ? s.boughtByMe(amount)
-            : s.boughtBy(amount, view.nameOf(status.expense.paidBy)),
+        detail: byMe ? s.boughtByMe(amount) : s.boughtBy(amount, view.nameOf(paidBy)),
         tone: 'success',
       };
     }

@@ -1,7 +1,10 @@
-import { splitEqually } from '@yallist/domain';
+import { splitEqually, type Expense, type Item } from '@yallist/domain';
 import { describe, expect, it, vi } from 'vitest';
 
-import { perPersonText } from './labels';
+import type { TripData } from '@/state/types';
+
+import { deriveTrip } from './derive';
+import { perPersonText, statusLine } from './labels';
 
 // The theme pulls in react-native, which these unit tests don't run.
 vi.mock('@/theme', () => ({ colors: {} }));
@@ -18,5 +21,56 @@ describe('perPersonText', () => {
   it('has nothing to show without an amount or anyone to split with', () => {
     expect(perPersonText(undefined, 3)).toBeUndefined();
     expect(perPersonText(41290, 0)).toBeUndefined();
+  });
+});
+
+describe('statusLine for a bought item', () => {
+  const items: Item[] = Array.from({ length: 8 }, (_, i) => ({
+    id: `i${i}`,
+    list: 'buy',
+    position: i,
+    name: i === 0 ? 'חומוס' : `פריט ${i}`,
+    kind: 'single',
+    quantityNeeded: 1,
+  }));
+  const run = (paidBy: string): Expense => ({
+    id: 'run',
+    itemIds: items.map((i) => i.id),
+    description: 'קניות · 8 פריטים',
+    amountAgorot: 41290,
+    paidBy,
+    shares: ['me', 'ron'],
+  });
+  const line = (expense: Expense, item = items[0]!) => {
+    const data = {
+      members: ['me', 'ron'].map((userId) => ({
+        userId,
+        displayName: userId === 'ron' ? 'רון' : 'נדב',
+        role: 'member',
+        status: 'active',
+        color: '#FFD9C2',
+      })),
+      items,
+      claims: [],
+      expenses: [expense],
+      runs: [],
+      transfers: [],
+    } as unknown as TripData;
+    const view = deriveTrip(data, 'me');
+    return statusLine(item, view.status(item), [], view, 'me');
+  };
+
+  it("says it was part of a shopping run, not that the run's total was its price", () => {
+    expect(line(run('ron'))).toEqual({
+      label: 'נקנה',
+      detail: 'בקנייה של רון: 8 פריטים, ₪412.90',
+      tone: 'success',
+    });
+    expect(line(run('me')).detail).toBe('בקנייה שלך: 8 פריטים, ₪412.90');
+  });
+
+  it('shows the price of an item bought on its own', () => {
+    const alone: Expense = { ...run('ron'), itemIds: ['i0'], amountAgorot: 1290 };
+    expect(line(alone).detail).toBe('₪12.90, רון');
   });
 });
