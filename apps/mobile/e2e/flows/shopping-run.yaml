@@ -1,5 +1,6 @@
-# Go shopping for the buy list: take two items, check one off, pay at the till. The one in the
-# cart is bought with one expense; the other goes back to the list.
+# Go shopping for the buy list: take two items, check one off, add a forgotten one in the store and
+# check it off too, pay at the till. What's in the cart is bought with one expense; the other goes
+# back to the list.
 appId: app.yallist
 url: ${WEB_URL}
 # A video per flow, kept even when it fails (onFlowComplete always runs).
@@ -31,6 +32,17 @@ tags: [shopping]
 - tapOn:
     id: shop-item-Milk
 - assertVisible: 1 מתוך 2 בעגלה
+# Forgot the ice: it joins the run (and the buy list), ready to tick.
+- tapOn:
+    id: shop-forgot-name
+- inputText: Ice
+- tapOn:
+    id: shop-forgot-add
+- assertVisible:
+    id: shop-item-Ice
+- tapOn:
+    id: shop-item-Ice
+- assertVisible: 2 מתוך 3 בעגלה
 - tapOn:
     id: shop-checkout
 - tapOn:
@@ -38,7 +50,7 @@ tags: [shopping]
 - inputText: '45.5'
 - tapOn:
     id: shop-finish-save
-# Back on the buy list: Milk is bought, Bread is missing again, and the run is closed.
+# Back on the buy list: Milk and Ice are bought, Bread is missing again, and the run is closed.
 - assertVisible:
     id: trip-title
 - assertVisible:
@@ -46,4 +58,4 @@ tags: [shopping]
 - assertVisible: .*45\.5.*
 - tapOn:
     id: trip-tab-money
-- assertVisible: קניות · פריט אחד
+- assertVisible: קניות · 2 פריטים
