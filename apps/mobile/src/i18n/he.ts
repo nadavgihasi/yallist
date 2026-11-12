@@ -330,6 +330,9 @@ export const he = {
     claimBring: 'אני אביא את זה',
     claimBuy: 'אני אקנה את זה',
     claimEach: 'יש לי כבר',
+    /** Characters typed out of the most a name takes: `72/80`. */
+    count: (n: number, max: number) => `${n}/${max}`,
+    failed: 'הפריט לא נשמר. מה שכתבת נשאר כאן, אפשר לנסות שוב.',
     cta: (name: string, list: 'bring' | 'buy') =>
       name
         ? `הוספת ״${name}״ ל${list === 'bring' ? 'רשימת ההבאה' : 'רשימת הקניות'}`

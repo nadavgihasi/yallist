@@ -21,6 +21,8 @@ import type { NewItemInput } from '@/state/reducer';
 import { useTrip } from '@/state/trips';
 import { colors, fonts } from '@/theme';
 
+import { COUNTER_FROM, ITEM_NAME_MAX } from './addItem';
+
 const KINDS: ItemKind[] = ['single', 'qty', 'each'];
 
 /** Marks the "new category" chip as the picked category. */
@@ -44,7 +46,8 @@ export function ItemForm({
   list?: ListKind;
   /** Preselected for a new item, e.g. when added from inside a category. */
   categoryId?: string;
-  onSubmit: (item: NewItemInput, claim: boolean, newCategory?: string) => void;
+  /** A promise keeps the sheet saving until it settles; a rejection shows on the name field. */
+  onSubmit: (item: NewItemInput, claim: boolean, newCategory?: string) => Promise<void> | void;
   onClose: () => void;
 }) {
   const data = useTrip(tripId);
@@ -55,6 +58,8 @@ export function ItemForm({
   const [category, setCategory] = useState(item ? item.categoryId : initialCategory);
   const [newName, setNewName] = useState('');
   const [claim, setClaim] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   if (!data) return null;
 
@@ -70,7 +75,7 @@ export function ItemForm({
   const trimmed = name.trim();
   // Only suggest what this list doesn't have yet.
   const taken = heldCatalogNames(data.items.filter((i) => i.list === list).map((i) => i.name));
-  const valid = !!trimmed && (picked !== NEW || !!newCategory);
+  const valid = !!trimmed && trimmed.length <= ITEM_NAME_MAX && (picked !== NEW || !!newCategory);
 
   // A catalog item fills in the rest: its list, how it's counted and its category (the trip's own
   // if it has one of that name, otherwise a new one, unless one is already picked).
@@ -88,15 +93,23 @@ export function ItemForm({
   };
 
   const submit = () => {
-    if (!valid) return;
+    if (!valid || saving) return;
     const quantityNeeded = kind === 'qty' ? qty : 1;
     const creating = picked === NEW && !existing;
     const categoryId = picked === NEW ? (existing?.id ?? null) : (picked ?? null);
-    onSubmit(
+    const result = onSubmit(
       { list, name: trimmed, kind, quantityNeeded, categoryId },
       claim,
       creating ? newCategory : undefined,
     );
+    if (!result) return;
+    setSaving(true);
+    setFailed(false);
+    // On success the sheet closes; on failure it stays, with the text, to try again.
+    result.catch(() => {
+      setSaving(false);
+      setFailed(true);
+    });
   };
 
   const claimLabel =
@@ -116,7 +129,7 @@ export function ItemForm({
           {...testId('item-form-save')}
           size="lg"
           wide
-          disabled={!valid}
+          disabled={!valid || saving}
           onPress={submit}
         />
       }
@@ -132,10 +145,21 @@ export function ItemForm({
       />
 
       <View style={styles.field}>
-        <Text style={fieldStyles.label}>{he.addItem.what}</Text>
+        <View style={styles.labelRow}>
+          <Text style={fieldStyles.label}>{he.addItem.what}</Text>
+          {name.length >= COUNTER_FROM && (
+            <Text style={styles.counter} {...testId('item-form-counter')}>
+              {he.addItem.count(name.length, ITEM_NAME_MAX)}
+            </Text>
+          )}
+        </View>
         <Input
           value={name}
-          onChangeText={setName}
+          onChangeText={(text) => {
+            setName(text);
+            setFailed(false);
+          }}
+          maxLength={ITEM_NAME_MAX}
           onSubmitEditing={submit}
           returnKeyType="done"
           placeholder={he.addItem.placeholder[list]}
@@ -144,6 +168,11 @@ export function ItemForm({
           autoFocus={!item}
           style={styles.input}
         />
+        {failed && (
+          <Text style={fieldStyles.error} accessibilityLiveRegion="polite">
+            {he.addItem.failed}
+          </Text>
+        )}
         {!item && <CatalogPicker query={name} list={list} exclude={taken} onPick={pick} />}
       </View>
 
@@ -245,6 +274,8 @@ export function ItemForm({
 
 const styles = StyleSheet.create({
   field: { gap: 10 },
+  labelRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  counter: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted, marginStart: 'auto' },
   input: {
     minHeight: 60,
     paddingHorizontal: 18,
