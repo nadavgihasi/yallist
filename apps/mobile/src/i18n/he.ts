@@ -369,6 +369,7 @@ export const he = {
     fromCart: (name: string) => `הוצאת ${name} מהעגלה`,
     addedBy: (name: string) => `נוסף עכשיו ע״י ${name}`,
     alsoMine: 'גם עליי',
+    cartSection: 'בעגלה',
     dismiss: 'הסתרה',
     checkout: 'סיימתי, לקופה',
     menu: 'עוד אפשרויות',

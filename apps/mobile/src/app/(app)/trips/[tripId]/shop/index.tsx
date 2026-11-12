@@ -1,4 +1,4 @@
-import { runSummary, type Item } from '@yallist/domain';
+import type { Item } from '@yallist/domain';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,12 +7,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Avatar } from '@/components/Avatar';
 import { FLOATING_CLEARANCE, FloatingAction } from '@/components/FloatingAction';
 import { Icon } from '@/components/Icon';
-import { Card } from '@/components/ListGroup';
+import { Card, ListGroup } from '@/components/ListGroup';
 import { Loader } from '@/components/Loader';
 import { PillButton } from '@/components/PillButton';
 import { Progress } from '@/components/Progress';
 import { deriveTrip, type TripView } from '@/features/trip/derive';
 import { buyQuantity } from '@/features/trip/labels';
+import { shopList } from '@/features/trip/shopList';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { useMe } from '@/state/store';
@@ -66,8 +67,9 @@ function ShopRunBody({
   const [menu, setMenu] = useState<'closed' | 'open' | 'confirm'>('closed');
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
 
-  const { inCart, notInCart } = runSummary(view.runClaims(runId), view.items);
-  const rows = [...inCart, ...notInCart].sort((a, b) => a.position - b.position);
+  // What's left by category, as on the buy list; what's in the cart sinks to its own section.
+  const { groups, inCart } = shopList(view.runClaims(runId), view.items, data.categories);
+  const total = inCart.length + groups.reduce((n, g) => n + g.items.length, 0);
   const cart = new Set(inCart.map((i) => i.id));
   // Free items others added since the run started, newest first.
   const startedAt = view.myRun!.startedAt;
@@ -145,35 +147,20 @@ function ShopRunBody({
 
         <Card gap={space[1]}>
           <Text style={styles.cartCount} accessibilityLiveRegion="polite">
-            {he.shop.inCart(inCart.length, rows.length)}
+            {he.shop.inCart(inCart.length, total)}
           </Text>
           <View style={styles.bar}>
-            <Progress done={inCart.length} total={rows.length} />
+            <Progress done={inCart.length} total={total} />
           </View>
-          {rows.map((item) => {
-            const on = cart.has(item.id);
-            return (
-              <Pressable
-                key={item.id}
-                accessibilityRole="button"
-                accessibilityLabel={on ? he.shop.fromCart(item.name) : he.shop.toCart(item.name)}
-                onPress={() => toggle(item)}
-                style={styles.row}
-                {...testId(`shop-item-${item.name}`)}
-              >
-                {on ? (
-                  <View style={[styles.check, styles.checkOn]}>
-                    <Icon name="check" size={18} color={colors.onPrimary} strokeWidth={3} />
-                  </View>
-                ) : (
-                  <View style={styles.check} />
-                )}
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.caption}>{buyQuantity(item)}</Text>
-              </Pressable>
-            );
-          })}
         </Card>
+
+        {groups.map(({ category, items }) => (
+          <ListGroup key={category?.id ?? 'none'} title={category?.name ?? he.trip.uncategorized}>
+            {items.map((item) => (
+              <CartRow key={item.id} item={item} on={false} onPress={() => toggle(item)} />
+            ))}
+          </ListGroup>
+        ))}
 
         {added.map((item) => (
           <Card key={item.id} style={styles.added}>
@@ -201,6 +188,14 @@ function ShopRunBody({
             </Pressable>
           </Card>
         ))}
+
+        {inCart.length > 0 && (
+          <ListGroup title={he.shop.cartSection}>
+            {inCart.map((item) => (
+              <CartRow key={item.id} item={item} on onPress={() => toggle(item)} />
+            ))}
+          </ListGroup>
+        )}
         <View style={{ height: FLOATING_CLEARANCE + insets.bottom }} />
       </ScrollView>
       <FloatingAction
@@ -210,6 +205,29 @@ function ShopRunBody({
         onPress={() => router.push({ pathname: '/trips/[tripId]/shop/finish', params: { tripId } })}
       />
     </View>
+  );
+}
+
+/** One item to tick into the cart, or (`on`) back out of it. */
+function CartRow({ item, on, onPress }: { item: Item; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={on ? he.shop.fromCart(item.name) : he.shop.toCart(item.name)}
+      onPress={onPress}
+      style={styles.row}
+      {...testId(`shop-item-${item.name}`)}
+    >
+      {on ? (
+        <View style={[styles.check, styles.checkOn]}>
+          <Icon name="check" size={18} color={colors.onPrimary} strokeWidth={3} />
+        </View>
+      ) : (
+        <View style={styles.check} />
+      )}
+      <Text style={[styles.name, on && styles.nameOn]}>{item.name}</Text>
+      <Text style={styles.caption}>{buyQuantity(item)}</Text>
+    </Pressable>
   );
 }
 
@@ -261,6 +279,7 @@ const styles = StyleSheet.create({
   },
   checkOn: { backgroundColor: colors.brand, borderColor: colors.brand },
   name: { ...type.itemTitle, fontSize: 17, lineHeight: 24, color: colors.ink, flex: 1 },
+  nameOn: { color: colors.inkMuted },
   added: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   dismiss: {
     width: space.touch,
