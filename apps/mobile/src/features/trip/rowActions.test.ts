@@ -1,7 +1,7 @@
 import type { Claim, Item, ItemStatus } from '@yallist/domain';
 import { describe, expect, it } from 'vitest';
 
-import { ringClaim } from './rowActions';
+import { noteLine, ringClaim } from './rowActions';
 
 const grill: Item = {
   id: 'grill',
@@ -43,5 +43,22 @@ describe('ringClaim', () => {
     expect(ringClaim(chairs, { kind: 'partial', missing: 6 }, mine, 'me')).toBeUndefined();
     const bought = { kind: 'bought', expense: {} } as never;
     expect(ringClaim(grill, bought, [], 'me')).toBeUndefined();
+  });
+});
+
+describe('noteLine', () => {
+  it('shows the note on one line', () => {
+    expect(noteLine('הגדול, מהמחסן\nליד הדלת')).toBe('הגדול, מהמחסן ליד הדלת');
+  });
+
+  it('cuts a long note short', () => {
+    const line = noteLine('א'.repeat(100), 20)!;
+    expect(line).toHaveLength(20);
+    expect(line.endsWith('…')).toBe(true);
+  });
+
+  it('shows nothing without a note', () => {
+    expect(noteLine(undefined)).toBeUndefined();
+    expect(noteLine('  \n ')).toBeUndefined();
   });
 });

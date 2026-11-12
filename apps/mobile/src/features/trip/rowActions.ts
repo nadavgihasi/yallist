@@ -20,3 +20,10 @@ export function ringClaim(
   if (claimCap(item, claims, me) <= 0) return undefined;
   return item.kind === 'single' ? item.quantityNeeded : 1;
 }
+
+/** A row's note on one line: whitespace and line breaks collapsed, cut at `max` characters. */
+export function noteLine(note: string | undefined, max = 60): string | undefined {
+  const line = note?.replace(/\s+/g, ' ').trim();
+  if (!line) return undefined;
+  return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
+}

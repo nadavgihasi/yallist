@@ -21,7 +21,7 @@ import { colors, space, type } from '@/theme';
 import type { TripView } from './derive';
 import { ClaimStepper } from './ClaimStepper';
 import { TONE_COLOR, packedText, quantityText, statusLine } from './labels';
-import { ringClaim } from './rowActions';
+import { noteLine, ringClaim } from './rowActions';
 
 /** Dashed while something is still missing, a ring once covered, a brand check once packed. */
 const RING: Record<Packing, RingState> = { missing: 'open', covered: 'held', packed: 'done' };
@@ -67,6 +67,7 @@ export function ItemRow({
   const myClaim = claims.find((c) => c.itemId === item.id && c.userId === me);
   // Nobody has it (or not all of it) and I have none of it: the dashed ring claims it.
   const ringQuantity = ringClaim(item, status, claims, me);
+  const note = noteLine(item.note);
 
   // Once bought (it has an expense), claims are settled: show who has it instead of controls.
   const bought = status.kind === 'bought';
@@ -159,6 +160,11 @@ export function ItemRow({
           {!!line.detail && <Text style={styles.detail}> · {line.detail}</Text>}
           {!!packed && <Text style={styles.detail}> · {packed}</Text>}
         </Text>
+        {!!note && (
+          <Text style={styles.note} numberOfLines={1} {...testId('item-note')}>
+            {note}
+          </Text>
+        )}
       </Pressable>
       {action}
     </View>
@@ -208,4 +214,5 @@ const styles = StyleSheet.create({
   status: { ...type.caption },
   mine: { fontFamily: type.itemTitle.fontFamily },
   detail: { fontFamily: type.caption.fontFamily, color: colors.inkMuted },
+  note: { ...type.caption, color: colors.inkMuted },
 });
