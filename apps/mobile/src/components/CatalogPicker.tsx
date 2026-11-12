@@ -19,6 +19,15 @@ import { colors, radius, space, type } from '@/theme';
 const PAGE = 24;
 
 /**
+ * The categories shown before "more categories", by id: the ones most trips use, so the sheet
+ * doesn't open on a wall of chips.
+ */
+const COMMON: Record<ListKind, string[]> = {
+  bring: ['cooking', 'sleeping', 'seating', 'kitchen', 'clothes', 'hygiene'],
+  buy: ['meat', 'bread', 'veg', 'drinks', 'snacks', 'breakfast'],
+};
+
+/**
  * The catalog under a name field. While something is typed: the items that match, to tap (the
  * name is then spelled as the catalog does, which is how a trip item meets my bag). Before that:
  * the catalog's categories, each opening its items.
@@ -41,6 +50,7 @@ export function CatalogPicker({
 }) {
   const [open, setOpen] = useState<string>();
   const [shown, setShown] = useState(PAGE);
+  const [all, setAll] = useState(false);
   const typed = normalizeName(query).length > 0;
 
   if (typed) {
@@ -72,7 +82,12 @@ export function CatalogPicker({
   }
 
   if (!browse) return null;
-  const categories = CATALOG_CATEGORIES.filter((c) => c.list === list);
+  const listed = CATALOG_CATEGORIES.filter((c) => c.list === list);
+  // A few common ones until asked for all; an opened one always stays in sight.
+  const categories = all
+    ? listed
+    : listed.filter((c) => COMMON[list].includes(c.id) || c.name === open);
+  const hidden = listed.length - categories.length;
   const items = open ? catalogCategoryItems(open).filter((i) => !exclude.has(i.name)) : [];
   return (
     <View style={styles.browse}>
@@ -89,6 +104,15 @@ export function CatalogPicker({
           />
         ))}
       </ChipGroup>
+      {(hidden > 0 || all) && (
+        <PillButton
+          label={all ? he.catalog.fewerCategories : he.catalog.moreCategories(hidden)}
+          variant="quiet"
+          size="sm"
+          onPress={() => setAll(!all)}
+          style={styles.toggle}
+        />
+      )}
       {items.length > 0 && (
         <View style={styles.wrap}>
           {items.slice(0, shown).map((i) => (
@@ -126,5 +150,6 @@ const styles = StyleSheet.create({
   resultName: { ...type.itemTitle, color: colors.ink, flexShrink: 1 },
   resultCategory: { ...type.caption, color: colors.inkMuted, flex: 1 },
   browse: { gap: space[3] },
+  toggle: { alignSelf: 'flex-start' },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
 });

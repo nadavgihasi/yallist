@@ -315,6 +315,8 @@ export const he = {
     results: 'הצעות מהקטלוג',
     categories: 'קטגוריות בקטלוג',
     more: (left: number) => `עוד ${left} פריטים`,
+    moreCategories: (left: number) => `עוד ${left} קטגוריות`,
+    fewerCategories: 'פחות קטגוריות',
   },
   addItem: {
     title: 'פריט חדש',
