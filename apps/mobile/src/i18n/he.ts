@@ -666,7 +666,8 @@ export const he = {
       `${n === 1 ? 'פריט אחד סומן' : `${n} פריטים סומנו`} מהתיק שלך. נשאר רק לארוז.`,
     /** Common items in the bag that nobody brings yet. */
     offerTitle: (n: number) => `${n === 1 ? 'פריט אחד' : `${n} פריטים`} כבר בתיק שלך`,
-    offerText: (names: string) => `${names}. מסמנים שהם עליך?`,
+    /** The bag line, read out: what it says, which items, and that it opens the choice. */
+    offerLabel: (line: string, names: string) => `${line}: ${names}. בחירה מה עליך`,
     offerAll: 'הכול עליי',
     offerDismiss: 'לא עכשיו',
     chooseTitle: 'מה עליך?',

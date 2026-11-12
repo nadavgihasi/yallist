@@ -102,12 +102,14 @@ function BagLine({
     <View style={styles.note} {...testId('bag-offer')}>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${text}. ${he.bag.offerText(joinNames(offers.map((o) => rtl(o.item.name))))}`}
+        accessibilityLabel={he.bag.offerLabel(text, joinNames(offers.map((o) => rtl(o.item.name))))}
         onPress={() => router.push({ pathname: '/trips/[tripId]/bag', params: { tripId } })}
         style={({ pressed }) => [styles.noteBody, pressed && styles.pressed]}
         {...testId('bag-offer-choose')}
       >
         {body}
+        {/* The text opens the choice: say so, as the hero's call to action does. */}
+        <Icon name="chevronEnd" size={18} color={colors.primaryStrong} strokeWidth={2.5} />
       </Pressable>
       <PillButton
         label={he.bag.offerAll}
@@ -196,7 +198,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.card,
     backgroundColor: colors.primaryTint,
   },
-  noteBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  noteBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
   noteText: { ...type.caption, color: colors.ink, flex: 1 },
   pressed: { opacity: 0.75 },
   // A 44px target at the line's end.
