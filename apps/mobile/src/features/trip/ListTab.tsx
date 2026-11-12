@@ -90,15 +90,18 @@ export function ListTab({
       {list === 'buy' && <ShopBanner data={data} view={view} me={me} />}
       {list === 'bring' && <BagCards data={data} view={view} me={me} bag={bag} />}
       {progress && progress.total > 0 && (
-        <Card gap={space[2]}>
-          <Text style={styles.progress} {...testId('bring-progress')}>
-            {he.trip.coveredCount(progress.covered, progress.total)}
-          </Text>
+        // Slim, not a card: the list starts right under it.
+        <View style={styles.progressWrap}>
+          <View style={styles.progressLine}>
+            <Text style={styles.progress} {...testId('bring-progress')}>
+              {he.trip.coveredCount(progress.covered, progress.total)}
+            </Text>
+            <Text style={styles.aside} {...testId('bring-packed')}>
+              {packedCount(progress.packed)}
+            </Text>
+          </View>
           <Progress done={progress.covered} total={progress.total} />
-          <Text style={styles.aside} {...testId('bring-packed')}>
-            {packedCount(progress.packed)}
-          </Text>
-        </Card>
+        </View>
       )}
       <ScrollView
         horizontal
@@ -230,7 +233,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   aside: { ...type.caption, color: colors.inkMuted },
-  progress: { ...type.itemTitle, color: colors.ink },
+  progress: { ...type.itemTitle, color: colors.ink, flex: 1 },
+  progressWrap: { gap: space[2], paddingHorizontal: space[1] },
+  progressLine: { flexDirection: 'row', alignItems: 'baseline', gap: space[3] },
   edit: {
     width: 36,
     height: 36,

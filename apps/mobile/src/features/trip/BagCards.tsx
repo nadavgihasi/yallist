@@ -7,7 +7,7 @@ import { CheckRow } from '@/components/CheckRow';
 import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
-import { he, joinNames } from '@/i18n/he';
+import { bagLine, he, joinNames } from '@/i18n/he';
 import { rtl } from '@/lib/bidi';
 import { countdown } from '@/lib/dates';
 import { testId } from '@/lib/testId';
@@ -35,7 +35,7 @@ export function useTakeFromBag(tripId: string) {
 }
 
 /**
- * The top of the bring list: how many per-person items my bag marked, common items in my bag that
+ * The top of the bring list: one line for what my bag marked and the common items in it that
  * nobody brings yet, and once the trip is over, what I brought that my bag doesn't have.
  */
 export function BagCards({
@@ -55,56 +55,75 @@ export function BagCards({
   const brought = ended ? broughtNotInBag(view.items, data.claims, bag, me) : [];
   return (
     <>
-      {marked > 0 && (
-        <View style={styles.note} {...testId('bag-marked')}>
-          <Icon name="bag" color={colors.primaryStrong} />
-          <Text style={styles.noteText}>{he.bag.marked(marked)}</Text>
-        </View>
+      {(marked > 0 || offers.length > 0) && (
+        <BagLine tripId={data.trip.id} marked={marked} offers={offers} />
       )}
-      {offers.length > 0 && <Offer tripId={data.trip.id} offers={offers} />}
       {brought.length > 0 && <AddBrought tripId={data.trip.id} brought={brought} />}
     </>
   );
 }
 
-/** "3 items are already in your bag": all on me, pick some, or not for this trip. */
-function Offer({ tripId, offers }: { tripId: string; offers: BagSuggestion[] }) {
+/**
+ * One line for the bag: how many per-person items it marked, and the common items in it that
+ * nobody brings yet, with "all on me" and ✕ for not this trip. Tapping the text opens the sheet
+ * that picks some of them.
+ */
+function BagLine({
+  tripId,
+  marked,
+  offers,
+}: {
+  tripId: string;
+  marked: number;
+  offers: BagSuggestion[];
+}) {
   const [dismissed, dismiss] = useDismissed(`bag-offer/${tripId}`);
   const take = useTakeFromBag(tripId);
-  if (dismissed !== false) return null;
+  // Unknown (still reading) counts as dismissed, so the offer doesn't flash.
+  const offer = dismissed === false && offers.length > 0;
+  if (!offer && marked === 0) return null;
+  const text = bagLine(marked, offer ? offers.length : 0);
+  const body = (
+    <>
+      <Icon name="bag" color={colors.primaryStrong} />
+      <Text style={styles.noteText} numberOfLines={2}>
+        {text}
+      </Text>
+    </>
+  );
+  if (!offer) {
+    return (
+      <View style={styles.note} {...testId('bag-marked')}>
+        {body}
+      </View>
+    );
+  }
   return (
-    <View style={styles.card} {...testId('bag-offer')}>
-      <View style={styles.head}>
-        <Icon name="bag" color={colors.primaryStrong} />
-        <View style={styles.texts}>
-          <Text style={styles.title}>{he.bag.offerTitle(offers.length)}</Text>
-          <Text style={styles.caption}>
-            {he.bag.offerText(joinNames(offers.map((o) => rtl(o.item.name))))}
-          </Text>
-        </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={he.bag.offerDismiss}
-          onPress={dismiss}
-          style={styles.close}
-          {...testId('bag-offer-dismiss')}
-        >
-          <Icon name="close" size={20} color={colors.inkMuted} />
-        </Pressable>
-      </View>
-      <View style={styles.actions}>
-        <PillButton
-          label={he.bag.offerAll}
-          onPress={() => take(offers)}
-          {...testId('bag-offer-all')}
-        />
-        <PillButton
-          label={he.bag.offerChoose}
-          variant="card"
-          onPress={() => router.push({ pathname: '/trips/[tripId]/bag', params: { tripId } })}
-          {...testId('bag-offer-choose')}
-        />
-      </View>
+    <View style={styles.note} {...testId('bag-offer')}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${text}. ${he.bag.offerText(joinNames(offers.map((o) => rtl(o.item.name))))}`}
+        onPress={() => router.push({ pathname: '/trips/[tripId]/bag', params: { tripId } })}
+        style={({ pressed }) => [styles.noteBody, pressed && styles.pressed]}
+        {...testId('bag-offer-choose')}
+      >
+        {body}
+      </Pressable>
+      <PillButton
+        label={he.bag.offerAll}
+        size="sm"
+        onPress={() => take(offers)}
+        {...testId('bag-offer-all')}
+      />
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={he.bag.offerDismiss}
+        onPress={dismiss}
+        style={styles.lineClose}
+        {...testId('bag-offer-dismiss')}
+      >
+        <Icon name="close" size={20} color={colors.inkMuted} />
+      </Pressable>
     </View>
   );
 }
@@ -166,16 +185,28 @@ function AddBrought({
 }
 
 const styles = StyleSheet.create({
+  // One line: the text, then "all on me" and ✕ at its end.
   note: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space[3],
-    paddingVertical: 14,
-    paddingHorizontal: space[5],
+    gap: space[2],
+    minHeight: 56,
+    paddingVertical: space[2],
+    paddingHorizontal: space[4],
     borderRadius: radius.card,
     backgroundColor: colors.primaryTint,
   },
+  noteBody: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[3] },
   noteText: { ...type.caption, color: colors.ink, flex: 1 },
+  pressed: { opacity: 0.75 },
+  // A 44px target at the line's end.
+  lineClose: {
+    width: space.touch,
+    height: space.touch,
+    marginEnd: -space[3],
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   card: {
     gap: space[4],
     padding: space[5],
@@ -186,14 +217,6 @@ const styles = StyleSheet.create({
   texts: { flex: 1, gap: 2 },
   title: { ...type.itemTitle, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },
-  // A 44px target in the card's corner.
-  close: {
-    width: space.touch,
-    height: space.touch,
-    margin: -12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   inner: {
     borderRadius: 16,
     backgroundColor: colors.card,

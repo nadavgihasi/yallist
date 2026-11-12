@@ -1,19 +1,18 @@
 import * as Linking from 'expo-linking';
 import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
-import { AvatarStack } from '@/components/Avatar';
 import { Countdown } from '@/components/Countdown';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { ProgressRing } from '@/components/ProgressRing';
-import { firstNames, he, missingCount, openTransfers, peopleNames } from '@/i18n/he';
+import { firstNames, he, missingCount, openTransfers } from '@/i18n/he';
 import { countdown } from '@/lib/dates';
 import { missingMessage, openWhatsApp } from '@/lib/share';
 import { testId } from '@/lib/testId';
 import type { TripData } from '@/state/types';
 import { colors, radius, size, space, type } from '@/theme';
 
-import { toAvatar, type TripView } from './derive';
+import type { TripView } from './derive';
 
 /**
  * WhatsApp first: that's where the group is (#51); in a new tab on web. The share sheet if it
@@ -28,8 +27,9 @@ async function shareToWhatsApp(text: string) {
 }
 
 /**
- * The top of a trip: how long until it, how ready it is, who's in, what's mine, and one way to
- * act: open what's missing (or invite, while you're alone), or send the missing list to WhatsApp.
+ * The top of a trip: how long until it, how ready it is, what's mine, and one way to act: open
+ * what's missing (or invite, while you're alone), or send the missing list to WhatsApp. Who's in
+ * is under the trip's name.
  */
 export function ReadinessHero({
   data,
@@ -107,13 +107,6 @@ export function ReadinessHero({
               </Text>
             </Pressable>
           )}
-          {!solo && (
-            <AvatarStack
-              people={view.active.map(toAvatar)}
-              max={4}
-              label={peopleNames(view.active.map((m) => m.displayName))}
-            />
-          )}
         </View>
         {view.items.length > 0 && (
           <ProgressRing done={view.doneCount} total={view.items.length} size="hero" />
@@ -166,7 +159,7 @@ function Cta({
       style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
     >
       {icon && <Icon name={icon} size={18} color={colors.primaryStrong} />}
-      <Text style={styles.ctaText} numberOfLines={2}>
+      <Text style={styles.ctaText} numberOfLines={1}>
         {label}
       </Text>
       <Icon name="chevronEnd" size={18} color={colors.primaryStrong} strokeWidth={2.5} />

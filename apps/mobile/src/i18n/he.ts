@@ -668,7 +668,6 @@ export const he = {
     offerTitle: (n: number) => `${n === 1 ? 'פריט אחד' : `${n} פריטים`} כבר בתיק שלך`,
     offerText: (names: string) => `${names}. מסמנים שהם עליך?`,
     offerAll: 'הכול עליי',
-    offerChoose: 'בוחרים',
     offerDismiss: 'לא עכשיו',
     chooseTitle: 'מה עליך?',
     chooseCaption: 'יש לך בתיק, ועוד אין מי שמביא.',
@@ -751,6 +750,18 @@ export const he = {
     },
   },
 } as const;
+
+/**
+ * The trip's one bag line: `5 פריטים סומנו מהתיק שלך. נשאר רק לארוז.`, `3 פריטים כבר בתיק שלך`,
+ * or both at once: `5 סומנו מהתיק · עוד 3 בתיק שלך`.
+ */
+export function bagLine(marked: number, offers: number): string {
+  if (offers === 0) return he.bag.marked(marked);
+  if (marked === 0) return he.bag.offerTitle(offers);
+  const done = marked === 1 ? 'פריט אחד סומן מהתיק' : `${marked} סומנו מהתיק`;
+  const more = offers === 1 ? 'עוד אחד בתיק שלך' : `עוד ${offers} בתיק שלך`;
+  return `${done} · ${more}`;
+}
 
 /** `ועוד 5`, after a cut-off list. */
 export function andMore(n: number): string {

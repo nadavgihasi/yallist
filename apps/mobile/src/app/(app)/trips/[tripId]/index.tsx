@@ -1,6 +1,6 @@
 import { formatShekel, type ListFilter } from '@yallist/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   Platform,
   Pressable,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AvatarStack } from '@/components/Avatar';
 import { SegmentedControl } from '@/components/Controls';
 import { Cover } from '@/components/Cover';
 import { StateScreen } from '@/components/EmptyState';
@@ -20,15 +21,15 @@ import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { Skeleton } from '@/components/Skeleton';
-import { deriveTrip } from '@/features/trip/derive';
+import { deriveTrip, toAvatar } from '@/features/trip/derive';
 import { JoinedPrompt } from '@/features/trip/JoinedPrompt';
 import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
 import { PeopleTab } from '@/features/trip/PeopleTab';
 import { ReadinessHero } from '@/features/trip/ReadinessHero';
 import { TripLinksBar } from '@/features/trip/TripLinks';
-import { he, participants } from '@/i18n/he';
-import { formatRange } from '@/lib/dates';
+import { he, participants, peopleNames } from '@/i18n/he';
+import { countdown, formatRange } from '@/lib/dates';
 import { statusOf } from '@/lib/api';
 import { testId } from '@/lib/testId';
 import { useToday } from '@/lib/useToday';
@@ -42,6 +43,16 @@ type Tab = (typeof TABS)[number];
 
 /** Keeps the desktop side panel in view while the list scrolls (web only). */
 const sticky = (Platform.OS === 'web' ? { position: 'sticky', top: 24 } : {}) as ViewStyle;
+
+/**
+ * Phone and tablet: once the tabs reach the top, a bar with the trip's name and the tabs stays
+ * pinned there. From the safe area to the tabs: its top padding, the back button's row, the gap.
+ */
+const BAR_ABOVE_TABS = space[2] + size.avatar + space[3];
+
+/** The scroll offset where the tabs, `tabsY` down the page, meet the pinned bar's tabs. */
+const pinOffset = (tabsY: number, insetTop: number) =>
+  Math.max(0, tabsY - insetTop - BAR_ABOVE_TABS);
 
 export default function TripScreen() {
   const params = useLocalSearchParams<{
@@ -67,9 +78,17 @@ export default function TripScreen() {
   const setTab = (next: Tab) => router.setParams({ tab: next });
   // Lifted from ListTab, so the hero's "missing" button can open a list already filtered.
   const [filter, setFilter] = useState<ListFilter>('all');
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  // Phone and tablet: how far down the tabs are, and whether they're pinned to the top.
+  const tabsY = useRef(0);
+  const [pinned, setPinned] = useState(false);
   const pickTab = (next: Tab) => {
     setTab(next);
     setFilter('all');
+    // Pinned, the new tab starts right under the pinned tabs, not where the old one was scrolled.
+    if (pinned) {
+      scrollRef.current?.scrollTo({ y: pinOffset(tabsY.current, insets.top), animated: false });
+    }
   };
   const now = useToday();
   // Every "invite friends" button opens the invite sheet, which shows what will be sent.
@@ -149,6 +168,19 @@ export default function TripScreen() {
   return (
     <View style={styles.screen}>
       <ScrollView
+        ref={scrollRef}
+        // The hero scrolls away under a bar with the name and the tabs (phone and tablet).
+        onScroll={
+          desktop
+            ? undefined
+            : (e) => {
+                const next =
+                  tabsY.current > 0 &&
+                  e.nativeEvent.contentOffset.y >= pinOffset(tabsY.current, insets.top);
+                if (next !== pinned) setPinned(next);
+              }
+        }
+        scrollEventThrottle={16}
         contentContainerStyle={[
           styles.page,
           !desktop && styles.column,
@@ -195,11 +227,22 @@ export default function TripScreen() {
           <Text style={styles.title} accessibilityRole="header" {...testId('trip-title')}>
             {trip.name}
           </Text>
-          <Text style={styles.caption}>
-            {[formatRange(trip.startsOn, trip.endsOn), participants(view.activeIds.length)]
-              .filter(Boolean)
-              .join(' · ')}
-          </Text>
+          <View style={styles.captionRow}>
+            <Text style={[styles.caption, styles.captionText]}>
+              {[formatRange(trip.startsOn, trip.endsOn), participants(view.activeIds.length)]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+            {/* Who's in, beside how many: not a row of its own in the hero. */}
+            {view.active.length > 1 && (
+              <View
+                accessible
+                accessibilityLabel={peopleNames(view.active.map((m) => m.displayName))}
+              >
+                <AvatarStack people={view.active.map(toAvatar)} max={4} />
+              </View>
+            )}
+          </View>
           <TripLinksBar trip={trip} onMeetup={() => pickTab('people')} />
         </View>
 
@@ -215,7 +258,10 @@ export default function TripScreen() {
           />
         )}
         {!desktop && hero}
-        <View style={desktop && styles.columns}>
+        <View
+          style={desktop && styles.columns}
+          onLayout={(e) => (tabsY.current = e.nativeEvent.layout.y)}
+        >
           <View style={[styles.main, desktop && styles.mainDesktop]}>
             <SegmentedControl options={tabs} value={tab} onChange={pickTab} testID="trip-tab" />
             {(tab === 'bring' || tab === 'buy') && (
@@ -250,6 +296,29 @@ export default function TripScreen() {
         </View>
         <View style={{ height: FLOATING_CLEARANCE + insets.bottom }} />
       </ScrollView>
+      {!desktop && pinned && (
+        <View style={[styles.pinned, { paddingTop: space[2] + insets.top }]}>
+          <View style={[styles.pinnedInner, styles.column]}>
+            <View style={styles.pinnedBar}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={he.trip.back}
+                onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
+                style={styles.back}
+              >
+                <Icon name="back" strokeWidth={2.5} />
+              </Pressable>
+              <Text style={styles.pinnedTitle} numberOfLines={1}>
+                {trip.name}
+              </Text>
+              <Text style={styles.caption} numberOfLines={1}>
+                {countdown(trip.startsOn, trip.endsOn, now).label}
+              </Text>
+            </View>
+            <SegmentedControl options={tabs} value={tab} onChange={pickTab} />
+          </View>
+        </View>
+      )}
       {add && (
         <FloatingAction
           label={he.trip.fabShort[tab as 'bring' | 'buy' | 'money']}
@@ -327,9 +396,30 @@ const styles = StyleSheet.create({
   // Long unbroken words wrap at the column's width instead of overflowing it.
   title: { ...type.pageTitle, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },
+  captionRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  captionText: { flex: 1 },
   columns: { flexDirection: 'row', alignItems: 'flex-start', gap: space[6] },
   main: { gap: space[4] },
   mainDesktop: { flex: 1, minWidth: 0 },
   side: { width: 340, gap: space[4] },
   sideTitle: { ...type.itemTitle, color: colors.ink },
+  // Over the top of the scroll view, on the page's ground, the list scrolling under it.
+  pinned: {
+    position: 'absolute',
+    top: 0,
+    start: 0,
+    end: 0,
+    paddingBottom: space[3],
+    backgroundColor: colors.ground,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.line,
+  },
+  pinnedInner: {
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: space.screen,
+    gap: space[3],
+  },
+  pinnedBar: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  pinnedTitle: { ...type.itemTitle, color: colors.ink, flex: 1 },
 });
