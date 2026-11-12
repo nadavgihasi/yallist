@@ -32,7 +32,10 @@ tags: [trips]
     id: trip-cover-winter
 - assertVisible:
     id: trip-hero-cover-winter
-# And home's card shows it.
-- openLink: ${WEB_URL}
+# And home's card shows it, once saved: home through the app, as a person goes back to it. The
+# hero shows the new cover at once; the card follows when the save settles and home's list
+# refetches. A reload (openLink) ~2 s after the tap raced that save on a slow API.
+- tapOn:
+    id: trip-back
 - assertVisible:
     id: trip-card-cover-winter
