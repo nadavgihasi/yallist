@@ -313,10 +313,17 @@ export function ItemForm({
       </View>
 
       {!item && (
-        <View style={styles.switchRow}>
+        // The whole row toggles; the switch stays the one control screen readers and Tab reach.
+        <Pressable
+          onPress={() => setClaim(!claim)}
+          accessible={false}
+          focusable={false}
+          style={styles.switchRow}
+          {...testId('item-form-claim-row')}
+        >
           <Text style={styles.switchLabel}>{claimLabel}</Text>
           <Switch value={claim} onChange={setClaim} label={claimLabel} />
-        </View>
+        </Pressable>
       )}
     </Sheet>
   );
