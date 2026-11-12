@@ -116,7 +116,8 @@ export default function Home() {
           </View>
         )}
         <VersionLine />
-        <View style={{ height: FLOATING_CLEARANCE }} />
+        {/* The add button sits above the system bar (`insets.bottom`), so this does too. */}
+        <View style={{ height: FLOATING_CLEARANCE + insets.bottom }} />
       </ScrollView>
       <FloatingAction
         label={empty ? he.firstHome.cta : he.home.newTrip}
