@@ -1,4 +1,4 @@
-import type { BulkItem } from '@yallist/domain';
+import type { BulkItem, ListKind } from '@yallist/domain';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { parseResponse } from 'hono/client';
 
@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 
 import { tripKey, tripsKey } from './trips';
 
-type Added = { added: unknown[]; skipped: string[] };
+type Added = { added: { list: ListKind }[]; skipped: string[] };
 
 /**
  * A request that adds many items to the trip. Unlike the one-item `addItem`, the sheet waits for

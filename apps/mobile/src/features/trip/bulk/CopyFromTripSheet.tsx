@@ -1,5 +1,5 @@
 import { BULK_MAX_ITEMS } from '@yallist/domain';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CheckRow } from '@/components/CheckRow';
@@ -92,6 +92,8 @@ function SourceItems({
   const source = useSourceTrip(from.id);
   const copy = useCopyItems(tripId);
   const [unpicked, setUnpicked] = useState<ReadonlySet<string>>(new Set());
+  // Set at once on the first tap, unlike `isPending`: a double tap sends one request.
+  const sending = useRef(false);
 
   const entries = source.data ? copyEntries(source.data, data.items) : [];
   const pickable = entries.filter((e) => e.status === 'add');
@@ -109,10 +111,14 @@ function SourceItems({
     });
 
   const save = () => {
-    if (!canSave) return;
+    if (!canSave || sending.current) return;
+    sending.current = true;
     copy.mutate(
       { fromTripId: from.id, itemIds: picked },
       {
+        onSettled: () => {
+          sending.current = false;
+        },
         onSuccess: ({ added, skipped }) => {
           onClose();
           showToast(he.bulk.added(added.length, exists + skipped.length));
