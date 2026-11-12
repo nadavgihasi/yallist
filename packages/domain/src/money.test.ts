@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { balances, formatShekel, parseShekel, splitEqually, suggestTransfers } from './money';
+import {
+  balances,
+  formatShekel,
+  parseShekel,
+  shekelInput,
+  splitEqually,
+  suggestTransfers,
+} from './money';
 import type { Expense, Payment } from './types';
 
 const expense = (paidBy: string, amountAgorot: number, shares: string[]): Expense => ({
@@ -152,6 +159,12 @@ describe('formatShekel / parseShekel', () => {
   it('rounds a fraction of an agora to the nearest agora', () => {
     expect(formatShekel(13763.33)).toBe('₪137.63');
     expect(formatShekel(13763.5)).toBe('₪137.64');
+  });
+
+  it('fills an amount input with two decimals, which parses back', () => {
+    expect(shekelInput(41290)).toBe('412.90');
+    expect(shekelInput(9000)).toBe('90.00');
+    expect(parseShekel(shekelInput(41290))).toBe(41290);
   });
 
   it('parses', () => {

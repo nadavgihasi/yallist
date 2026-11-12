@@ -73,6 +73,11 @@ export function formatShekel(agorot: number): string {
   return `₪${(Math.round(agorot) / 100).toFixed(2)}`;
 }
 
+/** An amount as an input's text, `412.90`: what `formatShekel` shows, without the sign. */
+export function shekelInput(agorot: number): string {
+  return formatShekel(agorot).slice(1);
+}
+
 /** Parse user input like "450" or "12.5" into agorot; undefined if not a positive amount. */
 export function parseShekel(input: string): number | undefined {
   const trimmed = input.trim().replace(/^₪/, '').replace(',', '.');

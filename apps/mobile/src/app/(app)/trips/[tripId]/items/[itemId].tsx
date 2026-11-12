@@ -1,4 +1,11 @@
-import { claimCap, linkedExpense, parseShekel, purchasedCount, type Expense } from '@yallist/domain';
+import {
+  claimCap,
+  linkedExpense,
+  parseShekel,
+  purchasedCount,
+  shekelInput,
+  type Expense,
+} from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -88,7 +95,7 @@ function ItemSheetBody({
   const line = statusLine(item, status, data.claims, view, me);
   const mine = view.myQuantity(item.id);
 
-  const [price, setPrice] = useState(expense ? String(expense.amountAgorot / 100) : '');
+  const [price, setPrice] = useState(expense ? shekelInput(expense.amountAgorot) : '');
   const [shares, setShares] = useShares(view, expense?.shares);
   const [note, setNote] = useState(item.note ?? '');
 
