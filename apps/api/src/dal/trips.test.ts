@@ -99,6 +99,7 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
         createdBy: me,
         shares: [me],
         hasReceipt: false,
+        createdAt: expect.any(String),
       },
     ]);
   });
