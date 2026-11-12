@@ -21,6 +21,7 @@ import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { Skeleton } from '@/components/Skeleton';
 import { deriveTrip } from '@/features/trip/derive';
+import { JoinedPrompt } from '@/features/trip/JoinedPrompt';
 import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
 import { PeopleTab } from '@/features/trip/PeopleTab';
@@ -49,6 +50,8 @@ export default function TripScreen() {
     itemId?: string;
     list?: string;
     categoryId?: string;
+    /** Set by the join page: we just got in, so ask once what we'll bring. */
+    joined?: string;
   }>();
   const { tripId, itemId, list, categoryId } = params;
   const query = useTripQuery(tripId);
@@ -224,6 +227,17 @@ export default function TripScreen() {
           <TripLinksBar trip={trip} onMeetup={() => pickTab('people')} />
         </View>
 
+        {params.joined && (
+          <JoinedPrompt
+            tripId={tripId}
+            view={view}
+            onPick={(next) => {
+              setTab(next);
+              setFilter('missing');
+            }}
+            onDone={() => router.setParams({ joined: undefined })}
+          />
+        )}
         {!desktop && hero}
         <View style={desktop && styles.columns}>
           <View style={[styles.main, desktop && styles.mainDesktop]}>

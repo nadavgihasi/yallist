@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { invitePayload, inviteUrl } from './invite';
+import { invitePayload, inviteUrl, whoIsIn } from './invite';
 
 describe('inviteUrl', () => {
   it('builds an https link to the join page', () => {
@@ -32,5 +32,19 @@ describe('invitePayload', () => {
 
   it.each(['web', 'ios', 'android'])('carries the link once on %s', (os) => {
     expect(shared(invitePayload(url, os)).split(url)).toHaveLength(2);
+  });
+});
+
+describe('whoIsIn', () => {
+  it('names up to three, and counts the rest', () => {
+    expect(whoIsIn(['דנה'], 1)).toBe('דנה כבר בטיול');
+    expect(whoIsIn(['דנה', 'רון'], 2)).toBe('דנה ורון כבר בטיול');
+    expect(whoIsIn(['דנה', 'רון', 'שירה'], 3)).toBe('דנה, רון ושירה כבר בטיול');
+    expect(whoIsIn(['דנה', 'רון', 'שירה', 'אבי'], 4)).toBe('דנה, רון ועוד 2 כבר בטיול');
+  });
+
+  it('counts members the preview leaves out', () => {
+    expect(whoIsIn(['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח'], 12)).toBe('א, ב ועוד 10 כבר בטיול');
+    expect(whoIsIn([], 0)).toBe('');
   });
 });

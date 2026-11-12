@@ -516,6 +516,8 @@ export const he = {
   },
   join: {
     invited: 'הוזמנת לטיול',
+    /** Who's already in, under the trip on the join page. */
+    whoIsIn: (names: string) => `${names} כבר בטיול`,
     missing: 'מה עוד חסר',
     nameLabel: 'איך קוראים לך?',
     join: 'הצטרפות לטיול',
@@ -535,6 +537,16 @@ export const he = {
     toStart: 'למסך הפתיחה',
     /** Opening the invite link to a trip you're already in, on the way to it. */
     alreadyIn: 'כבר יש לך מקום בטיול הזה',
+  },
+  /** The trip, once, right after joining it (JoinedPrompt). */
+  joined: {
+    title: 'ברוכים הבאים לטיול!',
+    text: (n: number) =>
+      n === 1
+        ? 'פריט אחד עוד בלי מישהו שמביא אותו. בוחרים מה מביאים, וכולם רואים.'
+        : `${n} פריטים עוד בלי מישהו שמביא אותם. בוחרים מה מביאים, וכולם רואים.`,
+    pick: 'בחירת מה להביא',
+    later: 'אחר כך',
   },
   profile: {
     title: 'הפרופיל שלי',

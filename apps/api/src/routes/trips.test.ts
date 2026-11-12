@@ -265,6 +265,7 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         'cover',
         'endsOn',
         'memberCount',
+        'members',
         'missingCount',
         'missingItems',
         'name',
@@ -276,6 +277,45 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         missingCount: data.items.length,
       });
       expect(preview.missingItems).toEqual(data.items.slice(0, 6).map((i) => i.name));
+    });
+
+    it("names who's in to anyone with the link: display names and colors, nothing else", async () => {
+      const organizer = await guest('organizer');
+      const data = await createTrip(organizer, { requireApproval: true });
+      const [member, waiting, removed] = [
+        await guest('member'),
+        await guest('waiting'),
+        await guest('removed'),
+      ];
+      for (const user of [member, waiting, removed]) await join(user, data.inviteToken);
+      const tripId = data.trip.id;
+      const decide = (user: Guest, action: 'approve' | 'decline') =>
+        client.trips[':tripId'].members[':userId'][action].$post(
+          { param: { tripId, userId: user.id } },
+          as(organizer),
+        );
+      expect((await decide(member, 'approve')).status).toBe(200);
+      expect((await decide(removed, 'decline')).status).toBe(200);
+
+      const res = await client.invites[':token'].$get({ param: { token: data.inviteToken } });
+      const { members, memberCount } = await res.json();
+      // Active members only, in joining order; not who is waiting or was turned away.
+      expect(members.map((m) => m.name)).toEqual(['organizer', 'member']);
+      expect(memberCount).toBe(2);
+      for (const m of members) {
+        expect(Object.keys(m).sort()).toEqual(['color', 'name']);
+        expect(m.color).toMatch(/^#/);
+      }
+    });
+
+    it('names at most 8 members, and counts them all', async () => {
+      const organizer = await guest('organizer');
+      const data = await createTrip(organizer);
+      for (let i = 1; i <= 9; i++) await join(await guest(`m${i}`), data.inviteToken);
+      const res = await client.invites[':token'].$get({ param: { token: data.inviteToken } });
+      const { members, memberCount } = await res.json();
+      expect(members).toHaveLength(8);
+      expect(memberCount).toBe(10);
     });
 
     it("tells a signed-in caller their own membership, and a stranger nobody's", async () => {

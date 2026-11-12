@@ -29,8 +29,8 @@ const sessionToken = (page: Page) =>
 
 /**
  * Dana makes a trip with a Tent that needs her approval to join, and copies its invite link;
- * Noa opens it in her own session and asks to join; Dana approves her. Ends with Noa on the
- * trip and Dana on its people tab.
+ * Noa opens it in her own session, sees Dana is in, and asks to join; Dana approves her. Ends
+ * with Noa on the trip (past the "what will you bring" prompt) and Dana on its people tab.
  */
 async function join(dana: Page, noa: Page) {
   await signIn(dana, 'Dana');
@@ -62,6 +62,8 @@ async function join(dana: Page, noa: Page) {
 
   await noa.goto(link);
   await expect(noa.getByRole('heading', { name: 'E2E trip' })).toBeVisible({ timeout: 30_000 });
+  // Whose trip it is, before joining: names (and initials), nothing else.
+  await expect(noa.locator('#join-members')).toContainText('Dana כבר בטיול');
   await noa.locator('#join-name').fill('Noa');
   await noa.locator('#join-submit').click();
   await expect(noa.locator('#join-check')).toBeVisible();
@@ -75,6 +77,10 @@ async function join(dana: Page, noa: Page) {
   await expect(dana.locator('#people-approve')).toBeHidden();
   await noa.locator('#join-check').click();
   await expect(noa.locator('#trip-title')).toHaveText('E2E trip');
+  // Once in, asked once what she'll bring: the Tent has no one yet.
+  await expect(noa.locator('#joined-pick')).toBeVisible();
+  await noa.locator('#joined-later').click();
+  await expect(noa.locator('#joined-pick')).toBeHidden();
   return tripId;
 }
 
