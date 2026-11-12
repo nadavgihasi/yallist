@@ -1,0 +1,24 @@
+# The item catalog: typing another name for an item suggests it, and picking it adds the item under
+# the catalog's name, in the catalog's category.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [items]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- tapOn:
+    id: trip-add
+- tapOn:
+    id: item-form-name
+- inputText: גריל
+- assertVisible: מנגל
+- tapOn: מנגל
+- tapOn:
+    id: item-form-save
+- assertVisible: מנגל
+- assertVisible: בישול ועל האש
