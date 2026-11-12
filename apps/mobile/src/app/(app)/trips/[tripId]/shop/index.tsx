@@ -1,18 +1,21 @@
-import { runSummary, type Item } from '@yallist/domain';
+import type { Item } from '@yallist/domain';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { Input } from '@/components/Fields';
 import { FLOATING_CLEARANCE, FloatingAction } from '@/components/FloatingAction';
 import { Icon } from '@/components/Icon';
-import { Card } from '@/components/ListGroup';
+import { Card, ListGroup } from '@/components/ListGroup';
 import { Loader } from '@/components/Loader';
 import { PillButton } from '@/components/PillButton';
 import { Progress } from '@/components/Progress';
+import { showToast } from '@/components/Toast';
 import { deriveTrip, type TripView } from '@/features/trip/derive';
 import { buyQuantity } from '@/features/trip/labels';
+import { forgottenMatch, shopList } from '@/features/trip/shopList';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { useMe } from '@/state/store';
@@ -66,8 +69,13 @@ function ShopRunBody({
   const [menu, setMenu] = useState<'closed' | 'open' | 'confirm'>('closed');
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
 
-  const { inCart, notInCart } = runSummary(view.runClaims(runId), view.items);
-  const rows = [...inCart, ...notInCart].sort((a, b) => a.position - b.position);
+  const [forgotten, setForgotten] = useState('');
+  // Typing a forgotten item: the keyboard lifts the checkout button onto the field, so it hides.
+  const [typing, setTyping] = useState(false);
+
+  // What's left by category, as on the buy list; what's in the cart sinks to its own section.
+  const { groups, inCart } = shopList(view.runClaims(runId), view.items, data.categories);
+  const total = inCart.length + groups.reduce((n, g) => n + g.items.length, 0);
   const cart = new Set(inCart.map((i) => i.id));
   // Free items others added since the run started, newest first.
   const startedAt = view.myRun!.startedAt;
@@ -79,6 +87,26 @@ function ShopRunBody({
 
   const toggle = (item: Item) =>
     act({ type: 'setInCart', itemId: item.id, inCart: !cart.has(item.id) });
+  // Something not on the list: it joins the buy list and this run, ready to tick. One the list
+  // already has isn't added twice: it's in the run already, or it joins it as it is.
+  const addForgotten = () => {
+    const name = forgotten.trim();
+    if (!name) return;
+    setForgotten('');
+    const match = forgottenMatch(
+      name,
+      [...inCart, ...groups.flatMap((g) => g.items)],
+      view.runEligible,
+    );
+    if (match?.inRun) return showToast(he.shop.forgotInRun(match.item.name));
+    if (match) return act({ type: 'addToRun', runId, itemId: match.item.id });
+    act({
+      type: 'addItem',
+      item: { list: 'buy', name, kind: 'single', quantityNeeded: 1, categoryId: null },
+      claim: 0,
+      runId,
+    });
+  };
   // The run disappears at once, and with it this screen.
   const cancel = () => act({ type: 'cancelRun', runId });
 
@@ -145,35 +173,20 @@ function ShopRunBody({
 
         <Card gap={space[1]}>
           <Text style={styles.cartCount} accessibilityLiveRegion="polite">
-            {he.shop.inCart(inCart.length, rows.length)}
+            {he.shop.inCart(inCart.length, total)}
           </Text>
           <View style={styles.bar}>
-            <Progress done={inCart.length} total={rows.length} />
+            <Progress done={inCart.length} total={total} />
           </View>
-          {rows.map((item) => {
-            const on = cart.has(item.id);
-            return (
-              <Pressable
-                key={item.id}
-                accessibilityRole="button"
-                accessibilityLabel={on ? he.shop.fromCart(item.name) : he.shop.toCart(item.name)}
-                onPress={() => toggle(item)}
-                style={styles.row}
-                {...testId(`shop-item-${item.name}`)}
-              >
-                {on ? (
-                  <View style={[styles.check, styles.checkOn]}>
-                    <Icon name="check" size={18} color={colors.onPrimary} strokeWidth={3} />
-                  </View>
-                ) : (
-                  <View style={styles.check} />
-                )}
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.caption}>{buyQuantity(item)}</Text>
-              </Pressable>
-            );
-          })}
         </Card>
+
+        {groups.map(({ category, items }) => (
+          <ListGroup key={category?.id ?? 'none'} title={category?.name ?? he.trip.uncategorized}>
+            {items.map((item) => (
+              <CartRow key={item.id} item={item} on={false} onPress={() => toggle(item)} />
+            ))}
+          </ListGroup>
+        ))}
 
         {added.map((item) => (
           <Card key={item.id} style={styles.added}>
@@ -201,15 +214,78 @@ function ShopRunBody({
             </Pressable>
           </Card>
         ))}
+
+        <Card gap={space[2]}>
+          <Text style={styles.forgotTitle}>{he.shop.forgot}</Text>
+          <View style={styles.forgotRow}>
+            <Input
+              value={forgotten}
+              onChangeText={setForgotten}
+              placeholder={he.shop.forgotPlaceholder}
+              accessibilityLabel={he.shop.forgotPlaceholder}
+              maxLength={80}
+              returnKeyType="done"
+              submitBehavior="submit"
+              onSubmitEditing={addForgotten}
+              onFocus={() => setTyping(true)}
+              onBlur={() => setTyping(false)}
+              style={styles.forgotInput}
+              {...testId('shop-forgot-name')}
+            />
+            <PillButton
+              label={he.shop.forgotAdd}
+              variant="soft"
+              disabled={!forgotten.trim()}
+              onPress={addForgotten}
+              {...testId('shop-forgot-add')}
+            />
+          </View>
+        </Card>
+
+        {inCart.length > 0 && (
+          <ListGroup title={he.shop.cartSection}>
+            {inCart.map((item) => (
+              <CartRow key={item.id} item={item} on onPress={() => toggle(item)} />
+            ))}
+          </ListGroup>
+        )}
+        {/* The last rows scroll clear of the checkout button. */}
         <View style={{ height: FLOATING_CLEARANCE + insets.bottom }} />
       </ScrollView>
-      <FloatingAction
-        label={he.shop.checkout}
-        icon="check"
-        testID="shop-checkout"
-        onPress={() => router.push({ pathname: '/trips/[tripId]/shop/finish', params: { tripId } })}
-      />
+      {!typing && (
+        <FloatingAction
+          label={he.shop.checkout}
+          icon="check"
+          testID="shop-checkout"
+          onPress={() =>
+            router.push({ pathname: '/trips/[tripId]/shop/finish', params: { tripId } })
+          }
+        />
+      )}
     </View>
+  );
+}
+
+/** One item to tick into the cart, or (`on`) back out of it. */
+function CartRow({ item, on, onPress }: { item: Item; on: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={on ? he.shop.fromCart(item.name) : he.shop.toCart(item.name)}
+      onPress={onPress}
+      style={styles.row}
+      {...testId(`shop-item-${item.name}`)}
+    >
+      {on ? (
+        <View style={[styles.check, styles.checkOn]}>
+          <Icon name="check" size={18} color={colors.onPrimary} strokeWidth={3} />
+        </View>
+      ) : (
+        <View style={styles.check} />
+      )}
+      <Text style={[styles.name, on && styles.nameOn]}>{item.name}</Text>
+      <Text style={styles.caption}>{buyQuantity(item)}</Text>
+    </Pressable>
   );
 }
 
@@ -261,6 +337,19 @@ const styles = StyleSheet.create({
   },
   checkOn: { backgroundColor: colors.brand, borderColor: colors.brand },
   name: { ...type.itemTitle, fontSize: 17, lineHeight: 24, color: colors.ink, flex: 1 },
+  nameOn: { color: colors.inkMuted },
+  forgotTitle: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.inkMuted },
+  forgotRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  forgotInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: space.touch,
+    paddingHorizontal: space[4],
+    borderRadius: radius.pill,
+    backgroundColor: colors.ground,
+    ...type.body,
+    color: colors.ink,
+  },
   added: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   dismiss: {
     width: space.touch,

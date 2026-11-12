@@ -33,7 +33,8 @@ export type Action =
   /** Packs or unpacks my claim on the item. */
   | { type: 'setPacked'; itemId: string; packed: boolean }
   // `newCategory`: create a category of that name first, and put the item in it.
-  | { type: 'addItem'; item: NewItemInput; claim: number; newCategory?: string }
+  // `runId`: added in the store, so it joins my shopping run too.
+  | { type: 'addItem'; item: NewItemInput; claim: number; newCategory?: string; runId?: string }
   | { type: 'deleteItem'; itemId: string }
   | { type: 'editItem'; itemId: string; changes: NewItemInput; newCategory?: string }
   | { type: 'addCategory'; list: ListKind; name: string }

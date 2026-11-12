@@ -151,6 +151,14 @@ async function send(tripId: string, action: Action): Promise<unknown> {
     case 'addItem': {
       const json = await withNewCategory(action.item, action.newCategory);
       const item = await parseResponse(trip.items.$post({ param, json }));
+      if (action.runId) {
+        return parseResponse(
+          trip.runs[':runId'].items.$post({
+            param: { ...param, runId: action.runId },
+            json: { itemId: item.id },
+          }),
+        );
+      }
       return action.claim > 0 && claim(item.id, action.claim);
     }
     case 'deleteItem':
@@ -335,7 +343,9 @@ export function useTripAction(tripId: string) {
             ? he.errors.categoryExists
             : action.type === 'editItem'
               ? he.errors.itemEditRefused
-              : action.type === 'setInCart' || action.type === 'cancelRun'
+              : action.type === 'setInCart' ||
+                  action.type === 'cancelRun' ||
+                  (action.type === 'addItem' && action.runId)
                 ? he.errors.runOver
                 : he.errors.failed;
       showToast(message, 'error');
