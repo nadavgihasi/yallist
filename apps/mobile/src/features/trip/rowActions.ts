@@ -30,5 +30,6 @@ export function noteLine(note: string | undefined, max = 60): string | undefined
   if (!line) return undefined;
   const chars = Array.from(line);
   if (chars.length <= max) return line;
-  return `${chars.slice(0, max - 1).join('').trimEnd()}…`;
+  const cut = chars.slice(0, max - 1).join('');
+  return `${cut.trimEnd()}…`;
 }
