@@ -1,4 +1,5 @@
 import { CATALOG_SOURCES } from './catalog-data';
+import { isItemGlyph, type ItemGlyph } from './catalog-glyphs';
 import type { ItemKind, ListKind } from './types';
 
 /** A group of catalog items. Its list is where its items belong: what to bring or what to buy. */
@@ -7,15 +8,15 @@ export interface CatalogCategory {
   id: string;
   /** Shown, and the name of the trip category the item lands in. */
   name: string;
-  icon: string;
+  icon: ItemGlyph;
   list: ListKind;
 }
 
 export interface CatalogItem {
   /** The canonical name: what a trip item and my bag are matched by, so always the same spelling. */
   name: string;
-  /** An emoji: a picture per item, drawn by the system on every platform. */
-  icon: string;
+  /** The line icon it is drawn with: its own, or its category's. */
+  icon: ItemGlyph;
   category: string;
   list: ListKind;
   /** How it's usually counted; `single` unless the entry says otherwise. */
@@ -29,7 +30,7 @@ export interface CatalogItem {
   synonyms: string[];
 }
 
-const cat = (id: string, name: string, icon: string, list: ListKind): CatalogCategory => ({
+const cat = (id: string, name: string, icon: ItemGlyph, list: ListKind): CatalogCategory => ({
   id,
   name,
   icon,
@@ -38,52 +39,52 @@ const cat = (id: string, name: string, icon: string, list: ListKind): CatalogCat
 
 export const CATALOG_CATEGORIES: CatalogCategory[] = [
   // What to bring.
-  cat('cooking', 'בישול ועל האש', '🔥', 'bring'),
-  cat('sleeping', 'לינה', '⛺', 'bring'),
-  cat('seating', 'ישיבה וצל', '🪑', 'bring'),
-  cat('tableware', 'כלים וסכו״ם', '🍽️', 'bring'),
-  cat('kitchen', 'ציוד מטבח', '🍳', 'bring'),
-  cat('clothes', 'ביגוד והנעלה', '👕', 'bring'),
-  cat('hygiene', 'היגיינה וטיפוח', '🧴', 'bring'),
-  cat('health', 'עזרה ראשונה ובריאות', '🩹', 'bring'),
-  cat('light', 'תאורה וניווט', '🔦', 'bring'),
-  cat('tools', 'כלי עבודה', '🔧', 'bring'),
-  cat('tech', 'חשמל וטכנולוגיה', '🔌', 'bring'),
-  cat('water', 'ים ובריכה', '🏖️', 'bring'),
-  cat('sports', 'ספורט וטיולים', '🥾', 'bring'),
-  cat('winter', 'שלג וחורף', '⛷️', 'bring'),
-  cat('wheels', 'רכב ואופניים', '🚗', 'bring'),
-  cat('fishing', 'דיג', '🎣', 'bring'),
-  cat('fun', 'משחקים ובידור', '🎲', 'bring'),
-  cat('kids', 'ילדים ותינוקות', '🍼', 'bring'),
-  cat('pets', 'חיות מחמד', '🐕', 'bring'),
-  cat('party', 'מסיבה ואירוח', '🎉', 'bring'),
-  cat('docs', 'מסמכים וכסף', '🪪', 'bring'),
-  cat('general', 'כללי', '🎒', 'bring'),
+  cat('cooking', 'בישול ועל האש', 'flame', 'bring'),
+  cat('sleeping', 'לינה', 'tent', 'bring'),
+  cat('seating', 'ישיבה וצל', 'armchair', 'bring'),
+  cat('tableware', 'כלים וסכו״ם', 'utensils', 'bring'),
+  cat('kitchen', 'ציוד מטבח', 'cooking-pot', 'bring'),
+  cat('clothes', 'ביגוד והנעלה', 'shirt', 'bring'),
+  cat('hygiene', 'היגיינה וטיפוח', 'soap-dispenser-droplet', 'bring'),
+  cat('health', 'עזרה ראשונה ובריאות', 'briefcase-medical', 'bring'),
+  cat('light', 'תאורה וניווט', 'flashlight', 'bring'),
+  cat('tools', 'כלי עבודה', 'wrench', 'bring'),
+  cat('tech', 'חשמל וטכנולוגיה', 'plug', 'bring'),
+  cat('water', 'ים ובריכה', 'waves-horizontal', 'bring'),
+  cat('sports', 'ספורט וטיולים', 'footprints', 'bring'),
+  cat('winter', 'שלג וחורף', 'snowflake', 'bring'),
+  cat('wheels', 'רכב ואופניים', 'car', 'bring'),
+  cat('fishing', 'דיג', 'fishing-rod', 'bring'),
+  cat('fun', 'משחקים ובידור', 'dices', 'bring'),
+  cat('kids', 'ילדים ותינוקות', 'toy-brick', 'bring'),
+  cat('pets', 'חיות מחמד', 'paw-print', 'bring'),
+  cat('party', 'מסיבה ואירוח', 'party-popper', 'bring'),
+  cat('docs', 'מסמכים וכסף', 'id-card', 'bring'),
+  cat('general', 'כללי', 'backpack', 'bring'),
   // What to buy.
-  cat('meat', 'בשר', '🥩', 'buy'),
-  cat('fish', 'דגים ופירות ים', '🐟', 'buy'),
-  cat('bread', 'לחם וסלטים', '🥖', 'buy'),
-  cat('bakery', 'מאפים ועוגות', '🥐', 'buy'),
-  cat('veg', 'ירקות', '🥬', 'buy'),
-  cat('fruit', 'פירות', '🍉', 'buy'),
-  cat('nuts', 'אגוזים ופירות יבשים', '🥜', 'buy'),
-  cat('dairy', 'חלב וביצים', '🥚', 'buy'),
-  cat('cheese', 'גבינות', '🧀', 'buy'),
-  cat('breakfast', 'ארוחת בוקר', '🥣', 'buy'),
-  cat('pantry', 'מזווה', '🍚', 'buy'),
-  cat('spices', 'תבלינים', '🌶️', 'buy'),
-  cat('sauces', 'רטבים ושמנים', '🫒', 'buy'),
-  cat('canned', 'שימורים ומוכנים', '🥫', 'buy'),
-  cat('frozen', 'קפואים וגלידות', '🍦', 'buy'),
-  cat('snacks', 'חטיפים וממתקים', '🍫', 'buy'),
-  cat('drinks', 'שתייה', '🥤', 'buy'),
-  cat('coffee', 'קפה ותה', '☕', 'buy'),
-  cat('alcohol', 'אלכוהול', '🍺', 'buy'),
-  cat('cleaning', 'ניקיון וחד־פעמי', '🧻', 'buy'),
-  cat('care', 'מוצרי טיפוח', '🧼', 'buy'),
-  cat('pharmacy', 'בית מרקחת', '💊', 'buy'),
-  cat('baby', 'מוצרי תינוקות', '👶', 'buy'),
+  cat('meat', 'בשר', 'beef', 'buy'),
+  cat('fish', 'דגים ופירות ים', 'fish', 'buy'),
+  cat('bread', 'לחם וסלטים', 'wheat', 'buy'),
+  cat('bakery', 'מאפים ועוגות', 'croissant', 'buy'),
+  cat('veg', 'ירקות', 'carrot', 'buy'),
+  cat('fruit', 'פירות', 'apple', 'buy'),
+  cat('nuts', 'אגוזים ופירות יבשים', 'nut', 'buy'),
+  cat('dairy', 'חלב וביצים', 'milk', 'buy'),
+  cat('cheese', 'גבינות', 'hand-platter', 'buy'),
+  cat('breakfast', 'ארוחת בוקר', 'egg-fried', 'buy'),
+  cat('pantry', 'מזווה', 'package', 'buy'),
+  cat('spices', 'תבלינים', 'leaf', 'buy'),
+  cat('sauces', 'רטבים ושמנים', 'droplet', 'buy'),
+  cat('canned', 'שימורים ומוכנים', 'can', 'buy'),
+  cat('frozen', 'קפואים וגלידות', 'snowflake', 'buy'),
+  cat('snacks', 'חטיפים וממתקים', 'candy', 'buy'),
+  cat('drinks', 'שתייה', 'cup-soda', 'buy'),
+  cat('coffee', 'קפה ותה', 'coffee', 'buy'),
+  cat('alcohol', 'אלכוהול', 'wine', 'buy'),
+  cat('cleaning', 'ניקיון וחד־פעמי', 'spray-can', 'buy'),
+  cat('care', 'מוצרי טיפוח', 'tube-lotion', 'buy'),
+  cat('pharmacy', 'בית מרקחת', 'pill', 'buy'),
+  cat('baby', 'מוצרי תינוקות', 'baby', 'buy'),
 ];
 
 const categories = new Map(CATALOG_CATEGORIES.map((c) => [c.id, c]));
@@ -92,12 +93,19 @@ const categories = new Map(CATALOG_CATEGORIES.map((c) => [c.id, c]));
  * The data files list items in a line each, under `@category` headings:
  *
  *     @cooking
- *     🔥: מנגל=גריל, פחמים:⚫, צידניות*2, מלקחיים
+ *     flame: מנגל=גריל, מלקחיים, פחמים:flame-kindling, צידניות*2
  *
- * `icon:` before the items is theirs; `name:icon` overrides it for one; `=a/b` are synonyms;
+ * The icon before the colon is the items' (an `ItemGlyph`); `name:icon` overrides it for one;
+ * `=a/b` are synonyms;
  * `*each` is a per-person item and `*4` a quantity.
  */
 const ITEM = /^([^:=*]+)(?::([^=*]+))?(?:=([^*]+))?(?:\*(each|\d+))?$/;
+
+function glyph(text: string): ItemGlyph {
+  const name = text.trim();
+  if (!isItemGlyph(name)) throw new Error(`Unknown catalog icon: ${name}`);
+  return name;
+}
 
 export function parseCatalog(source: string): CatalogItem[] {
   const items: CatalogItem[] = [];
@@ -112,7 +120,7 @@ export function parseCatalog(source: string): CatalogItem[] {
     }
     const colon = line.indexOf(':');
     if (!category || colon < 0) throw new Error(`Catalog line outside a category: ${line}`);
-    const icon = line.slice(0, colon).trim();
+    const icon = glyph(line.slice(0, colon));
     for (const token of line.slice(colon + 1).split(',')) {
       const text = token.trim();
       if (!text) continue;
@@ -121,7 +129,7 @@ export function parseCatalog(source: string): CatalogItem[] {
       const [, name, own, synonyms, count] = match;
       items.push({
         name: name!.trim(),
-        icon: own?.trim() || icon,
+        icon: own ? glyph(own) : icon,
         category: category.name,
         list: category.list,
         kind: count === 'each' ? 'each' : count ? 'qty' : 'single',
@@ -214,8 +222,8 @@ export function findCatalogItem(name: string): CatalogItem | undefined {
   return key ? (BY_NAME.get(key) ?? BY_SYNONYM.get(key)) : undefined;
 }
 
-/** A picture for an item: the catalog's, by name; undefined when the catalog doesn't know it. */
-export const catalogIcon = (name: string): string | undefined => findCatalogItem(name)?.icon;
+/** An item's icon: the catalog's, by name; undefined when the catalog doesn't know it. */
+export const catalogIcon = (name: string): ItemGlyph | undefined => findCatalogItem(name)?.icon;
 
 /** Whether every typed word starts one of the words, or one of their stems. */
 const startsWords = (tokens: string[], stems: string[], words: string[], wordStems: string[]) =>

@@ -1,21 +1,23 @@
 import { catalogIcon, type ListKind } from '@yallist/domain';
-import { StyleSheet, Text, View } from 'react-native';
+import { View } from 'react-native';
 
 import { useShowItemIcons } from '@/state/profile';
 import { colors } from '@/theme';
 
-/** What an item the catalog doesn't know gets: a box. */
-const FALLBACK: Record<ListKind, string> = { bring: '🎒', buy: '🛒' };
+import { ITEM_GLYPHS } from './itemGlyphs';
+
+/** What an item the catalog doesn't know is drawn with. */
+const FALLBACK = { bring: 'backpack', buy: 'shopping-basket' } as const;
 
 /**
- * The picture of an item, by its name: an emoji in a soft circle. Decorative, so hidden from
- * screen readers, which read the name beside it. Nothing at all when the user turned item icons
- * off in their profile.
+ * An item's line icon, by its name: thin, gray and with no background, so the row's name leads.
+ * Decorative, so hidden from screen readers, which read the name beside it. Nothing at all when
+ * the user turned item icons off in their profile.
  */
 export function ItemIcon({
   name,
   list = 'bring',
-  size = 40,
+  size = 22,
 }: {
   name: string;
   list?: ListKind;
@@ -23,20 +25,10 @@ export function ItemIcon({
 }) {
   const show = useShowItemIcons();
   if (!show) return null;
+  const Glyph = ITEM_GLYPHS[catalogIcon(name) ?? FALLBACK[list]];
   return (
-    <View
-      accessibilityElementsHidden
-      importantForAccessibility="no-hide-descendants"
-      style={[styles.circle, { width: size, height: size, borderRadius: size / 2 }]}
-    >
-      <Text style={[styles.glyph, { fontSize: size * 0.5, lineHeight: size * 0.62 }]}>
-        {catalogIcon(name) ?? FALLBACK[list]}
-      </Text>
+    <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+      <Glyph size={size} color={colors.inkMuted} strokeWidth={1.75} absoluteStrokeWidth />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  circle: { backgroundColor: colors.ground, alignItems: 'center', justifyContent: 'center' },
-  glyph: { textAlign: 'center' },
-});

@@ -8,6 +8,7 @@ import {
   findCatalogItem,
   itemKey,
   normalizeName,
+  parseCatalog,
   sameItem,
   searchCatalog,
 } from './catalog';
@@ -57,6 +58,29 @@ describe('CATALOG', () => {
         );
         owner.set(key, item.name);
       }
+  });
+});
+
+describe('parseCatalog', () => {
+  it('reads lines of items under a category, with synonyms, counts and icons', () => {
+    const [grill, tongs, coal, coolers] = parseCatalog(
+      '@cooking\nflame: מנגל=גריל, מלקחיים, פחמים:flame-kindling, צידניות*2',
+    );
+    expect(grill).toMatchObject({
+      name: 'מנגל',
+      icon: 'flame',
+      synonyms: ['גריל'],
+      kind: 'single',
+    });
+    expect(tongs).toMatchObject({ name: 'מלקחיים', icon: 'flame', category: 'בישול ועל האש' });
+    expect(coal?.icon).toBe('flame-kindling');
+    expect(coolers).toMatchObject({ kind: 'qty', quantityNeeded: 2 });
+  });
+
+  it('refuses an icon outside the set, or items outside a category', () => {
+    expect(() => parseCatalog('@cooking\nrocket: מנגל')).toThrow('Unknown catalog icon');
+    expect(() => parseCatalog('@cooking\nflame: מנגל:rocket')).toThrow('Unknown catalog icon');
+    expect(() => parseCatalog('flame: מנגל')).toThrow('outside a category');
   });
 });
 
@@ -117,8 +141,10 @@ describe('same item', () => {
     expect(sameItem('מנגל', 'פחמים')).toBe(false);
   });
 
-  it('draws a picture for a known item only', () => {
-    expect(catalogIcon('מנגל')).toBeTruthy();
+  it('draws a known item with its own line icon, and nothing for an unknown one', () => {
+    expect(catalogIcon('מנגל')).toBe('flame');
+    expect(catalogIcon('אוהלים')).toBe('tent');
+    expect(catalogIcon('בננות')).toBe('banana');
     expect(catalogIcon('זזזזז')).toBeUndefined();
   });
 });

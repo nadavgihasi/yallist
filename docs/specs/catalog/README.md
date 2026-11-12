@@ -13,9 +13,12 @@ Each item has a category, an emoji icon, how it's usually counted and its synony
 - **One item per name.** A synonym is another name for the same thing (`גריל` for `מנגל`,
   `אוהל` for `אוהלים`), never a related item: `מנגו` does not find `אננס`. A name or synonym belongs
   to one item (tested; a clash drops the later one).
-- **Icons.** Every item row, in a trip and in My Bag, shows the catalog's icon by name. Most items
-  have their own emoji (assigned by keyword: mango 🥭, tent ⛺); the rest use their category's. An item
-  the catalog doesn't know gets 🎒 (bring) or 🛒 (buy).
+- **Icons.** Every item row, in a trip and in My Bag, and the catalog suggestions show a thin gray
+  line icon with no background, from Lucide (lucide.dev, ISC), the set the app's own icons come
+  from. 172 icons: most items have their own (tent, cooler, flame, banana), the rest use their
+  category's, and an item the catalog doesn't know gets a backpack (bring) or a basket (buy).
+  The names are listed in `catalog-glyphs.ts` and mapped to components in the app's
+  `itemGlyphs.ts`, one import per icon so the bundle carries only these.
 - **Turning icons off.** The profile has a "תצוגה" card with an "אייקונים לפריטים" switch (on by
   default). It is a profile field (`profiles.show_item_icons`, `PATCH /me`), so it follows the
   account to every device, and applies at once to every item row, My Bag and the catalog
@@ -24,5 +27,5 @@ Each item has a category, an emoji icon, how it's usually counted and its synony
   dashes, case) or the same catalog item. The API uses the same rule (`dal/bag.ts`), so nothing is
   stored differently: names stay as typed.
 - **Data format.** One line per run of items sharing an icon, under `@category` headings:
-  `🔥: מנגל=גריל, פחמים, צידניות*2`. `*each` is per-person, `*4` a quantity, `=a/b` synonyms.
+  `flame: מנגל=גריל, מלקחיים, פחמים:flame-kindling, צידניות*2`. `*each` is per-person, `*4` a quantity, `=a/b` synonyms.
 - **Adding items.** Every trip template item must be in the catalog (tested).

@@ -13,7 +13,6 @@ import { ChipGroup, FilterChip, SuggestionChip } from '@/components/Chips';
 import { PillButton } from '@/components/PillButton';
 import { ItemIcon } from '@/components/ItemIcon';
 import { he } from '@/i18n/he';
-import { useShowItemIcons } from '@/state/profile';
 import { colors, radius, space, type } from '@/theme';
 
 /** How many items of a category show at once; the rest come with "more". */
@@ -42,7 +41,6 @@ export function CatalogPicker({
 }) {
   const [open, setOpen] = useState<string>();
   const [shown, setShown] = useState(PAGE);
-  const showIcons = useShowItemIcons();
   const typed = normalizeName(query).length > 0;
 
   if (typed) {
@@ -60,7 +58,7 @@ export function CatalogPicker({
             onPress={() => onPick(item)}
             style={styles.result}
           >
-            <ItemIcon name={item.name} size={36} />
+            <ItemIcon name={item.name} />
             <Text style={styles.resultName} numberOfLines={1}>
               {item.name}
             </Text>
@@ -82,7 +80,7 @@ export function CatalogPicker({
         {categories.map((c) => (
           <FilterChip
             key={c.id}
-            label={showIcons ? `${c.icon} ${c.name}` : c.name}
+            label={c.name}
             selected={open === c.name}
             onPress={() => {
               setOpen(open === c.name ? undefined : c.name);
@@ -96,7 +94,8 @@ export function CatalogPicker({
           {items.slice(0, shown).map((i) => (
             <SuggestionChip
               key={i.name}
-              label={showIcons ? `${i.icon} ${i.name}` : i.name}
+              label={i.name}
+              icon={<ItemIcon name={i.name} size={18} />}
               onPress={() => onPick(i)}
             />
           ))}
