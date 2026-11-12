@@ -1,4 +1,5 @@
 export * from './bag';
+export * from './bulk';
 export * from './catalog';
 export * from './catalog-glyphs';
 export * from './coverage';

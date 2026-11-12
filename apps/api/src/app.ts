@@ -7,6 +7,7 @@ import type { Db } from './db/client';
 import type { Publish } from './realtime';
 import type { ReceiptStore } from './receipts';
 import { bagRoutes } from './routes/bag';
+import { bulkItemRoutes } from './routes/bulk-items';
 import { categoryRoutes } from './routes/categories';
 import { feedbackRoutes, type FeedbackConfig } from './routes/feedback';
 import { githubWebhookRoutes } from './routes/github-webhook';
@@ -62,6 +63,7 @@ export function createApp(
     .route('/trips', tripRoutes(auth, db, receipts))
     .route('/trips', categoryRoutes(auth, db))
     .route('/trips', itemRoutes(auth, db))
+    .route('/trips', bulkItemRoutes(auth, db))
     .route('/trips', moneyRoutes(auth, db, receipts))
     .route('/trips', receiptRoutes(auth, db, receipts))
     .route('/trips', runRoutes(auth, db))
