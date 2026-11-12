@@ -12,9 +12,10 @@ import { Card, ListGroup } from '@/components/ListGroup';
 import { Loader } from '@/components/Loader';
 import { PillButton } from '@/components/PillButton';
 import { Progress } from '@/components/Progress';
+import { showToast } from '@/components/Toast';
 import { deriveTrip, type TripView } from '@/features/trip/derive';
 import { buyQuantity } from '@/features/trip/labels';
-import { shopList } from '@/features/trip/shopList';
+import { forgottenMatch, shopList } from '@/features/trip/shopList';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { useMe } from '@/state/store';
@@ -86,17 +87,25 @@ function ShopRunBody({
 
   const toggle = (item: Item) =>
     act({ type: 'setInCart', itemId: item.id, inCart: !cart.has(item.id) });
-  // Something not on the list: it joins the buy list and this run, ready to tick.
+  // Something not on the list: it joins the buy list and this run, ready to tick. One the list
+  // already has isn't added twice: it's in the run already, or it joins it as it is.
   const addForgotten = () => {
     const name = forgotten.trim();
     if (!name) return;
+    setForgotten('');
+    const match = forgottenMatch(
+      name,
+      [...inCart, ...groups.flatMap((g) => g.items)],
+      view.runEligible,
+    );
+    if (match?.inRun) return showToast(he.shop.forgotInRun(match.item.name));
+    if (match) return act({ type: 'addToRun', runId, itemId: match.item.id });
     act({
       type: 'addItem',
       item: { list: 'buy', name, kind: 'single', quantityNeeded: 1, categoryId: null },
       claim: 0,
       runId,
     });
-    setForgotten('');
   };
   // The run disappears at once, and with it this screen.
   const cancel = () => act({ type: 'cancelRun', runId });

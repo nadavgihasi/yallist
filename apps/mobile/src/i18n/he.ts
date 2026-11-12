@@ -373,6 +373,7 @@ export const he = {
     forgot: 'שכחנו משהו?',
     forgotPlaceholder: 'עוד פריט לקנייה',
     forgotAdd: 'הוספה',
+    forgotInRun: (name: string) => `${name} כבר ברשימה שלך`,
     dismiss: 'הסתרה',
     checkout: 'סיימתי, לקופה',
     menu: 'עוד אפשרויות',

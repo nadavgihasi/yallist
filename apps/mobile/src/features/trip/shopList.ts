@@ -1,4 +1,4 @@
-import { runSummary, type Category, type Claim, type Item } from '@yallist/domain';
+import { runSummary, sameItem, type Category, type Claim, type Item } from '@yallist/domain';
 
 interface ShopGroup {
   /** Absent: items without a (known) category. */
@@ -30,4 +30,20 @@ export function shopList(
     }))
     .filter((g) => g.items.length > 0);
   return { groups, inCart };
+}
+
+/**
+ * A forgotten item typed in the store that the list already has: in this run (`inRun`, nothing
+ * to add), or on the buy list for anyone to take, which joins the run as it is rather than as a
+ * second item of that name. Undefined: it's new.
+ */
+export function forgottenMatch(
+  name: string,
+  runItems: readonly Item[],
+  eligible: readonly Item[],
+): { item: Item; inRun: boolean } | undefined {
+  const inRun = runItems.find((i) => sameItem(i.name, name));
+  if (inRun) return { item: inRun, inRun: true };
+  const onList = eligible.find((i) => sameItem(i.name, name));
+  return onList && { item: onList, inRun: false };
 }

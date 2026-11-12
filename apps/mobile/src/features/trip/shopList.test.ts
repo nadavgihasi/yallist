@@ -1,7 +1,7 @@
 import type { Category, Claim, Item } from '@yallist/domain';
 import { describe, expect, it } from 'vitest';
 
-import { shopList } from './shopList';
+import { forgottenMatch, shopList } from './shopList';
 
 const category = (id: string, position: number, list: Category['list'] = 'buy'): Category => ({
   id,
@@ -73,5 +73,23 @@ describe('shopList', () => {
   it('puts an item of a deleted category with the uncategorized ones', () => {
     const { groups } = shopList([inRun('cola')], items, [category('meat', 0)]);
     expect(groups).toEqual([{ category: undefined, items: [items[0]] }]);
+  });
+});
+
+describe('forgottenMatch', () => {
+  const named = (id: string, name: string) => ({ ...item(id, 0), name });
+  const run = [named('milk', 'חלב')];
+  const onList = [named('ice', 'קרח')];
+
+  it('finds a name already in the run, however it is spelled', () => {
+    expect(forgottenMatch(' חלב ', run, onList)).toEqual({ item: run[0], inRun: true });
+  });
+
+  it('takes a free item of that name from the buy list instead of adding a second one', () => {
+    expect(forgottenMatch('קרח', run, onList)).toEqual({ item: onList[0], inRun: false });
+  });
+
+  it('is undefined for something new', () => {
+    expect(forgottenMatch('מצית', run, onList)).toBeUndefined();
   });
 });

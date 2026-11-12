@@ -329,7 +329,9 @@ export function useTripAction(tripId: string) {
             ? he.errors.categoryExists
             : action.type === 'editItem'
               ? he.errors.itemEditRefused
-              : action.type === 'setInCart' || action.type === 'cancelRun'
+              : action.type === 'setInCart' ||
+                  action.type === 'cancelRun' ||
+                  (action.type === 'addItem' && action.runId)
                 ? he.errors.runOver
                 : he.errors.failed;
       showToast(message, 'error');
