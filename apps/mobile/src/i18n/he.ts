@@ -679,6 +679,45 @@ export const he = {
     failed: 'השליחה לא הצליחה, נסו שוב',
     tooMany: 'שלחת הרבה בקשות. אפשר לנסות שוב בעוד שעה.',
   },
+  /** Adding many items at once (the add-item sheet's bulk mode). */
+  bulk: {
+    open: 'הוספת כמה פריטים בבת אחת',
+    title: 'כמה פריטים בבת אחת',
+    subtitle: 'פריט בכל שורה, או מופרדים בפסיק. כמות: ״כיסאות ×4״ או ״4 כיסאות״.',
+    text: 'הפריטים',
+    placeholder: 'מחצלת\nכיסאות ×4\nפחמים, מצית',
+    suggestions: 'או לסמן מההצעות',
+    common: 'נפוצים',
+    preview: 'מה ייכנס לרשימות',
+    previewEmpty: 'כותבים או מסמנים פריטים, והם יופיעו כאן לפני השמירה.',
+    status: { exists: 'כבר ברשימה', repeat: 'מופיע פעמיים', tooLong: 'שם ארוך מדי' },
+    each: 'לכל אחד',
+    qty: (n: number) => `כמות: ${n}`,
+    /** An item the catalog puts on the other list than the one open. */
+    toList: { bring: 'יעבור לרשימת ההבאה', buy: 'יעבור לרשימת הקניות' },
+    summary: (add: number, skip: number) =>
+      [`${itemsCount(add)} ייכנסו`, skip > 0 && `${skip} כבר ברשימה`].filter(Boolean).join(' · '),
+    cta: (n: number) => (n === 0 ? 'אין מה להוסיף' : `הוספת ${itemsCount(n)}`),
+    tooMany: (max: number) => `אפשר עד ${max} פריטים בפעם אחת. מחלקים לכמה פעמים.`,
+    /** `elsewhere`: how many of them went to the other list than the one open, and which. */
+    added: (
+      added: number,
+      skipped: number,
+      elsewhere?: { list: 'bring' | 'buy'; count: number },
+    ) => {
+      if (added === 0) return 'הכול כבר ברשימה';
+      const there = elsewhere && `ל${elsewhere.list === 'bring' ? 'רשימת ההבאה' : 'רשימת הקניות'}`;
+      const all = elsewhere?.count === added;
+      return [
+        `${added === 1 ? 'פריט אחד נוסף' : `${added} נוספו`}${all ? ` ${there}` : ''}`,
+        !all && elsewhere?.count && `${elsewhere.count} מהם ${there}`,
+        skipped > 0 && `${skipped} כבר ברשימה`,
+      ]
+        .filter(Boolean)
+        .join(', ');
+    },
+    failed: 'ההוספה לא הצליחה. הכול נשאר כאן, אפשר לנסות שוב.',
+  },
 } as const;
 
 /** `ועוד 5`, after a cut-off list. */

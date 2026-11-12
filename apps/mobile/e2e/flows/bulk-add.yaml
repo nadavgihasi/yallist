@@ -1,0 +1,36 @@
+# Bulk add: several items typed at once and a ticked suggestion, previewed, added in one go; what
+# the list already has (by another name too) is skipped and reported.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [items]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- runFlow:
+    file: ../common/add-item.yaml
+    env:
+      ITEM: מנגל
+- tapOn:
+    id: trip-add
+- tapOn:
+    id: bulk-open
+- tapOn:
+    id: bulk-text
+- inputText: מחצלת, כיסאות x4, גריל
+- tapOn: מלקחיים
+# The preview: גריל is another name for the מנגל the list has.
+- assertVisible:
+    id: bulk-preview
+- assertVisible: כבר ברשימה
+- assertVisible: 'כמות: 4.*'
+- tapOn:
+    id: bulk-save
+- assertVisible: 3 נוספו, 1 כבר ברשימה
+- assertVisible: מחצלת
+- assertVisible: מלקחיים
+- assertVisible: כיסאות.*

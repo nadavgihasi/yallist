@@ -16,6 +16,7 @@ export default function TripLayout() {
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.ground } }}>
       <Stack.Screen name="index" />
       <Stack.Screen name="items/new" options={sheet} />
+      <Stack.Screen name="items/bulk" options={sheet} />
       <Stack.Screen name="items/[itemId]" options={sheet} />
       <Stack.Screen name="expenses/new" options={sheet} />
       <Stack.Screen name="expenses/[expenseId]/receipt" options={sheet} />
