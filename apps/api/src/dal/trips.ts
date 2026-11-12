@@ -174,11 +174,11 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
   ]);
 
   // Per-person bring items count as had by whoever has them in their bag (dal/bag.ts).
-  const bagRows = await bagRowsFor(
-    tx,
-    [...new Set(memberRows.filter((m) => m.status === 'active').map((m) => m.userId))],
-    [...new Set(itemRows.filter(bagMarks).map((i) => i.name))],
-  );
+  const bagRows = itemRows.some(bagMarks)
+    ? await bagRowsFor(tx, [
+        ...new Set(memberRows.filter((m) => m.status === 'active').map((m) => m.userId)),
+      ])
+    : [];
 
   const avatars = new Map<string, string | undefined>();
   if (photos) {

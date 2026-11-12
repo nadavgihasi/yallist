@@ -11,6 +11,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AvatarStack } from '@/components/Avatar';
 import { Icon } from '@/components/Icon';
+import { ItemIcon } from '@/components/ItemIcon';
 import { PillButton } from '@/components/PillButton';
 import { StatusRing, type RingState } from '@/components/StatusRing';
 import { he } from '@/i18n/he';
@@ -128,6 +129,7 @@ export function ItemRow({
       ) : (
         <StatusRing state={ring} label={line.label} />
       )}
+      <ItemIcon name={item.name} list={item.list} />
       <Pressable style={styles.main} onPress={onOpen} accessibilityRole="button">
         <Text style={styles.name}>
           {item.name}

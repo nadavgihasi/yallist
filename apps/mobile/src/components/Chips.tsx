@@ -67,10 +67,13 @@ export function SuggestionChip({
   label,
   onPress,
   plus = true,
+  icon,
 }: {
   label: string;
   onPress: () => void;
   plus?: boolean;
+  /** Shown before the label, in place of the "+". */
+  icon?: ReactNode;
 }) {
   return (
     <Pressable
@@ -78,7 +81,7 @@ export function SuggestionChip({
       onPress={onPress}
       style={[styles.chip, styles.suggestion]}
     >
-      {plus && <Text style={[type.buttonSm, styles.plus]}>+</Text>}
+      {icon ?? (plus && <Text style={[type.buttonSm, styles.plus]}>+</Text>)}
       <Text style={[type.buttonSm, styles.suggestionLabel]} numberOfLines={1}>
         {label}
       </Text>

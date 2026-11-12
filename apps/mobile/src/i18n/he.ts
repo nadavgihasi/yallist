@@ -307,6 +307,11 @@ export const he = {
     title: 'עריכת פריט',
     save: 'שמירת השינויים',
   },
+  catalog: {
+    results: 'הצעות מהקטלוג',
+    categories: 'קטגוריות בקטלוג',
+    more: (left: number) => `עוד ${left} פריטים`,
+  },
   addItem: {
     title: 'פריט חדש',
     what: 'מה צריך?',
@@ -518,6 +523,9 @@ export const he = {
     photoFailed: 'העלאת התמונה נכשלה, נסו שוב',
     name: 'שם',
     nameHint: 'כך יראו אותך בטיולים חדשים',
+    display: 'תצוגה',
+    itemIcons: 'אייקונים לפריטים',
+    itemIconsHint: 'ציור קטן ליד כל פריט, כמו להבה ליד מנגל. חל על כל המכשירים שלך.',
     payments: 'תשלומים',
     phone: 'טלפון לקבלת כסף',
     phoneHint: 'כדי שחברים לטיול יוכלו להעביר לך ב-Bit או ב-PayBox',

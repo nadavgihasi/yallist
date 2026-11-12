@@ -18,6 +18,7 @@ import { Avatar } from '@/components/Avatar';
 import { Callout } from '@/components/Callout';
 import { EmptyState } from '@/components/EmptyState';
 import { TextField } from '@/components/Fields';
+import { Switch } from '@/components/Controls';
 import { Icon } from '@/components/Icon';
 import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
@@ -186,6 +187,8 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
 
       <BagLink />
 
+      <DisplaySettings profile={profile} />
+
       <ListGroup title={he.profile.payments}>
         <TextField
           label={he.profile.phone}
@@ -323,6 +326,22 @@ function Photo({ profile }: { profile: Profile }) {
       </View>
       <Text style={styles.caption}>{he.profile.photoHint}</Text>
     </View>
+  );
+}
+
+/** How the app looks, kept in the account so every device agrees: whether items show their icons. */
+function DisplaySettings({ profile }: { profile: Profile }) {
+  const update = useUpdateProfile();
+  return (
+    <ListGroup title={he.profile.display}>
+      <SettingRow label={he.profile.itemIcons} hint={he.profile.itemIconsHint}>
+        <Switch
+          value={profile.showItemIcons}
+          onChange={(showItemIcons) => update.mutate({ showItemIcons })}
+          label={he.profile.itemIcons}
+        />
+      </SettingRow>
+    </ListGroup>
   );
 }
 

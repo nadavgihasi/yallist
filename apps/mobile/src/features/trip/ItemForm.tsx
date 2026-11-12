@@ -1,8 +1,15 @@
-import { QUICK_SUGGESTIONS, type Item, type ItemKind, type ListKind } from '@yallist/domain';
+import {
+  heldCatalogNames,
+  type CatalogItem,
+  type Item,
+  type ItemKind,
+  type ListKind,
+} from '@yallist/domain';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ChipGroup, FilterChip, SuggestionChip } from '@/components/Chips';
+import { CatalogPicker } from '@/components/CatalogPicker';
+import { ChipGroup, FilterChip } from '@/components/Chips';
 import { SegmentedControl, Switch } from '@/components/Controls';
 import { Input, fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
@@ -62,9 +69,23 @@ export function ItemForm({
   const existing = categories.find((c) => c.name.toLowerCase() === newCategory.toLowerCase());
   const trimmed = name.trim();
   // Only suggest what this list doesn't have yet.
-  const taken = new Set(data.items.filter((i) => i.list === list).map((i) => i.name.trim()));
-  const suggestions = QUICK_SUGGESTIONS[list].filter((s) => !taken.has(s));
+  const taken = heldCatalogNames(data.items.filter((i) => i.list === list).map((i) => i.name));
   const valid = !!trimmed && (picked !== NEW || !!newCategory);
+
+  // A catalog item fills in the rest: its list, how it's counted and its category (the trip's own
+  // if it has one of that name, otherwise a new one, unless one is already picked).
+  const pick = (entry: CatalogItem) => {
+    setName(entry.name);
+    setList(entry.list);
+    setKind(entry.kind);
+    if (entry.kind === 'qty') setQty(entry.quantityNeeded);
+    const own = data.categories.find((c) => c.list === entry.list && c.name === entry.category);
+    if (own) setCategory(own.id);
+    else if (picked === undefined) {
+      setCategory(NEW);
+      setNewName(entry.category);
+    }
+  };
 
   const submit = () => {
     if (!valid) return;
@@ -123,13 +144,7 @@ export function ItemForm({
           autoFocus={!item}
           style={styles.input}
         />
-        {!item && suggestions.length > 0 && (
-          <View style={styles.wrap}>
-            {suggestions.map((s) => (
-              <SuggestionChip key={s} label={s} onPress={() => setName(s)} />
-            ))}
-          </View>
-        )}
+        {!item && <CatalogPicker query={name} list={list} exclude={taken} onPick={pick} />}
       </View>
 
       <View style={styles.field}>
@@ -239,7 +254,6 @@ const styles = StyleSheet.create({
     fontSize: 19,
     color: colors.ink,
   },
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   kinds: { flexDirection: 'row', gap: 8 },
   kind: {
     flex: 1,

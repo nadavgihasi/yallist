@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN "show_item_icons" boolean;
