@@ -9,9 +9,11 @@ import {
   itemKey,
   normalizeName,
   parseCatalog,
+  parseEnglishNames,
   sameItem,
   searchCatalog,
 } from './catalog';
+import { CATALOG_ENGLISH } from './catalog-data';
 import { TEMPLATES } from './templates';
 
 /** Words whose next word names the product: a sewing kit is not a first-aid kit. */
@@ -255,6 +257,50 @@ describe('searchCatalog', () => {
   it('is empty for nothing typed or nothing known', () => {
     expect(searchCatalog('  ')).toEqual([]);
     expect(searchCatalog('זזזזזזז')).toEqual([]);
+  });
+
+  it('finds an item through a typo', () => {
+    expect(searchCatalog('צדנית', { list: 'bring' })[0]?.name).toBe('צידנית');
+    expect(searchCatalog('מנגאל', { list: 'bring' })[0]?.name).toBe('מנגל');
+    expect(searchCatalog('נמגל', { list: 'bring' })[0]?.name).toBe('מנגל');
+    expect(searchCatalog('אהל', { list: 'bring' })[0]?.name).toBe('אוהל');
+    expect(searchCatalog('שק שנה', { list: 'bring' })[0]?.name).toBe('שק שינה');
+  });
+
+  it('finds common items by their English name, and through an English typo', () => {
+    expect(searchCatalog('tent', { list: 'bring' })[0]?.name).toBe('אוהל');
+    expect(searchCatalog('Tent')[0]?.name).toBe('אוהל');
+    expect(searchCatalog('sleeping bag')[0]?.name).toBe('שק שינה');
+    expect(searchCatalog('cooler')[0]?.name).toBe('צידנית');
+    expect(searchCatalog('tnet')[0]?.name).toBe('אוהל');
+  });
+
+  it('keeps what is spelled right first: a typo match never pushes it aside', () => {
+    // מנגו is a letter from מנגל, but typed right it finds only mango.
+    expect(searchCatalog('מנגו', { limit: 50 }).every((i) => i.name.includes('מנגו'))).toBe(true);
+    expect(searchCatalog('מנגל', { list: 'bring' })[0]?.name).toBe('מנגל');
+    expect(searchCatalog('צידנית', { list: 'bring' })[0]?.name).toBe('צידנית');
+  });
+
+  it('stays fast on the whole catalog', () => {
+    const queries = ['צדנית', 'מנגאל', 'tnet', 'זזזזזזז', 'שק שנה', 'כסאות מתקפלים'];
+    const start = performance.now();
+    for (let i = 0; i < 10; i++) for (const q of queries) searchCatalog(q);
+    const each = (performance.now() - start) / (10 * queries.length);
+    // A keystroke's search, well under a frame even on a slow test machine.
+    expect(each).toBeLessThan(30);
+  });
+});
+
+describe('English names', () => {
+  it('names catalog items only, and are never synonyms', () => {
+    for (const name of parseEnglishNames(CATALOG_ENGLISH).keys())
+      expect(
+        CATALOG.some((i) => i.name === name),
+        name,
+      ).toBe(true);
+    expect(findCatalogItem('tent')).toBeUndefined();
+    expect(sameItem('tent', 'אוהל')).toBe(false);
   });
 });
 

@@ -1,5 +1,6 @@
-import { CATALOG_SOURCES } from './catalog-data';
+import { CATALOG_ENGLISH, CATALOG_SOURCES } from './catalog-data';
 import { isItemGlyph, type ItemGlyph } from './catalog-glyphs';
+import { typoMatch } from './fuzzy';
 import type { ItemKind, ListKind } from './types';
 
 /** A group of catalog items. Its list is where its items belong: what to bring or what to buy. */
@@ -188,14 +189,38 @@ interface Indexed {
   name: string;
   words: string[];
   stems: string[];
+  /** Its synonyms and English names, normalized: what else it is searched by. */
   synonyms: string[];
   synonymWords: string[];
   synonymStems: string[];
 }
 
+/**
+ * English names by catalog name, from `catalog-data/english`: `name: english, english` a line.
+ * Searched like synonyms, but never make a trip item the catalog's (unlike `findCatalogItem`).
+ */
+export function parseEnglishNames(source: string): Map<string, string[]> {
+  const names = new Map<string, string[]>();
+  for (const raw of source.split('\n')) {
+    const line = raw.trim();
+    if (!line) continue;
+    const colon = line.indexOf(':');
+    if (colon < 0) throw new Error(`Bad English catalog line: ${line}`);
+    const english = line
+      .slice(colon + 1)
+      .split(',')
+      .map((e) => e.trim())
+      .filter(Boolean);
+    names.set(line.slice(0, colon).trim(), english);
+  }
+  return names;
+}
+
+const ENGLISH = parseEnglishNames(CATALOG_ENGLISH);
+
 const INDEX: Indexed[] = CATALOG.map((item) => {
   const name = normalizeName(item.name);
-  const synonyms = item.synonyms.map(normalizeName);
+  const synonyms = [...item.synonyms, ...(ENGLISH.get(item.name) ?? [])].map(normalizeName);
   const words = name.split(' ');
   const synonymWords = synonyms.flatMap((s) => s.split(' '));
   return {
@@ -213,8 +238,9 @@ const INDEX: Indexed[] = CATALOG.map((item) => {
 const BY_NAME = new Map<string, CatalogItem>();
 for (const { item, name } of INDEX) if (!BY_NAME.has(name)) BY_NAME.set(name, item);
 const BY_SYNONYM = new Map<string, CatalogItem>();
-for (const { item, synonyms } of INDEX)
-  for (const synonym of synonyms) if (!BY_SYNONYM.has(synonym)) BY_SYNONYM.set(synonym, item);
+for (const { item } of INDEX)
+  for (const synonym of item.synonyms.map(normalizeName))
+    if (!BY_SYNONYM.has(synonym)) BY_SYNONYM.set(synonym, item);
 
 /** The item of that name, or that goes by it; undefined for what the catalog doesn't know. */
 export function findCatalogItem(name: string): CatalogItem | undefined {
@@ -250,8 +276,25 @@ function score(
 }
 
 /**
+ * Lower is a better match, after every `score`; undefined for none. A typo away from a word of
+ * the name, then of a synonym: `צדנית` finds `צידנית`, `מנגאל` finds `מנגל`.
+ */
+function typoScore(entry: Indexed, tokens: string[]): number | undefined {
+  const name = typoMatch(tokens, entry.words);
+  if (name !== undefined) return 7 + 2 * name;
+  let synonym: number | undefined;
+  for (const s of entry.synonyms) {
+    const d = typoMatch(tokens, s.split(' '));
+    if (d !== undefined && (synonym === undefined || d < synonym)) synonym = d;
+  }
+  return synonym === undefined ? undefined : 8 + 2 * synonym;
+}
+
+/**
  * Catalog items for what's being typed, best first. `list` is the list being added to: its items
  * come before the other list's at the same quality, and `exclude` drops names already there.
+ * When nothing matches as typed, it looks again allowing a typo or two, so a misspelling still
+ * finds the item but never pushes aside what is spelled right.
  */
 export function searchCatalog(
   text: string,
@@ -265,19 +308,33 @@ export function searchCatalog(
   if (!query) return [];
   const tokens = query.split(' ');
   const stems = tokens.map(stem);
-  const hits: { item: CatalogItem; rank: number; order: number }[] = [];
-  INDEX.forEach((entry, order) => {
-    if (exclude?.has(entry.item.name)) return;
-    const s = score(entry, query, tokens, stems);
-    if (s === undefined) return;
-    hits.push({
-      item: entry.item,
-      rank: s * 2 + (list && entry.item.list !== list ? 1 : 0),
-      order,
+  // `near`: how far the name's length is from what was typed, which tells apart equal typo
+  // matches (נמגל is a swap in מנגל, not מגל with an extra letter).
+  const collect = (rate: (entry: Indexed) => number | undefined, typos: boolean) => {
+    const hits: { item: CatalogItem; rank: number; near: number; order: number }[] = [];
+    INDEX.forEach((entry, order) => {
+      if (exclude?.has(entry.item.name)) return;
+      const s = rate(entry);
+      if (s === undefined) return;
+      hits.push({
+        item: entry.item,
+        rank: s * 2 + (list && entry.item.list !== list ? 1 : 0),
+        near: typos ? Math.abs(entry.name.length - query.length) : 0,
+        order,
+      });
     });
-  });
+    return hits;
+  };
+  let hits = collect((entry) => score(entry, query, tokens, stems), false);
+  if (hits.length === 0) hits = collect((entry) => typoScore(entry, tokens), true);
   return hits
-    .sort((a, b) => a.rank - b.rank || a.item.name.length - b.item.name.length || a.order - b.order)
+    .sort(
+      (a, b) =>
+        a.rank - b.rank ||
+        a.near - b.near ||
+        a.item.name.length - b.item.name.length ||
+        a.order - b.order,
+    )
     .slice(0, limit)
     .map((h) => h.item);
 }
