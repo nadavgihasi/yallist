@@ -104,9 +104,10 @@ function ItemSheetBody({
   const qty = quantityText(item, data.claims);
   const amount = parseShekel(price);
   const bought = status.kind === 'bought';
-  // A shopping run's purchase covers several items: it's changed from the money tab, never
-  // replaced by this item's price, even once its other items are deleted.
-  const shared = !!expense && purchasedCount(expense) > 1;
+  // A shopping run's purchase covers several items, or is split in parts: it's changed from the
+  // money tab, never replaced by this item's price and an equal split, even once its other items
+  // are deleted.
+  const shared = !!expense && (purchasedCount(expense) > 1 || !!expense.parts?.length);
   // `each` items are everyone's own purchase, so they aren't priced as one shared expense.
   const canPrice = isBuy && item.kind !== 'each' && (mine > 0 || !!expense) && !shared;
   const expenseEdit =

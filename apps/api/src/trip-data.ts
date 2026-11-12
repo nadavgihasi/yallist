@@ -5,6 +5,7 @@ import {
   suggestTransfers,
   type Category,
   type Expense,
+  type ExpensePart,
   type Item,
   type Member,
   type Payment,
@@ -65,6 +66,7 @@ export function toExpense(
   itemIds: string[],
   /** Deleted items included: a run whose items were deleted is still a run. */
   itemCount = itemIds.length,
+  parts: ExpensePart[] = [],
 ): Expense {
   return {
     id: row.id,
@@ -74,6 +76,8 @@ export function toExpense(
     amountAgorot: row.amountAgorot,
     paidBy: row.paidBy,
     shares,
+    // Absent unless split in parts, as before parts existed.
+    ...(parts.length > 0 && { parts }),
     hasReceipt: row.receiptPath !== null,
   };
 }

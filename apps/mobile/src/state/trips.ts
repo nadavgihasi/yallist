@@ -277,11 +277,11 @@ async function send(tripId: string, action: Action): Promise<unknown> {
         }),
       );
     case 'finishRun': {
-      const { runId, amountAgorot, shares, receipt } = action;
+      const { runId, amountAgorot, shares, parts, receipt } = action;
       const expense = await parseResponse(
         trip.runs[':runId'].finish.$post({
           param: { ...param, runId },
-          json: { amountAgorot, shares },
+          json: { amountAgorot, shares, ...(parts?.length && { parts }) },
         }),
       );
       if (receipt) {

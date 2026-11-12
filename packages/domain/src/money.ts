@@ -14,6 +14,28 @@ export function splitEqually(amount: number, participants: readonly string[]): M
   return result;
 }
 
+/**
+ * What each participant owes for an expense. Each part is split equally between its own shares,
+ * and what the parts leave between the expense's shares, each with `splitEqually`'s rule, so the
+ * amounts add up to the expense exactly. Empty when they can't (parts over the total, or an
+ * amount that nobody shares): such an expense isn't split at all.
+ */
+export function owedShares(
+  expense: Pick<Expense, 'amountAgorot' | 'shares' | 'parts'>,
+): Map<string, number> {
+  const parts = expense.parts ?? [];
+  const rest = expense.amountAgorot - parts.reduce((sum, p) => sum + p.amountAgorot, 0);
+  const groups = [...parts, { amountAgorot: rest, shares: expense.shares }];
+  const result = new Map<string, number>();
+  for (const { amountAgorot, shares } of groups) {
+    if (amountAgorot < 0 || (amountAgorot > 0 && shares.length === 0)) return new Map();
+    for (const [id, owed] of splitEqually(amountAgorot, shares)) {
+      result.set(id, (result.get(id) ?? 0) + owed);
+    }
+  }
+  return result;
+}
+
 /** paid − owed + payments sent − payments received. Positive: the group owes them. */
 export function balances(
   memberIds: readonly string[],
@@ -23,10 +45,11 @@ export function balances(
   const result = new Map<string, number>(memberIds.map((id) => [id, 0]));
   const add = (id: string, delta: number) => result.set(id, (result.get(id) ?? 0) + delta);
   for (const e of expenses) {
-    // An expense nobody shares can't be split; skipping it keeps balances summing to zero.
-    if (e.shares.length === 0) continue;
+    // An expense that can't be split (nobody shares it) is skipped: balances still sum to zero.
+    const owed = owedShares(e);
+    if (owed.size === 0) continue;
     add(e.paidBy, e.amountAgorot);
-    for (const [id, owed] of splitEqually(e.amountAgorot, e.shares)) add(id, -owed);
+    for (const [id, amount] of owed) add(id, -amount);
   }
   for (const p of payments) {
     add(p.fromUser, p.amountAgorot);

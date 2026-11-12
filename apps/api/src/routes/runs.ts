@@ -29,6 +29,16 @@ const itemParam = z.object({ tripId: z.uuid(), itemId: z.uuid() });
 /** ₪100,000: one supermarket bill, with room to spare. */
 const MAX_RUN_AGOROT = 10_000_000;
 
+/** At most this many parts split apart from the rest of a run (alcohol, meat, …). */
+const MAX_PARTS = 10;
+
+/** A part of the run's total split between other people than the rest (expense_parts). */
+const part = z.object({
+  label: z.string().trim().min(1).max(40),
+  amountAgorot: z.int().min(1).max(MAX_RUN_AGOROT),
+  shares: z.array(z.uuid()).min(1).max(100),
+});
+
 /** `קניות · 4 פריטים`: the run's expense, as the money tab lists it. */
 const runDescription = (n: number) => `קניות · ${n === 1 ? 'פריט אחד' : `${n} פריטים`}`;
 
@@ -135,8 +145,9 @@ export const runRoutes = (auth: Auth, db: Db) =>
       },
     )
 
-    // At the till: one expense for everything in the cart, split between `shares`; the rest goes
-    // back to the list.
+    // At the till: one expense for everything in the cart; the rest goes back to the list. Each of
+    // `parts` (optional) is split between its own shares, and what they leave of the total between
+    // `shares`; without parts, the whole total is split between `shares`.
     .post(
       '/:tripId/runs/:runId/finish',
       validate('param', runParam),
@@ -145,18 +156,28 @@ export const runRoutes = (auth: Auth, db: Db) =>
         z.object({
           amountAgorot: z.int().min(1).max(MAX_RUN_AGOROT),
           shares: z.array(z.uuid()).min(1).max(100),
+          parts: z.array(part).max(MAX_PARTS).optional(),
         }),
       ),
       async (c) => {
         const { tripId, runId } = c.req.valid('param');
         const { amountAgorot } = c.req.valid('json');
         const shares = [...new Set(c.req.valid('json').shares)];
+        const parts = (c.req.valid('json').parts ?? []).map((p) => ({
+          ...p,
+          shares: [...new Set(p.shares)],
+        }));
         const me = c.var.user.id;
         const result = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
           await lockActiveRun(tx, tripId, runId, me);
+          // Something must be left for `shares`: a run that is all one part is split between its
+          // people by `shares` alone.
+          if (parts.reduce((sum, p) => sum + p.amountAgorot, 0) >= amountAgorot) {
+            throw fail(400, 'Parts must add up to less than the total');
+          }
           const active = await activeUserIds(tx, tripId);
-          if (!shares.every((id) => active.has(id))) {
+          if (![...shares, ...parts.flatMap((p) => p.shares)].every((id) => active.has(id))) {
             throw fail(400, 'Every share must be an active member');
           }
           // In the cart, still on the list, and not bought meanwhile (by the single-item flow).
@@ -181,6 +202,7 @@ export const runRoutes = (auth: Auth, db: Db) =>
             },
             shares,
             bought,
+            parts,
           );
           await endRun(tx, runId, { status: 'done', expenseId: expense.id });
           await logActivity(tx, tripId, me, 'shopping_finished', {
@@ -189,7 +211,7 @@ export const runRoutes = (auth: Auth, db: Db) =>
             count: bought.length,
             amountAgorot,
           });
-          return toExpense(expense, shares, bought);
+          return toExpense(expense, shares, bought, bought.length, parts);
         });
         return c.json(result, 201);
       },

@@ -335,6 +335,42 @@ export const expenseShares = pgTable(
   (t) => [primaryKey({ columns: [t.expenseId, t.userId] })],
 );
 
+/**
+ * A part of an expense split between other people than the rest, such as the alcohol of a
+ * shopping run: its amount is split equally between its own shares (expense_part_shares), and
+ * what the parts leave is split between the expense's shares. The parts add up to less than the
+ * expense; an expense without parts is split equally as a whole.
+ */
+export const expenseParts = pgTable(
+  'expense_parts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    expenseId: uuid('expense_id')
+      .notNull()
+      .references(() => expenses.id),
+    /** Order on the expense. */
+    position: integer('position').notNull(),
+    label: text('label').notNull(),
+    amountAgorot: integer('amount_agorot').notNull(),
+  },
+  (t) => [
+    index('expense_parts_expense_idx').on(t.expenseId),
+    positive('expense_parts_amount_check', t.amountAgorot),
+  ],
+);
+
+/** The participants a part of an expense is split between. */
+export const expensePartShares = pgTable(
+  'expense_part_shares',
+  {
+    partId: uuid('part_id')
+      .notNull()
+      .references(() => expenseParts.id),
+    userId: userRef('user_id').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.partId, t.userId] })],
+);
+
 /** The buy items a purchase covers: one expense per item at most, so an item is bought once. */
 export const expenseItems = pgTable(
   'expense_items',

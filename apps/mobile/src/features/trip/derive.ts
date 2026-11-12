@@ -4,7 +4,7 @@ import {
   isDone,
   isRunEligible,
   itemStatus,
-  splitEqually,
+  owedShares,
   type Item,
   type ListKind,
 } from '@yallist/domain';
@@ -73,10 +73,7 @@ export function deriveTrip(data: TripData, me: string) {
     /** Who pays whom to settle up, worked out by the API. */
     transfers: data.transfers,
     totalSpent: data.expenses.reduce((sum, e) => sum + e.amountAgorot, 0),
-    myShare: data.expenses.reduce(
-      (sum, e) => sum + (splitEqually(e.amountAgorot, e.shares).get(me) ?? 0),
-      0,
-    ),
+    myShare: data.expenses.reduce((sum, e) => sum + (owedShares(e).get(me) ?? 0), 0),
   };
 }
 

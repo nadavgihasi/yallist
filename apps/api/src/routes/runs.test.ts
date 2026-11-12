@@ -1,4 +1,4 @@
-import { splitEqually } from '@yallist/domain';
+import { owedShares, splitEqually, type ExpensePart } from '@yallist/domain';
 import { testClient } from 'hono/testing';
 import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -60,7 +60,7 @@ describe.skipIf(!DATABASE_URL)('shopping runs', () => {
     user: Guest,
     tripId: string,
     runId: string,
-    json: { amountAgorot: number; shares: string[] },
+    json: { amountAgorot: number; shares: string[]; parts?: ExpensePart[] },
   ) => runs()[':runId'].finish.$post({ param: { tripId, runId }, json }, as(user));
   const cancel = (user: Guest, tripId: string, runId: string) =>
     runs()[':runId'].cancel.$post({ param: { tripId, runId } }, as(user));
@@ -69,6 +69,13 @@ describe.skipIf(!DATABASE_URL)('shopping runs', () => {
   const activity = async (tripId: string, type: string) =>
     sql<{ payload: Record<string, unknown> }[]>`
       select payload from activity where trip_id = ${tripId} and type = ${type}`;
+
+  /** The trip's expense parts and who shares them, as rows. */
+  const partRows = (tripId: string) => sql`
+    select p.id, s.user_id from expense_parts p
+      join expenses e on e.id = p.expense_id
+      left join expense_part_shares s on s.part_id = p.id
+      where e.trip_id = ${tripId}`;
 
   it('claims every eligible item for the shopper and shows the run to everyone', async () => {
     const { a, b, tripId, buy } = await trip();
@@ -207,6 +214,125 @@ describe.skipIf(!DATABASE_URL)('shopping runs', () => {
     expect((await finish(a, tripId, id, { amountAgorot: 10_000_000, shares: [a.id] })).status).toBe(
       201,
     );
+  });
+
+  it('splits a part of the run between some, and the rest between others', async () => {
+    const { a, b, c, tripId, buy } = await trip();
+    const { run } = await startOk(a, tripId, [buy[0]!]);
+    await cart(a, tripId, buy[0]!);
+    // ₪301 run: ₪120.01 of alcohol for a and b; the rest (₪180.99) for a, b and c.
+    const parts = [{ label: 'אלכוהול', amountAgorot: 12001, shares: [a.id, b.id, b.id] }];
+    const res = await finish(a, tripId, run!.id, {
+      amountAgorot: 30100,
+      shares: [a.id, b.id, c.id],
+      parts,
+    });
+    expect(res.status).toBe(201);
+    const expense = await res.json();
+    expect(expense.parts).toEqual([{ ...parts[0], shares: [a.id, b.id] }]);
+
+    const after = await detail(c, tripId);
+    const sorted = (e: typeof expense) => ({
+      ...e,
+      shares: [...e.shares].sort(),
+      parts: e.parts!.map((p) => ({ ...p, shares: [...p.shares].sort() })),
+    });
+    expect(after.expenses.map(sorted)).toEqual([sorted(expense)]);
+    const owed = owedShares(expense);
+    expect([...owed.values()].reduce((sum, v) => sum + v, 0)).toBe(30100);
+    const alcohol = splitEqually(12001, [a.id, b.id]);
+    const rest = splitEqually(18099, [a.id, b.id, c.id]);
+    expect(after.balances).toEqual({
+      [a.id]: 30100 - alcohol.get(a.id)! - rest.get(a.id)!,
+      [b.id]: -alcohol.get(b.id)! - rest.get(b.id)!,
+      [c.id]: -rest.get(c.id)!,
+    });
+    // The suggested transfers pay a exactly what the others owe.
+    expect(after.transfers).toEqual(
+      expect.arrayContaining([
+        { from: b.id, to: a.id, amountAgorot: -after.balances[b.id]! },
+        { from: c.id, to: a.id, amountAgorot: -after.balances[c.id]! },
+      ]),
+    );
+
+    // Deleting the expense takes its parts with it.
+    const deleted = await client.trips[':tripId'].expenses[':expenseId'].$delete(
+      { param: { tripId, expenseId: expense.id } },
+      as(a),
+    );
+    expect(deleted.status).toBe(204);
+    expect(await partRows(tripId)).toEqual([]);
+  });
+
+  it('validates the parts', async () => {
+    const { a, b, tripId, buy } = await trip();
+    const stranger = await signInAsGuest(app, 'stranger');
+    const { run } = await startOk(a, tripId, [buy[0]!]);
+    await cart(a, tripId, buy[0]!);
+    const id = run!.id;
+    const shares = [a.id, b.id];
+    const send = (parts: ExpensePart[]) =>
+      finish(a, tripId, id, { amountAgorot: 1000, shares, parts });
+    const part = (amountAgorot: number, partShares = [a.id], label = 'בשר') => ({
+      label,
+      amountAgorot,
+      shares: partShares,
+    });
+    // The parts must leave something of the total for the rest.
+    expect((await send([part(1000)])).status).toBe(400);
+    expect((await send([part(600), part(400)])).status).toBe(400);
+    expect((await send([part(600), part(500)])).status).toBe(400);
+    // Every part needs people, all of them active members, an amount and a name.
+    expect((await send([part(100, [])])).status).toBe(400);
+    expect((await send([part(100, [a.id, stranger.id])])).status).toBe(400);
+    expect((await send([part(0)])).status).toBe(400);
+    expect((await send([part(100, [a.id], ' ')])).status).toBe(400);
+    expect((await send(Array.from({ length: 11 }, () => part(1)))).status).toBe(400);
+    expect(await partRows(tripId)).toEqual([]);
+    // Only the shopper finishes their run, parts or not.
+    expect(
+      (await finish(b, tripId, id, { amountAgorot: 1000, shares, parts: [part(100)] })).status,
+    ).toBe(403);
+    expect(
+      (await finish(stranger, tripId, id, { amountAgorot: 1000, shares, parts: [part(100)] }))
+        .status,
+    ).toBe(404);
+
+    expect((await send([part(600, [b.id]), part(399)])).status).toBe(201);
+  });
+
+  it('saves a run with parts once when it is sent twice', async () => {
+    const { a, b, c, tripId, buy } = await trip();
+    const { run } = await startOk(a, tripId, [buy[0]!]);
+    await cart(a, tripId, buy[0]!);
+    const json = {
+      amountAgorot: 41290,
+      shares: [a.id, b.id, c.id],
+      parts: [{ label: 'אלכוהול', amountAgorot: 12000, shares: [b.id, c.id] }],
+    };
+    const statuses = await Promise.all([
+      finish(a, tripId, run!.id, json),
+      finish(a, tripId, run!.id, json),
+    ]).then((all) => all.map((r) => r.status).sort());
+    expect(statuses).toEqual([201, 409]);
+    expect(await partRows(tripId)).toHaveLength(2);
+    expect((await detail(a, tripId)).expenses).toHaveLength(1);
+  });
+
+  it('keeps a former member’s part in the balances', async () => {
+    const { a, b, c, tripId, buy } = await trip();
+    const { run } = await startOk(a, tripId, [buy[0]!]);
+    await cart(a, tripId, buy[0]!);
+    const parts = [{ label: 'אלכוהול', amountAgorot: 900, shares: [b.id, c.id] }];
+    await finish(a, tripId, run!.id, { amountAgorot: 1200, shares: [a.id, b.id, c.id], parts });
+    const removed = await client.trips[':tripId'].members[':userId'].$delete(
+      { param: { tripId, userId: c.id } },
+      as(a),
+    );
+    expect(removed.status).toBe(200);
+    const after = await detail(a, tripId);
+    expect(after.balances).toMatchObject({ [a.id]: 1200 - 100, [b.id]: -450 - 100 });
+    expect(after.balances[c.id]).toBe(-450 - 100);
   });
 
   it('cancels, releasing every item', async () => {

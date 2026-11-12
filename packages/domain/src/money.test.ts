@@ -3,12 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   balances,
   formatShekel,
+  owedShares,
   parseShekel,
   shekelInput,
   splitEqually,
   suggestTransfers,
 } from './money';
-import type { Expense, Payment } from './types';
+import type { Expense, ExpensePart, Payment } from './types';
 
 const expense = (paidBy: string, amountAgorot: number, shares: string[]): Expense => ({
   id: `${paidBy}-${amountAgorot}`,
@@ -90,6 +91,164 @@ describe('balances', () => {
       [],
     );
     expect([...b.values()].reduce((s, v) => s + v, 0)).toBe(0);
+  });
+});
+
+describe('owedShares', () => {
+  const part = (amountAgorot: number, shares: string[]): ExpensePart => ({
+    label: 'אלכוהול',
+    amountAgorot,
+    shares,
+  });
+  const run = (amountAgorot: number, shares: string[], parts: ExpensePart[]): Expense => ({
+    ...expense('a', amountAgorot, shares),
+    parts,
+  });
+  const total = (owed: Map<string, number>) => [...owed.values()].reduce((s, v) => s + v, 0);
+
+  it('splits equally between the shares without parts', () => {
+    expect(owedShares(expense('a', 900, ['a', 'b', 'c']))).toEqual(
+      splitEqually(900, ['a', 'b', 'c']),
+    );
+  });
+
+  it('leaves out who is not part of it', () => {
+    expect(Object.fromEntries(owedShares(expense('a', 900, ['a', 'c'])))).toEqual({
+      a: 450,
+      c: 450,
+    });
+  });
+
+  it('splits a part between its own people and the rest between everyone', () => {
+    // ₪300 run: ₪120 of alcohol for a, b, c, d; the other ₪180 for all five.
+    const e = run(30000, ['a', 'b', 'c', 'd', 'e'], [part(12000, ['a', 'b', 'c', 'd'])]);
+    expect(Object.fromEntries(owedShares(e))).toEqual({
+      a: 3000 + 3600,
+      b: 3000 + 3600,
+      c: 3000 + 3600,
+      d: 3000 + 3600,
+      e: 3600,
+    });
+  });
+
+  it('takes several parts, and people in some of them only', () => {
+    const e = run(
+      10000,
+      ['a', 'b', 'c'],
+      [part(3000, ['a', 'b']), { label: 'בשר', amountAgorot: 4000, shares: ['b', 'c', 'x'] }],
+    );
+    const owed = owedShares(e);
+    expect(total(owed)).toBe(10000);
+    expect(owed.get('x')).toBe(1333);
+    expect(owed.get('b')).toBe(1500 + 1334 + 1000);
+  });
+
+  it('always adds up to the total, the remainders by user id', () => {
+    for (const amount of [1001, 9999, 12345, 100]) {
+      const e = run(amount + 77, ['c', 'a', 'b'], [part(amount, ['b', 'd', 'a'])]);
+      expect(total(owedShares(e)), String(amount)).toBe(amount + 77);
+    }
+    // 100 between 3: the first id by sort order gets the extra agora, in each group alike.
+    const e = run(200, ['c', 'b', 'a'], [part(100, ['c', 'b', 'a'])]);
+    expect(Object.fromEntries(owedShares(e))).toEqual({ a: 68, b: 66, c: 66 });
+  });
+
+  it('can leave nothing for the rest', () => {
+    const e = run(500, [], [part(500, ['a', 'b'])]);
+    expect(Object.fromEntries(owedShares(e))).toEqual({ a: 250, b: 250 });
+  });
+
+  it('refuses parts over the total, or an amount nobody shares', () => {
+    expect(owedShares(run(500, ['a'], [part(600, ['a'])])).size).toBe(0);
+    expect(owedShares(run(500, ['a'], [part(100, [])])).size).toBe(0);
+    expect(owedShares(run(500, [], [part(100, ['a'])])).size).toBe(0);
+  });
+
+  it('settles a run with a part, a former member among its people', () => {
+    // a paid ₪300; ₪120 alcohol for a, b and x (removed since); the rest for a, b, c.
+    const e = run(30000, ['a', 'b', 'c'], [part(12000, ['a', 'b', 'x'])]);
+    const b = balances(['a', 'b', 'c'], [e], []);
+    expect(Object.fromEntries(b)).toEqual({
+      a: 30000 - 4000 - 6000,
+      b: -4000 - 6000,
+      c: -6000,
+      x: -4000,
+    });
+    expect([...b.values()].reduce((s, v) => s + v, 0)).toBe(0);
+    const transfers = suggestTransfers(b);
+    expect(transfers.reduce((s, t) => s + t.amountAgorot, 0)).toBe(20000);
+    expect(transfers.every((t) => t.to === 'a')).toBe(true);
+  });
+
+  it('holds for random totals, parts and people', () => {
+    // A small seeded generator: the same cases every run.
+    let seed = 173181;
+    const rand = (n: number) => {
+      seed = (seed * 1103515245 + 12345) % 2 ** 31;
+      return seed % n;
+    };
+    const people = ['p0', 'p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7'];
+    const some = () => {
+      const picked = people.filter(() => rand(2) === 0);
+      return picked.length > 0 ? picked : [people[rand(people.length)]!];
+    };
+    const shuffled = (ids: string[]) => [...ids].sort(() => rand(3) - 1);
+    for (let n = 0; n < 2000; n++) {
+      const total = 1 + rand(10_000_000);
+      const parts: ExpensePart[] = [];
+      let left = total - 1;
+      for (let i = rand(4); i > 0 && left > 0; i--) {
+        // Now and then a part that leaves exactly one agora for the rest.
+        const amount = rand(10) === 0 ? left : 1 + rand(left);
+        parts.push(part(amount, some()));
+        left -= amount;
+      }
+      const shares = some();
+      const e = { ...run(total, shares, parts), paidBy: people[rand(people.length)]! };
+      const owed = owedShares(e);
+
+      // What each owes, worked out independently: per group, the floor, and one more agora for
+      // the first (amount mod n) people in id order.
+      const expected = new Map<string, number>();
+      // `left` is what the parts left of total − 1: the rest is that and the one agora kept back.
+      for (const g of [...parts, { amountAgorot: left + 1, shares }]) {
+        const ids = [...new Set(g.shares)].sort();
+        ids.forEach((id, i) => {
+          const share =
+            Math.floor(g.amountAgorot / ids.length) + (i < g.amountAgorot % ids.length ? 1 : 0);
+          expected.set(id, (expected.get(id) ?? 0) + share);
+        });
+      }
+      expect(owed).toEqual(expected);
+      for (const v of owed.values()) {
+        expect(Number.isInteger(v)).toBe(true);
+        expect(v).toBeGreaterThanOrEqual(0);
+      }
+      expect([...owed.values()].reduce((s, v) => s + v, 0)).toBe(total);
+      // The same however the people are ordered.
+      const reordered = {
+        ...e,
+        shares: shuffled(shares),
+        parts: parts.map((p) => ({ ...p, shares: shuffled(p.shares) })),
+      };
+      expect(owedShares(reordered)).toEqual(owed);
+      // Balances sum to zero, and the transfers settle them to the agora.
+      const b = balances(people, [e], []);
+      expect([...b.values()].reduce((s, v) => s + v, 0)).toBe(0);
+      const settled = new Map(b);
+      for (const t of suggestTransfers(b)) {
+        settled.set(t.from, settled.get(t.from)! + t.amountAgorot);
+        settled.set(t.to, settled.get(t.to)! - t.amountAgorot);
+      }
+      expect([...settled.values()].every((v) => v === 0)).toBe(true);
+    }
+  });
+
+  it('charges the payer nothing when they share none of it', () => {
+    const e = { ...run(41290, ['b', 'c'], [part(12000, ['c', 'd'])]), paidBy: 'a' };
+    const b = balances(['a', 'b', 'c', 'd'], [e], []);
+    expect(owedShares(e).has('a')).toBe(false);
+    expect(Object.fromEntries(b)).toEqual({ a: 41290, b: -14645, c: -20645, d: -6000 });
   });
 });
 

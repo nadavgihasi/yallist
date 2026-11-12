@@ -293,6 +293,11 @@ export const he = {
     sharedBy: (n: number) => `${n} מתחלקים`,
     /** An equal split that doesn't divide to the agora: some pay an agora more. */
     oneOf: (smaller: string, larger: string) => `${smaller} או ${larger}`,
+    /** Who shares an expense: `בין דנה ורון`, a part as `אלכוהול ₪120: דנה ורון`. */
+    between: (names: string) => `בין ${names}`,
+    part: (label: string, amount: string, names: string) => `${label} ${amount}: ${names}`,
+    rest: (names: string) => `השאר: ${names}`,
+    everyone: 'כולם',
   },
   item: {
     inBring: 'ברשימת ההבאה',
@@ -435,6 +440,19 @@ export const he = {
       change: 'שינוי',
       save: 'שמירה',
       empty: 'אין פריטים בעגלה',
+      /** Splitting part of the total between other people (alcohol for the drinkers only). */
+      byParts: 'מתחלק לפי חלקים',
+      addPart: 'חלק שמתחלק אחרת',
+      addPartHint: 'למשל אלכוהול או בשר, רק למי שבעניין',
+      partName: 'על מה?',
+      partPlaceholder: 'למשל: אלכוהול',
+      partDefault: (n: number) => `חלק ${n}`,
+      partAmount: 'כמה מתוך הסכום?',
+      removePart: 'הסרת החלק',
+      rest: (amount: string) => `השאר (${amount}) מתחלק בין`,
+      partsOver: 'החלקים צריכים להשאיר משהו מהסכום',
+      whoPays: 'כמה יוצא לכל אחד',
+      whoPaysOf: (total: string) => `כמה יוצא לכל אחד מתוך ${total}`,
     },
   },
   receipt: {

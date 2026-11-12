@@ -5,6 +5,7 @@ import {
   type Claim,
   type CoverId,
   type Expense,
+  type ExpensePart,
   type ItemKind,
   type LatLng,
   type ListKind,
@@ -77,7 +78,15 @@ export type Action =
   | { type: 'addToRun'; runId: string; itemId: string }
   | { type: 'setInCart'; itemId: string; inCart: boolean }
   // `receipt`: a local photo to upload once the expense exists, as for addExpense.
-  | { type: 'finishRun'; runId: string; amountAgorot: number; shares: string[]; receipt?: string }
+  // `parts`: amounts split between other people than the rest (see owedShares).
+  | {
+      type: 'finishRun';
+      runId: string;
+      amountAgorot: number;
+      shares: string[];
+      parts?: ExpensePart[];
+      receipt?: string;
+    }
   | { type: 'cancelRun'; runId: string };
 
 /**
