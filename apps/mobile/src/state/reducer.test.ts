@@ -73,6 +73,34 @@ describe('setClaim', () => {
       [],
     );
   });
+
+  it('assigns to another member, moving it from whoever had it, and records who did', () => {
+    const t = trip({ claims: [{ itemId: 'meat', userId: 'me', quantity: 1 }] });
+    const next = applyAction(
+      t,
+      { type: 'setClaim', itemId: 'meat', quantity: 1, userId: 'ron', from: 'me' },
+      'me',
+    );
+    expect(next.claims).toEqual([
+      { itemId: 'meat', userId: 'ron', quantity: 1, assignedBy: 'me', packed: false },
+    ]);
+  });
+
+  it("caps an assignment at what's still needed, and unassigns at zero", () => {
+    const t = trip({ claims: [{ itemId: 'chairs', userId: 'me', quantity: 6 }] });
+    const assigned = applyAction(
+      t,
+      { type: 'setClaim', itemId: 'chairs', quantity: 5, userId: 'ron' },
+      'me',
+    );
+    expect(assigned.claims.find((c) => c.userId === 'ron')?.quantity).toBe(2);
+    const unassigned = applyAction(
+      assigned,
+      { type: 'setClaim', itemId: 'chairs', quantity: 0, userId: 'ron' },
+      'me',
+    );
+    expect(unassigned.claims).toEqual(t.claims);
+  });
 });
 
 describe('setPacked', () => {

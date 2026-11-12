@@ -7,6 +7,8 @@ import { AmountField, Input, fieldStyles } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
+import { canAssign } from '@/features/trip/assign';
+import { AssignPicker } from '@/features/trip/AssignPicker';
 import { ClaimStepper } from '@/features/trip/ClaimStepper';
 import { useCloseSheet } from '@/features/trip/closeSheet';
 import { ItemForm } from '@/features/trip/ItemForm';
@@ -234,6 +236,16 @@ function ItemSheetBody({
         )}
       </View>
       {!!line.detail && <Text style={styles.detail}>{line.detail}</Text>}
+
+      {canAssign(item) && !bought && (
+        <AssignPicker
+          item={item}
+          claims={data.claims}
+          view={view}
+          me={me}
+          onAssign={(assignment) => act({ type: 'setClaim', itemId: item.id, ...assignment })}
+        />
+      )}
 
       {canPrice && (
         <>

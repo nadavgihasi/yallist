@@ -288,6 +288,8 @@ export const claims = pgTable(
     inCartAt: timestamp('in_cart_at', { withTimezone: true }),
     /** In the claimer's bag. Only they set it; claiming more clears it. */
     packedAt: timestamp('packed_at', { withTimezone: true }),
+    /** The member who last set this claim for the claimer (assigned it); null: they took it. */
+    assignedBy: userRef('assigned_by'),
     createdAt: createdAt(),
   },
   (t) => [

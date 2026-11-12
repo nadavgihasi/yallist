@@ -7,7 +7,11 @@ import type { Executor, Tx } from '../db/tx';
 /** The item's claims, locked. */
 export async function lockClaims(tx: Tx, itemId: string): Promise<Claim[]> {
   const rows = await tx.select().from(claims).where(eq(claims.itemId, itemId)).for('update');
-  return rows.map((c) => ({ ...c, runId: c.runId ?? undefined }));
+  return rows.map((c) => ({
+    ...c,
+    runId: c.runId ?? undefined,
+    assignedBy: c.assignedBy ?? undefined,
+  }));
 }
 
 const mine = (itemId: string, userId: string) =>
@@ -15,7 +19,8 @@ const mine = (itemId: string, userId: string) =>
 
 /**
  * Sets the user's claim on the item; 0 drops it. `existing`: their claim, if they have one.
- * Claiming more takes it out of their bag: the extra isn't packed yet.
+ * Claiming more takes it out of their bag: the extra isn't packed yet. `assignedBy`: the other
+ * member who set it for them, recorded on the claim; the user's own change keeps the record.
  */
 export async function setClaim(
   tx: Executor,
@@ -23,14 +28,16 @@ export async function setClaim(
   userId: string,
   quantity: number,
   existing: { quantity: number } | undefined,
+  assignedBy?: string,
 ) {
+  const assigned = assignedBy ? { assignedBy } : {};
   if (quantity === 0) await tx.delete(claims).where(mine(itemId, userId));
-  else if (!existing) await tx.insert(claims).values({ itemId, userId, quantity });
+  else if (!existing) await tx.insert(claims).values({ itemId, userId, quantity, ...assigned });
   else {
     const unpack = quantity > existing.quantity ? { packedAt: null } : {};
     await tx
       .update(claims)
-      .set({ quantity, ...unpack })
+      .set({ quantity, ...unpack, ...assigned })
       .where(mine(itemId, userId));
   }
 }

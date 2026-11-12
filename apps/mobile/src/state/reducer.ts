@@ -29,7 +29,11 @@ export interface NewExpenseInput {
 
 /** A change to a trip, sent to the API by `useTripAction`. */
 export type Action =
-  | { type: 'setClaim'; itemId: string; quantity: number }
+  /**
+   * Sets my claim on the item, or with `userId` assigns it to that member. `from`: the member it
+   * moves from (reassigning), whose claim is dropped first.
+   */
+  | { type: 'setClaim'; itemId: string; quantity: number; userId?: string; from?: string }
   /** Packs or unpacks my claim on the item. */
   | { type: 'setPacked'; itemId: string; packed: boolean }
   // `newCategory`: create a category of that name first, and put the item in it.
@@ -74,15 +78,21 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
     case 'setClaim': {
       const item = data.items.find((i) => i.id === action.itemId);
       if (!item) return data;
+      const who = action.userId ?? me;
+      // Reassigning: the claim it moves from goes first, as the API does.
+      const kept = data.claims.filter(
+        (c) => !(c.itemId === action.itemId && c.userId === action.from && c.userId !== who),
+      );
       // Same cap the server enforces: never claim past what's still needed.
-      const quantity = Math.min(action.quantity, claimCap(item, data.claims, me));
-      const isMine = (c: Claim) => c.itemId === action.itemId && c.userId === me;
-      const others = data.claims.filter((c) => !isMine(c));
-      const mine = data.claims.find(isMine) ?? { itemId: action.itemId, userId: me, quantity: 0 };
+      const quantity = Math.min(action.quantity, claimCap(item, kept, who));
+      const isTheirs = (c: Claim) => c.itemId === action.itemId && c.userId === who;
+      const others = kept.filter((c) => !isTheirs(c));
+      const theirs = kept.find(isTheirs) ?? { itemId: action.itemId, userId: who, quantity: 0 };
+      const assigned = who === me ? theirs : { ...theirs, assignedBy: me };
       return {
         ...data,
         // Claiming more unpacks it, as the API does.
-        claims: quantity > 0 ? [...others, withQuantity(mine, quantity)] : others,
+        claims: quantity > 0 ? [...others, withQuantity(assigned, quantity)] : others,
       };
     }
     case 'setPacked':

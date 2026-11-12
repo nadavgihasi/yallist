@@ -1,0 +1,2 @@
+ALTER TABLE "claims" ADD COLUMN "assigned_by" uuid;--> statement-breakpoint
+ALTER TABLE "claims" ADD CONSTRAINT "claims_assigned_by_profiles_id_fk" FOREIGN KEY ("assigned_by") REFERENCES "public"."profiles"("id") ON DELETE no action ON UPDATE no action;
