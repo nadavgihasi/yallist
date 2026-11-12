@@ -36,6 +36,7 @@ export function PillButton({
   icon,
   wide = false,
   float = false,
+  lines,
   disabled,
   style,
   ...rest
@@ -48,6 +49,8 @@ export function PillButton({
   wide?: boolean;
   /** The screen's one floating action: adds `shadow-float`. */
   float?: boolean;
+  /** Cuts the label to this many lines, with an ellipsis, where the pill may shrink. */
+  lines?: number;
   style?: StyleProp<ViewStyle>;
 }) {
   const v = VARIANTS[variant];
@@ -72,7 +75,12 @@ export function PillButton({
       {...rest}
     >
       {icon && <View>{icon}</View>}
-      <Text style={[s.text, { color: v.fg }]}>{label}</Text>
+      <Text
+        style={[s.text, { color: v.fg }, lines !== undefined && styles.shrink]}
+        numberOfLines={lines}
+      >
+        {label}
+      </Text>
     </Pressable>
   );
 }
@@ -85,4 +93,5 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   wide: { alignSelf: 'stretch' },
+  shrink: { flexShrink: 1 },
 });

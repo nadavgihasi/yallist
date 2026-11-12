@@ -1,6 +1,6 @@
 import { formatShekel, type ListFilter } from '@yallist/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import {
   Platform,
   Pressable,
@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AvatarStack } from '@/components/Avatar';
 import { SegmentedControl } from '@/components/Controls';
 import { Cover } from '@/components/Cover';
 import { StateScreen } from '@/components/EmptyState';
@@ -20,15 +21,16 @@ import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { Skeleton } from '@/components/Skeleton';
-import { deriveTrip } from '@/features/trip/derive';
+import { deriveTrip, toAvatar } from '@/features/trip/derive';
 import { JoinedPrompt } from '@/features/trip/JoinedPrompt';
 import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
 import { PeopleTab } from '@/features/trip/PeopleTab';
+import { pinOffset, tabsMinHeight } from '@/features/trip/pin';
 import { ReadinessHero } from '@/features/trip/ReadinessHero';
 import { TripLinksBar } from '@/features/trip/TripLinks';
-import { he, participants } from '@/i18n/he';
-import { formatRange } from '@/lib/dates';
+import { he, participants, peopleNames } from '@/i18n/he';
+import { countdown, formatRange } from '@/lib/dates';
 import { statusOf } from '@/lib/api';
 import { testId } from '@/lib/testId';
 import { useToday } from '@/lib/useToday';
@@ -42,6 +44,14 @@ type Tab = (typeof TABS)[number];
 
 /** Keeps the desktop side panel in view while the list scrolls (web only). */
 const sticky = (Platform.OS === 'web' ? { position: 'sticky', top: 24 } : {}) as ViewStyle;
+
+/**
+ * Phone and tablet: once the tabs reach the top, a bar with the trip's name and the tabs stays
+ * pinned there. From the safe area to the tabs: its top padding, the back button's row, the gap.
+ */
+const BAR_ABOVE_TABS = space[2] + size.avatar + space[3];
+/** Phone and tablet: the gap between the page's blocks, a little tighter than desktop's. */
+const COLUMN_GAP = space[3];
 
 export default function TripScreen() {
   const params = useLocalSearchParams<{
@@ -67,13 +77,28 @@ export default function TripScreen() {
   const setTab = (next: Tab) => router.setParams({ tab: next });
   // Lifted from ListTab, so the hero's "missing" button can open a list already filtered.
   const [filter, setFilter] = useState<ListFilter>('all');
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
+  // Phone and tablet: how far down the tabs are, and whether they're pinned to the top.
+  const tabsY = useRef(0);
+  const [pinned, setPinned] = useState(false);
+  const showPinned = !desktop && pinned;
   const pickTab = (next: Tab) => {
     setTab(next);
     setFilter('all');
+    // Pinned, the new tab starts right under the pinned tabs, not where the old one was scrolled.
+    if (pinned) {
+      scrollRef.current?.scrollTo({
+        y: pinOffset(tabsY.current, insets.top, BAR_ABOVE_TABS),
+        animated: false,
+      });
+    }
   };
   const now = useToday();
   // Every "invite friends" button opens the invite sheet, which shows what will be sent.
   const invite = () => router.push({ pathname: '/trips/[tripId]/invite', params: { tripId } });
+  // Phone and tablet: room under the tabs for a short tab, so switching to it while pinned
+  // stays pinned instead of jumping the page back down.
+  const [viewport, setViewport] = useState(0);
   // A sheet opened by URL hands its params to this screen underneath it. Clear them once this
   // screen is focused again: `router.setParams` targets the focused route, not necessarily this one.
   useFocusEffect(
@@ -129,6 +154,11 @@ export default function TripScreen() {
         setTab(view.missingIn('bring') >= view.missingIn('buy') ? 'bring' : 'buy');
         setFilter('missing');
       }}
+      onMine={() => {
+        const mineIn = (l: 'bring' | 'buy') => view.mine.filter((i) => i.list === l).length;
+        setTab(mineIn('bring') >= mineIn('buy') ? 'bring' : 'buy');
+        setFilter('mine');
+      }}
       onInvite={invite}
     />
   );
@@ -141,55 +171,132 @@ export default function TripScreen() {
         : () =>
             router.push({ pathname: '/trips/[tripId]/items/new', params: { tripId, list: tab } });
 
+  const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
+  const back = (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={he.trip.back}
+      onPress={goBack}
+      style={styles.back}
+    >
+      <Icon name="back" strokeWidth={2.5} />
+    </Pressable>
+  );
+  const inviteButton = (
+    <PillButton
+      label={he.trip.invite}
+      // On the cover (phone and tablet), white like the cover's other buttons.
+      variant={desktop ? 'soft' : 'card'}
+      icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
+      {...testId('trip-invite')}
+      onPress={invite}
+    />
+  );
+  const editCover = () => router.push({ pathname: '/trips/[tripId]/cover', params: { tripId } });
+  const coverEdit =
+    organizer &&
+    (desktop ? (
+      <PillButton
+        label={he.cover.changeShort}
+        accessibilityLabel={he.cover.change}
+        variant="card"
+        size="sm"
+        icon={<Icon name="image" size={16} color={colors.ink} />}
+        {...testId('trip-cover-edit')}
+        onPress={editCover}
+        style={styles.coverEdit}
+      />
+    ) : (
+      // In the cover's row with back and invite: round like back, so all three fit at 320px.
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={he.cover.change}
+        {...testId('trip-cover-edit')}
+        onPress={editCover}
+        style={styles.back}
+      >
+        <Icon name="image" size={20} color={colors.ink} />
+      </Pressable>
+    ));
+  // Phone and tablet: a short tab still scrolls up to the pinned tabs.
+  const minHeight = tabsMinHeight({
+    viewport,
+    insetTop: insets.top,
+    insetBottom: insets.bottom,
+    barAboveTabs: BAR_ABOVE_TABS,
+    gapBelow: COLUMN_GAP,
+    clearance: FLOATING_CLEARANCE,
+  });
+
   return (
     <View style={styles.screen}>
       <ScrollView
+        ref={scrollRef}
+        onLayout={(e) => setViewport(e.nativeEvent.layout.height)}
+        // The hero scrolls away under a bar with the name and the tabs (phone and tablet).
+        onScroll={
+          desktop
+            ? undefined
+            : (e) => {
+                const next =
+                  tabsY.current > 0 &&
+                  e.nativeEvent.contentOffset.y >=
+                    pinOffset(tabsY.current, insets.top, BAR_ABOVE_TABS);
+                if (next !== pinned) setPinned(next);
+              }
+        }
+        scrollEventThrottle={16}
         contentContainerStyle={[
           styles.page,
           !desktop && styles.column,
+          !desktop && styles.columnTight,
           { paddingTop: space[6] + insets.top },
         ]}
       >
-        <View style={styles.topBar}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={he.trip.back}
-            onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
-            style={styles.back}
-          >
-            <Icon name="back" strokeWidth={2.5} />
-          </Pressable>
-          <PillButton
-            label={he.trip.invite}
-            variant="soft"
-            icon={<Icon name="userPlus" size={18} color={colors.primaryStrong} />}
-            {...testId('trip-invite')}
-            onPress={invite}
-          />
-        </View>
+        {desktop && (
+          <View style={styles.topBar}>
+            {back}
+            {inviteButton}
+          </View>
+        )}
         <Cover
           scene={trip.cover}
           style={[styles.cover, desktop && styles.coverDesktop]}
           testID={`trip-hero-cover-${trip.cover}`}
           horizon
         >
-          {organizer && (
-            <PillButton
-              label={he.cover.changeShort}
-              accessibilityLabel={he.cover.change}
-              variant="card"
-              size="sm"
-              icon={<Icon name="image" size={16} color={colors.ink} />}
-              {...testId('trip-cover-edit')}
-              onPress={() => router.push({ pathname: '/trips/[tripId]/cover', params: { tripId } })}
-              style={styles.coverEdit}
-            />
+          {desktop ? (
+            coverEdit
+          ) : (
+            // Phone and tablet: back and invite on the cover, not a row of their own above it.
+            <View style={styles.coverBar}>
+              {back}
+              <View style={styles.coverActions}>
+                {coverEdit}
+                {inviteButton}
+              </View>
+            </View>
           )}
         </Cover>
         <View style={styles.titles}>
-          <Text style={styles.title} accessibilityRole="header" {...testId('trip-title')}>
-            {trip.name}
-          </Text>
+          <View style={styles.titleRow}>
+            <Text
+              style={[styles.title, styles.titleText]}
+              accessibilityRole="header"
+              {...testId('trip-title')}
+            >
+              {trip.name}
+            </Text>
+            {/* Who's in, beside the name: not a row of its own in the hero. */}
+            {view.active.length > 1 && (
+              <View
+                accessible
+                accessibilityLabel={peopleNames(view.active.map((m) => m.displayName))}
+              >
+                <AvatarStack people={view.active.map(toAvatar)} max={4} />
+              </View>
+            )}
+          </View>
           <Text style={styles.caption}>
             {[formatRange(trip.startsOn, trip.endsOn), participants(view.activeIds.length)]
               .filter(Boolean)
@@ -210,9 +317,20 @@ export default function TripScreen() {
           />
         )}
         {!desktop && hero}
-        <View style={desktop && styles.columns}>
+        <View
+          style={desktop ? styles.columns : { minHeight }}
+          onLayout={(e) => (tabsY.current = e.nativeEvent.layout.y)}
+        >
           <View style={[styles.main, desktop && styles.mainDesktop]}>
-            <SegmentedControl options={tabs} value={tab} onChange={pickTab} testID="trip-tab" />
+            {/* Pinned, the bar's copy is the tabs: this one is out of reach of screen readers
+                and the keyboard, and the test ids go with the one in view. */}
+            <SegmentedControl
+              options={tabs}
+              value={tab}
+              onChange={pickTab}
+              testID={showPinned ? undefined : 'trip-tab'}
+              hidden={showPinned}
+            />
             {(tab === 'bring' || tab === 'buy') && (
               <ListTab
                 key={tab}
@@ -245,6 +363,22 @@ export default function TripScreen() {
         </View>
         <View style={{ height: FLOATING_CLEARANCE + insets.bottom }} />
       </ScrollView>
+      {showPinned && (
+        <View style={[styles.pinned, { paddingTop: space[2] + insets.top }]}>
+          <View style={[styles.pinnedInner, styles.column]}>
+            <View style={styles.pinnedBar}>
+              {back}
+              <Text style={styles.pinnedTitle} numberOfLines={1}>
+                {trip.name}
+              </Text>
+              <Text style={styles.caption} numberOfLines={1}>
+                {countdown(trip.startsOn, trip.endsOn, now).label}
+              </Text>
+            </View>
+            <SegmentedControl options={tabs} value={tab} onChange={pickTab} testID="trip-tab" />
+          </View>
+        </View>
+      )}
       {add && (
         <FloatingAction
           label={he.trip.fabShort[tab as 'bring' | 'buy' | 'money']}
@@ -301,6 +435,8 @@ const styles = StyleSheet.create({
   },
   // Phone and tablet: one column, capped so rows don't stretch across a tablet.
   column: { maxWidth: 640 },
+  // Phone and tablet: a little tighter, so the list starts higher.
+  columnTight: { gap: COLUMN_GAP },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -315,10 +451,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cover: { height: 120, borderRadius: radius.card },
+  // Phone and tablet: a band under back and invite. Desktop: taller, under its own top bar.
+  cover: { height: 80, borderRadius: radius.card },
   coverDesktop: { height: 220 },
   coverEdit: { position: 'absolute', bottom: space[3], end: space[3] },
+  coverBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[2],
+    padding: space[3],
+  },
+  coverActions: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   titles: { gap: space[1] },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  titleText: { flex: 1 },
   // Long unbroken words wrap at the column's width instead of overflowing it.
   title: { ...type.pageTitle, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },
@@ -327,4 +474,23 @@ const styles = StyleSheet.create({
   mainDesktop: { flex: 1, minWidth: 0 },
   side: { width: 340, gap: space[4] },
   sideTitle: { ...type.itemTitle, color: colors.ink },
+  // Over the top of the scroll view, on the page's ground, the list scrolling under it.
+  pinned: {
+    position: 'absolute',
+    top: 0,
+    start: 0,
+    end: 0,
+    paddingBottom: space[3],
+    backgroundColor: colors.ground,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.line,
+  },
+  pinnedInner: {
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: space.screen,
+    gap: space[3],
+  },
+  pinnedBar: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  pinnedTitle: { ...type.itemTitle, color: colors.ink, flex: 1 },
 });

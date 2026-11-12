@@ -20,6 +20,7 @@ import { useBag } from '@/state/bag';
 import { useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
+import { useBreakpoint } from '@/theme/breakpoint';
 
 import { BagCards } from './BagCards';
 import { CopyFromTripButton } from './bulk/AddManyLinks';
@@ -50,6 +51,8 @@ export function ListTab({
   const act = useTripAction(tripId);
   // Only the bring list: there's nothing to buy of what's already at home.
   const bag = useBag().data ?? [];
+  // Phone and tablet: a little tighter, as the trip screen around it, so the list starts higher.
+  const tight = useBreakpoint() !== 'desktop';
   const listItems = view.items.filter((i) => i.list === list);
   const shown = (f: ListFilter) =>
     filterItems(listItems, f, data.claims, data.expenses, view.activeIds, me);
@@ -86,19 +89,22 @@ export function ListTab({
   const progress = list === 'bring' && listProgress(listItems, data.claims, view.activeIds);
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, tight && styles.wrapTight]}>
       {list === 'buy' && <ShopBanner data={data} view={view} me={me} />}
       {list === 'bring' && <BagCards data={data} view={view} me={me} bag={bag} />}
       {progress && progress.total > 0 && (
-        <Card gap={space[2]}>
-          <Text style={styles.progress} {...testId('bring-progress')}>
-            {he.trip.coveredCount(progress.covered, progress.total)}
-          </Text>
+        // Slim, not a card: the list starts right under it.
+        <View style={styles.progressWrap}>
+          <View style={styles.progressLine}>
+            <Text style={styles.progress} {...testId('bring-progress')}>
+              {he.trip.coveredCount(progress.covered, progress.total)}
+            </Text>
+            <Text style={styles.aside} {...testId('bring-packed')}>
+              {packedCount(progress.packed)}
+            </Text>
+          </View>
           <Progress done={progress.covered} total={progress.total} />
-          <Text style={styles.aside} {...testId('bring-packed')}>
-            {packedCount(progress.packed)}
-          </Text>
-        </Card>
+        </View>
       )}
       <ScrollView
         horizontal
@@ -220,6 +226,7 @@ export function ListTab({
 
 const styles = StyleSheet.create({
   wrap: { gap: space[4] },
+  wrapTight: { gap: space[3] },
   filters: { gap: space[2] },
   chips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space[2] },
   header: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 36 },
@@ -230,7 +237,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   aside: { ...type.caption, color: colors.inkMuted },
-  progress: { ...type.itemTitle, color: colors.ink },
+  progress: { ...type.itemTitle, color: colors.ink, flex: 1 },
+  progressWrap: { gap: space[2], paddingHorizontal: space[1] },
+  progressLine: { flexDirection: 'row', alignItems: 'baseline', gap: space[3] },
   edit: {
     width: 36,
     height: 36,

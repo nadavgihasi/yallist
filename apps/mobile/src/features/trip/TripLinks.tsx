@@ -194,7 +194,8 @@ export function TripLinksBar({ trip, onMeetup }: { trip: Trip; onMeetup: () => v
   if (!meetup && !albumUrl) return null;
   const place = meetupText && !parseMapLink(meetupText) ? meetupText : he.links.mapLink;
   return (
-    <View style={styles.row}>
+    // One line, the place cut short if need be: the list starts right under it.
+    <View style={styles.bar}>
       {meetup && (
         <PillButton
           label={he.links.meetupAt(place)}
@@ -203,6 +204,7 @@ export function TripLinksBar({ trip, onMeetup }: { trip: Trip; onMeetup: () => v
           icon={<Icon name="pin" size={16} color={colors.primaryStrong} />}
           {...testId('trip-bar-meetup')}
           onPress={onMeetup}
+          lines={1}
           style={styles.shrink}
         />
       )}
@@ -227,5 +229,6 @@ const styles = StyleSheet.create({
   title: { ...type.itemTitle, color: colors.ink },
   text: { ...type.caption, color: colors.inkMuted },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  bar: { flexDirection: 'row', gap: space[2] },
   grow: { flexGrow: 1 },
 });

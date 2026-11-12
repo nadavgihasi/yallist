@@ -21,6 +21,7 @@ export function SegmentedControl<T extends string>({
   onChange,
   style,
   testID,
+  hidden = false,
 }: {
   options: { value: T; label: string; accessibilityLabel?: string }[];
   value: T;
@@ -28,9 +29,11 @@ export function SegmentedControl<T extends string>({
   style?: StyleProp<ViewStyle>;
   /** Each segment gets `<testID>-<value>`. */
   testID?: string;
+  /** Another copy stands in for this one: hidden from screen readers and the tab order. */
+  hidden?: boolean;
 }) {
   return (
-    <View style={[styles.track, style]} accessibilityRole="tablist">
+    <View style={[styles.track, style]} accessibilityRole="tablist" aria-hidden={hidden}>
       {options.map((o) => {
         const selected = o.value === value;
         return (
@@ -39,6 +42,7 @@ export function SegmentedControl<T extends string>({
             accessibilityRole="tab"
             accessibilityLabel={o.accessibilityLabel}
             accessibilityState={{ selected }}
+            tabIndex={hidden ? -1 : undefined}
             {...testId(testID && `${testID}-${o.value}`)}
             onPress={() => onChange(o.value)}
             style={[styles.segment, selected && styles.selected]}

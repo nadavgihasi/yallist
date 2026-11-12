@@ -214,6 +214,8 @@ export const he = {
       `${count}: ${names.map(rtl).join(', ')}${more ? '…' : ''}`,
     solo: 'לבד פה בינתיים · הזמנת חברים',
     share: 'שליחת מה שחסר בוואטסאפ',
+    /** The capped `אצלך:` line opens the list on `אצלי`. */
+    mineLabel: (names: string) => `אצלך: ${names}. הצגת כל מה שאצלך`,
   },
   share: {
     missing: (trip: string, dates: string, names: string, link: string) =>
@@ -664,9 +666,9 @@ export const he = {
       `${n === 1 ? 'פריט אחד סומן' : `${n} פריטים סומנו`} מהתיק שלך. נשאר רק לארוז.`,
     /** Common items in the bag that nobody brings yet. */
     offerTitle: (n: number) => `${n === 1 ? 'פריט אחד' : `${n} פריטים`} כבר בתיק שלך`,
-    offerText: (names: string) => `${names}. מסמנים שהם עליך?`,
+    /** The bag line, read out: what it says, which items, and that it opens the choice. */
+    offerLabel: (line: string, names: string) => `${line}: ${names}. בחירה מה עליך`,
     offerAll: 'הכול עליי',
-    offerChoose: 'בוחרים',
     offerDismiss: 'לא עכשיו',
     chooseTitle: 'מה עליך?',
     chooseCaption: 'יש לך בתיק, ועוד אין מי שמביא.',
@@ -750,6 +752,18 @@ export const he = {
   },
 } as const;
 
+/**
+ * The trip's one bag line: `5 פריטים סומנו מהתיק שלך. נשאר רק לארוז.`, `3 פריטים כבר בתיק שלך`,
+ * or both at once: `5 סומנו מהתיק · עוד 3 בתיק שלך`.
+ */
+export function bagLine(marked: number, offers: number): string {
+  if (offers === 0) return he.bag.marked(marked);
+  if (marked === 0) return he.bag.offerTitle(offers);
+  const done = marked === 1 ? 'פריט אחד סומן מהתיק' : `${marked} סומנו מהתיק`;
+  const more = offers === 1 ? 'עוד אחד בתיק שלך' : `עוד ${offers} בתיק שלך`;
+  return `${done} · ${more}`;
+}
+
 /** `ועוד 5`, after a cut-off list. */
 export function andMore(n: number): string {
   return `ועוד ${n}`;
@@ -800,6 +814,11 @@ export function missingNames(names: string[], missing: number): string {
   const more = missing - names.length;
   const list = names.map(rtl).join(', ');
   return more > 0 ? `${list} ${andMore(more)}` : list;
+}
+
+/** `אוהל, קפה, קרח`, then `אוהל, קפה, קרח ועוד 11` past `max`. */
+export function firstNames(names: string[], max = 3): string {
+  return missingNames(names.slice(0, max), names.length);
 }
 
 /** `דנה, אבי ונועה`, then `דנה, אבי ועוד 2` past three. */

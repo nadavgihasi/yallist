@@ -1,20 +1,18 @@
 import * as Linking from 'expo-linking';
 import { Platform, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 
-import { AvatarStack } from '@/components/Avatar';
 import { Countdown } from '@/components/Countdown';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { ProgressRing } from '@/components/ProgressRing';
-import { he, missingCount, openTransfers, peopleNames } from '@/i18n/he';
-import { rtl } from '@/lib/bidi';
+import { firstNames, he, missingCount, openTransfers } from '@/i18n/he';
 import { countdown } from '@/lib/dates';
 import { missingMessage, openWhatsApp } from '@/lib/share';
 import { testId } from '@/lib/testId';
 import type { TripData } from '@/state/types';
 import { colors, radius, size, space, type } from '@/theme';
 
-import { toAvatar, type TripView } from './derive';
+import type { TripView } from './derive';
 
 /**
  * WhatsApp first: that's where the group is (#51); in a new tab on web. The share sheet if it
@@ -29,8 +27,9 @@ async function shareToWhatsApp(text: string) {
 }
 
 /**
- * The top of a trip: how long until it, how ready it is, who's in, what's mine, and one way to
- * act: open what's missing (or invite, while you're alone), or send the missing list to WhatsApp.
+ * The top of a trip: how long until it, how ready it is, what's mine, and one way to act: open
+ * what's missing (or invite, while you're alone), or send the missing list to WhatsApp. Who's in
+ * is under the trip's name.
  */
 export function ReadinessHero({
   data,
@@ -38,6 +37,7 @@ export function ReadinessHero({
   me,
   now,
   onMissing,
+  onMine,
   onInvite,
 }: {
   data: TripData;
@@ -45,6 +45,8 @@ export function ReadinessHero({
   me: string;
   now: string;
   onMissing: () => void;
+  /** Opens the list on what's mine: the line names only the first few. */
+  onMine: () => void;
   onInvite: () => void;
 }) {
   const { trip } = data;
@@ -55,6 +57,8 @@ export function ReadinessHero({
     .sort((a, b) => (a.list === b.list ? 0 : a.list === 'bring' ? -1 : 1))
     .map((i) => i.name);
   const solo = view.active.length === 1;
+  // The first few and `ועוד 11`, not every name over three lines.
+  const mineNames = firstNames(view.mine.map((i) => i.name));
   const myTransfers = view.transfers.filter((t) => t.from === me || t.to === me).length;
 
   let action;
@@ -85,22 +89,23 @@ export function ReadinessHero({
   }
 
   return (
-    <Card gap={space[4]}>
+    <Card gap={space[3]}>
       <View style={styles.top}>
         <View style={styles.texts}>
           <Countdown startsOn={trip.startsOn} endsOn={trip.endsOn} now={now} variant="hero" />
           {view.mine.length > 0 && (
-            <Text style={styles.mine}>
-              {he.home.mine}
-              {view.mine.map((i) => rtl(i.name)).join(', ')}
-            </Text>
-          )}
-          {!solo && (
-            <AvatarStack
-              people={view.active.map(toAvatar)}
-              max={4}
-              label={peopleNames(view.active.map((m) => m.displayName))}
-            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={he.hero.mineLabel(mineNames)}
+              {...testId('trip-hero-mine')}
+              onPress={onMine}
+              style={({ pressed }) => pressed && styles.pressed}
+            >
+              <Text style={styles.mine} numberOfLines={2}>
+                {he.home.mine}
+                {mineNames}
+              </Text>
+            </Pressable>
           )}
         </View>
         {view.items.length > 0 && (
@@ -154,7 +159,7 @@ function Cta({
       style={({ pressed }) => [styles.cta, pressed && styles.pressed]}
     >
       {icon && <Icon name={icon} size={18} color={colors.primaryStrong} />}
-      <Text style={styles.ctaText} numberOfLines={2}>
+      <Text style={styles.ctaText} numberOfLines={1}>
         {label}
       </Text>
       <Icon name="chevronEnd" size={18} color={colors.primaryStrong} strokeWidth={2.5} />

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { he, missingNames, removeWarning } from './he';
+import { bagLine, firstNames, he, missingNames, removeWarning } from './he';
 
 const RLI = '⁧';
 const PDI = '⁩';
@@ -33,5 +33,33 @@ describe('removeWarning', () => {
 
   it('says how much the group owes the member', () => {
     expect(removeWarning('נועה', 4550)).toContain('הקבוצה חייבת לנועה ₪45.5');
+  });
+});
+
+describe('firstNames', () => {
+  it('names all of a short list, each isolated', () => {
+    expect(firstNames([])).toBe('');
+    expect(firstNames(['אוהל'])).toBe(`${RLI}אוהל${PDI}`);
+    expect(firstNames(['אוהל', 'קפה'])).toBe(`${RLI}אוהל${PDI}, ${RLI}קפה${PDI}`);
+  });
+
+  it('names the first three of a long list, then how many more', () => {
+    const many = Array.from({ length: 14 }, (_, i) => `פריט ${i + 1}`);
+    const first = [1, 2, 3].map((i) => `${RLI}פריט ${i}${PDI}`).join(', ');
+    expect(firstNames(many)).toBe(`${first} ועוד 11`);
+    expect(firstNames(['א', 'ב', 'ג', 'ד'], 2)).toBe(`${RLI}א${PDI}, ${RLI}ב${PDI} ועוד 2`);
+  });
+});
+
+describe('bagLine', () => {
+  it('says what the bag marked, or offers what nobody brings yet', () => {
+    expect(bagLine(5, 0)).toBe('5 פריטים סומנו מהתיק שלך. נשאר רק לארוז.');
+    expect(bagLine(0, 3)).toBe('3 פריטים כבר בתיק שלך');
+    expect(bagLine(0, 1)).toBe('פריט אחד כבר בתיק שלך');
+  });
+
+  it('says both on one line', () => {
+    expect(bagLine(5, 3)).toBe('5 סומנו מהתיק · עוד 3 בתיק שלך');
+    expect(bagLine(1, 1)).toBe('פריט אחד סומן מהתיק · עוד אחד בתיק שלך');
   });
 });
