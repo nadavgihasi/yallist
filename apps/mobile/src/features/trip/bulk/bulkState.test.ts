@@ -1,6 +1,8 @@
 import { BULK_MAX_ITEMS } from '@yallist/domain';
 import { describe, expect, it } from 'vitest';
 
+import { he } from '@/i18n/he';
+
 import { bulkEntries, bulkSummary, isPicked, togglePicked } from './bulkState';
 
 const trip = [
@@ -64,5 +66,17 @@ describe('togglePicked', () => {
   it('treats a synonym as the same suggestion', () => {
     expect(isPicked(['מנגל'], 'גריל')).toBe(true);
     expect(togglePicked(['מנגל'], 'גריל')).toEqual([]);
+  });
+});
+
+describe('the result toast', () => {
+  it('says where items went when the catalog put them on the other list', () => {
+    expect(he.bulk.added(5, 0, { list: 'buy', count: 0 })).toBe('5 נוספו');
+    expect(he.bulk.added(5, 2, { list: 'buy', count: 2 })).toBe(
+      '5 נוספו, 2 מהם לרשימת הקניות, 2 כבר ברשימה',
+    );
+    expect(he.bulk.added(3, 0, { list: 'bring', count: 3 })).toBe('3 נוספו לרשימת ההבאה');
+    expect(he.bulk.added(1, 0, { list: 'buy', count: 1 })).toBe('פריט אחד נוסף לרשימת הקניות');
+    expect(he.bulk.added(0, 4)).toBe('הכול כבר ברשימה');
   });
 });

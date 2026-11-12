@@ -670,15 +670,29 @@ export const he = {
     status: { exists: 'כבר ברשימה', repeat: 'מופיע פעמיים', tooLong: 'שם ארוך מדי' },
     each: 'לכל אחד',
     qty: (n: number) => `כמות: ${n}`,
-    toList: { bring: 'להבאה', buy: 'לקנייה' },
+    /** An item the catalog puts on the other list than the one open. */
+    toList: { bring: 'יעבור לרשימת ההבאה', buy: 'יעבור לרשימת הקניות' },
     summary: (add: number, skip: number) =>
       [`${itemsCount(add)} ייכנסו`, skip > 0 && `${skip} כבר ברשימה`].filter(Boolean).join(' · '),
     cta: (n: number) => (n === 0 ? 'אין מה להוסיף' : `הוספת ${itemsCount(n)}`),
     tooMany: (max: number) => `אפשר עד ${max} פריטים בפעם אחת. מחלקים לכמה פעמים.`,
-    added: (added: number, skipped: number) =>
-      added === 0
-        ? 'הכול כבר ברשימה'
-        : `${added === 1 ? 'פריט אחד נוסף' : `${added} נוספו`}${skipped > 0 ? `, ${skipped} כבר ברשימה` : ''}`,
+    /** `elsewhere`: how many of them went to the other list than the one open, and which. */
+    added: (
+      added: number,
+      skipped: number,
+      elsewhere?: { list: 'bring' | 'buy'; count: number },
+    ) => {
+      if (added === 0) return 'הכול כבר ברשימה';
+      const there = elsewhere && `ל${elsewhere.list === 'bring' ? 'רשימת ההבאה' : 'רשימת הקניות'}`;
+      const all = elsewhere?.count === added;
+      return [
+        `${added === 1 ? 'פריט אחד נוסף' : `${added} נוספו`}${all ? ` ${there}` : ''}`,
+        !all && elsewhere?.count && `${elsewhere.count} מהם ${there}`,
+        skipped > 0 && `${skipped} כבר ברשימה`,
+      ]
+        .filter(Boolean)
+        .join(', ');
+    },
     failed: 'ההוספה לא הצליחה. הכול נשאר כאן, אפשר לנסות שוב.',
   },
 } as const;

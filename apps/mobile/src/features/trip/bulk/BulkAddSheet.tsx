@@ -1,6 +1,6 @@
 import { BULK_MAX_ITEMS, bulkToAdd, heldCatalogNames, type ListKind } from '@yallist/domain';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { SegmentedControl } from '@/components/Controls';
@@ -40,6 +40,8 @@ export function BulkAddSheet({
   const [list, setList] = useState(initialList);
   const [text, setText] = useState(initialText);
   const [picked, setPicked] = useState<string[]>([]);
+  // Set at once on the first tap, unlike `isPending`: a double tap sends one request.
+  const sending = useRef(false);
 
   if (!data) return null;
 
@@ -49,11 +51,23 @@ export function BulkAddSheet({
   const canSave = summary.add > 0 && !summary.tooMany && !bulk.isPending;
 
   const save = () => {
-    if (!canSave) return;
+    if (!canSave || sending.current) return;
+    sending.current = true;
     bulk.mutate(bulkToAdd(entries), {
+      onSettled: () => {
+        sending.current = false;
+      },
       onSuccess: ({ added, skipped }) => {
         close();
-        showToast(he.bulk.added(added.length, summary.exists + skipped.length));
+        // The catalog may have put some on the other list: say so, as the preview did.
+        const other = list === 'bring' ? 'buy' : 'bring';
+        const elsewhere = added.filter((i) => i.list === other).length;
+        showToast(
+          he.bulk.added(added.length, summary.exists + skipped.length, {
+            list: other,
+            count: elsewhere,
+          }),
+        );
       },
       onError: () => showToast(he.bulk.failed, 'error'),
     });
