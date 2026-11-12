@@ -218,6 +218,16 @@ export const he = {
       `חסרים ל${trip} (${dates}): ${names}. מי מביא? ${link}`,
     allCovered: (trip: string, link: string) => `הכול מכוסה ל${trip} 🎉 ${link}`,
   },
+  /** The invite sheet: every "invite friends" button opens it. */
+  invite: {
+    title: 'הזמנת חברים',
+    subtitle: 'זו ההודעה שתישלח, עם הקישור לטיול',
+    message: (trip: string, dates: string, link: string) =>
+      `בואו ל${trip} (${dates})! מצטרפים מהקישור, בלי הורדה, ורואים מי מביא מה: ${link}`,
+    send: 'שליחת ההזמנה',
+    copyLink: 'העתקת הקישור בלבד',
+    messageCopied: 'ההודעה הועתקה, אפשר להדביק בוואטסאפ',
+  },
   deleteTrip: {
     action: 'מחיקת טיול',
     title: 'למחוק את הטיול?',
@@ -239,7 +249,6 @@ export const he = {
   people: {
     inviteTitle: 'עוד חברים מצטרפים?',
     inviteText: 'שולחים את הקישור בוואטסאפ, וכל אחד מצטרף מהדפדפן.',
-    share: 'שיתוף הקישור',
     copied: 'הקישור הועתק',
     pending: 'מחכים לאישור',
     approve: 'אישור',

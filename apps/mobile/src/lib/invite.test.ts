@@ -30,8 +30,10 @@ describe('invitePayload', () => {
   const shared = (p: { message?: string; url?: string }) =>
     [p.message, p.url].filter(Boolean).join(' ');
 
-  it.each(['web', 'ios', 'android'])('carries the link once on %s', (os) => {
-    expect(shared(invitePayload(url, os)).split(url)).toHaveLength(2);
+  it('shares exactly the previewed message, with its link once', () => {
+    const message = `בואו לטיול! ${url}`;
+    expect(shared(invitePayload(message))).toBe(message);
+    expect(shared(invitePayload(message)).split(url)).toHaveLength(2);
   });
 });
 

@@ -53,10 +53,14 @@ async function join(dana: Page, noa: Page) {
   );
   expect(res).toBe(200);
 
-  // While alone, the hero invites; the people tab copies the link (Chrome has no Web Share).
+  // While alone, the hero invites: the invite sheet shows the message with the link in it, and
+  // copies the link alone too.
   await dana.locator('#trip-hero-invite').click();
-  await dana.locator('#people-share').click();
+  await dana.locator('#invite-copy-link').click();
   const link = await dana.evaluate(() => navigator.clipboard.readText());
+  await expect(dana.locator('#invite-message')).toContainText(link);
+  await dana.keyboard.press('Escape');
+  await dana.locator('#trip-tab-people').click();
   // Under the preview's base path, which the shared router's root doesn't serve.
   expect(link.startsWith(new URL('j/', process.env.E2E_WEB_URL).href)).toBe(true);
 

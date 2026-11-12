@@ -10,10 +10,13 @@ tags: [trips]
 ---
 - runFlow: ../common/sign-in.yaml
 - runFlow: ../common/new-trip.yaml
+# The ניהול tab's invite button opens the same invite sheet as the others.
 - tapOn:
     id: trip-tab-people
+- tapOn:
+    id: people-invite
 - copyTextFrom:
-    id: people-invite-link
+    id: invite-link
 - openLink: ${maestro.copiedText}
 - assertVisible: כבר יש לך מקום בטיול הזה
 - assertVisible:

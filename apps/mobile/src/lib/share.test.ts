@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { missingMessage, openWhatsApp } from './share';
+import { inviteMessage, missingMessage, openWhatsApp } from './share';
 
 const LRI = '⁦';
 const PDI = '⁩';
@@ -55,5 +55,15 @@ describe('openWhatsApp', () => {
     await expect(
       openWhatsApp('x', 'android', openURL, { open: vi.fn(() => null) }),
     ).rejects.toThrow();
+  });
+});
+
+describe('inviteMessage', () => {
+  it('names the trip and its dates, and carries the link once', () => {
+    const text = inviteMessage(trip, link);
+    expect(text).toBe(
+      `בואו לקמפינג בכנרת (${LRI}8–9${PDI} בנובמבר)! מצטרפים מהקישור, בלי הורדה, ורואים מי מביא מה: ${LRI}${link}${PDI}`,
+    );
+    expect(text.split(link)).toHaveLength(2);
   });
 });

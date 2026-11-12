@@ -11,11 +11,12 @@ export function inviteUrl(webOrigin: string, token: string): string {
 }
 
 /**
- * What the share sheet gets for an invite link: the link once. Android shares only `message`; iOS
- * and the web (navigator.share) take `url` and append it to any `message`, which doubled the link.
+ * What the share sheet gets for an invite: the message alone, its link inside it, on every
+ * platform. iOS and the web (navigator.share) append a separate `url` to the message, which
+ * doubled the link and made what's sent differ from the invite sheet's preview.
  */
-export function invitePayload(url: string, os: string): ShareContent {
-  return os === 'android' ? { message: url } : { url };
+export function invitePayload(message: string): ShareContent {
+  return { message };
 }
 
 /**
