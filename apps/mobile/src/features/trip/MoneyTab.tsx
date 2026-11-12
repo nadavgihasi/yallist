@@ -138,22 +138,28 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
         <ListGroup title={he.money.payments}>
           {data.payments.map((p) => {
             const waiting = p.status === 'marked';
+            // The receiver's button goes under the row: beside it, it left the names no room
+            // and the amount ran over the avatars.
             return (
-              <View key={p.id} style={styles.transfer}>
-                <FromTo view={view} from={p.fromUser} to={p.toUser} />
-                <View style={styles.paymentEnd}>
-                  <Text style={styles.amount}>{formatShekel(p.amountAgorot)}</Text>
-                  <Text style={styles.expenseWho}>
-                    {waiting ? he.money.paymentWaiting : he.money.paymentConfirmed}
-                  </Text>
+              <View key={p.id} style={styles.payment}>
+                <View style={styles.transfer}>
+                  <FromTo view={view} from={p.fromUser} to={p.toUser} />
+                  <View style={styles.paymentEnd}>
+                    <Text style={styles.amount}>{formatShekel(p.amountAgorot)}</Text>
+                    <Text style={styles.expenseWho}>
+                      {waiting ? he.money.paymentWaiting : he.money.paymentConfirmed}
+                    </Text>
+                  </View>
                 </View>
                 {waiting && p.toUser === me && (
-                  <PillButton
-                    label={he.money.confirmReceived}
-                    size="sm"
-                    disabled={saving}
-                    onPress={() => act({ type: 'confirmPayment', paymentId: p.id })}
-                  />
+                  <View style={styles.paymentEnd}>
+                    <PillButton
+                      label={he.money.confirmReceived}
+                      size="sm"
+                      disabled={saving}
+                      onPress={() => act({ type: 'confirmPayment', paymentId: p.id })}
+                    />
+                  </View>
                 )}
               </View>
             );
@@ -323,6 +329,7 @@ const styles = StyleSheet.create({
   heroButton: { marginTop: space[3] },
   heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },
   paymentEnd: { alignItems: 'flex-end' },
+  payment: { gap: space[1] },
   transfer: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: space.touch },
   transferWho: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
   transferPerson: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
