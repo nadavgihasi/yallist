@@ -10,7 +10,7 @@ import { lockCategory } from '../dal/categories';
 import { lockClaims, setClaim, setPacked } from '../dal/claims';
 import { findPurchase } from '../dal/expenses';
 import { appendItem, deleteItem, endOfList, lockItem, updateItem } from '../dal/items';
-import { findMember, requireMember } from '../dal/members';
+import { lockMembers, requireMember } from '../dal/members';
 import type { Db } from '../db/client';
 import { KINDS, LISTS } from '../db/schema';
 import { transact, type Tx } from '../db/tx';
@@ -64,12 +64,15 @@ async function categoryFor(tx: Tx, tripId: string, categoryId: string | null | u
 const CATEGORY_RULE = 'The category is on the other list';
 
 /**
- * Who an item is assigned to: an active member of the trip, locked like the caller, so removing
- * them meanwhile conflicts with the assignment instead of racing it.
+ * The caller assigning an item, and who it's assigned to: both active members of the trip, both
+ * locked (in one order), so removing either meanwhile conflicts with the assignment instead of
+ * racing it.
  */
-async function requireAssignee(tx: Tx, tripId: string, userId: string) {
-  const member = await findMember(tx, tripId, userId, { lock: true });
-  if (member?.status !== 'active') throw fail(404, 'Member not found');
+async function requireAssigner(tx: Tx, tripId: string, me: string, userId: string) {
+  const members = await lockMembers(tx, tripId, [me, userId]);
+  const active = (id: string) => members.some((m) => m.userId === id && m.status === 'active');
+  if (!active(me)) throw fail(404, 'Trip not found');
+  if (!active(userId)) throw fail(404, 'Member not found');
 }
 
 const tripParam = z.object({ tripId: z.uuid() });
@@ -185,8 +188,8 @@ export const itemRoutes = (auth: Auth, db: Db) =>
         const { quantity, userId = me, from } = c.req.valid('json');
         const assigning = userId !== me;
         await transact(db, async (tx) => {
-          await requireMember(tx, tripId, me, { lock: true });
-          if (assigning) await requireAssignee(tx, tripId, userId);
+          if (assigning) await requireAssigner(tx, tripId, me, userId);
+          else await requireMember(tx, tripId, me, { lock: true });
           const item = await lockItem(tx, tripId, itemId);
           // Everyone brings their own: only they can say they have it.
           if (assigning && item.kind === 'each') throw fail(400, 'Everyone brings their own');

@@ -214,6 +214,18 @@ describe.skipIf(!DATABASE_URL)('assigning an item to another member', () => {
     expect(await claimsOf(a, tripId, single.id)).toHaveLength(1);
   });
 
+  it('lets two members assign to each other at once', async () => {
+    const { a, b, tripId, qty } = await trip();
+    // Each locks both memberships: in one order, or they deadlock.
+    for (let round = 0; round < 5; round++) {
+      const results = await Promise.all([
+        claim(a, tripId, qty.id, { quantity: 1, userId: b.id }),
+        claim(b, tripId, qty.id, { quantity: 1, userId: a.id }),
+      ]);
+      expect(results.map((r) => r.status)).toEqual([200, 200]);
+    }
+  });
+
   it("leaves a claim in someone else's shopping run alone", async () => {
     const { a, b, c, tripId } = await trip();
     const items = (await (await client.trips[':tripId'].$get({ param: { tripId } }, as(a))).json())
