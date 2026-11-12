@@ -148,7 +148,12 @@ export default function Join() {
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
       <Text style={styles.kicker}>{he.join.invited}</Text>
       <View style={[styles.card, styles.invite]}>
-        <Cover scene={trip.cover} style={styles.cover} testID={`join-cover-${trip.cover}`} />
+        <Cover
+          scene={trip.cover}
+          style={styles.cover}
+          testID={`join-cover-${trip.cover}`}
+          horizon
+        />
         <Text style={styles.name} accessibilityRole="header">
           {trip.name}
         </Text>

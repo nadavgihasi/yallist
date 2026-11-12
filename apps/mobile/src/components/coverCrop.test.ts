@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { crop } from './coverCrop';
+import { crop, HORIZON } from './coverCrop';
 
 /** The camp scene's focal point: its tent stands from y 214 to 264, the sun sets at 70–166. */
 const camp = { x: 84, y: 222 };
@@ -12,14 +12,19 @@ const band = (viewBox: string) => {
 describe('crop', () => {
   it('keeps the horizon above the tent in the trip header, not just the ground', () => {
     // The trip header at phone width: 358×120.
-    const { top, bottom } = band(crop(camp, 358, 120));
+    const { top, bottom } = band(crop(camp, 358, 120, HORIZON));
     expect(top).toBeLessThan(140);
     expect(bottom).toBeGreaterThanOrEqual(264);
   });
 
+  it("keeps the tent's base in home's thinner card band", () => {
+    // Home's card at phone width: 358×88. Two thirds down would cut the tent off at y 255.
+    expect(band(crop(camp, 358, 88)).bottom).toBeGreaterThanOrEqual(264);
+  });
+
   it('stays inside the scene', () => {
-    expect(band(crop({ x: 84, y: 290 }, 358, 120)).bottom).toBe(300);
-    expect(band(crop({ x: 84, y: 10 }, 358, 120)).top).toBe(0);
+    expect(band(crop({ x: 84, y: 290 }, 358, 120, HORIZON)).bottom).toBe(300);
+    expect(band(crop({ x: 84, y: 10 }, 358, 120, HORIZON)).top).toBe(0);
   });
 
   it('centers a narrow box on the focal point across', () => {

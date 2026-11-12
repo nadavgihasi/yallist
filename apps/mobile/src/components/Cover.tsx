@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import Svg from 'react-native-svg';
 
-import { crop, SCENE_H, SCENE_W } from './coverCrop';
+import { crop, HORIZON, SCENE_H, SCENE_W } from './coverCrop';
 import { FOCUS, SCENES } from './coverScenes';
 import { STATE_SPOTS, type SpotId } from './stateSpots';
 
@@ -17,18 +17,21 @@ import { testId } from '@/lib/testId';
 import { radius, size } from '@/theme';
 
 /**
- * A trip's cover scene filling its box, cropped like CSS `cover` around the scene's focal point
- * (two thirds down a thin band), so a thin band still shows the tent and the horizon above it.
+ * A trip's cover scene filling its box, cropped like CSS `cover` around the scene's focal point,
+ * so a thin band still shows the tent. A trip's banner passes `horizon`: the focal point two
+ * thirds down, with the horizon above it.
  */
 export function Cover({
   scene,
   style,
   testID,
+  horizon = false,
   children,
 }: {
   scene: CoverId;
   style?: StyleProp<ViewStyle>;
   testID?: string;
+  horizon?: boolean;
   children?: ReactNode;
 }) {
   const [box, setBox] = useState<{ width: number; height: number }>();
@@ -40,7 +43,9 @@ export function Cover({
         width="100%"
         height="100%"
         viewBox={
-          box?.height ? crop(FOCUS[scene], box.width, box.height) : `0 0 ${SCENE_W} ${SCENE_H}`
+          box?.height
+            ? crop(FOCUS[scene], box.width, box.height, horizon ? HORIZON : undefined)
+            : `0 0 ${SCENE_W} ${SCENE_H}`
         }
         preserveAspectRatio="xMidYMid slice"
       >

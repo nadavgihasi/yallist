@@ -196,6 +196,7 @@ export default function TripScreen() {
           scene={trip.cover}
           style={[styles.cover, desktop && styles.coverDesktop]}
           testID={`trip-hero-cover-${trip.cover}`}
+          horizon
         >
           {organizer && (
             <PillButton
