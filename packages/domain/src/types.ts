@@ -78,6 +78,8 @@ export interface Expense {
   description: string;
   amountAgorot: number;
   paidBy: string;
+  /** Who added it: they, the payer and organizers may change it. From the API. */
+  createdBy?: string;
   /** Participants the expense is split between: what its parts leave, if it has parts. */
   shares: string[];
   /** Amounts split between other people than the rest, such as a run's alcohol. */

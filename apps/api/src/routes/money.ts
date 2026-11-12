@@ -4,7 +4,14 @@ import { z } from 'zod';
 import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
 import { logActivity } from '../dal/activity';
-import { deleteExpense, findExpense, findPurchase, insertExpense } from '../dal/expenses';
+import {
+  deleteExpense,
+  expenseSplit,
+  findExpense,
+  findPurchase,
+  insertExpense,
+  updateExpense,
+} from '../dal/expenses';
 import { findItem } from '../dal/items';
 import { activeUserIds, findMember, requireMember } from '../dal/members';
 import { confirmPayment, deletePayment, insertPayment, lockPayment } from '../dal/payments';
@@ -13,6 +20,8 @@ import type { expenses, tripMembers } from '../db/schema';
 import { transact } from '../db/tx';
 import { deleteReceipt, type ReceiptStore } from '../receipts';
 import { toExpense } from '../trip-data';
+
+import { assertPartsFit, MAX_PARTS, part } from './runs';
 
 /** Agorot, positive; ₪1M is far beyond any trip and well inside a Postgres integer. */
 const agorot = z.int().min(1).max(100_000_000);
@@ -28,11 +37,23 @@ const addExpense = z.object({
   itemId: z.uuid().optional(),
 });
 
+/**
+ * A change to an expense: only the fields given change. `shares` and `parts` replace what it
+ * had; `parts: []` drops its parts.
+ */
+const editExpense = z.object({
+  description: z.string().trim().min(1).max(80).optional(),
+  amountAgorot: agorot.optional(),
+  paidBy: z.uuid().optional(),
+  shares: z.array(z.uuid()).min(1).max(100).optional(),
+  parts: z.array(part).max(MAX_PARTS).optional(),
+});
+
 const tripParam = z.object({ tripId: z.uuid() });
 const expenseParam = z.object({ tripId: z.uuid(), expenseId: z.uuid() });
 const paymentParam = z.object({ tripId: z.uuid(), paymentId: z.uuid() });
 
-/** Deleting an expense or its receipt: whoever added it, whoever paid, or an organizer. */
+/** Editing or deleting an expense or its receipt: whoever added it, whoever paid, or an organizer. */
 export function assertMayChange(
   expense: typeof expenses.$inferSelect,
   member: typeof tripMembers.$inferSelect,
@@ -83,6 +104,53 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           return created;
         });
         return c.json(toExpense(expense, shares, expense.itemId ? [expense.itemId] : []), 201);
+      },
+    )
+
+    // Fixes an expense in place, by whoever may delete it. Its receipt and the items it covers
+    // stay. Someone who left the trip can stay its payer or keep sharing it, but isn't added.
+    .patch(
+      '/:tripId/expenses/:expenseId',
+      validate('param', expenseParam),
+      validate('json', editExpense),
+      async (c) => {
+        const { tripId, expenseId } = c.req.valid('param');
+        const { shares: shareIds, parts: partsIn, ...values } = c.req.valid('json');
+        const me = c.var.user.id;
+        const shares = shareIds && [...new Set(shareIds)];
+        const parts = partsIn?.map((p) => ({ ...p, shares: [...new Set(p.shares)] }));
+        const result = await transact(db, async (tx) => {
+          const member = await requireMember(tx, tripId, me, { lock: true });
+          const expense = await findExpense(tx, tripId, expenseId, { lock: true });
+          assertMayChange(expense, member);
+          const before = await expenseSplit(tx, expenseId);
+          const active = await activeUserIds(tx, tripId);
+          if (values.paidBy && values.paidBy !== expense.paidBy && !active.has(values.paidBy)) {
+            throw fail(400, 'paidBy is not an active member');
+          }
+          const had = new Set([...before.shares, ...before.parts.flatMap((p) => p.shares)]);
+          const added = [...(shares ?? []), ...(parts ?? []).flatMap((p) => p.shares)];
+          if (!added.every((id) => active.has(id) || had.has(id))) {
+            throw fail(400, 'Every share must be an active member');
+          }
+          const amountAgorot = values.amountAgorot ?? expense.amountAgorot;
+          assertPartsFit(parts ?? before.parts, amountAgorot);
+
+          const updated = await updateExpense(tx, expenseId, values, { shares, parts });
+          await logActivity(tx, tripId, me, 'expense_edited', {
+            expenseId,
+            fromAgorot: expense.amountAgorot,
+            amountAgorot,
+          });
+          return toExpense(
+            updated,
+            shares ?? before.shares,
+            before.itemIds,
+            before.itemCount,
+            parts ?? before.parts,
+          );
+        });
+        return c.json(result);
       },
     )
 
