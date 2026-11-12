@@ -195,31 +195,49 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
       ) : (
         <ListGroup title={he.money.expenses} aside={he.money.total(formatShekel(view.totalSpent))}>
           {data.expenses.map((e) => (
+            // Two lines at phone width: what and who on the start, the amount over the actions
+            // on the end, so the description keeps the room.
             <View key={e.id} style={styles.expense}>
               <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
               <View style={styles.expenseBody}>
-                <Text style={styles.expenseWhat}>{e.description}</Text>
-                <Text style={styles.expenseWho}>
+                <Text style={styles.expenseWhat} numberOfLines={1}>
+                  {e.description}
+                </Text>
+                <Text style={styles.expenseWho} numberOfLines={1}>
                   {view.nameOf(e.paidBy)}
                   {e.shares.length < view.activeIds.length &&
                     ` · ${he.money.sharedBy(e.shares.length)}`}
                 </Text>
               </View>
-              <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
-              <ReceiptButton tripId={data.trip.id} expense={e} />
-              {/* The API also lets whoever added it delete it, but the app doesn't know who that was. */}
-              {(e.paidBy === me || organizer) && (
-                <PillButton
-                  label={confirmDelete === e.id ? he.money.confirmDelete : he.money.deleteExpense}
-                  variant={confirmDelete === e.id ? 'danger' : 'quiet'}
-                  size="sm"
-                  onPress={() => {
-                    if (confirmDelete !== e.id) return setConfirmDelete(e.id);
-                    act({ type: 'deleteExpense', expenseId: e.id });
-                    setConfirmDelete(undefined);
-                  }}
-                />
-              )}
+              <View style={styles.expenseEnd}>
+                <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+                <View style={styles.expenseActions}>
+                  <ReceiptButton tripId={data.trip.id} expense={e} />
+                  {/* The API also lets whoever added it delete it, but the app doesn't know who that was. */}
+                  {(e.paidBy === me || organizer) &&
+                    (confirmDelete === e.id ? (
+                      <PillButton
+                        label={he.money.confirmDelete}
+                        variant="danger"
+                        size="sm"
+                        onPress={() => {
+                          act({ type: 'deleteExpense', expenseId: e.id });
+                          setConfirmDelete(undefined);
+                        }}
+                      />
+                    ) : (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={he.money.deleteExpense}
+                        hitSlop={4}
+                        onPress={() => setConfirmDelete(e.id)}
+                        style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.75 }]}
+                      >
+                        <Icon name="trash" size={20} color={colors.inkFaint} />
+                      </Pressable>
+                    ))}
+                </View>
+              </View>
             </View>
           ))}
         </ListGroup>
@@ -299,6 +317,14 @@ const styles = StyleSheet.create({
   amount: { ...type.itemTitle, color: colors.ink },
   expense: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
   expenseBody: { flex: 1, gap: space[1] },
+  expenseEnd: { alignItems: 'flex-end' },
+  expenseActions: { flexDirection: 'row', alignItems: 'center' },
+  iconButton: {
+    width: space.touch,
+    height: space.touch,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   expenseWhat: { ...type.itemTitle, color: colors.ink },
   expenseWho: { ...type.caption, color: colors.inkMuted },
 });

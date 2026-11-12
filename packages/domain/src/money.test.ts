@@ -140,11 +140,18 @@ describe('suggestTransfers', () => {
 });
 
 describe('formatShekel / parseShekel', () => {
-  it('formats', () => {
-    expect(formatShekel(9000)).toBe('₪90');
+  it('formats with two decimals, always', () => {
+    expect(formatShekel(9000)).toBe('₪90.00');
     expect(formatShekel(1235)).toBe('₪12.35');
-    expect(formatShekel(1250)).toBe('₪12.5');
-    expect(formatShekel(3333, 1)).toBe('₪33.3');
+    expect(formatShekel(41290)).toBe('₪412.90');
+    expect(formatShekel(7980)).toBe('₪79.80');
+    expect(formatShekel(5)).toBe('₪0.05');
+    expect(formatShekel(0)).toBe('₪0.00');
+  });
+
+  it('rounds a fraction of an agora to the nearest agora', () => {
+    expect(formatShekel(13763.33)).toBe('₪137.63');
+    expect(formatShekel(13763.5)).toBe('₪137.64');
   });
 
   it('parses', () => {

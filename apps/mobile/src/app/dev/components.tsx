@@ -85,8 +85,8 @@ export default function ComponentsPreview() {
             <Pill label="חדש" tone="primary" />
           </View>
           <View style={styles.row}>
-            <Stat value="₪180" label="הוצאות בטיול" />
-            <Stat value="₪60" label="את חייבת" />
+            <Stat value="₪180.00" label="הוצאות בטיול" />
+            <Stat value="₪60.00" label="את חייבת" />
           </View>
           <AvatarStack people={PEOPLE.slice(0, 3)} label="דנה, מיכל ורון" />
         </Card>

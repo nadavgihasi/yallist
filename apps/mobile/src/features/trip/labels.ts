@@ -2,6 +2,7 @@ import {
   claimedQuantity,
   formatShekel,
   packingStatus,
+  perPersonPreview,
   type Claim,
   type Item,
   type ItemStatus,
@@ -72,13 +73,22 @@ export function statusLine(
     case 'inProgress':
       return { label: s.inProgress, detail: holders(status.holderIds), tone: 'ok' };
     case 'bought': {
-      const amount = formatShekel(status.expense.amountAgorot);
+      const { amountAgorot, paidBy, itemIds = [] } = status.expense;
+      const amount = formatShekel(amountAgorot);
+      const byMe = paidBy === me;
+      // A shopping run's one amount is the run's total, never this item's price.
+      if (itemIds.length > 1) {
+        return {
+          label: s.bought,
+          detail: byMe
+            ? s.boughtInMyRun(itemIds.length, amount)
+            : s.boughtInRun(view.displayNameOf(paidBy), itemIds.length, amount),
+          tone: 'success',
+        };
+      }
       return {
         label: s.bought,
-        detail:
-          status.expense.paidBy === me
-            ? s.boughtByMe(amount)
-            : s.boughtBy(amount, view.nameOf(status.expense.paidBy)),
+        detail: byMe ? s.boughtByMe(amount) : s.boughtBy(amount, view.nameOf(paidBy)),
         tone: 'success',
       };
     }
@@ -111,6 +121,18 @@ export function quantityText(item: Item, claims: readonly Claim[]): string {
 /** A buy item's amount in the shopping screens: its free text, or `×40` for a quantity. */
 export function buyQuantity(item: Item): string {
   return item.displayQty ?? (item.kind === 'qty' ? `×${item.quantityNeeded}` : '');
+}
+
+/**
+ * "Each pays" for an amount split equally between `shareCount` people: the largest share
+ * (`perPersonPreview`), so every place that shows it shows the same number.
+ */
+export function perPersonText(
+  amountAgorot: number | undefined,
+  shareCount: number,
+): string | undefined {
+  const share = amountAgorot ? perPersonPreview(amountAgorot, shareCount) : undefined;
+  return share === undefined ? undefined : formatShekel(share);
 }
 
 export function groupSummary(missing: number): string {

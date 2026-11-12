@@ -1,4 +1,4 @@
-import { formatShekel, parseShekel, perPersonPreview, runSummary } from '@yallist/domain';
+import { parseShekel, runSummary } from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -10,6 +10,7 @@ import { Sheet } from '@/components/Sheet';
 import { showToast } from '@/components/Toast';
 import { useCloseSheet } from '@/features/trip/closeSheet';
 import { deriveTrip } from '@/features/trip/derive';
+import { perPersonText } from '@/features/trip/labels';
 import { ReceiptField } from '@/features/trip/ReceiptField';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
@@ -48,7 +49,7 @@ function FinishRunBody({ data, runId }: { data: TripData; runId: string }) {
   const { inCart, notInCart } = runSummary(view.runClaims(runId), view.items);
   const agorot = parseShekel(amount);
   const valid = !!agorot && agorot <= MAX_AGOROT && shares.length > 0;
-  const perPerson = agorot && perPersonPreview(agorot, shares.length);
+  const perPerson = perPersonText(agorot, shares.length);
 
   const save = () => {
     if (!valid || inCart.length === 0) return;
@@ -134,9 +135,7 @@ function FinishRunBody({ data, runId }: { data: TripData; runId: string }) {
             <Icon name="userPlus" size={18} />
           </View>
         }
-        title={
-          perPerson ? he.shop.finish.perPerson(formatShekel(perPerson)) : he.shop.finish.enterAmount
-        }
+        title={perPerson ? he.shop.finish.perPerson(perPerson) : he.shop.finish.enterAmount}
         text={he.shop.finish.split(shares.length, view.activeIds.length)}
         action={
           <Pressable

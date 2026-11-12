@@ -194,6 +194,10 @@ export const he = {
     of: (have: number, total: number) => `${have} מתוך ${total}`,
     boughtBy: (amount: string, name: string) => `${amount}, ${name}`,
     boughtByMe: (amount: string) => `${amount}, שילמת`,
+    /** A shopping run's item: the amount is the whole run's, so it says so. */
+    boughtInRun: (name: string, items: number, amount: string) =>
+      `בקנייה של ${name}: ${items} פריטים, ${amount}`,
+    boughtInMyRun: (items: number, amount: string) => `בקנייה שלך: ${items} פריטים, ${amount}`,
     forEach: 'לכל אחד',
     packed: 'ארוז',
     packedOf: (packed: number, claims: number) => `ארזו ${packed} מתוך ${claims}`,
