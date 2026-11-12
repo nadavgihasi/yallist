@@ -13,6 +13,7 @@ import { showToast } from '@/components/Toast';
 import { GoogleButton } from '@/features/auth/GoogleButton';
 import { andMore, he, joiningAs, missingItems, participants } from '@/i18n/he';
 import { signInAsGuest, signInWithGoogle, statusOf, type AuthResult } from '@/lib/api';
+import { rtl } from '@/lib/bidi';
 import { formatRange } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useSession } from '@/state/store';
@@ -164,9 +165,13 @@ export default function Join() {
           <View style={styles.missing}>
             <Text style={styles.missingTitle}>{missingItems(trip.missingCount)}</Text>
             <Text style={styles.meta}>
+              {/* Each name isolated, so `סוללות AA, Tent גדול` keeps its order. */}
               {(trip.missingCount > trip.missingItems.length
-                ? [...trip.missingItems, andMore(trip.missingCount - trip.missingItems.length)]
-                : trip.missingItems
+                ? [
+                    ...trip.missingItems.map(rtl),
+                    andMore(trip.missingCount - trip.missingItems.length),
+                  ]
+                : trip.missingItems.map(rtl)
               ).join(', ')}
             </Text>
           </View>
