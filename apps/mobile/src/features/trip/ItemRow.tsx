@@ -148,8 +148,9 @@ export function ItemRow({
       <Pressable style={styles.main} onPress={onOpen} accessibilityRole="button">
         <Text style={styles.name}>
           {item.name}
-          {/* Isolated, so an English word or number ending the name doesn't pull it across. */}
-          {!!qty && <Text style={styles.qty}> {isolate(qty)}</Text>}
+          {/* Isolated, so an English word or number ending the name doesn't pull it across, and
+              in one piece: `500 גרם` doesn't wrap between the number and its unit. */}
+          {!!qty && <Text style={styles.qty}> {isolate(qty.replaceAll(' ', '\u00a0'))}</Text>}
         </Text>
         <Text
           style={[

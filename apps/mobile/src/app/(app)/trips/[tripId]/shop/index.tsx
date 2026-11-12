@@ -14,7 +14,7 @@ import { PillButton } from '@/components/PillButton';
 import { Progress } from '@/components/Progress';
 import { showToast } from '@/components/Toast';
 import { deriveTrip, type TripView } from '@/features/trip/derive';
-import { buyQuantity } from '@/features/trip/labels';
+import { buyItemText, buyQuantity } from '@/features/trip/labels';
 import { forgottenMatch, shopList } from '@/features/trip/shopList';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
@@ -195,9 +195,7 @@ function ShopRunBody({
               <Text style={styles.caption}>
                 {he.shop.addedBy(view.displayNameOf(item.createdBy ?? ''))}
               </Text>
-              <Text style={styles.name}>
-                {[item.name, buyQuantity(item)].filter(Boolean).join(' · ')}
-              </Text>
+              <Text style={[styles.name, styles.rtl]}>{buyItemText(item, ' · ')}</Text>
             </View>
             <PillButton
               label={he.shop.alsoMine}
@@ -338,6 +336,8 @@ const styles = StyleSheet.create({
   checkOn: { backgroundColor: colors.brand, borderColor: colors.brand },
   name: { ...type.itemTitle, fontSize: 17, lineHeight: 24, color: colors.ink, flex: 1 },
   nameOn: { color: colors.inkMuted },
+  // A name in English next to its amount still reads right to left (`buyItemText`).
+  rtl: { writingDirection: 'rtl' },
   forgotTitle: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.inkMuted },
   forgotRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
   forgotInput: {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { parseBuyAmount } from './amount';
 import {
   BULK_MAX_ITEMS,
   bulkItemFor,
@@ -72,14 +73,29 @@ describe('parseBulkText', () => {
   });
 
   it('reads an amount with a unit as how much, not how many', () => {
-    expect(parseBulkLine('2 ק"ג עגבניות')).toEqual({ name: 'עגבניות', amount: '2 ק"ג' });
+    expect(parseBulkLine('2 ק"ג עגבניות')).toEqual({ name: 'עגבניות', amount: '2 ק״ג' });
     expect(parseBulkLine('2 ק״ג עגבניות')).toEqual({ name: 'עגבניות', amount: '2 ק״ג' });
     expect(parseBulkLine('500 גרם גבינה')).toEqual({ name: 'גבינה', amount: '500 גרם' });
     expect(parseBulkLine('1.5 ליטר חלב')).toEqual({ name: 'חלב', amount: '1.5 ליטר' });
     expect(parseBulkLine('מים 6 ליטר')).toEqual({ name: 'מים', amount: '6 ליטר' });
-    expect(parseBulkLine('3 קילו עגבניות')).toEqual({ name: 'עגבניות', amount: '3 קילו' });
+    expect(parseBulkLine('3 קילו עגבניות')).toEqual({ name: 'עגבניות', amount: '3 ק״ג' });
     // A word that only starts like a unit is the name.
     expect(parseBulkLine("2 ג'ינס")).toEqual({ name: "ג'ינס", quantity: 2 });
+  });
+
+  it('spells the unit as the buy form does, so the item edits there with its unit chip', () => {
+    const amount = (line: string) => parseBulkLine(line)?.amount;
+    expect(amount('2ק"ג עגבניות')).toBe('2 ק״ג');
+    expect(amount('אבטיח 2kg')).toBe('2 ק״ג');
+    expect(amount('2 KG אבטיח')).toBe('2 ק״ג');
+    expect(amount("500 גר' גבינה")).toBe('500 גרם');
+    expect(amount('500 ג׳ גבינה')).toBe('500 גרם');
+    expect(amount('2 ליטרים מים')).toBe('2 ליטר');
+    expect(amount("1 ל' חלב")).toBe('1 ליטר');
+    expect(amount('250 מ"ל שמנת')).toBe('250 מ״ל');
+    // As the form reads it back: the number and the chip.
+    expect(parseBuyAmount(amount('1.5 ק”ג עגבניות'))).toEqual({ amount: '1.5', unit: 'ק״ג' });
+    expect(parseBuyAmount(amount('500 gr גבינה'))).toEqual({ amount: '500', unit: 'גרם' });
   });
 
   it('cleans up a WhatsApp paste: direction marks, emoji bullets, bold', () => {

@@ -10,6 +10,7 @@ import {
 } from '@yallist/domain';
 
 import { groupMissing, he, missingCount } from '@/i18n/he';
+import { isolate, rtl } from '@/lib/bidi';
 import { colors } from '@/theme';
 
 import type { TripView } from './derive';
@@ -124,6 +125,16 @@ export function quantityText(item: Item, claims: readonly Claim[]): string {
 /** A buy item's amount in the shopping screens: its free text, or `×40` for a quantity. */
 export function buyQuantity(item: Item): string {
   return item.displayQty ?? (item.kind === 'qty' ? `×${item.quantityNeeded}` : '');
+}
+
+/**
+ * A buy item's name and amount in one text (`Coca Cola · 2 ליטר`): the name in its own
+ * direction and the amount isolated, so a name in English doesn't take the amount's number, and
+ * in one piece (`3 חבילות` doesn't wrap between the number and its unit).
+ */
+export function buyItemText(item: Item, separator: string): string {
+  const qty = buyQuantity(item);
+  return qty ? `${rtl(item.name)}${separator}${isolate(qty.replaceAll(' ', '\u00a0'))}` : item.name;
 }
 
 /**

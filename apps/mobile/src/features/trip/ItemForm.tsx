@@ -1,5 +1,4 @@
 import {
-  buyAmountText,
   heldCatalogNames,
   type CatalogItem,
   type Item,
@@ -33,7 +32,13 @@ import {
   typedCatalogItem,
   type Draft,
 } from './addItem';
-import { buyItemFields, catalogBuyAmount, initialBuyAmount } from './buyAmount';
+import {
+  amountFields,
+  buyAmountError,
+  buyDisplayQty,
+  countedByKind,
+  initialBuyAmount,
+} from './buyAmount';
 import { BuyAmountField } from './BuyAmountField';
 
 const KINDS: ItemKind[] = ['single', 'qty', 'each'];
@@ -80,6 +85,10 @@ export function ItemForm({
   const [anyway, setAnyway] = useState(false);
   // The buy list counts by amount and unit (`2 ק״ג`) instead of the bring list's kinds.
   const [buyAmount, setBuyAmount] = useState(() => initialBuyAmount(item));
+  // Decided when the sheet opens, so the form doesn't change under the hand if someone takes it.
+  const [byKind] = useState(
+    () => !!item && countedByKind(item, !!data?.claims.some((c) => c.itemId === item.id)),
+  );
 
   if (!data) return null;
 
@@ -100,23 +109,18 @@ export function ItemForm({
   const trimmed = name.trim();
   // Only suggest what this list doesn't have yet.
   const taken = heldCatalogNames(data.items.filter((i) => i.list === list).map((i) => i.name));
-  // A typed catalog name's default count fills an amount not typed yet, as its suggestion would.
-  const amount = (match && !buyAmount.amount.trim() && catalogBuyAmount(match)) || buyAmount;
-  const displayQty = buyAmountText(amount);
+  const byAmount = list === 'buy' && !byKind;
+  const displayQty = buyDisplayQty(item, buyAmount);
   const valid =
     !!trimmed &&
     trimmed.length <= ITEM_NAME_MAX &&
     (picked !== NEW || !!shown.newName.trim()) &&
-    (list !== 'buy' || displayQty !== undefined);
+    (!byAmount || displayQty !== undefined);
 
   const draftSave = toSave(shown, data.categories);
-  const claimed = !!item && data.claims.some((c) => c.itemId === item.id);
   const save = {
     ...draftSave,
-    item: {
-      ...draftSave.item,
-      ...(list === 'buy' ? buyItemFields(item, claimed, displayQty ?? null) : { displayQty: null }),
-    },
+    item: { ...draftSave.item, ...amountFields(item, list, byAmount, displayQty ?? null) },
   };
   // A new item the list already has (by any of its names) warns before it goes in twice. Not while
   // saving: the item shows on the list at once, and would warn about itself.
@@ -132,8 +136,6 @@ export function ItemForm({
     setQty(next.qty);
     setCategory(next.category);
     setNewName(next.newName);
-    const counted = catalogBuyAmount(entry);
-    if (counted) setBuyAmount(counted);
   };
   // A choice by hand keeps what a typed catalog name filled in, then changes it.
   const choose =
@@ -266,8 +268,13 @@ export function ItemForm({
         {!item && <CatalogPicker query={name} list={list} exclude={taken} onPick={pick} />}
       </View>
 
-      {list === 'buy' ? (
-        <BuyAmountField value={amount} onChange={setBuyAmount} onSubmitEditing={() => submit()} />
+      {byAmount ? (
+        <BuyAmountField
+          value={buyAmount}
+          error={displayQty === undefined ? buyAmountError(buyAmount) : undefined}
+          onChange={setBuyAmount}
+          onSubmitEditing={() => submit()}
+        />
       ) : (
         <View style={styles.field}>
           <Text style={fieldStyles.label}>{he.addItem.howMany}</Text>

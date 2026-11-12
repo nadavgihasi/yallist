@@ -7,8 +7,6 @@ import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { colors, fonts } from '@/theme';
 
-import { buyAmountError } from './buyAmount';
-
 /**
  * The buy form's "how much": a number and a unit chip (`2` + `ק״ג`). Both are optional; tapping
  * the picked unit again unpicks it. A unit the item already had that isn't a chip (a template's
@@ -16,16 +14,18 @@ import { buyAmountError } from './buyAmount';
  */
 export function BuyAmountField({
   value,
+  error,
   onChange,
   onSubmitEditing,
 }: {
   value: BuyAmount;
+  /** Why the amount can't be saved, shown under it. */
+  error?: string;
   onChange: (value: BuyAmount) => void;
   onSubmitEditing?: () => void;
 }) {
   const units: string[] = [...BUY_UNITS];
   if (value.unit && !units.includes(value.unit)) units.push(value.unit);
-  const error = buyAmountError(value);
   return (
     <View style={styles.wrap}>
       <Text style={fieldStyles.label}>{he.addItem.howMany}</Text>

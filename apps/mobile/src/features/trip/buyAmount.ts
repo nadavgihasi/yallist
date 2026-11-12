@@ -1,15 +1,17 @@
 import {
   allowsFraction,
+  BUY_AMOUNT_MAX,
   buyAmountText,
   parseBuyAmount,
   type BuyAmount,
-  type CatalogItem,
   type Item,
+  type ListKind,
 } from '@yallist/domain';
 
 import { he } from '@/i18n/he';
+import type { NewItemInput } from '@/state/reducer';
 
-/** The unit a counted amount gets, such as a catalog entry's `*6` or an older quantity item. */
+/** The unit an older quantity item's count gets. */
 const PIECES = 'יח׳';
 
 /**
@@ -23,30 +25,53 @@ export function initialBuyAmount(item: Item | undefined): BuyAmount {
   return parseBuyAmount(item?.list === 'buy' ? item.displayQty : undefined);
 }
 
-/** A catalog suggestion's default count as an amount (`*6` → 6 יח׳); undefined when it has none. */
-export function catalogBuyAmount(entry: CatalogItem): BuyAmount | undefined {
-  return entry.kind === 'qty' ? { amount: String(entry.quantityNeeded), unit: PIECES } : undefined;
+/**
+ * The amount text the buy form saves: the item's own text while the amount wasn't changed, so
+ * text the form doesn't write (`2-3 ק״ג`, `2.5 גרם`) stays as it is and doesn't block saving
+ * other changes; otherwise the amount typed. Undefined when that isn't valid.
+ */
+export function buyDisplayQty(item: Item | undefined, value: BuyAmount): string | null | undefined {
+  const stored = item?.list === 'buy' ? item.displayQty : undefined;
+  if (stored !== undefined) {
+    const was = parseBuyAmount(stored);
+    if (was.amount === value.amount && was.unit === value.unit) return stored;
+  }
+  return buyAmountText(value);
 }
 
 /**
- * How a buy item is counted once saved from the form: one item for the group, with the amount as
- * its text. An existing per-person or quantity item someone already claimed keeps its kind: the
- * API refuses to change a claimed item's kind.
+ * Whether the form keeps counting the item the bring list's way (one / quantity / per person)
+ * instead of by amount: a quantity or per-person item someone already took. Its kind can't change
+ * (the API refuses), and an amount next to a count that stays would say something else (`2/4` on
+ * its row, `8 יח׳` in the store).
  */
-export function buyItemFields(
+export const countedByKind = (item: Item | undefined, claimed: boolean) =>
+  !!item && item.kind !== 'single' && claimed;
+
+/**
+ * What the form saves about how much, over the rest of the item. By amount: one item for the
+ * group, with its amount as text. Counted by kind (the bring list, or `countedByKind`): the kind
+ * and count picked, with the amount text left as it is (a bring item's from a bulk add or a copy
+ * too). Moved off the buy list, it has none.
+ */
+export function amountFields(
   item: Item | undefined,
-  claimed: boolean,
+  list: ListKind,
+  byAmount: boolean,
   displayQty: string | null,
-): Pick<Item, 'kind' | 'quantityNeeded'> & { displayQty: string | null } {
-  if (item && item.kind !== 'single' && claimed) {
-    return { kind: item.kind, quantityNeeded: item.quantityNeeded, displayQty };
-  }
-  return { kind: 'single', quantityNeeded: 1, displayQty };
+): Pick<NewItemInput, 'displayQty'> & Partial<Pick<NewItemInput, 'kind' | 'quantityNeeded'>> {
+  if (list === 'buy' && byAmount) return { kind: 'single', quantityNeeded: 1, displayQty };
+  if (item?.list === 'buy' && list === 'bring') return { displayQty: null };
+  return {};
 }
 
 /** Why the amount can't be saved, if it can't. */
 export function buyAmountError(value: BuyAmount): string | undefined {
   if (buyAmountText(value) !== undefined) return undefined;
-  const fraction = /^\d+[.,]\d+$/.test(value.amount.trim());
-  return fraction && !allowsFraction(value.unit) ? he.addItem.wholeAmount : he.addItem.badAmount;
+  const typed = value.amount.trim();
+  if (!typed) return he.addItem.noAmount;
+  if (!/^\d+([.,]\d+)?$/.test(typed)) return he.addItem.badAmount;
+  if (Number(typed.replace(',', '.')) > BUY_AMOUNT_MAX) return he.addItem.maxAmount;
+  if (/[.,]/.test(typed) && !allowsFraction(value.unit)) return he.addItem.wholeAmount;
+  return he.addItem.badAmount;
 }
