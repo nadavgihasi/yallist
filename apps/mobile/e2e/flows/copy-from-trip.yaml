@@ -19,7 +19,10 @@ tags: [items]
     file: ../common/add-item.yaml
     env:
       ITEM: פנס ראש
-- tapOn: חזרה לכל הטיולים
+# Home again, to make the next trip.
+- openLink: ${WEB_URL}
+- assertVisible:
+    id: home-new-trip
 - runFlow: ../common/new-trip.yaml
 - assertVisible: הרשימה ריקה
 - tapOn:
