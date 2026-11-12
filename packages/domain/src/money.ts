@@ -66,15 +66,11 @@ export function suggestTransfers(balance: ReadonlyMap<string, number>): Transfer
 }
 
 /**
- * `₪90`, `₪12.35` — sign before the number, no decimals when whole.
- * Per-person previews pass `decimals: 1` (`₪37.5`).
+ * `₪90.00`, `₪12.35`, `₪412.90`: sign before the number, always two decimals. The one money
+ * format in the app; a fraction of an agora rounds to the nearest agora.
  */
-export function formatShekel(agorot: number, decimals: 1 | 2 = 2): string {
-  const shekels = agorot / 100;
-  const text = Number.isInteger(shekels)
-    ? String(shekels)
-    : String(Number(shekels.toFixed(decimals)));
-  return `₪${text}`;
+export function formatShekel(agorot: number): string {
+  return `₪${(Math.round(agorot) / 100).toFixed(2)}`;
 }
 
 /** Parse user input like "450" or "12.5" into agorot; undefined if not a positive amount. */

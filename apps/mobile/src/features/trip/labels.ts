@@ -2,6 +2,7 @@ import {
   claimedQuantity,
   formatShekel,
   packingStatus,
+  perPersonPreview,
   type Claim,
   type Item,
   type ItemStatus,
@@ -111,6 +112,18 @@ export function quantityText(item: Item, claims: readonly Claim[]): string {
 /** A buy item's amount in the shopping screens: its free text, or `×40` for a quantity. */
 export function buyQuantity(item: Item): string {
   return item.displayQty ?? (item.kind === 'qty' ? `×${item.quantityNeeded}` : '');
+}
+
+/**
+ * "Each pays" for an amount split equally between `shareCount` people: the largest share
+ * (`perPersonPreview`), so every place that shows it shows the same number.
+ */
+export function perPersonText(
+  amountAgorot: number | undefined,
+  shareCount: number,
+): string | undefined {
+  const share = amountAgorot ? perPersonPreview(amountAgorot, shareCount) : undefined;
+  return share === undefined ? undefined : formatShekel(share);
 }
 
 export function groupSummary(missing: number): string {
