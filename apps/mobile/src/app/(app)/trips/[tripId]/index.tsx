@@ -25,6 +25,7 @@ import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
 import { PeopleTab } from '@/features/trip/PeopleTab';
 import { ReadinessHero } from '@/features/trip/ReadinessHero';
+import { TripLinksBar } from '@/features/trip/TripLinks';
 import { he, participants } from '@/i18n/he';
 import { formatRange } from '@/lib/dates';
 import { statusOf } from '@/lib/api';
@@ -220,6 +221,7 @@ export default function TripScreen() {
               .filter(Boolean)
               .join(' · ')}
           </Text>
+          <TripLinksBar trip={trip} onMeetup={() => pickTab('people')} />
         </View>
 
         {!desktop && hero}

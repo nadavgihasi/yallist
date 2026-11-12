@@ -100,6 +100,10 @@ export function PeopleTab({
 
   return (
     <View style={styles.wrap}>
+      {/* First: what every member needs on the day, before managing anything. */}
+      <MeetupSection trip={data.trip} organizer={organizer} />
+      <AlbumSection trip={data.trip} organizer={organizer} />
+
       <Card>
         <View style={styles.texts}>
           <Text style={styles.title}>{he.people.inviteTitle}</Text>
@@ -148,9 +152,6 @@ export function PeopleTab({
           </View>
         </Card>
       )}
-
-      <MeetupSection trip={data.trip} organizer={organizer} />
-      <AlbumSection trip={data.trip} organizer={organizer} />
 
       {organizer && pending.length > 0 && (
         <ListGroup title={he.people.pending}>

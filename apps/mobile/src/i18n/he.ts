@@ -443,6 +443,8 @@ export const he = {
   /** The meetup place and the photo album: sections of the ניהול tab and their sheets. */
   links: {
     meetup: 'נקודת מפגש',
+    /** The meetup point at the top of the trip. */
+    meetupAt: (place: string) => `נפגשים: ${place}`,
     /** A pasted map link or a point on the map stands in for the place's name. */
     mapLink: 'מיקום במפה',
     waze: 'פתיחה ב־Waze',
@@ -454,7 +456,7 @@ export const he = {
     meetupEmpty: 'איפה כולם נפגשים, עם ניווט ב־Waze או במפות',
     addMeetup: 'הוספת נקודת מפגש',
     editMeetup: 'עריכת נקודת המפגש',
-    meetupSubtitle: 'כל המשתתפים יראו אותה בלשונית ״ניהול״',
+    meetupSubtitle: 'כל המשתתפים יראו אותה בראש הטיול ובלשונית ״ניהול״',
     meetupName: 'שם המקום',
     meetupHint: 'או כתובת, או קישור מ־Google Maps או Waze',
     meetupPlaceholder: 'חניון עין גדי',
@@ -463,7 +465,7 @@ export const he = {
     albumEmpty: 'אלבום משותף לתמונות מהטיול ב־Google Photos',
     addAlbum: 'הוספת אלבום',
     editAlbum: 'עריכת האלבום',
-    albumSubtitle: 'כל המשתתפים יוכלו לפתוח אותו מלשונית ״ניהול״',
+    albumSubtitle: 'כל המשתתפים יוכלו לפתוח אותו מראש הטיול ומלשונית ״ניהול״',
     albumLink: 'קישור לאלבום',
     albumHint: 'מ־Google Photos',
     badAlbum: 'צריך קישור לאלבום ב־Google Photos',
