@@ -246,6 +246,33 @@ describe.skipIf(!DATABASE_URL)('shopping runs', () => {
     expect((await detail(a, tripId)).claims.filter((cl) => cl.runId === id)).toHaveLength(2);
   });
 
+  it('keeps an item added in the store in the run, on the list and after a refresh', async () => {
+    const { a, b, tripId, buy } = await trip();
+    const { run } = await startOk(a, tripId, [buy[0]!]);
+    // What the store screen sends for a forgotten item: add it, then take it into the run.
+    const res = await client.trips[':tripId'].items.$post(
+      { param: { tripId }, json: { list: 'buy', name: 'Lighter', kind: 'single' } },
+      as(a),
+    );
+    const lighter = await res.json();
+    const added = await runs()[':runId'].items.$post(
+      { param: { tripId, runId: run!.id }, json: { itemId: lighter.id } },
+      as(a),
+    );
+    expect(added.status).toBe(200);
+    expect((await cart(a, tripId, lighter.id)).status).toBe(200);
+
+    // A fresh load, by anyone: on the buy list, in a's run and cart.
+    const seen = await detail(b, tripId);
+    expect(seen.items).toContainEqual(expect.objectContaining({ id: lighter.id, list: 'buy' }));
+    expect(seen.claims).toContainEqual(
+      expect.objectContaining({ itemId: lighter.id, userId: a.id, runId: run!.id, inCart: true }),
+    );
+    const paid = await finish(a, tripId, run!.id, { amountAgorot: 1500, shares: [a.id] });
+    expect(paid.status).toBe(201);
+    expect((await paid.json()).itemIds).toEqual([lighter.id]);
+  });
+
   it('cancels the run of a removed member, so their items return to the list', async () => {
     const { a, b, tripId, buy } = await trip();
     await startOk(b, tripId, buy);

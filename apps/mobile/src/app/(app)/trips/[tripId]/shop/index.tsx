@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/components/Avatar';
+import { Input } from '@/components/Fields';
 import { FLOATING_CLEARANCE, FloatingAction } from '@/components/FloatingAction';
 import { Icon } from '@/components/Icon';
 import { Card, ListGroup } from '@/components/ListGroup';
@@ -67,6 +68,8 @@ function ShopRunBody({
   const [menu, setMenu] = useState<'closed' | 'open' | 'confirm'>('closed');
   const [dismissed, setDismissed] = useState<ReadonlySet<string>>(new Set());
 
+  const [forgotten, setForgotten] = useState('');
+
   // What's left by category, as on the buy list; what's in the cart sinks to its own section.
   const { groups, inCart } = shopList(view.runClaims(runId), view.items, data.categories);
   const total = inCart.length + groups.reduce((n, g) => n + g.items.length, 0);
@@ -81,6 +84,18 @@ function ShopRunBody({
 
   const toggle = (item: Item) =>
     act({ type: 'setInCart', itemId: item.id, inCart: !cart.has(item.id) });
+  // Something not on the list: it joins the buy list and this run, ready to tick.
+  const addForgotten = () => {
+    const name = forgotten.trim();
+    if (!name) return;
+    act({
+      type: 'addItem',
+      item: { list: 'buy', name, kind: 'single', quantityNeeded: 1, categoryId: null },
+      claim: 0,
+      runId,
+    });
+    setForgotten('');
+  };
   // The run disappears at once, and with it this screen.
   const cancel = () => act({ type: 'cancelRun', runId });
 
@@ -189,6 +204,31 @@ function ShopRunBody({
           </Card>
         ))}
 
+        <Card gap={space[2]}>
+          <Text style={styles.forgotTitle}>{he.shop.forgot}</Text>
+          <View style={styles.forgotRow}>
+            <Input
+              value={forgotten}
+              onChangeText={setForgotten}
+              placeholder={he.shop.forgotPlaceholder}
+              accessibilityLabel={he.shop.forgotPlaceholder}
+              maxLength={80}
+              returnKeyType="done"
+              submitBehavior="submit"
+              onSubmitEditing={addForgotten}
+              style={styles.forgotInput}
+              {...testId('shop-forgot-name')}
+            />
+            <PillButton
+              label={he.shop.forgotAdd}
+              variant="soft"
+              disabled={!forgotten.trim()}
+              onPress={addForgotten}
+              {...testId('shop-forgot-add')}
+            />
+          </View>
+        </Card>
+
         {inCart.length > 0 && (
           <ListGroup title={he.shop.cartSection}>
             {inCart.map((item) => (
@@ -280,6 +320,18 @@ const styles = StyleSheet.create({
   checkOn: { backgroundColor: colors.brand, borderColor: colors.brand },
   name: { ...type.itemTitle, fontSize: 17, lineHeight: 24, color: colors.ink, flex: 1 },
   nameOn: { color: colors.inkMuted },
+  forgotTitle: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.inkMuted },
+  forgotRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  forgotInput: {
+    flex: 1,
+    minWidth: 0,
+    minHeight: space.touch,
+    paddingHorizontal: space[4],
+    borderRadius: radius.pill,
+    backgroundColor: colors.ground,
+    ...type.body,
+    color: colors.ink,
+  },
   added: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   dismiss: {
     width: space.touch,
