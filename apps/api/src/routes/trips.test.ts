@@ -282,12 +282,13 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
     it("names who's in to anyone with the link: display names and colors, nothing else", async () => {
       const organizer = await guest('organizer');
       const data = await createTrip(organizer, { requireApproval: true });
-      const [member, waiting, removed] = [
+      const [member, waiting, removed, left] = [
         await guest('member'),
         await guest('waiting'),
         await guest('removed'),
+        await guest('left'),
       ];
-      for (const user of [member, waiting, removed]) await join(user, data.inviteToken);
+      for (const user of [member, waiting, removed, left]) await join(user, data.inviteToken);
       const tripId = data.trip.id;
       const decide = (user: Guest, action: 'approve' | 'decline') =>
         client.trips[':tripId'].members[':userId'][action].$post(
@@ -296,10 +297,15 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         );
       expect((await decide(member, 'approve')).status).toBe(200);
       expect((await decide(removed, 'decline')).status).toBe(200);
+      // Was in, then left.
+      expect((await decide(left, 'approve')).status).toBe(200);
+      expect(
+        (await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(left))).status,
+      ).toBe(200);
 
       const res = await client.invites[':token'].$get({ param: { token: data.inviteToken } });
       const { members, memberCount } = await res.json();
-      // Active members only, in joining order; not who is waiting or was turned away.
+      // Active members only, in joining order; not who is waiting, was turned away or left.
       expect(members.map((m) => m.name)).toEqual(['organizer', 'member']);
       expect(memberCount).toBe(2);
       for (const m of members) {

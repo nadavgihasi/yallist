@@ -17,7 +17,7 @@ import { initial } from '@/features/trip/derive';
 import { signInAsGuest, signInWithGoogle, statusOf, type AuthResult } from '@/lib/api';
 import { rtl } from '@/lib/bidi';
 import { formatRange } from '@/lib/dates';
-import { whoIsIn } from '@/lib/invite';
+import { inviteToken, whoIsIn } from '@/lib/invite';
 import { testId } from '@/lib/testId';
 import { useSession } from '@/state/store';
 import { joinTrip, tripsKey, useInvite } from '@/state/trips';
@@ -25,7 +25,7 @@ import { avatarSize, colors, layout, radius, space, type } from '@/theme';
 
 /** Invite links land here (JoinV2): a preview anyone can see, then sign in and join. */
 export default function Join() {
-  const { token } = useLocalSearchParams<{ token: string }>();
+  const token = inviteToken(useLocalSearchParams<{ token: string }>().token);
   const { me, signIn } = useSession();
   const queryClient = useQueryClient();
   const invite = useInvite(token);

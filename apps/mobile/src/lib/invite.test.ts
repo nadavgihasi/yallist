@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { invitePayload, inviteUrl, whoIsIn } from './invite';
+import { invitePayload, inviteToken, inviteUrl, whoIsIn } from './invite';
 
 describe('inviteUrl', () => {
   it('builds an https link to the join page', () => {
@@ -21,6 +21,14 @@ describe('inviteUrl', () => {
     expect(inviteUrl('https://yallist.example', 'a/b?c')).toBe(
       'https://yallist.example/j/a%2Fb%3Fc',
     );
+  });
+});
+
+describe('inviteToken', () => {
+  it('drops the bidi marks a linkifier took into the link from the invite message', () => {
+    expect(inviteToken('N1Osy6W-hImmf5neEwQ8Lw⁩')).toBe('N1Osy6W-hImmf5neEwQ8Lw');
+    expect(inviteToken('⁦abc_-⁩‏')).toBe('abc_-');
+    expect(inviteToken('abc')).toBe('abc');
   });
 });
 

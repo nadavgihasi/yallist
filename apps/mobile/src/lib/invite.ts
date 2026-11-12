@@ -11,6 +11,15 @@ export function inviteUrl(webOrigin: string, token: string): string {
 }
 
 /**
+ * The token of an opened invite link, without the bidi marks around the link in the invite
+ * message (`ltr`): a linkifier that takes the closing U+2069 into the URL, as Android's does,
+ * would otherwise open a link that isn't valid.
+ */
+export function inviteToken(param: string): string {
+  return param.replace(/[‎‏‪-‮⁦-⁩]/g, '');
+}
+
+/**
  * What the share sheet gets for an invite: the message alone, its link inside it, on every
  * platform. iOS and the web (navigator.share) append a separate `url` to the message, which
  * doubled the link and made what's sent differ from the invite sheet's preview.
