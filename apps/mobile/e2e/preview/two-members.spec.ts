@@ -77,7 +77,13 @@ async function join(dana: Page, noa: Page) {
     await dana.reload();
     await expect(dana.locator('#people-approve')).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 45_000 });
+  // The button hides at once, before the API has the approval: wait for its answer, or Noa's
+  // check can reach the API first (and find her still waiting).
+  const approved = dana.waitForResponse(
+    (r) => r.request().method() === 'POST' && r.url().endsWith('/approve'),
+  );
   await dana.locator('#people-approve').click();
+  expect((await approved).ok()).toBe(true);
   await expect(dana.locator('#people-approve')).toBeHidden();
   await noa.locator('#join-check').click();
   await expect(noa.locator('#trip-title')).toHaveText('E2E trip');
