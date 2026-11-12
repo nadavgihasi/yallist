@@ -17,6 +17,8 @@ export const ITEM_QUANTITY_MAX = 999;
 export interface BulkLine {
   name: string;
   quantity?: number;
+  /** An amount with a unit, `2 ק״ג`: how much to get, not how many. */
+  amount?: string;
 }
 
 /** What one bulk-added item becomes: its list, how it's counted, and its category by name. */
@@ -38,12 +40,42 @@ const LEADING = /^(?:[x×X*]\s*)?(\d{1,4})(?:\s*[x×X*]\s*|\s+)(\S.*)$/;
 // "כיסאות x2", "כיסאות ×2", "כיסאות×2", "כיסאות 2x".
 const TRAILING = /^(.*\S)(?:\s+[x×X*]|×)\s*(\d{1,4})$|^(.*\S)\s+(\d{1,4})\s*[x×X]$/;
 
+// A unit after a number makes it an amount: "2 ק״ג עגבניות", "מים 6 ליטר", "1.5 ליטר חלב".
+const UNIT = String.raw`(?:ק["״”]?ג|קילו(?:גרם)?|גרם|גר['׳’]?|ג['׳’]|ליטר(?:ים)?|ל['׳’]|מ["״”]?ל|מטר(?:ים)?|ס["״”]מ|kg|gr?|ml|l)`;
+const AMOUNT = String.raw`(\d{1,4}(?:\.\d{1,2})?)\s*(${UNIT})`;
+const LEADING_AMOUNT = new RegExp(String.raw`^${AMOUNT}\s+(\S.*)$`, 'i');
+const TRAILING_AMOUNT = new RegExp(String.raw`^(.*\S)\s+${AMOUNT}$`, 'i');
+// Direction marks and zero-width characters that WhatsApp and web pages paste along (not the
+// zero-width joiner, which holds emoji together).
+const INVISIBLE = /[\u200b\u200c\u200e\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g;
+// An emoji in front as a list marker: "✅ מחצלת", "▫️ פחמים".
+const EMOJI_MARKER =
+  /^\p{Extended_Pictographic}[\p{Extended_Pictographic}\p{Emoji_Modifier}\u200d\ufe0f]*\s+/u;
+// WhatsApp's bold, italic and strikethrough around the whole line: "*מחצלת*".
+const FORMATTED = /^([*_~])(.+)\1$/;
+
 const clampQuantity = (n: number) => Math.min(Math.max(n, 1), ITEM_QUANTITY_MAX);
 
 /** One line or comma-separated part; undefined when nothing is left of it. */
 export function parseBulkLine(text: string): BulkLine | undefined {
-  const line = text.replace(/\s+/g, ' ').trim().replace(MARKER, '').trim();
-  if (!line) return undefined;
+  const line = text
+    .replace(INVISIBLE, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(MARKER, '')
+    .replace(EMOJI_MARKER, '')
+    .replace(FORMATTED, '$2')
+    .trim();
+  // Nothing left, or a heading over the list: "לקנות:".
+  if (!line || line.endsWith(':')) return undefined;
+  const leadingAmount = LEADING_AMOUNT.exec(line);
+  if (leadingAmount) {
+    return { name: leadingAmount[3]!.trim(), amount: `${leadingAmount[1]} ${leadingAmount[2]}` };
+  }
+  const trailingAmount = TRAILING_AMOUNT.exec(line);
+  if (trailingAmount) {
+    return { name: trailingAmount[1]!.trim(), amount: `${trailingAmount[2]} ${trailingAmount[3]}` };
+  }
   const trailing = TRAILING.exec(line);
   if (trailing) {
     const name = (trailing[1] ?? trailing[3])!.trim();
@@ -69,7 +101,18 @@ export function parseBulkText(text: string): BulkLine[] {
  */
 export function bulkItemFor(line: BulkLine, list: ListKind): BulkItem {
   const known = findCatalogItem(line.name);
-  const { quantity } = line;
+  const { quantity, amount } = line;
+  // An amount is how much of one item: its free text, as the buy list shows `4 ק״ג`.
+  if (amount !== undefined) {
+    return {
+      list: known?.list ?? list,
+      name: known?.name ?? line.name,
+      kind: 'single',
+      quantityNeeded: 1,
+      category: known?.category ?? null,
+      displayQty: amount,
+    };
+  }
   const kind: ItemKind =
     quantity === undefined ? (known?.kind ?? 'single') : quantity >= 2 ? 'qty' : 'single';
   const quantityNeeded =

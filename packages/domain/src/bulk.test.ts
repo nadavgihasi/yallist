@@ -30,6 +30,13 @@ describe('parseBulkText', () => {
     expect(parseBulkText(' \n , ')).toEqual([]);
   });
 
+  it('drops a heading over the list', () => {
+    expect(parseBulkText('רשימה לקמפינג:\nמחצלת\n*לקנות:*\nקרח')).toEqual([
+      { name: 'מחצלת' },
+      { name: 'קרח' },
+    ]);
+  });
+
   it('reads a count written after the name', () => {
     for (const text of [
       'כיסאות ×4',
@@ -62,6 +69,30 @@ describe('parseBulkText', () => {
     expect(parseBulkLine('7up')).toEqual({ name: '7up' });
     expect(parseBulkLine('סוללות AA')).toEqual({ name: 'סוללות AA' });
     expect(parseBulkLine('Box2')).toEqual({ name: 'Box2' });
+  });
+
+  it('reads an amount with a unit as how much, not how many', () => {
+    expect(parseBulkLine('2 ק"ג עגבניות')).toEqual({ name: 'עגבניות', amount: '2 ק"ג' });
+    expect(parseBulkLine('2 ק״ג עגבניות')).toEqual({ name: 'עגבניות', amount: '2 ק״ג' });
+    expect(parseBulkLine('500 גרם גבינה')).toEqual({ name: 'גבינה', amount: '500 גרם' });
+    expect(parseBulkLine('1.5 ליטר חלב')).toEqual({ name: 'חלב', amount: '1.5 ליטר' });
+    expect(parseBulkLine('מים 6 ליטר')).toEqual({ name: 'מים', amount: '6 ליטר' });
+    expect(parseBulkLine('3 קילו עגבניות')).toEqual({ name: 'עגבניות', amount: '3 קילו' });
+    // A word that only starts like a unit is the name.
+    expect(parseBulkLine("2 ג'ינס")).toEqual({ name: "ג'ינס", quantity: 2 });
+  });
+
+  it('cleans up a WhatsApp paste: direction marks, emoji bullets, bold', () => {
+    expect(parseBulkText('‏4 כיסאות‎\n‫קרח‬\n✅ מחצלת\n▫️ פחמים\n*מצית*')).toEqual([
+      { name: 'כיסאות', quantity: 4 },
+      { name: 'קרח' },
+      { name: 'מחצלת' },
+      { name: 'פחמים' },
+      { name: 'מצית' },
+    ]);
+    // An emoji that is the name, or part of it, stays.
+    expect(parseBulkLine('🍉')).toEqual({ name: '🍉' });
+    expect(parseBulkLine('פחמים 🔥')).toEqual({ name: 'פחמים 🔥' });
   });
 
   it('keeps counts between 1 and 999', () => {
@@ -99,6 +130,16 @@ describe('bulkItemFor', () => {
     expect(bulkItemFor({ name: 'שק שינה', quantity: 1 }, 'bring')).toMatchObject({
       kind: 'single',
       quantityNeeded: 1,
+    });
+  });
+
+  it('keeps an amount as the item’s free-text quantity', () => {
+    expect(bulkItemFor({ name: 'עגבניות', amount: '2 ק"ג' }, 'bring')).toMatchObject({
+      list: 'buy',
+      name: 'עגבניות',
+      kind: 'single',
+      quantityNeeded: 1,
+      displayQty: '2 ק"ג',
     });
   });
 

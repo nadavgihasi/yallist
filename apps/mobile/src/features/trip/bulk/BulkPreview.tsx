@@ -31,6 +31,7 @@ export function BulkPreview({ entries, list }: { entries: readonly BulkEntry[]; 
             item.kind === 'qty'
               ? he.bulk.qty(item.quantityNeeded)
               : item.kind === 'each' && he.bulk.each,
+            item.displayQty,
             item.category,
             item.list !== list && he.bulk.toList[item.list],
           ].filter(Boolean);
