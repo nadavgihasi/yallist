@@ -1,4 +1,5 @@
 import {
+  buyAmountText,
   heldCatalogNames,
   type CatalogItem,
   type Item,
@@ -32,6 +33,8 @@ import {
   typedCatalogItem,
   type Draft,
 } from './addItem';
+import { buyItemFields, catalogBuyAmount, initialBuyAmount } from './buyAmount';
+import { BuyAmountField } from './BuyAmountField';
 
 const KINDS: ItemKind[] = ['single', 'qty', 'each'];
 
@@ -75,6 +78,8 @@ export function ItemForm({
   const [chosen, setChosen] = useState(false);
   // Added though the list has it: the duplicate warning was answered.
   const [anyway, setAnyway] = useState(false);
+  // The buy list counts by amount and unit (`2 ק״ג`) instead of the bring list's kinds.
+  const [buyAmount, setBuyAmount] = useState(() => initialBuyAmount(item));
 
   if (!data) return null;
 
@@ -95,10 +100,24 @@ export function ItemForm({
   const trimmed = name.trim();
   // Only suggest what this list doesn't have yet.
   const taken = heldCatalogNames(data.items.filter((i) => i.list === list).map((i) => i.name));
+  // A typed catalog name's default count fills an amount not typed yet, as its suggestion would.
+  const amount = (match && !buyAmount.amount.trim() && catalogBuyAmount(match)) || buyAmount;
+  const displayQty = buyAmountText(amount);
   const valid =
-    !!trimmed && trimmed.length <= ITEM_NAME_MAX && (picked !== NEW || !!shown.newName.trim());
+    !!trimmed &&
+    trimmed.length <= ITEM_NAME_MAX &&
+    (picked !== NEW || !!shown.newName.trim()) &&
+    (list !== 'buy' || displayQty !== undefined);
 
-  const save = toSave(shown, data.categories);
+  const draftSave = toSave(shown, data.categories);
+  const claimed = !!item && data.claims.some((c) => c.itemId === item.id);
+  const save = {
+    ...draftSave,
+    item: {
+      ...draftSave.item,
+      ...(list === 'buy' ? buyItemFields(item, claimed, displayQty ?? null) : { displayQty: null }),
+    },
+  };
   // A new item the list already has (by any of its names) warns before it goes in twice. Not while
   // saving: the item shows on the list at once, and would warn about itself.
   const duplicate =
@@ -113,6 +132,8 @@ export function ItemForm({
     setQty(next.qty);
     setCategory(next.category);
     setNewName(next.newName);
+    const counted = catalogBuyAmount(entry);
+    if (counted) setBuyAmount(counted);
   };
   // A choice by hand keeps what a typed catalog name filled in, then changes it.
   const choose =
@@ -141,7 +162,7 @@ export function ItemForm({
   };
 
   const claimLabel =
-    shown.kind === 'each'
+    shown.kind === 'each' && list === 'bring'
       ? he.addItem.claimEach
       : list === 'bring'
         ? he.addItem.claimBring
@@ -245,56 +266,60 @@ export function ItemForm({
         {!item && <CatalogPicker query={name} list={list} exclude={taken} onPick={pick} />}
       </View>
 
-      <View style={styles.field}>
-        <Text style={fieldStyles.label}>{he.addItem.howMany}</Text>
-        <View
-          style={styles.kinds}
-          accessibilityRole="radiogroup"
-          accessibilityLabel={he.addItem.howMany}
-        >
-          {KINDS.map((k) => {
-            const selected = k === shown.kind;
-            const [label, hint] = he.addItem.kinds[k];
-            return (
-              <Pressable
-                key={k}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                onPress={() => choose(setKind)(k)}
-                style={[styles.kind, selected && styles.kindOn]}
-              >
-                <Text style={styles.kindLabel}>{label}</Text>
-                <Text style={styles.kindHint}>{hint}</Text>
-              </Pressable>
-            );
-          })}
-        </View>
-        {shown.kind === 'qty' && (
-          <View style={styles.qtyRow}>
-            <Text style={styles.qtyLabel}>{he.addItem.total}</Text>
-            <View style={styles.qtyControls}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={he.addItem.more}
-                onPress={() => choose(setQty)(shown.qty + 1)}
-                style={styles.qtyButton}
-              >
-                <Icon name="plus" size={20} />
-              </Pressable>
-              <Text style={styles.qtyValue}>{shown.qty}</Text>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={he.addItem.less}
-                disabled={shown.qty <= 2}
-                onPress={() => choose(setQty)(shown.qty - 1)}
-                style={[styles.qtyButton, shown.qty <= 2 && { opacity: 0.35 }]}
-              >
-                <Icon name="minus" size={20} />
-              </Pressable>
-            </View>
+      {list === 'buy' ? (
+        <BuyAmountField value={amount} onChange={setBuyAmount} onSubmitEditing={() => submit()} />
+      ) : (
+        <View style={styles.field}>
+          <Text style={fieldStyles.label}>{he.addItem.howMany}</Text>
+          <View
+            style={styles.kinds}
+            accessibilityRole="radiogroup"
+            accessibilityLabel={he.addItem.howMany}
+          >
+            {KINDS.map((k) => {
+              const selected = k === shown.kind;
+              const [label, hint] = he.addItem.kinds[k];
+              return (
+                <Pressable
+                  key={k}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => choose(setKind)(k)}
+                  style={[styles.kind, selected && styles.kindOn]}
+                >
+                  <Text style={styles.kindLabel}>{label}</Text>
+                  <Text style={styles.kindHint}>{hint}</Text>
+                </Pressable>
+              );
+            })}
           </View>
-        )}
-      </View>
+          {shown.kind === 'qty' && (
+            <View style={styles.qtyRow}>
+              <Text style={styles.qtyLabel}>{he.addItem.total}</Text>
+              <View style={styles.qtyControls}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={he.addItem.more}
+                  onPress={() => choose(setQty)(shown.qty + 1)}
+                  style={styles.qtyButton}
+                >
+                  <Icon name="plus" size={20} />
+                </Pressable>
+                <Text style={styles.qtyValue}>{shown.qty}</Text>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={he.addItem.less}
+                  disabled={shown.qty <= 2}
+                  onPress={() => choose(setQty)(shown.qty - 1)}
+                  style={[styles.qtyButton, shown.qty <= 2 && { opacity: 0.35 }]}
+                >
+                  <Icon name="minus" size={20} />
+                </Pressable>
+              </View>
+            </View>
+          )}
+        </View>
+      )}
 
       <View style={styles.field}>
         <Text style={fieldStyles.label}>{he.addItem.category}</Text>
