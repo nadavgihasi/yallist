@@ -1,7 +1,7 @@
 import type { Item } from '@yallist/domain';
 import { describe, expect, it } from 'vitest';
 
-import { applyAction } from './reducer';
+import { applyAction, repricedPurchase } from './reducer';
 import type { TripData, TripMember } from './types';
 
 const member = (userId: string, role: TripMember['role'] = 'member'): TripMember => ({
@@ -152,6 +152,25 @@ describe('deleteItem', () => {
     expect(next.items.map((i) => i.id)).toEqual(['chairs']);
     expect(next.claims).toEqual([]);
     expect(next.expenses).toEqual([expect.objectContaining({ id: 'e1', itemIds: [] })]);
+  });
+
+  it("keeps a shopping run's item count, so the item left isn't priced at the run's total", () => {
+    const t = trip({
+      expenses: [
+        {
+          id: 'run',
+          itemIds: ['meat', 'chairs'],
+          description: 'קניות · 2 פריטים',
+          amountAgorot: 41290,
+          paidBy: 'me',
+          shares: ['me'],
+        },
+      ],
+    });
+    const next = applyAction(t, { type: 'deleteItem', itemId: 'chairs' }, 'me');
+    expect(next.expenses).toEqual([
+      expect.objectContaining({ itemIds: ['meat'], itemCount: 2, amountAgorot: 41290 }),
+    ]);
   });
 });
 
@@ -357,5 +376,26 @@ describe('shopping runs', () => {
     const cancelled = applyAction(t, { type: 'cancelRun', runId: 'r1' }, 'me');
     expect(cancelled.claims.map((c) => c.itemId)).toEqual(['chairs']);
     expect(cancelled.runs).toEqual([]);
+  });
+});
+
+describe('repricedPurchase', () => {
+  it("stays the item's purchase, so a new price doesn't unmark it as bought", () => {
+    const bamba = {
+      id: 'e1',
+      itemIds: ['bamba'],
+      itemCount: 1,
+      description: 'במבה',
+      amountAgorot: 1550,
+      paidBy: 'me',
+      shares: ['me', 'noa'],
+    };
+    expect(repricedPurchase(bamba, 'bamba')).toEqual({
+      description: 'במבה',
+      amountAgorot: 1550,
+      paidBy: 'me',
+      shares: ['me', 'noa'],
+      itemId: 'bamba',
+    });
   });
 });

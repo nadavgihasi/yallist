@@ -1,8 +1,10 @@
 import {
   claimCap,
+  purchasedCount,
   withQuantity,
   type Claim,
   type CoverId,
+  type Expense,
   type ItemKind,
   type LatLng,
   type ListKind,
@@ -25,6 +27,15 @@ export interface NewExpenseInput {
   paidBy: string;
   shares: string[];
   itemId?: string;
+}
+
+/**
+ * The purchase that replaces an item's own `expense` once its price or split is changed: still
+ * that item's, so it stays bought. Expenses aren't edited in place.
+ */
+export function repricedPurchase(expense: Expense, itemId: string): NewExpenseInput {
+  const { description, amountAgorot, paidBy, shares } = expense;
+  return { description, amountAgorot, paidBy, shares, itemId };
 }
 
 /** A change to a trip, sent to the API by `useTripAction`. */
@@ -111,6 +122,8 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
         expenses: data.expenses.map((e) => ({
           ...e,
           itemIds: e.itemIds?.filter((id) => id !== action.itemId),
+          // A run stays a run: its total is never the one item left's price.
+          itemCount: purchasedCount(e),
         })),
       };
     case 'editItem': {

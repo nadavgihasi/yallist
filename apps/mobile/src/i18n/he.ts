@@ -291,6 +291,8 @@ export const he = {
     tip: 'מצלמים את הקבלה כשמוסיפים הוצאה, וכולם בטיול יכולים לראות אותה.',
     total: (amount: string) => `סה״כ ${amount}`,
     sharedBy: (n: number) => `${n} מתחלקים`,
+    /** An equal split that doesn't divide to the agora: some pay an agora more. */
+    oneOf: (smaller: string, larger: string) => `${smaller} או ${larger}`,
   },
   item: {
     inBring: 'ברשימת ההבאה',

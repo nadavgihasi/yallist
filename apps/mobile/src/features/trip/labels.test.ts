@@ -1,4 +1,4 @@
-import { splitEqually, type Expense, type Item } from '@yallist/domain';
+import { formatShekel, splitEqually, type Expense, type Item } from '@yallist/domain';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { TripData } from '@/state/types';
@@ -10,12 +10,18 @@ import { perPersonText, statusLine } from './labels';
 vi.mock('@/theme', () => ({ colors: {} }));
 
 describe('perPersonText', () => {
-  it('shows the checkout share with two decimals, the same in every place', () => {
-    // ₪412.90 between 3: 137.64 + 137.63 + 137.63. The largest share, never ₪137.6.
-    expect(perPersonText(41290, 3)).toBe('₪137.64');
+  it("shows both shares when they differ by an agora: each one somebody's real share", () => {
+    // ₪412.90 between 3: 137.64 + 137.63 + 137.63, the split the money tab's "החלק שלך" uses.
+    const text = perPersonText(41290, 3);
+    expect(text).toBe('₪137.63 או ₪137.64');
     const shares = [...splitEqually(41290, ['a', 'b', 'c']).values()];
     expect(shares.reduce((a, b) => a + b, 0)).toBe(41290);
-    expect(Math.max(...shares)).toBe(13764);
+    for (const share of shares) expect(text).toContain(formatShekel(share));
+  });
+
+  it('shows one amount when everyone pays the same', () => {
+    expect(perPersonText(9000, 3)).toBe('₪30.00');
+    expect(perPersonText(41290, 1)).toBe('₪412.90');
   });
 
   it('has nothing to show without an amount or anyone to split with', () => {
@@ -67,6 +73,12 @@ describe('statusLine for a bought item', () => {
       tone: 'success',
     });
     expect(line(run('me')).detail).toBe('בקנייה שלך: 8 פריטים, ₪412.90');
+  });
+
+  it("still says so once the run's other items are deleted", () => {
+    const left: Expense = { ...run('ron'), itemIds: ['i0'], itemCount: 8 };
+    expect(line(left).detail).toBe('בקנייה של רון: 8 פריטים, ₪412.90');
+    expect(line({ ...left, paidBy: 'me' }).detail).toBe('בקנייה שלך: 8 פריטים, ₪412.90');
   });
 
   it('shows the price of an item bought on its own', () => {

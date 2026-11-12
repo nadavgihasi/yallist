@@ -109,13 +109,7 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
         <ListGroup title={he.money.transfers}>
           {view.transfers.map((t) => (
             <View key={`${t.from}-${t.to}`} style={styles.transfer}>
-              <View style={styles.transferWho}>
-                <Avatar person={view.avatarOf(t.from)} ring={false} />
-                <Text style={styles.transferName}>{view.nameOf(t.from)}</Text>
-                <Icon name="arrowEnd" size={18} color={colors.inkFaint} />
-                <Avatar person={view.avatarOf(t.to)} ring={false} />
-                <Text style={styles.transferName}>{view.nameOf(t.to)}</Text>
-              </View>
+              <FromTo view={view} from={t.from} to={t.to} />
               <Text style={[styles.amount, t.from === me && { color: colors.brandStrong }]}>
                 {formatShekel(t.amountAgorot)}
               </Text>
@@ -144,28 +138,28 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
         <ListGroup title={he.money.payments}>
           {data.payments.map((p) => {
             const waiting = p.status === 'marked';
+            // The receiver's button goes under the row: beside it, it left the names no room
+            // and the amount ran over the avatars.
             return (
-              <View key={p.id} style={styles.transfer}>
-                <View style={styles.transferWho}>
-                  <Avatar person={view.avatarOf(p.fromUser)} ring={false} />
-                  <Text style={styles.transferName}>{view.nameOf(p.fromUser)}</Text>
-                  <Icon name="arrowEnd" size={18} color={colors.inkFaint} />
-                  <Avatar person={view.avatarOf(p.toUser)} ring={false} />
-                  <Text style={styles.transferName}>{view.nameOf(p.toUser)}</Text>
-                </View>
-                <View style={styles.paymentEnd}>
-                  <Text style={styles.amount}>{formatShekel(p.amountAgorot)}</Text>
-                  <Text style={styles.expenseWho}>
-                    {waiting ? he.money.paymentWaiting : he.money.paymentConfirmed}
-                  </Text>
+              <View key={p.id} style={styles.payment}>
+                <View style={styles.transfer}>
+                  <FromTo view={view} from={p.fromUser} to={p.toUser} />
+                  <View style={styles.paymentEnd}>
+                    <Text style={styles.amount}>{formatShekel(p.amountAgorot)}</Text>
+                    <Text style={styles.expenseWho}>
+                      {waiting ? he.money.paymentWaiting : he.money.paymentConfirmed}
+                    </Text>
+                  </View>
                 </View>
                 {waiting && p.toUser === me && (
-                  <PillButton
-                    label={he.money.confirmReceived}
-                    size="sm"
-                    disabled={saving}
-                    onPress={() => act({ type: 'confirmPayment', paymentId: p.id })}
-                  />
+                  <View style={styles.paymentEnd}>
+                    <PillButton
+                      label={he.money.confirmReceived}
+                      size="sm"
+                      disabled={saving}
+                      onPress={() => act({ type: 'confirmPayment', paymentId: p.id })}
+                    />
+                  </View>
                 )}
               </View>
             );
@@ -246,6 +240,30 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
   );
 }
 
+/**
+ * "who → whom": each side gets half the row and a long name ends in "…", so the row stays one
+ * line and a short name is never squeezed by a long one.
+ */
+function FromTo({ view, from, to }: { view: TripView; from: string; to: string }) {
+  return (
+    <View style={styles.transferWho}>
+      <View style={styles.transferPerson}>
+        <Avatar person={view.avatarOf(from)} ring={false} />
+        <Text style={styles.transferName} numberOfLines={1}>
+          {view.nameOf(from)}
+        </Text>
+      </View>
+      <Icon name="arrowEnd" size={18} color={colors.inkFaint} />
+      <View style={styles.transferPerson}>
+        <Avatar person={view.avatarOf(to)} ring={false} />
+        <Text style={styles.transferName} numberOfLines={1}>
+          {view.nameOf(to)}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
 /** Opens the expense's receipt, or adds one; shows an upload in flight or failed. */
 function ReceiptButton({
   tripId,
@@ -311,9 +329,11 @@ const styles = StyleSheet.create({
   heroButton: { marginTop: space[3] },
   heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },
   paymentEnd: { alignItems: 'flex-end' },
+  payment: { gap: space[1] },
   transfer: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: space.touch },
   transferWho: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  transferName: { ...type.itemTitle, color: colors.ink },
+  transferPerson: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
+  transferName: { ...type.itemTitle, color: colors.ink, flexShrink: 1 },
   amount: { ...type.itemTitle, color: colors.ink },
   expense: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
   expenseBody: { flex: 1, gap: space[1] },

@@ -63,10 +63,13 @@ export function toExpense(
   row: typeof expenses.$inferSelect,
   shares: string[],
   itemIds: string[],
+  /** Deleted items included: a run whose items were deleted is still a run. */
+  itemCount = itemIds.length,
 ): Expense {
   return {
     id: row.id,
     itemIds,
+    itemCount,
     description: row.description,
     amountAgorot: row.amountAgorot,
     paidBy: row.paidBy,

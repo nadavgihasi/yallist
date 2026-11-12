@@ -1,4 +1,11 @@
-import { claimCap, linkedExpense, parseShekel, type Expense } from '@yallist/domain';
+import {
+  claimCap,
+  linkedExpense,
+  parseShekel,
+  purchasedCount,
+  shekelInput,
+  type Expense,
+} from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -17,6 +24,7 @@ import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
+import { repricedPurchase } from '@/state/reducer';
 import { useMe } from '@/state/store';
 import { useTripAction, useTripQuery } from '@/state/trips';
 import type { TripData } from '@/state/types';
@@ -88,7 +96,7 @@ function ItemSheetBody({
   const line = statusLine(item, status, data.claims, view, me);
   const mine = view.myQuantity(item.id);
 
-  const [price, setPrice] = useState(expense ? String(expense.amountAgorot / 100) : '');
+  const [price, setPrice] = useState(expense ? shekelInput(expense.amountAgorot) : '');
   const [shares, setShares] = useShares(view, expense?.shares);
   const [note, setNote] = useState(item.note ?? '');
 
@@ -97,8 +105,8 @@ function ItemSheetBody({
   const amount = parseShekel(price);
   const bought = status.kind === 'bought';
   // A shopping run's purchase covers several items: it's changed from the money tab, never
-  // replaced by this item's price.
-  const shared = (expense?.itemIds?.length ?? 0) > 1;
+  // replaced by this item's price, even once its other items are deleted.
+  const shared = !!expense && purchasedCount(expense) > 1;
   // `each` items are everyone's own purchase, so they aren't priced as one shared expense.
   const canPrice = isBuy && item.kind !== 'each' && (mine > 0 || !!expense) && !shared;
   const expenseEdit =
@@ -124,10 +132,9 @@ function ItemSheetBody({
       if (latest !== undefined && latest !== original)
         act({ type: 'setNote', itemId: item.id, note: latest });
       if (edited) {
-        // Expenses aren't edited in place: the new one replaces the old.
-        const { id, ...expense } = edited;
-        act({ type: 'deleteExpense', expenseId: id });
-        act({ type: 'addExpense', expense });
+        // Expenses aren't edited in place: the new one, still this item's, replaces the old.
+        act({ type: 'deleteExpense', expenseId: edited.id });
+        act({ type: 'addExpense', expense: repricedPurchase(edited, item.id) });
       }
     };
     // Only on unmount: compare against the note as it was when the sheet opened.

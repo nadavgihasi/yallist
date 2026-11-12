@@ -92,12 +92,36 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
       {
         id: expect.any(String),
         itemIds: [],
+        itemCount: 1,
         description: 'קרח',
         amountAgorot: 1000,
         paidBy: me,
         shares: [me],
         hasReceipt: false,
       },
+    ]);
+  });
+
+  it("still counts a shopping run's deleted items, so the one left isn't priced at its total", async () => {
+    const { id: me } = await signInAsGuest(testApp(db), 'me');
+    const tripId = await trip(me, 'd');
+    const [hummus, pitas, coal] = [
+      await buy(tripId, me, 'חומוס'),
+      await buy(tripId, me, 'פיתות'),
+      await buy(tripId, me, 'פחמים'),
+    ];
+    await insertExpense(
+      db,
+      { tripId, description: 'קניות · 3 פריטים', amountAgorot: 41290, paidBy: me, createdBy: me },
+      [me],
+      [hummus.id, pitas.id, coal.id],
+    );
+    await deleteItem(db, pitas.id);
+    await deleteItem(db, coal.id);
+
+    const [data] = await loadTrips(db, [tripId]);
+    expect(data!.expenses).toEqual([
+      expect.objectContaining({ itemIds: [hummus.id], itemCount: 3, amountAgorot: 41290 }),
     ]);
   });
 });
