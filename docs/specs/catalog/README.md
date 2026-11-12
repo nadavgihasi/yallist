@@ -1,6 +1,6 @@
 # Items catalog
 
-A built-in catalog of about 3,200 common items in Hebrew (`packages/domain/src/catalog.ts`, data in
+A built-in catalog of about 2,800 common items in Hebrew (`packages/domain/src/catalog.ts`, data in
 `catalog-data/buy.ts` and `bring.ts`), in 45 categories: what to bring (cooking, sleeping, clothes,
 tools, tech, beach, winter, bikes and cars, fishing, kids, pets, party, documents…) and what to buy
 (meat, fish, produce, dairy, cheese, bread, pantry, spices, snacks, drinks, alcohol, cleaning…).
@@ -10,10 +10,13 @@ Each item has a category, an emoji icon, how it's usually counted and its synony
   name, a later word, a synonym, a singular for a plural. Before anything is typed, the categories
   open their items, 24 at a time. Picking an item fills its list, count (`single` / `qty` / `each`)
   and category: the trip's own category of that name, or a new one.
-- **Kept small.** Different things are separate items (banana, mango and pineapple), but kinds
-  of one thing are few: an item has at most 2 entries that extend its name in its category
-  (`מגבת`, `מגבת חוף`, `מגבת רחצה`), which a test checks. Other spellings of an item are
-  synonyms, not entries (`נעלי טיולים` finds `נעלי הליכה`), and there are no brand names.
+- **Kept small.** Different things are separate items (banana, mango and pineapple), but there
+  are at most 3 of a kind across the catalog (`חולצה`, `חולצת טריקו`, `חולצת פולו`), which a
+  test checks. The kind is the item's first word in any of its forms (`חולצה`, `חולצת`,
+  `חולצות`), or its first two words after a word like `ערכת` or `קרם` (a sewing kit is not a
+  first-aid kit). A short reviewed list keeps things apart that only start alike (`תפוחי אדמה`
+  is not an apple). Other spellings of an item are synonyms, not entries (`נעלי טיולים` finds
+  `נעלי הליכה`), and there are no brand names.
 - **One item per name.** A synonym is another name for the same thing (`גריל` for `מנגל`,
   `אוהל` for `אוהלים`), never a related item: `מנגו` does not find `אננס`. A name or synonym belongs
   to one item (tested; a clash drops the later one).

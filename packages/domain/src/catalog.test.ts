@@ -14,6 +14,107 @@ import {
 } from './catalog';
 import { TEMPLATES } from './templates';
 
+/** Words whose next word names the product: a sewing kit is not a first-aid kit. */
+const TWO_WORDS = new Set(
+  [
+    'ערכת',
+    'ערכה',
+    'תיק',
+    'שקית',
+    'שקיות',
+    'קופסת',
+    'קופסאות',
+    'כלי',
+    'מתקן',
+    'מעמד',
+    'נוזל',
+    'חומר',
+    'אבקת',
+    'מיכל',
+    'מכל',
+    'סט',
+    'כיסוי',
+    'מארז',
+    'צנצנת',
+    'מכונת',
+    'מכשיר',
+    'מד',
+    'ציוד',
+    'כרטיס',
+    'כרטיסי',
+    'מברשת',
+    'מחזיק',
+    'רשת',
+    'משאבת',
+    'משאבה',
+    'תבנית',
+    'מסיר',
+    'ספריי',
+    'ג׳ל',
+    'משחת',
+    'טיפות',
+    'כדורי',
+    'קרם',
+    'שמן',
+    'סבון',
+    'משחה',
+    'נייר',
+    'גבינת',
+  ].map(normalizeName),
+);
+/** Different things that only start like another kind's word: potatoes are not apples. */
+const OWN = new Set(
+  [
+    'תפוחי אדמה',
+    'פלפל שחור',
+    'גרעיני חמניות',
+    'חמאת בוטנים',
+    'סירופ מייפל',
+    'סירופ שיעול',
+    'מקלות הליכה',
+    'פותחן בקבוקים',
+    'מפתח ברגים',
+    'מפתח אלן',
+    'כבל טעינה',
+    'מסכת פנים',
+    'חבל כביסה',
+    'קוביות קרח',
+    'כרית חימום',
+    'מזרן ציפה',
+    'שואב אבק',
+    'תנור חימום',
+    'גלגל רזרבי',
+    'מנעול למזוודה',
+    'מזון תינוקות',
+    'חטיפי כלבים',
+    'בקבוק האכלה',
+    'מגבת תינוק',
+  ].map(normalizeName),
+);
+const plainNames = new Set(
+  CATALOG.map((i) => normalizeName(i.name)).filter((n) => !n.includes(' ')),
+);
+/** Another form of a word that is itself an item: חולצת, חולצות → חולצה; מזלג → מזלגות. */
+function base(w: string): string {
+  const forms = [w];
+  const cut = (n: number) => (w.length - n >= 3 ? w.slice(0, -n) : undefined);
+  const s1 = cut(1);
+  const s2 = cut(2);
+  if (w.endsWith('ת') && s1) forms.push(s1 + 'ה');
+  if (w.endsWith('ות') && s2) forms.push(s2 + 'ה', s2 + 'ת', s2);
+  if (w.endsWith('ימ') && s2) forms.push(s2, s2 + 'ה');
+  if (w.endsWith('י') && s1) forms.push(s1 + 'ימ', s1 + 'ות', s1, s1 + 'ה');
+  if (w.length >= 3) forms.push(w + 'ות', w + 'ימ');
+  return forms.find((f) => plainNames.has(f)) ?? w;
+}
+/** The kind of thing an item is, by its first word (or two). */
+function family(name: string): string {
+  const normal = normalizeName(name);
+  if (OWN.has(normal)) return normal;
+  const [first, second] = normal.split(' ');
+  return TWO_WORDS.has(first!) && second ? `${first} ${base(second)}` : base(first!);
+}
+
 describe('CATALOG', () => {
   it('has a unique name, an icon and a known category for every item', () => {
     const names = new Set<string>();
@@ -47,6 +148,18 @@ describe('CATALOG', () => {
       ).map((other) => other.name);
       expect(variants.length, `${item.name}: ${variants.join(', ')}`).toBeLessThanOrEqual(2);
     }
+  });
+
+  it('has at most 3 of a kind across the catalog: חולצה, חולצת טריקו, חולצת פולו', () => {
+    const must = new Set(Object.values(TEMPLATES).flatMap((items) => items.map((i) => i.name)));
+    const families = new Map<string, string[]>();
+    for (const item of CATALOG) {
+      if (must.has(item.name)) continue;
+      const key = family(item.name);
+      families.set(key, [...(families.get(key) ?? []), item.name]);
+    }
+    for (const [key, names] of families)
+      expect(names.length, `${key}: ${names.join(', ')}`).toBeLessThanOrEqual(3);
   });
 
   it('fits the quantity rules of an item', () => {
