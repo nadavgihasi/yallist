@@ -45,6 +45,8 @@ export interface Claim {
   arrived?: boolean;
   /** The shopping run that claimed it. */
   runId?: string;
+  /** The member who assigned it to the claimer; absent when they took it themselves. */
+  assignedBy?: string;
   /** Checked off in the store, while its run is active. */
   inCart?: boolean;
   /** In the claimer's bag; the whole claim, not each unit. */

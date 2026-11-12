@@ -1,4 +1,4 @@
-import { and, count, eq } from 'drizzle-orm';
+import { and, count, eq, inArray } from 'drizzle-orm';
 
 import { fail } from '../access';
 import { tripMembers } from '../db/schema';
@@ -37,6 +37,18 @@ export async function requireMember(
   if (organizer && member.role !== 'organizer') throw fail(403, 'Organizers only');
   return member;
 }
+
+/**
+ * The users' memberships of the trip in any status, locked in one query in user id order, so two
+ * writes locking the same two members (say, each assigning an item to the other) can't deadlock.
+ */
+export const lockMembers = (tx: Tx, tripId: string, userIds: string[]) =>
+  tx
+    .select()
+    .from(tripMembers)
+    .where(and(eq(tripMembers.tripId, tripId), inArray(tripMembers.userId, userIds)))
+    .orderBy(tripMembers.userId)
+    .for('update');
 
 /** Another member of the trip, in any status, locked. */
 export async function lockMember(tx: Tx, tripId: string, userId: string) {

@@ -197,6 +197,7 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
         runId: claim.runId ?? undefined,
         inCart: claim.inCartAt ? true : undefined,
         packed: claim.packedAt !== null,
+        assignedBy: claim.assignedBy ?? undefined,
       }));
     const activeIds = memberRows
       .filter((m) => m.tripId === trip.id && m.status === 'active')

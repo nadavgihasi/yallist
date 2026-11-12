@@ -10,7 +10,7 @@ import { lockCategory } from '../dal/categories';
 import { lockClaims, setClaim, setPacked } from '../dal/claims';
 import { findPurchase } from '../dal/expenses';
 import { appendItem, deleteItem, endOfList, lockItem, updateItem } from '../dal/items';
-import { requireMember } from '../dal/members';
+import { lockMembers, requireMember } from '../dal/members';
 import type { Db } from '../db/client';
 import { KINDS, LISTS } from '../db/schema';
 import { transact, type Tx } from '../db/tx';
@@ -62,6 +62,18 @@ async function categoryFor(tx: Tx, tripId: string, categoryId: string | null | u
   return categoryId ? lockCategory(tx, tripId, categoryId) : undefined;
 }
 const CATEGORY_RULE = 'The category is on the other list';
+
+/**
+ * The caller assigning an item, and who it's assigned to: both active members of the trip, both
+ * locked (in one order), so removing either meanwhile conflicts with the assignment instead of
+ * racing it.
+ */
+async function requireAssigner(tx: Tx, tripId: string, me: string, userId: string) {
+  const members = await lockMembers(tx, tripId, [me, userId]);
+  const active = (id: string) => members.some((m) => m.userId === id && m.status === 'active');
+  if (!active(me)) throw fail(404, 'Trip not found');
+  if (!active(userId)) throw fail(404, 'Member not found');
+}
 
 const tripParam = z.object({ tripId: z.uuid() });
 const itemParam = z.object({ tripId: z.uuid(), itemId: z.uuid() });
@@ -155,26 +167,59 @@ export const itemRoutes = (auth: Auth, db: Db) =>
       return c.body(null, 204);
     })
 
-    // Sets my claim on an item; 0 drops it. Never past what's still needed (SPEC §4).
+    // Sets a member's claim on an item; 0 drops it. Never past what's still needed (SPEC §4).
+    // Mine by default. With `userId`, any active member assigns it to another one, who then has
+    // it as if they took it. `from`: the member it moves from (reassigning), whose claim is
+    // dropped first, in the same transaction, if they still have one.
     .put(
       '/:tripId/items/:itemId/claim',
       validate('param', itemParam),
-      validate('json', z.object({ quantity: z.int().min(0).max(999) })),
+      validate(
+        'json',
+        z.object({
+          quantity: z.int().min(0).max(999),
+          userId: z.uuid().optional(),
+          from: z.uuid().optional(),
+        }),
+      ),
       async (c) => {
         const { tripId, itemId } = c.req.valid('param');
-        const { quantity } = c.req.valid('json');
         const me = c.var.user.id;
+        const { quantity, userId = me, from } = c.req.valid('json');
+        const assigning = userId !== me;
         await transact(db, async (tx) => {
-          await requireMember(tx, tripId, me, { lock: true });
+          if (assigning) await requireAssigner(tx, tripId, me, userId);
+          else await requireMember(tx, tripId, me, { lock: true });
           const item = await lockItem(tx, tripId, itemId);
-          const current = await lockClaims(tx, itemId);
-          const cap = claimCap(toItem(item), current, me);
+          // Everyone brings their own: only they can say they have it.
+          if (assigning && item.kind === 'each') throw fail(400, 'Everyone brings their own');
+          let current = await lockClaims(tx, itemId);
+          const had = current.find((cl) => cl.userId === userId);
+          const moved = from === userId ? undefined : current.find((cl) => cl.userId === from);
+          // A claim in someone's shopping run is changed from the run, by its shopper.
+          const othersClaims = [
+            assigning ? had : undefined,
+            moved?.userId === me ? undefined : moved,
+          ];
+          if (othersClaims.some((cl) => cl?.runId)) throw fail(409, 'In a shopping run');
+          // A bought item is done: who got it is no one else's to change.
+          const forOthers = assigning || (moved !== undefined && moved.userId !== me);
+          if (forOthers && (await findPurchase(tx, itemId))) throw fail(409, 'Already bought');
+          if (moved) {
+            await setClaim(tx, itemId, moved.userId, 0, moved);
+            current = current.filter((cl) => cl !== moved);
+          }
+          const cap = claimCap(toItem(item), current, userId);
           if (quantity > cap) throw fail(409, `At most ${cap} can be claimed`);
-          const had = current.find((cl) => cl.userId === me);
-          await setClaim(tx, itemId, me, quantity, had);
-          await logActivity(tx, tripId, me, 'claim_set', { itemId, quantity });
+          await setClaim(tx, itemId, userId, quantity, had, assigning ? me : undefined);
+          await logActivity(tx, tripId, me, 'claim_set', {
+            itemId,
+            quantity,
+            ...(assigning && { userId }),
+            ...(moved && { from: moved.userId }),
+          });
         });
-        return c.json({ itemId, userId: me, quantity });
+        return c.json({ itemId, userId, quantity });
       },
     )
 
