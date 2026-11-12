@@ -301,6 +301,24 @@ describe.skipIf(!DATABASE_URL)('shopping runs', () => {
     expect((await send([part(600, [b.id]), part(399)])).status).toBe(201);
   });
 
+  it('saves a run with parts once when it is sent twice', async () => {
+    const { a, b, c, tripId, buy } = await trip();
+    const { run } = await startOk(a, tripId, [buy[0]!]);
+    await cart(a, tripId, buy[0]!);
+    const json = {
+      amountAgorot: 41290,
+      shares: [a.id, b.id, c.id],
+      parts: [{ label: 'אלכוהול', amountAgorot: 12000, shares: [b.id, c.id] }],
+    };
+    const statuses = await Promise.all([
+      finish(a, tripId, run!.id, json),
+      finish(a, tripId, run!.id, json),
+    ]).then((all) => all.map((r) => r.status).sort());
+    expect(statuses).toEqual([201, 409]);
+    expect(await partRows(tripId)).toHaveLength(2);
+    expect((await detail(a, tripId)).expenses).toHaveLength(1);
+  });
+
   it('keeps a former member’s part in the balances', async () => {
     const { a, b, c, tripId, buy } = await trip();
     const { run } = await startOk(a, tripId, [buy[0]!]);
