@@ -78,10 +78,19 @@ export interface Expense {
   description: string;
   amountAgorot: number;
   paidBy: string;
-  /** Participants the expense is split between. */
+  /** Participants the expense is split between: what its parts leave, if it has parts. */
   shares: string[];
+  /** Amounts split between other people than the rest, such as a run's alcohol. */
+  parts?: ExpensePart[];
   /** A receipt photo is attached (fetched separately, as a short-lived link). */
   hasReceipt?: boolean;
+}
+
+/** A part of an expense with its own participants; see `owedShares`. */
+export interface ExpensePart {
+  label: string;
+  amountAgorot: number;
+  shares: string[];
 }
 
 export interface Payment {

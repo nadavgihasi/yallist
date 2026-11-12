@@ -19,6 +19,7 @@ import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
+import { sharedText } from './runSplit';
 
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
   const act = useTripAction(data.trip.id);
@@ -197,10 +198,11 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
                 <Text style={styles.expenseWhat} numberOfLines={1}>
                   {e.description}
                 </Text>
-                <Text style={styles.expenseWho} numberOfLines={1}>
-                  {view.nameOf(e.paidBy)}
-                  {e.shares.length < view.activeIds.length &&
-                    ` · ${he.money.sharedBy(e.shares.length)}`}
+                {/* A split in parts wraps: who shares each part is the point of it. */}
+                <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
+                  {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
+                    .filter(Boolean)
+                    .join(' · ')}
                 </Text>
               </View>
               <View style={styles.expenseEnd}>

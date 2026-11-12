@@ -49,6 +49,7 @@ const USER_KEYED = [
   ['trip_members', 'trip_id'],
   ['claims', 'item_id'],
   ['expense_shares', 'expense_id'],
+  ['expense_part_shares', 'part_id'],
 ] as const;
 
 /** Every column that references a profile. */
@@ -61,6 +62,7 @@ const USER_COLUMNS = [
   ['expenses', 'paid_by'],
   ['expenses', 'created_by'],
   ['expense_shares', 'user_id'],
+  ['expense_part_shares', 'user_id'],
   ['payments', 'from_user'],
   ['payments', 'to_user'],
   ['activity', 'actor'],

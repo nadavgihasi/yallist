@@ -49,6 +49,11 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
           (select id from expenses where trip_id = ${tripId})) as shares,
         (select count(*) from expense_items where expense_id in
           (select id from expenses where trip_id = ${tripId})) as expense_items,
+        (select count(*) from expense_parts where expense_id in
+          (select id from expenses where trip_id = ${tripId})) as expense_parts,
+        (select count(*) from expense_part_shares where part_id in
+          (select id from expense_parts where expense_id in
+            (select id from expenses where trip_id = ${tripId}))) as part_shares,
         (select count(*) from shopping_runs where trip_id = ${tripId}) as shopping_runs,
         (select count(*) from payments where trip_id = ${tripId}) as payments,
         (select count(*) from activity where trip_id = ${tripId}) as activity`;
@@ -58,8 +63,8 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
   /**
    * A grill trip with something in every table: `a` organizes, `b` is a member who claimed an
    * item and paid an expense with a receipt, `p` waits for approval; one item is soft-deleted,
-   * `b` paid `a` back. `b` finished a shopping run (one item bought, one returned) and `a` has
-   * one open.
+   * `b` paid `a` back. `b` finished a shopping run (one item bought, one returned; a part of it
+   * split apart) and `a` has one open.
    */
   async function fullTrip() {
     const [a, b, p] = await Promise.all(['a', 'b', 'p'].map((n) => signInAsGuest(app, n)));
@@ -125,7 +130,14 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
       as(b!),
     );
     const finished = await runs[':runId'].finish.$post(
-      { param: { tripId, runId: started.run!.id }, json: { amountAgorot: 900, shares: [b!.id] } },
+      {
+        param: { tripId, runId: started.run!.id },
+        json: {
+          amountAgorot: 900,
+          shares: [b!.id],
+          parts: [{ label: 'אלכוהול', amountAgorot: 400, shares: [a!.id, b!.id] }],
+        },
+      },
       as(b!),
     );
     expect(finished.status).toBe(201);

@@ -7,6 +7,8 @@ import {
   activity,
   claims,
   expenseItems,
+  expensePartShares,
+  expenseParts,
   expenseShares,
   expenses,
   items,
@@ -23,6 +25,7 @@ import type { ReceiptStore } from '../receipts';
 import { toCategory, toExpense, toItem, toTrip } from '../trip-data';
 import { bagClaims, bagMarks, bagRowsFor } from './bag';
 import { listCategories } from './categories';
+import { deleteParts } from './expenses';
 
 export async function insertTrip(tx: Executor, values: typeof trips.$inferInsert) {
   const [trip] = await tx.insert(trips).values(values).returning();
@@ -76,6 +79,7 @@ export async function deleteTrip(tx: Executor, tripId: string) {
   // Runs after the claims that point at them; runs and purchased items before the expenses.
   await tx.delete(shoppingRuns).where(eq(shoppingRuns.tripId, tripId));
   await tx.delete(expenseItems).where(inArray(expenseItems.expenseId, tripExpenses));
+  await deleteParts(tx, tripExpenses);
   await tx.delete(expenseShares).where(inArray(expenseShares.expenseId, tripExpenses));
   const deleted = await tx
     .delete(expenses)
@@ -116,6 +120,8 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
     purchaseRows,
     paymentRows,
     runRows,
+    partRows,
+    partShareRows,
   ] = await Promise.all([
     tx.select().from(trips).where(inArray(trips.id, tripIds)),
     tx
@@ -176,6 +182,18 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
       .from(shoppingRuns)
       .where(and(inArray(shoppingRuns.tripId, tripIds), eq(shoppingRuns.status, 'active')))
       .orderBy(asc(shoppingRuns.startedAt)),
+    tx
+      .select({ part: expenseParts })
+      .from(expenseParts)
+      .innerJoin(expenses, eq(expenses.id, expenseParts.expenseId))
+      .where(inArray(expenses.tripId, tripIds))
+      .orderBy(asc(expenseParts.position)),
+    tx
+      .select({ partId: expensePartShares.partId, userId: expensePartShares.userId })
+      .from(expensePartShares)
+      .innerJoin(expenseParts, eq(expenseParts.id, expensePartShares.partId))
+      .innerJoin(expenses, eq(expenses.id, expenseParts.expenseId))
+      .where(inArray(expenses.tripId, tripIds)),
   ]);
 
   // Per-person bring items count as had by whoever has them in their bag (dal/bag.ts).
@@ -240,6 +258,13 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
           shareRows.filter((s) => s.expenseId === e.id).map((s) => s.userId),
           purchased.filter((p) => p.deletedAt === null).map((p) => p.itemId),
           purchased.length,
+          partRows
+            .filter(({ part }) => part.expenseId === e.id)
+            .map(({ part }) => ({
+              label: part.label,
+              amountAgorot: part.amountAgorot,
+              shares: partShareRows.filter((s) => s.partId === part.id).map((s) => s.userId),
+            })),
         );
       }),
     payments: paymentRows

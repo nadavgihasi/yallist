@@ -16,12 +16,14 @@ export function SharePicker({
   onChange,
   amount,
   showHint = true,
+  label = he.item.splitBetween,
 }: {
   view: TripView;
   shares: string[];
   onChange: (shares: string[]) => void;
   amount: number | undefined;
   showHint?: boolean;
+  label?: string;
 }) {
   const perPerson = perPersonText(amount, shares.length);
   const toggle = (id: string) =>
@@ -29,14 +31,14 @@ export function SharePicker({
   return (
     <View style={styles.wrap}>
       <View style={styles.head}>
-        <Text style={fieldStyles.label}>{he.item.splitBetween}</Text>
+        <Text style={fieldStyles.label}>{label}</Text>
         {perPerson !== undefined && (
           <Text style={styles.per} accessibilityLiveRegion="polite">
             {he.item.perPerson(perPerson)}
           </Text>
         )}
       </View>
-      <View style={styles.chips} accessibilityLabel={he.item.splitBetween}>
+      <View style={styles.chips} accessibilityLabel={label}>
         {view.activeIds.map((id) => (
           <PersonChip
             key={id}

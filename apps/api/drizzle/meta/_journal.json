@@ -120,6 +120,13 @@
       "when": 1794507277141,
       "tag": "0016_claims_assigned_by",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794511698973,
+      "tag": "0017_expense_parts",
+      "breakpoints": true
     }
   ]
 }

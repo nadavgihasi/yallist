@@ -177,6 +177,8 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
       'bag_items',
       'claims',
       'expense_items',
+      'expense_part_shares',
+      'expense_parts',
       'expense_shares',
       'expenses',
       'feedback',

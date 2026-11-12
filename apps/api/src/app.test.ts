@@ -92,6 +92,34 @@ describe.skipIf(!DATABASE_URL)('auth', () => {
     expect(await sql`select id from profiles where id = ${guest.id}`).toEqual([]);
   });
 
+  it('moves who shares a part of an expense, once where both did', async () => {
+    const guest = await signInAsGuest('guest');
+    const account = await signInAsGuest('account');
+    const [trip] = await sql<{ id: string }[]>`
+      insert into trips (name, starts_on, ends_on, template, invite_token, created_by)
+      values ('P', '2026-11-01', '2026-11-02', 'camp', 'token-p', ${account.id}) returning id`;
+    const [expense] = await sql<{ id: string }[]>`
+      insert into expenses (trip_id, description, amount_agorot, paid_by, created_by)
+      values (${trip!.id}, 'run', 1000, ${account.id}, ${account.id}) returning id`;
+    const parts = await sql<{ id: string }[]>`
+      insert into expense_parts (expense_id, position, label, amount_agorot)
+      values (${expense!.id}, 0, 'a', 100), (${expense!.id}, 1, 'b', 100) returning id`;
+    const [both, guestOnly] = parts.map((p) => p.id);
+    await sql`
+      insert into expense_part_shares (part_id, user_id) values
+        (${both!}, ${guest.id}), (${both!}, ${account.id}), (${guestOnly!}, ${guest.id})`;
+
+    await mergeUser(db, guest.id, account.id);
+
+    const rows = await sql`
+      select part_id, user_id from expense_part_shares
+      where part_id in (${both!}, ${guestOnly!}) order by part_id = ${guestOnly!}`;
+    expect(rows).toEqual([
+      { part_id: both, user_id: account.id },
+      { part_id: guestOnly, user_id: account.id },
+    ]);
+  });
+
   it('keeps the stronger role and status of overlapping memberships', async () => {
     const guest = await signInAsGuest('guest');
     const account = await signInAsGuest('account');
