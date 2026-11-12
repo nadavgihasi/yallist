@@ -171,9 +171,15 @@ export function ItemRow({
   );
 }
 
-/** What the row's claim button says, which the ring does too. */
+/** What the row's claim control says, which the ring does too: on a qty item, the stepper's +. */
 const claimLabel = (item: Item) =>
-  item.kind === 'each' ? he.trip.have : item.list === 'buy' ? he.trip.claimBuy : he.trip.claimBring;
+  item.kind === 'each'
+    ? he.trip.have
+    : item.kind === 'qty'
+      ? he.trip.plusOne
+      : item.list === 'buy'
+        ? he.trip.claimBuy
+        : he.trip.claimBring;
 
 const inMyBag = (item: Item, bag: readonly BagItem[]) =>
   item.list === 'bring' && bagItemFor(bag, item.name) !== undefined;

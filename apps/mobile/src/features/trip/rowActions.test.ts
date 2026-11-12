@@ -57,6 +57,11 @@ describe('noteLine', () => {
     expect(line.endsWith('…')).toBe(true);
   });
 
+  it('never cuts an emoji in half', () => {
+    const line = noteLine(`ab ${'😀'.repeat(40)}`, 20)!;
+    expect(line).toBe(`ab ${'😀'.repeat(16)}…`);
+  });
+
   it('shows nothing without a note', () => {
     expect(noteLine(undefined)).toBeUndefined();
     expect(noteLine('  \n ')).toBeUndefined();
