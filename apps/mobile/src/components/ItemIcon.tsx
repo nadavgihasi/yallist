@@ -1,7 +1,7 @@
 import { catalogIcon, type ListKind } from '@yallist/domain';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { useShowItemIcons } from '@/state/preferences';
+import { useShowItemIcons } from '@/state/profile';
 import { colors } from '@/theme';
 
 /** What an item the catalog doesn't know gets: a box. */

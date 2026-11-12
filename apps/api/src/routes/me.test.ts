@@ -39,8 +39,29 @@ describe.skipIf(!DATABASE_URL)('GET and PATCH /me', () => {
       notifyUpdates: true,
       notifyDayBefore: true,
       notifySettle: true,
+      showItemIcons: true,
       account: { type: 'guest', email: null },
     });
+  });
+
+  it('keeps whether items show their icons, on until turned off', async () => {
+    const guest = await signInAsGuest(app, 'דנה');
+    const read = async () => await (await app.request('/me', { headers: guest.headers })).json();
+    expect((await read()).showItemIcons).toBe(true);
+
+    const off = await patch(guest.headers, { showItemIcons: false });
+    expect(off.status).toBe(200);
+    expect((await off.json()).showItemIcons).toBe(false);
+    // Another device reads it from the account.
+    expect((await read()).showItemIcons).toBe(false);
+    // Other changes leave it alone.
+    await patch(guest.headers, { displayName: 'דנה כהן' });
+    expect((await read()).showItemIcons).toBe(false);
+
+    expect((await (await patch(guest.headers, { showItemIcons: true })).json()).showItemIcons).toBe(
+      true,
+    );
+    expect((await patch(guest.headers, { showItemIcons: 'no' })).status).toBe(400);
   });
 
   it('updates the given fields, normalizing the phone, and keeps the rest', async () => {

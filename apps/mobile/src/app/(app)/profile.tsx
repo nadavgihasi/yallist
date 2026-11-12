@@ -32,7 +32,6 @@ import { testId } from '@/lib/testId';
 import { signInWithGoogle } from '@/lib/api';
 import { useBag } from '@/state/bag';
 import { useAvatar, useProfile, useUpdateProfile, type Profile } from '@/state/profile';
-import { usePreferences } from '@/state/preferences';
 import { useSession } from '@/state/store';
 import { avatarSize, colors, layout, radius, size, space, type } from '@/theme';
 import { useBreakpoint, type Breakpoint } from '@/theme/breakpoint';
@@ -188,7 +187,7 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
 
       <BagLink />
 
-      <DisplaySettings />
+      <DisplaySettings profile={profile} />
 
       <ListGroup title={he.profile.payments}>
         <TextField
@@ -330,15 +329,15 @@ function Photo({ profile }: { profile: Profile }) {
   );
 }
 
-/** How the app looks, kept on this device: for now, whether items show their icons. */
-function DisplaySettings() {
-  const [preferences, setPreferences] = usePreferences();
+/** How the app looks, kept in the account so every device agrees: whether items show their icons. */
+function DisplaySettings({ profile }: { profile: Profile }) {
+  const update = useUpdateProfile();
   return (
     <ListGroup title={he.profile.display}>
       <SettingRow label={he.profile.itemIcons} hint={he.profile.itemIconsHint}>
         <Switch
-          value={preferences.showItemIcons}
-          onChange={(showItemIcons) => setPreferences({ showItemIcons })}
+          value={profile.showItemIcons}
+          onChange={(showItemIcons) => update.mutate({ showItemIcons })}
           label={he.profile.itemIcons}
         />
       </SettingRow>

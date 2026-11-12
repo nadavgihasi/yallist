@@ -13,7 +13,7 @@ import { ChipGroup, FilterChip, SuggestionChip } from '@/components/Chips';
 import { PillButton } from '@/components/PillButton';
 import { ItemIcon } from '@/components/ItemIcon';
 import { he } from '@/i18n/he';
-import { useShowItemIcons } from '@/state/preferences';
+import { useShowItemIcons } from '@/state/profile';
 import { colors, radius, space, type } from '@/theme';
 
 /** How many items of a category show at once; the rest come with "more". */

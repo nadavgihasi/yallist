@@ -147,6 +147,11 @@ export const profiles = pgTable('profiles', {
   notifyUpdates: boolean('notify_updates').notNull().default(true),
   notifyDayBefore: boolean('notify_day_before').notNull().default(true),
   notifySettle: boolean('notify_settle').notNull().default(true),
+  /**
+   * Whether items show their picture. Null is the default, on: DSQL can't add a column with a
+   * default, so the API reads null as true (routes/me.ts).
+   */
+  showItemIcons: boolean('show_item_icons'),
   createdAt: createdAt(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

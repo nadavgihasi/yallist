@@ -17,8 +17,9 @@ Each item has a category, an emoji icon, how it's usually counted and its synony
   have their own emoji (assigned by keyword: mango 🥭, tent ⛺); the rest use their category's. An item
   the catalog doesn't know gets 🎒 (bring) or 🛒 (buy).
 - **Turning icons off.** The profile has a "תצוגה" card with an "אייקונים לפריטים" switch (on by
-  default). It is a display preference kept on the device (`lib/preferences.ts`), so no API or
-  account change; it applies at once to every item row, My Bag and the catalog suggestions.
+  default). It is a profile field (`profiles.show_item_icons`, `PATCH /me`), so it follows the
+  account to every device, and applies at once to every item row, My Bag and the catalog
+  suggestions. Null in the database means the default, on (DSQL can't add a column with a default).
 - **Matching.** A trip item meets my bag by `sameItem`: equal after normalizing (niqqud, quotes,
   dashes, case) or the same catalog item. The API uses the same rule (`dal/bag.ts`), so nothing is
   stored differently: names stay as typed.

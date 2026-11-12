@@ -21,6 +21,12 @@ export function useProfile() {
   return useQuery({ queryKey: meKey(userId), queryFn: () => parseResponse(api.me.$get()) });
 }
 
+/**
+ * Whether items show their picture: the profile's setting, on until it loads (and for an account
+ * that never chose), so the picture doesn't blink in and out as the profile arrives.
+ */
+export const useShowItemIcons = () => useProfile().data?.showItemIcons ?? true;
+
 /** Saves profile changes, showing them at once; a rejected change rolls back with a toast. */
 export function useUpdateProfile() {
   const queryClient = useQueryClient();

@@ -42,6 +42,7 @@ const profileChanges = z.strictObject({
   notifyUpdates: z.boolean().optional(),
   notifyDayBefore: z.boolean().optional(),
   notifySettle: z.boolean().optional(),
+  showItemIcons: z.boolean().optional(),
 });
 
 /**
@@ -49,9 +50,10 @@ const profileChanges = z.strictObject({
  * their Google picture; `customAvatar` says it's a photo they can remove.
  */
 async function toMe(profile: typeof profiles.$inferSelect, user: User, photos: ReceiptStore) {
-  const { createdAt: _c, updatedAt: _u, avatarKey, ...fields } = profile;
+  const { createdAt: _c, updatedAt: _u, avatarKey, showItemIcons, ...fields } = profile;
   return {
     ...fields,
+    showItemIcons: showItemIcons ?? true,
     avatarUrl: (await avatarUrl(photos, { avatarKey, image: user.image })) ?? null,
     customAvatar: avatarKey !== null,
     account: user.isAnonymous
