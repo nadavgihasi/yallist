@@ -21,10 +21,18 @@ import type { NewItemInput } from '@/state/reducer';
 import { useTrip } from '@/state/trips';
 import { colors, fonts } from '@/theme';
 
-const KINDS: ItemKind[] = ['single', 'qty', 'each'];
+import {
+  COUNTER_FROM,
+  duplicateOf,
+  fillFromCatalog,
+  ITEM_NAME_MAX,
+  NEW,
+  toSave,
+  typedCatalogItem,
+  type Draft,
+} from './addItem';
 
-/** Marks the "new category" chip as the picked category. */
-const NEW = 'new';
+const KINDS: ItemKind[] = ['single', 'qty', 'each'];
 
 /**
  * The add-item sheet, also used to edit an item: `item` prefills it. Claiming is only offered
@@ -37,6 +45,7 @@ export function ItemForm({
   list: initialList = 'bring',
   categoryId: initialCategory,
   onSubmit,
+  onOpen,
   onClose,
 }: {
   tripId: string;
@@ -44,7 +53,10 @@ export function ItemForm({
   list?: ListKind;
   /** Preselected for a new item, e.g. when added from inside a category. */
   categoryId?: string;
-  onSubmit: (item: NewItemInput, claim: boolean, newCategory?: string) => void;
+  /** A promise keeps the sheet saving until it settles; a rejection shows on the name field. */
+  onSubmit: (item: NewItemInput, claim: boolean, newCategory?: string) => Promise<void> | void;
+  /** Opens an item the list already has, offered when the new one would be a duplicate. */
+  onOpen?: (itemId: string) => void;
   onClose: () => void;
 }) {
   const data = useTrip(tripId);
@@ -55,52 +67,80 @@ export function ItemForm({
   const [category, setCategory] = useState(item ? item.categoryId : initialCategory);
   const [newName, setNewName] = useState('');
   const [claim, setClaim] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [failed, setFailed] = useState(false);
+  // The list, how many or the category set by hand: a catalog name typed in full then doesn't
+  // override them.
+  const [chosen, setChosen] = useState(false);
+  // Added though the list has it: the duplicate warning was answered.
+  const [anyway, setAnyway] = useState(false);
 
   if (!data) return null;
+
+  const draft: Draft = { list, name, kind, qty, category, newName };
+  // A new item's name typed in full as the catalog has it (or another name for it) fills in its
+  // count and category as tapping its suggestion would, shown on the form and under the field.
+  const match = !item && !chosen ? typedCatalogItem(draft) : undefined;
+  const shown = match ? fillFromCatalog(draft, match, data.categories) : draft;
 
   const categories = data.categories
     .filter((c) => c.list === list)
     .sort((a, b) => a.position - b.position);
   // A category of the other list (after switching lists) doesn't apply: uncategorized.
   const picked =
-    category === NEW || categories.some((c) => c.id === category) ? category : undefined;
-  const newCategory = newName.trim();
-  // Typing an existing name picks that category instead of making a second one.
-  const existing = categories.find((c) => c.name.toLowerCase() === newCategory.toLowerCase());
+    shown.category === NEW || categories.some((c) => c.id === shown.category)
+      ? shown.category
+      : undefined;
   const trimmed = name.trim();
   // Only suggest what this list doesn't have yet.
   const taken = heldCatalogNames(data.items.filter((i) => i.list === list).map((i) => i.name));
-  const valid = !!trimmed && (picked !== NEW || !!newCategory);
+  const valid =
+    !!trimmed && trimmed.length <= ITEM_NAME_MAX && (picked !== NEW || !!shown.newName.trim());
 
-  // A catalog item fills in the rest: its list, how it's counted and its category (the trip's own
-  // if it has one of that name, otherwise a new one, unless one is already picked).
+  const save = toSave(shown, data.categories);
+  // A new item the list already has (by any of its names) warns before it goes in twice. Not while
+  // saving: the item shows on the list at once, and would warn about itself.
+  const duplicate =
+    !item && !anyway && !saving && trimmed ? duplicateOf(data.items, save.item) : undefined;
+
+  // A catalog item fills in the rest: its list, how it's counted and its category.
   const pick = (entry: CatalogItem) => {
-    setName(entry.name);
-    setList(entry.list);
-    setKind(entry.kind);
-    if (entry.kind === 'qty') setQty(entry.quantityNeeded);
-    const own = data.categories.find((c) => c.list === entry.list && c.name === entry.category);
-    if (own) setCategory(own.id);
-    else if (picked === undefined) {
-      setCategory(NEW);
-      setNewName(entry.category);
-    }
+    const next = fillFromCatalog(draft, entry, data.categories);
+    setName(next.name);
+    setList(next.list);
+    setKind(next.kind);
+    setQty(next.qty);
+    setCategory(next.category);
+    setNewName(next.newName);
   };
+  // A choice by hand keeps what a typed catalog name filled in, then changes it.
+  const choose =
+    <T,>(set: (value: T) => void) =>
+    (value: T) => {
+      setKind(shown.kind);
+      setQty(shown.qty);
+      setCategory(shown.category);
+      setNewName(shown.newName);
+      set(value);
+      setChosen(true);
+    };
 
-  const submit = () => {
-    if (!valid) return;
-    const quantityNeeded = kind === 'qty' ? qty : 1;
-    const creating = picked === NEW && !existing;
-    const categoryId = picked === NEW ? (existing?.id ?? null) : (picked ?? null);
-    onSubmit(
-      { list, name: trimmed, kind, quantityNeeded, categoryId },
-      claim,
-      creating ? newCategory : undefined,
-    );
+  const submit = (force = false) => {
+    if (!valid || saving || (duplicate && !force)) return;
+    if (force) setAnyway(true);
+    const result = onSubmit(save.item, claim, save.newCategory);
+    if (!result) return;
+    setSaving(true);
+    setFailed(false);
+    // On success the sheet closes; on failure it stays, with the text, to try again.
+    result.catch(() => {
+      setSaving(false);
+      setFailed(true);
+    });
   };
 
   const claimLabel =
-    kind === 'each'
+    shown.kind === 'each'
       ? he.addItem.claimEach
       : list === 'bring'
         ? he.addItem.claimBring
@@ -112,12 +152,12 @@ export function ItemForm({
       onClose={onClose}
       footer={
         <PillButton
-          label={item ? he.editItem.save : he.addItem.cta(trimmed, list)}
+          label={item ? he.editItem.save : he.addItem.cta(save.item.name, list)}
           {...testId('item-form-save')}
           size="lg"
           wide
-          disabled={!valid}
-          onPress={submit}
+          disabled={!valid || saving || !!duplicate}
+          onPress={() => submit()}
         />
       }
     >
@@ -127,16 +167,28 @@ export function ItemForm({
           { value: 'buy', label: he.trip.tabs.buy },
         ]}
         value={list}
-        onChange={setList}
+        onChange={choose(setList)}
         style={{ backgroundColor: colors.ground }}
       />
 
       <View style={styles.field}>
-        <Text style={fieldStyles.label}>{he.addItem.what}</Text>
+        <View style={styles.labelRow}>
+          <Text style={fieldStyles.label}>{he.addItem.what}</Text>
+          {name.length >= COUNTER_FROM && (
+            <Text style={styles.counter} {...testId('item-form-counter')}>
+              {he.addItem.count(name.length, ITEM_NAME_MAX)}
+            </Text>
+          )}
+        </View>
         <Input
           value={name}
-          onChangeText={setName}
-          onSubmitEditing={submit}
+          onChangeText={(text) => {
+            setName(text);
+            setFailed(false);
+            setAnyway(false);
+          }}
+          maxLength={ITEM_NAME_MAX}
+          onSubmitEditing={() => submit()}
           returnKeyType="done"
           placeholder={he.addItem.placeholder[list]}
           accessibilityLabel={he.addItem.what}
@@ -144,6 +196,50 @@ export function ItemForm({
           autoFocus={!item}
           style={styles.input}
         />
+        {failed && (
+          <Text style={fieldStyles.error} accessibilityLiveRegion="polite">
+            {he.addItem.failed}
+          </Text>
+        )}
+        {duplicate && (
+          <View style={styles.duplicate} {...testId('item-form-duplicate')}>
+            <Text style={fieldStyles.error} accessibilityLiveRegion="polite">
+              {he.addItem.duplicate(duplicate.name, duplicate.list)}
+            </Text>
+            <View style={styles.duplicateActions}>
+              {onOpen && (
+                <PillButton
+                  label={he.addItem.openExisting}
+                  size="sm"
+                  variant="quiet"
+                  onPress={() => onOpen(duplicate.id)}
+                  {...testId('item-form-open-existing')}
+                />
+              )}
+              <PillButton
+                label={he.addItem.addAnyway}
+                size="sm"
+                variant="quiet"
+                onPress={() => submit(true)}
+                {...testId('item-form-add-anyway')}
+              />
+            </View>
+          </View>
+        )}
+        {match && (
+          <View style={styles.match} {...testId('item-form-match')}>
+            <Icon name="check" size={16} color={colors.primaryStrong} strokeWidth={2.5} />
+            <Text style={styles.matchText} numberOfLines={1}>
+              {he.addItem.fromCatalog(
+                match.name,
+                // The category it goes in: a category picked first keeps it.
+                picked === NEW
+                  ? shown.newName.trim()
+                  : (categories.find((c) => c.id === picked)?.name ?? he.trip.uncategorized),
+              )}
+            </Text>
+          </View>
+        )}
         {!item && <CatalogPicker query={name} list={list} exclude={taken} onPick={pick} />}
       </View>
 
@@ -155,14 +251,14 @@ export function ItemForm({
           accessibilityLabel={he.addItem.howMany}
         >
           {KINDS.map((k) => {
-            const selected = k === kind;
+            const selected = k === shown.kind;
             const [label, hint] = he.addItem.kinds[k];
             return (
               <Pressable
                 key={k}
                 accessibilityRole="radio"
                 accessibilityState={{ checked: selected }}
-                onPress={() => setKind(k)}
+                onPress={() => choose(setKind)(k)}
                 style={[styles.kind, selected && styles.kindOn]}
               >
                 <Text style={styles.kindLabel}>{label}</Text>
@@ -171,25 +267,25 @@ export function ItemForm({
             );
           })}
         </View>
-        {kind === 'qty' && (
+        {shown.kind === 'qty' && (
           <View style={styles.qtyRow}>
             <Text style={styles.qtyLabel}>{he.addItem.total}</Text>
             <View style={styles.qtyControls}>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={he.addItem.more}
-                onPress={() => setQty(qty + 1)}
+                onPress={() => choose(setQty)(shown.qty + 1)}
                 style={styles.qtyButton}
               >
                 <Icon name="plus" size={20} />
               </Pressable>
-              <Text style={styles.qtyValue}>{qty}</Text>
+              <Text style={styles.qtyValue}>{shown.qty}</Text>
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={he.addItem.less}
-                disabled={qty <= 2}
-                onPress={() => setQty(qty - 1)}
-                style={[styles.qtyButton, qty <= 2 && { opacity: 0.35 }]}
+                disabled={shown.qty <= 2}
+                onPress={() => choose(setQty)(shown.qty - 1)}
+                style={[styles.qtyButton, shown.qty <= 2 && { opacity: 0.35 }]}
               >
                 <Icon name="minus" size={20} />
               </Pressable>
@@ -206,38 +302,47 @@ export function ItemForm({
               key={c.id}
               label={c.name}
               selected={c.id === picked}
-              onPress={() => setCategory(c.id)}
+              onPress={() => choose(setCategory)(c.id)}
             />
           ))}
           <FilterChip
             label={he.trip.uncategorized}
             selected={picked === undefined}
-            onPress={() => setCategory(undefined)}
+            onPress={() => choose(setCategory)(undefined)}
           />
           <FilterChip
             label={`+ ${he.addItem.newCategory}`}
             selected={picked === NEW}
-            onPress={() => setCategory(NEW)}
+            onPress={() => choose(setCategory)(NEW)}
           />
         </ChipGroup>
         {picked === NEW && (
           <Input
-            value={newName}
-            onChangeText={setNewName}
+            value={shown.newName}
+            onChangeText={choose(setNewName)}
             placeholder={he.category.placeholder}
             accessibilityLabel={he.category.name}
             maxLength={40}
-            autoFocus
+            // Picked by hand, not filled in by a typed catalog name: typing goes on in the name.
+            autoFocus={category === NEW}
             style={styles.input}
           />
         )}
       </View>
 
       {!item && (
-        <View style={styles.switchRow}>
+        // The whole row toggles; the switch stays the one control screen readers and Tab reach
+        // (`tabIndex`: on web, `focusable={false}` still leaves the row a tab stop).
+        <Pressable
+          onPress={() => setClaim(!claim)}
+          accessible={false}
+          tabIndex={-1}
+          style={styles.switchRow}
+          {...testId('item-form-claim-row')}
+        >
           <Text style={styles.switchLabel}>{claimLabel}</Text>
           <Switch value={claim} onChange={setClaim} label={claimLabel} />
-        </View>
+        </Pressable>
       )}
     </Sheet>
   );
@@ -245,6 +350,12 @@ export function ItemForm({
 
 const styles = StyleSheet.create({
   field: { gap: 10 },
+  duplicate: { gap: 6 },
+  duplicateActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  match: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6 },
+  matchText: { flexShrink: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
+  labelRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
+  counter: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted, marginStart: 'auto' },
   input: {
     minHeight: 60,
     paddingHorizontal: 18,

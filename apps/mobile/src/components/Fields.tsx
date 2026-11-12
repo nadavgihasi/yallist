@@ -148,6 +148,7 @@ export const dateTileStyles = StyleSheet.create({
 
 export const fieldStyles = StyleSheet.create({
   label: { fontFamily: fonts.bold, fontSize: 15, color: colors.ink },
+  error: { fontFamily: fonts.bold, fontSize: 13, color: colors.brandStrong },
 });
 
 const styles = StyleSheet.create({
@@ -175,7 +176,7 @@ const styles = StyleSheet.create({
   dateTexts: { flex: 1, gap: 2 },
   dateLabel: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
   dateValue: { fontFamily: fonts.bold, fontSize: 17, color: colors.ink },
-  error: { fontFamily: fonts.bold, fontSize: 13, color: colors.brandStrong },
+  error: fieldStyles.error,
   currency: { fontFamily: fonts.extraBold, fontSize: 30, color: colors.inkMuted },
   amountInput: {
     flex: 1,

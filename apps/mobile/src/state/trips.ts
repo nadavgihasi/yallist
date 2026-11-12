@@ -290,6 +290,18 @@ async function send(tripId: string, action: Action): Promise<unknown> {
 /** What `startRun` answers: the run, and the items someone else got first. */
 export type StartedRun = InferResponseType<(typeof api.trips)[':tripId']['runs']['$post'], 200>;
 
+/** Told when the API took a change or refused it: before the trip refetches, so not held up by it. */
+export interface Answer {
+  onSaved: () => void;
+  onError: (error: unknown) => void;
+}
+
+/** The `Answer` each change waits on, if any: one per action object. */
+const answers = new WeakMap<Action, Answer>();
+
+/** Has `answer` told when the API takes or refuses `action`, sent next with `useTripAction`. */
+export const awaitAnswer = (action: Action, answer: Answer) => void answers.set(action, answer);
+
 /**
  * Changes to one trip: shown at once where possible (`applyAction`), sent in order, rolled back
  * with a short message if the API refuses. Offline, they wait and go out on reconnect (while the
@@ -310,8 +322,10 @@ export function useTripAction(tripId: string) {
       if (before) queryClient.setQueryData(key, applyAction(before, action, me));
       return { before };
     },
+    onSuccess: (_data, action) => answers.get(action)?.onSaved(),
     onError: (error, action, context) => {
       if (context?.before) queryClient.setQueryData(key, context.before);
+      answers.get(action)?.onError(error);
       const conflict = statusOf(error) === 409;
       const message = !conflict
         ? he.errors.failed
