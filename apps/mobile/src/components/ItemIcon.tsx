@@ -1,6 +1,7 @@
 import { catalogIcon, type ListKind } from '@yallist/domain';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useShowItemIcons } from '@/state/preferences';
 import { colors } from '@/theme';
 
 /** What an item the catalog doesn't know gets: a box. */
@@ -8,7 +9,8 @@ const FALLBACK: Record<ListKind, string> = { bring: '🎒', buy: '🛒' };
 
 /**
  * The picture of an item, by its name: an emoji in a soft circle. Decorative, so hidden from
- * screen readers, which read the name beside it.
+ * screen readers, which read the name beside it. Nothing at all when the user turned item icons
+ * off in their profile.
  */
 export function ItemIcon({
   name,
@@ -19,6 +21,8 @@ export function ItemIcon({
   list?: ListKind;
   size?: number;
 }) {
+  const show = useShowItemIcons();
+  if (!show) return null;
   return (
     <View
       accessibilityElementsHidden

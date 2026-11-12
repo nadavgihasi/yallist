@@ -18,6 +18,7 @@ import { Avatar } from '@/components/Avatar';
 import { Callout } from '@/components/Callout';
 import { EmptyState } from '@/components/EmptyState';
 import { TextField } from '@/components/Fields';
+import { Switch } from '@/components/Controls';
 import { Icon } from '@/components/Icon';
 import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
@@ -31,6 +32,7 @@ import { testId } from '@/lib/testId';
 import { signInWithGoogle } from '@/lib/api';
 import { useBag } from '@/state/bag';
 import { useAvatar, useProfile, useUpdateProfile, type Profile } from '@/state/profile';
+import { usePreferences } from '@/state/preferences';
 import { useSession } from '@/state/store';
 import { avatarSize, colors, layout, radius, size, space, type } from '@/theme';
 import { useBreakpoint, type Breakpoint } from '@/theme/breakpoint';
@@ -186,6 +188,8 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
 
       <BagLink />
 
+      <DisplaySettings />
+
       <ListGroup title={he.profile.payments}>
         <TextField
           label={he.profile.phone}
@@ -323,6 +327,22 @@ function Photo({ profile }: { profile: Profile }) {
       </View>
       <Text style={styles.caption}>{he.profile.photoHint}</Text>
     </View>
+  );
+}
+
+/** How the app looks, kept on this device: for now, whether items show their icons. */
+function DisplaySettings() {
+  const [preferences, setPreferences] = usePreferences();
+  return (
+    <ListGroup title={he.profile.display}>
+      <SettingRow label={he.profile.itemIcons} hint={he.profile.itemIconsHint}>
+        <Switch
+          value={preferences.showItemIcons}
+          onChange={(showItemIcons) => setPreferences({ showItemIcons })}
+          label={he.profile.itemIcons}
+        />
+      </SettingRow>
+    </ListGroup>
   );
 }
 
