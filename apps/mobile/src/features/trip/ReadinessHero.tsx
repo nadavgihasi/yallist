@@ -7,6 +7,7 @@ import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
 import { ProgressRing } from '@/components/ProgressRing';
 import { he, missingCount, openTransfers, peopleNames } from '@/i18n/he';
+import { rtl } from '@/lib/bidi';
 import { countdown } from '@/lib/dates';
 import { missingMessage, openWhatsApp } from '@/lib/share';
 import { testId } from '@/lib/testId';
@@ -91,7 +92,7 @@ export function ReadinessHero({
           {view.mine.length > 0 && (
             <Text style={styles.mine}>
               {he.home.mine}
-              {view.mine.map((i) => i.name).join(', ')}
+              {view.mine.map((i) => rtl(i.name)).join(', ')}
             </Text>
           )}
           {!solo && (

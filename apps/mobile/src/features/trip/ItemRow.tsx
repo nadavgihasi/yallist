@@ -15,6 +15,7 @@ import { ItemIcon } from '@/components/ItemIcon';
 import { PillButton } from '@/components/PillButton';
 import { StatusRing, type RingState } from '@/components/StatusRing';
 import { he } from '@/i18n/he';
+import { isolate } from '@/lib/bidi';
 import { testId } from '@/lib/testId';
 import { colors, space, type } from '@/theme';
 
@@ -133,7 +134,8 @@ export function ItemRow({
       <Pressable style={styles.main} onPress={onOpen} accessibilityRole="button">
         <Text style={styles.name}>
           {item.name}
-          {!!qty && <Text style={styles.qty}> {qty}</Text>}
+          {/* Isolated, so an English word or number ending the name doesn't pull it across. */}
+          {!!qty && <Text style={styles.qty}> {isolate(qty)}</Text>}
         </Text>
         <Text
           style={[
@@ -186,7 +188,8 @@ const styles = StyleSheet.create({
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
   main: { flex: 1, minWidth: 0, gap: space[1], justifyContent: 'center', minHeight: space.touch },
-  name: { ...type.itemTitle, color: colors.ink },
+  // Right to left even when the name starts with an English word, as it was typed.
+  name: { ...type.itemTitle, color: colors.ink, writingDirection: 'rtl' },
   qty: { ...type.caption, color: colors.inkMuted },
   status: { ...type.caption },
   mine: { fontFamily: type.itemTitle.fontFamily },

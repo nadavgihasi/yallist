@@ -1,3 +1,5 @@
+import { rtl } from '@/lib/bidi';
+
 /** All user-facing strings. Hebrew only for v1; another locale is a sibling file with the same shape. */
 export const he = {
   appName: 'Yallist',
@@ -201,7 +203,7 @@ export const he = {
   hero: {
     /** `חסרים 13: אוהלים, קפה, קרח…` */
     missing: (count: string, names: string[], more: boolean) =>
-      `${count}: ${names.join(', ')}${more ? '…' : ''}`,
+      `${count}: ${names.map(rtl).join(', ')}${more ? '…' : ''}`,
     solo: 'לבד פה בינתיים · הזמנת חברים',
     share: 'שליחת מה שחסר בוואטסאפ',
   },
@@ -673,7 +675,8 @@ export function openTransfers(n: number): string {
 /** `אוהלים, קפה, קרח ועוד 10`: the first missing names out of `missing`. */
 export function missingNames(names: string[], missing: number): string {
   const more = missing - names.length;
-  return more > 0 ? `${names.join(', ')} ${andMore(more)}` : names.join(', ');
+  const list = names.map(rtl).join(', ');
+  return more > 0 ? `${list} ${andMore(more)}` : list;
 }
 
 /** `דנה, אבי ונועה`, then `דנה, אבי ועוד 2` past three. */

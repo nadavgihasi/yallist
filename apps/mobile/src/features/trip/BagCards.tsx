@@ -8,6 +8,7 @@ import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, joinNames } from '@/i18n/he';
+import { rtl } from '@/lib/bidi';
 import { countdown } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useDismissed } from '@/lib/useDismissed';
@@ -78,7 +79,7 @@ function Offer({ tripId, offers }: { tripId: string; offers: BagSuggestion[] }) 
         <View style={styles.texts}>
           <Text style={styles.title}>{he.bag.offerTitle(offers.length)}</Text>
           <Text style={styles.caption}>
-            {he.bag.offerText(joinNames(offers.map((o) => o.item.name)))}
+            {he.bag.offerText(joinNames(offers.map((o) => rtl(o.item.name))))}
           </Text>
         </View>
         <Pressable
