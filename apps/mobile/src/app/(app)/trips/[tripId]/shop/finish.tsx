@@ -188,8 +188,18 @@ function FinishRunBody({ data, runId }: { data: TripData; runId: string }) {
           <RunParts view={view} parts={parts} onChange={setParts} />
         </>
       )}
-      {parts.length > 0 && split.owed.size > 0 && (
-        <View style={styles.owed} accessibilityLabel={he.shop.finish.whoPays}>
+      {/* Under the parts, where they're edited: the total they come out of, and why it can't be
+          saved yet or what each pays. */}
+      {parts.length > 0 && (
+        <View style={styles.owed} {...testId('shop-finish-owed')}>
+          <Text style={styles.title} accessibilityRole="header">
+            {agorot ? he.shop.finish.whoPaysOf(formatShekel(agorot)) : he.shop.finish.whoPays}
+          </Text>
+          {split.error && (
+            <Text style={styles.error} accessibilityLiveRegion="polite">
+              {split.error}
+            </Text>
+          )}
           {view.activeIds
             .map((id): [string, number] => [id, split.owed.get(id) ?? 0])
             .filter(([, owed]) => owed > 0)
@@ -240,6 +250,7 @@ const styles = StyleSheet.create({
   change: { minHeight: space.touch, justifyContent: 'center', paddingHorizontal: space[1] },
   changeText: { ...type.buttonSm, color: colors.primaryStrong },
   owed: { gap: space[1] },
+  error: { ...type.caption, color: colors.brandStrong },
   owedRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3] },
   owedAmount: { ...type.itemTitle, color: colors.ink },
 });

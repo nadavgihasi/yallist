@@ -9,7 +9,7 @@ import { testId } from '@/lib/testId';
 import { colors, radius, space, type } from '@/theme';
 
 import type { TripView } from './derive';
-import { newPart, type PartDraft } from './runSplit';
+import { MAX_PARTS, newPart, type PartDraft } from './runSplit';
 import { SharePicker } from './SharePicker';
 
 /**
@@ -63,14 +63,16 @@ export function RunParts({
         </View>
       ))}
       <View style={styles.add}>
-        <PillButton
-          label={he.shop.finish.addPart}
-          variant="soft"
-          wide
-          icon={<Icon name="plus" size={18} color={colors.primaryStrong} />}
-          onPress={() => onChange([...parts, newPart(view.activeIds)])}
-          {...testId('shop-finish-add-part')}
-        />
+        {parts.length < MAX_PARTS && (
+          <PillButton
+            label={he.shop.finish.addPart}
+            variant="soft"
+            wide
+            icon={<Icon name="plus" size={18} color={colors.primaryStrong} />}
+            onPress={() => onChange([...parts, newPart(view.activeIds)])}
+            {...testId('shop-finish-add-part')}
+          />
+        )}
         {parts.length === 0 && <Text style={styles.hint}>{he.shop.finish.addPartHint}</Text>}
       </View>
     </>

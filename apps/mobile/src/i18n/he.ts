@@ -452,6 +452,7 @@ export const he = {
       rest: (amount: string) => `השאר (${amount}) מתחלק בין`,
       partsOver: 'החלקים צריכים להשאיר משהו מהסכום',
       whoPays: 'כמה יוצא לכל אחד',
+      whoPaysOf: (total: string) => `כמה יוצא לכל אחד מתוך ${total}`,
     },
   },
   receipt: {

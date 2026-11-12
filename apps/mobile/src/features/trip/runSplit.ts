@@ -15,6 +15,9 @@ export interface PartDraft {
   shares: string[];
 }
 
+/** As many parts as the API takes. */
+export const MAX_PARTS = 10;
+
 /** A new part starts with everyone in it: the payer unticks who isn't. */
 export const newPart = (activeIds: readonly string[]): PartDraft => ({
   label: '',
