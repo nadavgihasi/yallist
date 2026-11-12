@@ -69,6 +69,12 @@ describe('statusLine for a bought item', () => {
     expect(line(run('me')).detail).toBe('בקנייה שלך: 8 פריטים, ₪412.90');
   });
 
+  it("still says so once the run's other items are deleted", () => {
+    const left: Expense = { ...run('ron'), itemIds: ['i0'], itemCount: 8 };
+    expect(line(left).detail).toBe('בקנייה של רון: 8 פריטים, ₪412.90');
+    expect(line({ ...left, paidBy: 'me' }).detail).toBe('בקנייה שלך: 8 פריטים, ₪412.90');
+  });
+
   it('shows the price of an item bought on its own', () => {
     const alone: Expense = { ...run('ron'), itemIds: ['i0'], amountAgorot: 1290 };
     expect(line(alone).detail).toBe('₪12.90, רון');

@@ -153,6 +153,25 @@ describe('deleteItem', () => {
     expect(next.claims).toEqual([]);
     expect(next.expenses).toEqual([expect.objectContaining({ id: 'e1', itemIds: [] })]);
   });
+
+  it("keeps a shopping run's item count, so the item left isn't priced at the run's total", () => {
+    const t = trip({
+      expenses: [
+        {
+          id: 'run',
+          itemIds: ['meat', 'chairs'],
+          description: 'קניות · 2 פריטים',
+          amountAgorot: 41290,
+          paidBy: 'me',
+          shares: ['me'],
+        },
+      ],
+    });
+    const next = applyAction(t, { type: 'deleteItem', itemId: 'chairs' }, 'me');
+    expect(next.expenses).toEqual([
+      expect.objectContaining({ itemIds: ['meat'], itemCount: 2, amountAgorot: 41290 }),
+    ]);
+  });
 });
 
 describe('editItem', () => {

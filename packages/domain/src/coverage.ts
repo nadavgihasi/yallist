@@ -31,6 +31,11 @@ export function linkedExpense(itemId: string, expenses: readonly Expense[]): Exp
   return expenses.find((e) => e.itemIds?.includes(itemId));
 }
 
+/** How many buy items a purchase covered; more than one makes its amount a run's total. */
+export function purchasedCount(expense: Expense): number {
+  return expense.itemCount ?? expense.itemIds?.length ?? 0;
+}
+
 export type ItemStatus =
   | { kind: 'missing' }
   | { kind: 'partial'; missing: number }

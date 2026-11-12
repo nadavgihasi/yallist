@@ -1,4 +1,4 @@
-import { claimCap, linkedExpense, parseShekel, type Expense } from '@yallist/domain';
+import { claimCap, linkedExpense, parseShekel, purchasedCount, type Expense } from '@yallist/domain';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -97,8 +97,8 @@ function ItemSheetBody({
   const amount = parseShekel(price);
   const bought = status.kind === 'bought';
   // A shopping run's purchase covers several items: it's changed from the money tab, never
-  // replaced by this item's price.
-  const shared = (expense?.itemIds?.length ?? 0) > 1;
+  // replaced by this item's price, even once its other items are deleted.
+  const shared = !!expense && purchasedCount(expense) > 1;
   // `each` items are everyone's own purchase, so they aren't priced as one shared expense.
   const canPrice = isBuy && item.kind !== 'each' && (mine > 0 || !!expense) && !shared;
   const expenseEdit =

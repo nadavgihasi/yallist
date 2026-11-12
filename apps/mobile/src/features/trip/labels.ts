@@ -3,6 +3,7 @@ import {
   formatShekel,
   packingStatus,
   perPersonPreview,
+  purchasedCount,
   type Claim,
   type Item,
   type ItemStatus,
@@ -73,16 +74,18 @@ export function statusLine(
     case 'inProgress':
       return { label: s.inProgress, detail: holders(status.holderIds), tone: 'ok' };
     case 'bought': {
-      const { amountAgorot, paidBy, itemIds = [] } = status.expense;
+      const { amountAgorot, paidBy } = status.expense;
       const amount = formatShekel(amountAgorot);
       const byMe = paidBy === me;
-      // A shopping run's one amount is the run's total, never this item's price.
-      if (itemIds.length > 1) {
+      // A shopping run's one amount is the run's total, never this item's price, even once the
+      // run's other items are deleted.
+      const count = purchasedCount(status.expense);
+      if (count > 1) {
         return {
           label: s.bought,
           detail: byMe
-            ? s.boughtInMyRun(itemIds.length, amount)
-            : s.boughtInRun(view.displayNameOf(paidBy), itemIds.length, amount),
+            ? s.boughtInMyRun(count, amount)
+            : s.boughtInRun(view.displayNameOf(paidBy), count, amount),
           tone: 'success',
         };
       }

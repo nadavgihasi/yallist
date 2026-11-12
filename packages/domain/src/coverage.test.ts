@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { claimCap, filterItems, isDone, itemStatus } from './coverage';
+import { claimCap, filterItems, isDone, itemStatus, purchasedCount } from './coverage';
 import type { Claim, Expense, Item } from './types';
 
 const item = (over: Partial<Item> & Pick<Item, 'id'>): Item => ({
@@ -145,5 +145,25 @@ describe('claimCap', () => {
     const claims = [claim('chairs', 'me', 3), claim('chairs', 'ron', 2)];
     expect(claimCap(chairs, claims, 'me')).toBe(6);
     expect(claimCap(chairs, claims, 'dana')).toBe(3);
+  });
+});
+
+describe('purchasedCount', () => {
+  const purchase = (over: Partial<Expense>): Expense => ({
+    id: 'e',
+    description: 'קניות',
+    amountAgorot: 41290,
+    paidBy: 'me',
+    shares: ['me'],
+    ...over,
+  });
+
+  it('counts the items a purchase covered, deleted ones included', () => {
+    expect(purchasedCount(purchase({ itemIds: ['a'], itemCount: 8 }))).toBe(8);
+  });
+
+  it('falls back to its items when the API has not counted them yet', () => {
+    expect(purchasedCount(purchase({ itemIds: ['a', 'b'] }))).toBe(2);
+    expect(purchasedCount(purchase({}))).toBe(0);
   });
 });

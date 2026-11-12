@@ -155,12 +155,17 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
       .from(expenseShares)
       .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
       .where(inArray(expenses.tripId, tripIds)),
-    // A purchase of an item that was since deleted no longer marks anything bought.
+    // A purchase of an item that was since deleted no longer marks anything bought, but still
+    // counts towards how many items it covered.
     tx
-      .select({ expenseId: expenseItems.expenseId, itemId: expenseItems.itemId })
+      .select({
+        expenseId: expenseItems.expenseId,
+        itemId: expenseItems.itemId,
+        deletedAt: items.deletedAt,
+      })
       .from(expenseItems)
       .innerJoin(items, eq(items.id, expenseItems.itemId))
-      .where(and(inArray(items.tripId, tripIds), isNull(items.deletedAt))),
+      .where(inArray(items.tripId, tripIds)),
     tx
       .select()
       .from(payments)
@@ -228,13 +233,15 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
     claims: claimsOf(trip),
     expenses: expenseRows
       .filter((e) => e.tripId === trip.id)
-      .map((e) =>
-        toExpense(
+      .map((e) => {
+        const purchased = purchaseRows.filter((p) => p.expenseId === e.id);
+        return toExpense(
           e,
           shareRows.filter((s) => s.expenseId === e.id).map((s) => s.userId),
-          purchaseRows.filter((p) => p.expenseId === e.id).map((p) => p.itemId),
-        ),
-      ),
+          purchased.filter((p) => p.deletedAt === null).map((p) => p.itemId),
+          purchased.length,
+        );
+      }),
     payments: paymentRows
       .filter((p) => p.tripId === trip.id)
       .map((p): Payment => ({

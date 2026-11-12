@@ -70,6 +70,11 @@ export interface Expense {
   id: string;
   /** The buy items this purchase covers: they count as bought. */
   itemIds?: string[];
+  /**
+   * How many buy items the purchase covered, those deleted since included (`itemIds` drops them),
+   * so a shopping run stays a run. From the API; absent on an expense the app just made.
+   */
+  itemCount?: number;
   description: string;
   amountAgorot: number;
   paidBy: string;

@@ -1,5 +1,6 @@
 import {
   claimCap,
+  purchasedCount,
   withQuantity,
   type Claim,
   type CoverId,
@@ -111,6 +112,8 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
         expenses: data.expenses.map((e) => ({
           ...e,
           itemIds: e.itemIds?.filter((id) => id !== action.itemId),
+          // A run stays a run: its total is never the one item left's price.
+          itemCount: purchasedCount(e),
         })),
       };
     case 'editItem': {
