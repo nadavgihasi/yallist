@@ -8,6 +8,7 @@ import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, participants } from '@/i18n/he';
+import { formatRange } from '@/lib/dates';
 import { invitePayload, inviteUrl } from '@/lib/invite';
 import { testId } from '@/lib/testId';
 import { useExitTrip, useTripAction } from '@/state/trips';
@@ -119,6 +120,34 @@ export function PeopleTab({
           {link}
         </Text>
       </Card>
+
+      {organizer && (
+        <Card gap={space[3]}>
+          <View style={styles.nameRow}>
+            <Icon name="calendar" size={20} color={colors.inkMuted} />
+            <View style={styles.personBody}>
+              <Text style={styles.title} {...testId('trip-details-name')}>
+                {data.trip.name}
+              </Text>
+              <Text style={styles.text}>{formatRange(data.trip.startsOn, data.trip.endsOn)}</Text>
+            </View>
+            <PillButton
+              label={he.links.edit}
+              accessibilityLabel={he.renameTrip.edit}
+              variant="quiet"
+              size="sm"
+              icon={<Icon name="pencil" size={16} color={colors.inkMuted} />}
+              {...testId('trip-rename-edit')}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/[tripId]/rename',
+                  params: { tripId: data.trip.id },
+                })
+              }
+            />
+          </View>
+        </Card>
+      )}
 
       <MeetupSection trip={data.trip} organizer={organizer} />
       <AlbumSection trip={data.trip} organizer={organizer} />
