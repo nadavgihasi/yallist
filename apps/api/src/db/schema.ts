@@ -37,6 +37,10 @@ export const TEMPLATE_IDS = [
   'grill',
   'zimmer',
   'beach',
+  'hike',
+  'trek',
+  'flight',
+  'ski',
   'blank',
 ] as const satisfies TemplateId[];
 export const LISTS = ['bring', 'buy'] as const satisfies ListKind[];

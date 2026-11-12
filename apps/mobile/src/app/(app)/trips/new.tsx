@@ -28,7 +28,17 @@ import { useCreateTrip } from '@/state/trips';
 import { colors, radius, size, space, type } from '@/theme';
 import { useBreakpoint } from '@/theme/breakpoint';
 
-const KINDS: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
+const KINDS: TemplateId[] = [
+  'camp',
+  'grill',
+  'zimmer',
+  'beach',
+  'hike',
+  'trek',
+  'flight',
+  'ski',
+  'blank',
+];
 
 /**
  * Web gets a real blur behind the cover label; native keeps the dark translucent panel.

@@ -146,6 +146,15 @@ describe('apply on DSQL', () => {
     await apply(sql, 'ALTER TABLE "a" DROP COLUMN "x";', true);
   });
 
+  it('accepts a constraint an earlier run dropped', async () => {
+    const { sql } = fakeDsql(() => {
+      throw Object.assign(new Error('constraint "a_check" of relation "a" does not exist'), {
+        code: '42704',
+      });
+    }, {});
+    await apply(sql, 'ALTER TABLE "a" DROP CONSTRAINT "a_check";', true);
+  });
+
   it('rethrows a missing column for anything but a DROP COLUMN', async () => {
     const { sql } = fakeDsql(noColumn, {});
     await expect(apply(sql, 'CREATE INDEX "a_idx" ON "a" ("x");', true)).rejects.toThrow(
@@ -281,6 +290,7 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
     await trip('grill', null);
     await trip('blank', null);
     await trip('zimmer', 'city');
+    await trip('ski', null);
 
     await backfillCovers(sql);
     await backfillCovers(sql);
@@ -291,6 +301,7 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
       { template: 'blank', cover: 'trail' },
       { template: 'camp', cover: 'camp' },
       { template: 'grill', cover: 'picnic' },
+      { template: 'ski', cover: 'winter' },
       { template: 'zimmer', cover: 'city' },
     ]);
     const [{ count }] = await sql<[{ count: number }]>`
