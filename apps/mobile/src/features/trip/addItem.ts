@@ -9,6 +9,7 @@ import {
 } from '@yallist/domain';
 
 import type { Action, NewItemInput } from '@/state/reducer';
+import type { Answer } from '@/state/trips';
 
 /** The longest item name the API takes (`text(80)` in apps/api/src/routes/items.ts). */
 export const ITEM_NAME_MAX = 80;
@@ -16,17 +17,19 @@ export const ITEM_NAME_MAX = 80;
 /** The counter shows once a name is this close to the limit. */
 export const COUNTER_FROM = ITEM_NAME_MAX - 20;
 
-type Act = (
-  action: Action,
-  options: { onSuccess: () => void; onError: (error: unknown) => void },
-) => void;
+/** Sends `action`, having `answer` told when the API takes or refuses it. */
+type Act = (action: Action, answer: Answer) => void;
 
 /**
- * Sends a change and settles once the API answered it: the add sheet stays open until then, so a
- * failed save keeps what was typed.
+ * Sends a change and settles once the API answered it, without waiting for the trip to refetch:
+ * the add sheet stays open until then, so a failed save keeps what was typed. Offline, the change
+ * queues (shown at once) as any other, so there is nothing to wait for.
  */
-export const saved = (act: Act, action: Action): Promise<void> =>
-  new Promise((resolve, reject) => act(action, { onSuccess: () => resolve(), onError: reject }));
+export const saved = (act: Act, action: Action, online: boolean): Promise<void> =>
+  new Promise((resolve, reject) => {
+    act(action, { onSaved: resolve, onError: reject });
+    if (!online) resolve();
+  });
 
 /** Marks the "new category" chip as the picked category. */
 export const NEW = 'new';
@@ -73,17 +76,20 @@ export function fillFromCatalog(
 }
 
 /**
- * What saving the draft sends. A name the catalog knows (by its name or another name for it) fills
- * the draft in as tapping its suggestion would, unless `fill` is off: the count or category was
- * chosen by hand. `newCategory` is the name of a category to create for it.
+ * A new item's name typed in full as the catalog has it on this list, or another name for it
+ * (`גריל` for `מנגל`): saving it fills it in as tapping its suggestion would. Not one on the other
+ * list: typing doesn't move the item there; its suggestion still can.
  */
+export function typedCatalogItem(draft: Draft): CatalogItem | undefined {
+  const entry = findCatalogItem(draft.name);
+  return entry?.list === draft.list ? entry : undefined;
+}
+
+/** What saving the draft sends. `newCategory` is the name of a category to create for it. */
 export function toSave(
-  draft: Draft,
+  d: Draft,
   categories: readonly Category[],
-  fill: boolean,
 ): { item: NewItemInput; newCategory?: string } {
-  const match = fill ? findCatalogItem(draft.name) : undefined;
-  const d = match ? fillFromCatalog(draft, match, categories) : draft;
   const picked = pickedCategory(d, categories);
   const newName = d.newName.trim();
   // Typing an existing name picks that category instead of making a second one.

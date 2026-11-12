@@ -3,7 +3,15 @@ import { describe, expect, it } from 'vitest';
 
 import type { Action } from '@/state/reducer';
 
-import { duplicateOf, fillFromCatalog, NEW, saved, toSave, type Draft } from './addItem';
+import {
+  duplicateOf,
+  fillFromCatalog,
+  NEW,
+  saved,
+  toSave,
+  typedCatalogItem,
+  type Draft,
+} from './addItem';
 
 const add: Action = {
   type: 'addItem',
@@ -15,7 +23,7 @@ describe('saved', () => {
   it('waits for the API before the sheet may close', async () => {
     let answer: (() => void) | undefined;
     let done = false;
-    const save = saved((_, { onSuccess }) => (answer = onSuccess), add).then(() => (done = true));
+    const save = saved((_, { onSaved }) => (answer = onSaved), add, true).then(() => (done = true));
     await Promise.resolve();
     expect(done).toBe(false);
     answer!();
@@ -25,7 +33,13 @@ describe('saved', () => {
 
   it('fails when the API refuses, so the sheet keeps the text', async () => {
     const error = new Error('400');
-    await expect(saved((_, { onError }) => onError(error), add)).rejects.toBe(error);
+    await expect(saved((_, { onError }) => onError(error), add, true)).rejects.toBe(error);
+  });
+
+  it('closes at once offline: the change queues, shown on the list, as before', async () => {
+    let sent = false;
+    await saved(() => (sent = true), add, false);
+    expect(sent).toBe(true);
   });
 });
 
@@ -39,31 +53,66 @@ const typed = (name: string, list: Draft['list'] = 'bring'): Draft => ({
 });
 const light: Category = { id: 'light', list: 'bring', name: 'תאורה וניווט', position: 0 };
 
+/** What saving sends for a draft, filled in by the catalog name it has, as the sheet does. */
+const saving = (draft: Draft, categories: Category[]) => {
+  const entry = typedCatalogItem(draft);
+  return toSave(entry ? fillFromCatalog(draft, entry, categories) : draft, categories);
+};
+
+describe('typedCatalogItem', () => {
+  it('knows a catalog name, or another name for it, typed in full on its list', () => {
+    expect(typedCatalogItem(typed('פנס ראש'))?.name).toBe('פנס ראש');
+    expect(typedCatalogItem(typed('מים', 'buy'))?.name).toBe('מים');
+    expect(typedCatalogItem(typed(' גריל '))?.name).toBe('מנגל');
+  });
+
+  it('leaves a part of a name, or a name on the other list, alone', () => {
+    expect(typedCatalogItem(typed('פנס ר'))).toBeUndefined();
+    expect(typedCatalogItem(typed('הסירה של דני'))).toBeUndefined();
+    // Water is bought: typed on the bring list it stays there, as typed.
+    expect(typedCatalogItem(typed('מים', 'bring'))).toBeUndefined();
+  });
+});
+
 describe('toSave', () => {
   it('saves a fully typed catalog name in its category', () => {
-    expect(toSave(typed('פנס ראש'), [light], true)).toEqual({
+    expect(saving(typed('פנס ראש'), [light])).toEqual({
       item: {
         list: 'bring',
         name: 'פנס ראש',
-        kind: 'single',
+        kind: findCatalogItem('פנס ראש')!.kind,
         quantityNeeded: 1,
         categoryId: 'light',
       },
       newCategory: undefined,
     });
-    expect(toSave(typed('מים', 'buy'), [], true).newCategory).toBe('שתייה');
+    expect(saving(typed('מים', 'buy'), []).newCategory).toBe('שתייה');
   });
 
   it('saves a typed synonym as the catalog item, with its count', () => {
-    expect(toSave(typed('שקי שינה'), [], true)).toEqual({
+    expect(saving(typed('שקי שינה'), [])).toEqual({
       item: { list: 'bring', name: 'שק שינה', kind: 'each', quantityNeeded: 1, categoryId: null },
       newCategory: 'לינה',
     });
   });
 
-  it('leaves a name the catalog doesn’t know, or a hand-chosen count, as typed', () => {
-    expect(toSave(typed('הסירה של דני'), [light], true).newCategory).toBeUndefined();
-    expect(toSave(typed('פנס ראש'), [light], false).item.categoryId).toBeNull();
+  it('saves a name the catalog doesn’t know as typed', () => {
+    expect(saving(typed(' הסירה של דני '), [light])).toEqual({
+      item: {
+        list: 'bring',
+        name: 'הסירה של דני',
+        kind: 'single',
+        quantityNeeded: 1,
+        categoryId: null,
+      },
+      newCategory: undefined,
+    });
+  });
+
+  it('puts a new category named as one the list has into that one', () => {
+    const draft = { ...typed('פנס'), category: NEW, newName: ' תאורה וניווט ' };
+    expect(toSave(draft, [light]).item.categoryId).toBe('light');
+    expect(toSave(draft, [light]).newCategory).toBeUndefined();
   });
 });
 
