@@ -52,6 +52,9 @@ export function subscribe({ host, channel, token, onEvent, onSubscribed }: Optio
   let failures = 0;
   let retry: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
+  // Cleared by the unsubscribe itself, not only by the close event, which a browser fires only
+  // once the close handshake ends: late when the network is gone, after we left the trip.
+  let catchUps: ReturnType<typeof setTimeout>[] = [];
 
   const connect = () => {
     const authorization = { host: httpHost, Authorization: token() ?? '' };
@@ -66,7 +69,6 @@ export function subscribe({ host, channel, token, onEvent, onSubscribed }: Optio
       clearTimeout(watchdog);
       watchdog = setTimeout(reconnect, timeoutMs);
     };
-    let catchUps: ReturnType<typeof setTimeout>[] = [];
     function reconnect() {
       if (socket !== ws) return;
       socket = undefined;
@@ -108,6 +110,7 @@ export function subscribe({ host, channel, token, onEvent, onSubscribed }: Optio
   return () => {
     stopped = true;
     clearTimeout(retry);
+    catchUps.forEach(clearTimeout);
     socket?.close();
   };
 }

@@ -106,6 +106,16 @@ describe('subscribe', () => {
     expect(onSubscribed).toHaveBeenCalledTimes(1);
   });
 
+  it('drops the catch-ups on unsubscribe, before the socket reports closing', () => {
+    const { onSubscribed, stop } = start();
+    latest().accept();
+    // A browser fires close once the close handshake ends: late when the network is gone.
+    latest().close = () => {};
+    stop();
+    vi.advanceTimersByTime(60_000);
+    expect(onSubscribed).toHaveBeenCalledOnce();
+  });
+
   it('reports each event', () => {
     const { onEvent } = start();
     latest().accept();
