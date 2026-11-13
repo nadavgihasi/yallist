@@ -1,6 +1,7 @@
 export type ListKind = 'bring' | 'buy';
 export type ItemKind = 'single' | 'qty' | 'each';
-export type TemplateId = 'camp' | 'grill' | 'zimmer' | 'beach' | 'blank';
+export type TemplateId =
+  'camp' | 'grill' | 'zimmer' | 'beach' | 'hike' | 'trek' | 'flight' | 'ski' | 'blank';
 export type MemberRole = 'organizer' | 'member';
 export type MemberStatus = 'pending' | 'active' | 'removed';
 

@@ -1,0 +1,2 @@
+ALTER TABLE "trips" DROP CONSTRAINT "trips_template_check";--> statement-breakpoint
+ALTER TABLE "trips" ADD CONSTRAINT "trips_template_check" CHECK ("trips"."template" in ('camp', 'grill', 'zimmer', 'beach', 'hike', 'trek', 'flight', 'ski', 'blank'));
