@@ -465,6 +465,31 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       expect((await leave(member)).status).toBe(404);
     });
 
+    it('lets a member who left join again from the link; not one who was removed', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const removed = await guest('removed');
+      await join(removed, data.inviteToken);
+      await client.trips[':tripId'].members[':userId'].$delete(
+        memberPath(tripId, removed.id),
+        as(organizer),
+      );
+      await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(member));
+
+      const again = await join(member, data.inviteToken);
+      expect(again.status).toBe(200);
+      expect(await again.json()).toEqual({ tripId, status: 'active' });
+      expect((await detail(member, tripId)).status).toBe(200);
+      expect((await join(removed, data.inviteToken)).status).toBe(403);
+
+      // Removed after coming back: the link no longer lets them in.
+      await client.trips[':tripId'].members[':userId'].$delete(
+        memberPath(tripId, member.id),
+        as(organizer),
+      );
+      expect((await join(member, data.inviteToken)).status).toBe(403);
+    });
+
     it('lets an organizer leave once another member is organizer', async () => {
       const { organizer, member, data } = await tripWithMember();
       const tripId = data.trip.id;
