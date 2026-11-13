@@ -1,6 +1,7 @@
 export type ListKind = 'bring' | 'buy';
 export type ItemKind = 'single' | 'qty' | 'each';
-export type TemplateId = 'camp' | 'grill' | 'zimmer' | 'beach' | 'blank';
+export type TemplateId =
+  'camp' | 'grill' | 'zimmer' | 'beach' | 'hike' | 'trek' | 'flight' | 'ski' | 'blank';
 export type MemberRole = 'organizer' | 'member';
 export type MemberStatus = 'pending' | 'active' | 'removed';
 
@@ -78,6 +79,8 @@ export interface Expense {
   description: string;
   amountAgorot: number;
   paidBy: string;
+  /** Who added it: they, the payer and organizers may change it. From the API. */
+  createdBy?: string;
   /** Participants the expense is split between: what its parts leave, if it has parts. */
   shares: string[];
   /** Amounts split between other people than the rest, such as a run's alcohol. */

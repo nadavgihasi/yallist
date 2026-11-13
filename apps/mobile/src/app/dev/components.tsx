@@ -38,7 +38,17 @@ const PHASES: [string, string][] = [
   [NOW, NOW],
   [NOW, addDays(NOW, 1)],
 ];
-const TEMPLATES: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach', 'blank'];
+const TEMPLATES: TemplateId[] = [
+  'camp',
+  'grill',
+  'zimmer',
+  'beach',
+  'hike',
+  'trek',
+  'flight',
+  'ski',
+  'blank',
+];
 
 /** Dev-only gallery of the design-system components. */
 export default function ComponentsPreview() {

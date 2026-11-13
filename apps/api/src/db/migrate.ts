@@ -15,7 +15,7 @@ const DIR = new URL('../../drizzle/', import.meta.url);
  * DSQL allows one DDL statement per transaction, so each statement runs and is recorded on its
  * own; a failed deploy resumes from the statement that failed. A statement can commit without
  * being recorded (a crash in between), so on the next run its "already exists" error (or, for a
- * DROP COLUMN, "no such column") means it was applied.
+ * DROP COLUMN or DROP CONSTRAINT, "does not exist") means it was applied.
  */
 export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
   await sql`create table if not exists __migrations (
@@ -57,15 +57,21 @@ const ALREADY_EXISTS = new Set([
   '42701', // duplicate_column
   '42710', // duplicate_object: constraints
 ]);
-/** The SQLSTATE of re-running a DROP COLUMN that committed: undefined_column. */
-const ALREADY_DROPPED = '42703';
+/** The SQLSTATEs of re-running a DROP COLUMN or DROP CONSTRAINT that committed. */
+const COLUMN_DROPPED = '42703'; // undefined_column
+const CONSTRAINT_DROPPED = '42704'; // undefined_object
 
 /** Whether `error` from running `statement` means an earlier run already applied it. */
 function alreadyApplied(statement: string, error: unknown) {
   const code = (error as { code?: string }).code ?? '';
-  return ALREADY_EXISTS.has(code) || (code === ALREADY_DROPPED && isDropColumn(statement));
+  return (
+    ALREADY_EXISTS.has(code) ||
+    (code === COLUMN_DROPPED && isDrop('COLUMN', statement)) ||
+    (code === CONSTRAINT_DROPPED && isDrop('CONSTRAINT', statement))
+  );
 }
-const isDropColumn = (statement: string) => /^ALTER TABLE "[^"]+" DROP COLUMN /.test(statement);
+const isDrop = (what: 'COLUMN' | 'CONSTRAINT', statement: string) =>
+  new RegExp(`^ALTER TABLE "[^"]+" DROP ${what} `).test(statement);
 
 /**
  * Runs one migration statement. On DSQL an index is built by a background job: wait for it, and

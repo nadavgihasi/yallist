@@ -25,7 +25,6 @@ import { sharedText } from './runSplit';
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
   const act = useTripAction(data.trip.id);
   const [confirmDelete, setConfirmDelete] = useState<string>();
-  const organizer = view.memberById.get(me)?.role === 'organizer';
   // Transfers come from the API: until it answers, a second tap would pay twice.
   const saving = useIsMutating({ mutationKey: tripKey(data.trip.id) }) > 0;
   const sum = (xs: { amountAgorot: number }[]) => xs.reduce((n, x) => n + x.amountAgorot, 0);
@@ -224,8 +223,24 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
                 <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
                 <View style={styles.expenseActions}>
                   <ReceiptButton tripId={data.trip.id} expense={e} />
-                  {/* The API also lets whoever added it delete it, but the app doesn't know who that was. */}
-                  {(e.paidBy === me || organizer) &&
+                  {view.mayChange(e) && (
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={he.money.editExpense}
+                      hitSlop={4}
+                      {...testId('expense-edit')}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/trips/[tripId]/expenses/[expenseId]/edit',
+                          params: { tripId: data.trip.id, expenseId: e.id },
+                        })
+                      }
+                      style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.75 }]}
+                    >
+                      <Icon name="pencil" size={20} color={colors.primaryStrong} />
+                    </Pressable>
+                  )}
+                  {view.mayChange(e) &&
                     (confirmDelete === e.id ? (
                       <PillButton
                         label={he.money.confirmDelete}

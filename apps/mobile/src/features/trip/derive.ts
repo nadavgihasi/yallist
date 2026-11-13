@@ -5,6 +5,7 @@ import {
   isRunEligible,
   itemStatus,
   owedShares,
+  type Expense,
   type Item,
   type ListKind,
 } from '@yallist/domain';
@@ -49,6 +50,7 @@ export function deriveTrip(data: TripData, me: string) {
     return claim?.userId;
   };
   const runClaims = (runId: string) => data.claims.filter((c) => c.runId === runId);
+  const organizer = memberById.get(me)?.role === 'organizer';
 
   return {
     activeIds,
@@ -70,6 +72,9 @@ export function deriveTrip(data: TripData, me: string) {
     /** What a run may claim now: shared buy items nobody has, not bought yet. */
     runEligible: items.filter((i) => isRunEligible(i, data.claims, data.expenses)),
     status: (item: Item) => itemStatus(item, data.claims, data.expenses, activeIds, me),
+    /** Who may edit or delete an expense, as the API allows: who added it, who paid, organizers. */
+    mayChange: (e: Pick<Expense, 'createdBy' | 'paidBy'>) =>
+      e.createdBy === me || e.paidBy === me || organizer,
     /** Who pays whom to settle up, worked out by the API. */
     transfers: data.transfers,
     totalSpent: data.expenses.reduce((sum, e) => sum + e.amountAgorot, 0),

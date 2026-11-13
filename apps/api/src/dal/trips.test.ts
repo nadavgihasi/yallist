@@ -96,6 +96,7 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
         description: 'קרח',
         amountAgorot: 1000,
         paidBy: me,
+        createdBy: me,
         shares: [me],
         hasReceipt: false,
       },

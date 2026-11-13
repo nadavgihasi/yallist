@@ -20,6 +20,10 @@ const DEFAULT_COVERS: Record<TemplateId, CoverId> = {
   grill: 'picnic',
   zimmer: 'zimmer',
   beach: 'beach',
+  hike: 'forest',
+  trek: 'trail',
+  flight: 'flight',
+  ski: 'winter',
   blank: 'trail',
 };
 
