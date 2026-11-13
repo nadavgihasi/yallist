@@ -1,6 +1,6 @@
-import { formatShekel, type ListFilter } from '@yallist/domain';
+import { filterItems, formatShekel, type ListFilter } from '@yallist/domain';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import {
   Platform,
   Pressable,
@@ -28,11 +28,14 @@ import { MoneyTab } from '@/features/trip/MoneyTab';
 import { PeopleTab } from '@/features/trip/PeopleTab';
 import { pinOffset, tabsMinHeight } from '@/features/trip/pin';
 import { ReadinessHero } from '@/features/trip/ReadinessHero';
+import { clearReveal, pendingReveal, revealOffset, revealTarget } from '@/features/trip/reveal';
+import { RevealProvider, type ViewNode } from '@/features/trip/RevealTarget';
 import { TripLinksBar } from '@/features/trip/TripLinks';
 import { he, participants, peopleNames } from '@/i18n/he';
 import { countdown, formatRange } from '@/lib/dates';
 import { statusOf } from '@/lib/api';
 import { testId } from '@/lib/testId';
+import { useReducedMotion } from '@/lib/useReducedMotion';
 import { useToday } from '@/lib/useToday';
 import { useMe } from '@/state/store';
 import { useLeaveTrip, useTripQuery, useTripUpdates } from '@/state/trips';
@@ -52,6 +55,8 @@ const sticky = (Platform.OS === 'web' ? { position: 'sticky', top: 24 } : {}) as
 const BAR_ABOVE_TABS = space[2] + size.avatar + space[3];
 /** Phone and tablet: the gap between the page's blocks, a little tighter than desktop's. */
 const COLUMN_GAP = space[3];
+/** How long a row just added stays marked after the page scrolls to it. */
+const FLASH_MS = 2400;
 
 export default function TripScreen() {
   const params = useLocalSearchParams<{
@@ -93,12 +98,104 @@ export default function TripScreen() {
       });
     }
   };
-  const now = useToday();
-  // Every "invite friends" button opens the invite sheet, which shows what will be sent.
-  const invite = () => router.push({ pathname: '/trips/[tripId]/invite', params: { tripId } });
   // Phone and tablet: room under the tabs for a short tab, so switching to it while pinned
   // stays pinned instead of jumping the page back down.
   const [viewport, setViewport] = useState(0);
+  const reduced = useReducedMotion();
+  // Where each row is that a sheet may ask to show (`features/trip/reveal.ts`), and which flashes.
+  const targets = useRef(new Map<string, ViewNode>()).current;
+  const register = useCallback(
+    (key: string, node: ViewNode | null) =>
+      void (node ? targets.set(key, node) : targets.delete(key)),
+    [targets],
+  );
+  const [flashing, setFlashing] = useState<string>();
+  const reveals = useMemo(() => ({ register, flashing }), [register, flashing]);
+  const tabsRef = useRef<ViewNode>(null);
+  // Phone and tablet: the pinned bar's height, which covers the top of the page once it shows.
+  const pinnedHeight = useRef(0);
+  /** Scrolls to `node`, measured on the page now, so after whatever just changed above it. */
+  const scrollToNode = (node: ViewNode, offset: (y: number, height: number) => number) => {
+    const content = scrollRef.current?.getInnerViewNode();
+    if (!content) return;
+    node.measureLayout(content, (_x, y, _w, height) =>
+      scrollRef.current?.scrollTo({ y: offset(y, height), animated: !reduced }),
+    );
+  };
+  /**
+   * After a button above the tabs changed what they show (a tab, a filter): bring the tabs up to
+   * the top, pinned on phone and tablet, so the list it opened starts right under them.
+   */
+  const focusList = () =>
+    requestAnimationFrame(() => {
+      const node = tabsRef.current;
+      if (!node) return;
+      scrollToNode(node, (y) =>
+        desktop ? Math.max(0, y - space[6]) : pinOffset(y, insets.top, BAR_ABOVE_TABS) + 1,
+      );
+    });
+  // Only on top: a sheet over this screen shows its row once it closes.
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  // A sheet added something: open its tab (and a filter that shows it), then scroll to it. The
+  // request comes from outside React (`requestReveal`), so it's taken here, once we're on top.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (!focused || !data) return;
+    const reveal = pendingReveal(tripId);
+    const target = reveal && revealTarget(reveal, data);
+    if (!target) return;
+    clearReveal();
+    if (target.tab !== tab) setTab(target.tab);
+    const item = data.items.find((i) => i.id === target.itemId);
+    if (target.tab !== tab || (item && filter !== 'all')) {
+      const ids = deriveTrip(data, me.userId).activeIds;
+      const hidden =
+        item &&
+        filterItems([item], filter, data.claims, data.expenses, ids, me.userId).length === 0;
+      if (target.tab !== tab || hidden) setFilter('all');
+    }
+    setFlashing(target.key);
+    // `tab` and `filter` are read, not watched: changing them shouldn't show the row again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focused, data, tripId, me.userId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
+  // Once its row is on the page (a tab switch renders it), scroll it to the middle of the view.
+  useEffect(() => {
+    if (!flashing) return;
+    let tries = 0;
+    let frame = 0;
+    const go = () => {
+      const node = targets.get(flashing);
+      if (!node) {
+        if (tries++ < 30) frame = requestAnimationFrame(go);
+        return;
+      }
+      scrollToNode(node, (y, height) =>
+        revealOffset({
+          rowY: y,
+          rowHeight: height,
+          viewport,
+          coveredTop: desktop ? 0 : pinnedHeight.current || insets.top + BAR_ABOVE_TABS + 56,
+        }),
+      );
+    };
+    frame = requestAnimationFrame(go);
+    const done = setTimeout(() => setFlashing(undefined), FLASH_MS);
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(done);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [flashing]);
+  const now = useToday();
+  // Every "invite friends" button opens the invite sheet, which shows what will be sent.
+  const invite = () => router.push({ pathname: '/trips/[tripId]/invite', params: { tripId } });
   // A sheet opened by URL hands its params to this screen underneath it. Clear them once this
   // screen is focused again: `router.setParams` targets the focused route, not necessarily this one.
   useFocusEffect(
@@ -153,11 +250,13 @@ export default function TripScreen() {
       onMissing={() => {
         setTab(view.missingIn('bring') >= view.missingIn('buy') ? 'bring' : 'buy');
         setFilter('missing');
+        focusList();
       }}
       onMine={() => {
         const mineIn = (l: 'bring' | 'buy') => view.mine.filter((i) => i.list === l).length;
         setTab(mineIn('bring') >= mineIn('buy') ? 'bring' : 'buy');
         setFilter('mine');
+        focusList();
       }}
       onInvite={invite}
     />
@@ -305,7 +404,13 @@ export default function TripScreen() {
               .filter(Boolean)
               .join(' · ')}
           </Text>
-          <TripLinksBar trip={trip} onMeetup={() => pickTab('people')} />
+          <TripLinksBar
+            trip={trip}
+            onMeetup={() => {
+              pickTab('people');
+              focusList();
+            }}
+          />
         </View>
 
         {params.joined && (
@@ -315,6 +420,7 @@ export default function TripScreen() {
             onPick={(next) => {
               setTab(next);
               setFilter('missing');
+              focusList();
             }}
             onDone={() => router.setParams({ joined: undefined })}
           />
@@ -325,30 +431,34 @@ export default function TripScreen() {
           onLayout={(e) => (tabsY.current = e.nativeEvent.layout.y)}
         >
           <View style={[styles.main, desktop && styles.mainDesktop]}>
-            {/* Pinned, the bar's copy is the tabs: this one is out of reach of screen readers
+            <View ref={tabsRef} collapsable={false}>
+              {/* Pinned, the bar's copy is the tabs: this one is out of reach of screen readers
                 and the keyboard, and the test ids go with the one in view. */}
-            <SegmentedControl
-              options={tabs}
-              value={tab}
-              onChange={pickTab}
-              testID={showPinned ? undefined : 'trip-tab'}
-              hidden={showPinned}
-            />
-            {(tab === 'bring' || tab === 'buy') && (
-              <ListTab
-                key={tab}
-                list={tab}
-                data={data}
-                view={view}
-                me={me.userId}
-                filter={filter}
-                onFilter={setFilter}
+              <SegmentedControl
+                options={tabs}
+                value={tab}
+                onChange={pickTab}
+                testID={showPinned ? undefined : 'trip-tab'}
+                hidden={showPinned}
               />
-            )}
-            {tab === 'people' && (
-              <PeopleTab data={data} view={view} me={me.userId} onInvite={invite} />
-            )}
-            {tab === 'money' && <MoneyTab data={data} view={view} me={me.userId} />}
+            </View>
+            <RevealProvider value={reveals}>
+              {(tab === 'bring' || tab === 'buy') && (
+                <ListTab
+                  key={tab}
+                  list={tab}
+                  data={data}
+                  view={view}
+                  me={me.userId}
+                  filter={filter}
+                  onFilter={setFilter}
+                />
+              )}
+              {tab === 'people' && (
+                <PeopleTab data={data} view={view} me={me.userId} onInvite={invite} />
+              )}
+              {tab === 'money' && <MoneyTab data={data} view={view} me={me.userId} />}
+            </RevealProvider>
           </View>
           {desktop && (
             <View style={[styles.side, sticky]}>
@@ -367,7 +477,10 @@ export default function TripScreen() {
         <View style={{ height: FLOATING_CLEARANCE + insets.bottom }} />
       </ScrollView>
       {showPinned && (
-        <View style={[styles.pinned, { paddingTop: space[2] + insets.top }]}>
+        <View
+          style={[styles.pinned, { paddingTop: space[2] + insets.top }]}
+          onLayout={(e) => (pinnedHeight.current = e.nativeEvent.layout.height)}
+        >
           <View style={[styles.pinnedInner, styles.column]}>
             <View style={styles.pinnedBar}>
               {backButton('trip-pinned-back')}

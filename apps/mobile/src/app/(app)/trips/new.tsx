@@ -130,6 +130,33 @@ export default function NewTrip() {
           </View>
 
           <View style={[styles.body, desktop && styles.formCol]}>
+            {/* What it's called and when first: the card above shows them as they're typed. */}
+            <Card>
+              <TextField
+                label={he.newTrip.name}
+                value={name}
+                onChangeText={setName}
+                placeholder={he.newTrip.namePlaceholder}
+                {...testId('new-trip-name')}
+              />
+              <View style={styles.field}>
+                <Text style={fieldStyles.label}>{he.newTrip.when}</Text>
+                <View style={styles.dates}>
+                  <DateField
+                    label={he.newTrip.from}
+                    value={startsOn}
+                    min={today()}
+                    onChange={setStart}
+                  />
+                  <DateField
+                    label={he.newTrip.to}
+                    value={endsOn}
+                    min={startsOn}
+                    onChange={setEndsOn}
+                  />
+                </View>
+              </View>
+            </Card>
             <View style={styles.section}>
               <View style={styles.sectionHead}>
                 <Text style={styles.h2}>{he.newTrip.kind}</Text>
@@ -161,33 +188,6 @@ export default function NewTrip() {
               </View>
               <CoverPicker value={cover} onChange={setCover} />
             </View>
-
-            <Card>
-              <TextField
-                label={he.newTrip.name}
-                value={name}
-                onChangeText={setName}
-                placeholder={he.newTrip.namePlaceholder}
-                {...testId('new-trip-name')}
-              />
-              <View style={styles.field}>
-                <Text style={fieldStyles.label}>{he.newTrip.when}</Text>
-                <View style={styles.dates}>
-                  <DateField
-                    label={he.newTrip.from}
-                    value={startsOn}
-                    min={today()}
-                    onChange={setStart}
-                  />
-                  <DateField
-                    label={he.newTrip.to}
-                    value={endsOn}
-                    min={startsOn}
-                    onChange={setEndsOn}
-                  />
-                </View>
-              </View>
-            </Card>
 
             <View style={styles.card} accessibilityLiveRegion="polite">
               <Text style={styles.h3}>{he.newTrip.preview}</Text>

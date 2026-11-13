@@ -20,6 +20,8 @@ import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
 import { PayRow } from './PayRow';
+import { expenseKey } from './reveal';
+import { RevealTarget } from './RevealTarget';
 import { sharedText } from './runSplit';
 
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
@@ -206,65 +208,67 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           {data.expenses.map((e) => (
             // Two lines at phone width: what and who on the start, the amount over the actions
             // on the end, so the description keeps the room.
-            <View key={e.id} style={styles.expense}>
-              <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
-              <View style={styles.expenseBody}>
-                <Text style={styles.expenseWhat} numberOfLines={1}>
-                  {e.description}
-                </Text>
-                {/* A split in parts wraps: who shares each part is the point of it. */}
-                <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
-                  {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Text>
-              </View>
-              <View style={styles.expenseEnd}>
-                <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
-                <View style={styles.expenseActions}>
-                  <ReceiptButton tripId={data.trip.id} expense={e} />
-                  {view.mayChange(e) && (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={he.money.editExpense}
-                      hitSlop={4}
-                      {...testId('expense-edit')}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/trips/[tripId]/expenses/[expenseId]/edit',
-                          params: { tripId: data.trip.id, expenseId: e.id },
-                        })
-                      }
-                      style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.75 }]}
-                    >
-                      <Icon name="pencil" size={20} color={colors.primaryStrong} />
-                    </Pressable>
-                  )}
-                  {view.mayChange(e) &&
-                    (confirmDelete === e.id ? (
-                      <PillButton
-                        label={he.money.confirmDelete}
-                        variant="danger"
-                        size="sm"
-                        onPress={() => {
-                          act({ type: 'deleteExpense', expenseId: e.id });
-                          setConfirmDelete(undefined);
-                        }}
-                      />
-                    ) : (
+            <RevealTarget key={e.id} id={expenseKey(e.id)}>
+              <View style={styles.expense}>
+                <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
+                <View style={styles.expenseBody}>
+                  <Text style={styles.expenseWhat} numberOfLines={1}>
+                    {e.description}
+                  </Text>
+                  {/* A split in parts wraps: who shares each part is the point of it. */}
+                  <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
+                    {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
+                </View>
+                <View style={styles.expenseEnd}>
+                  <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+                  <View style={styles.expenseActions}>
+                    <ReceiptButton tripId={data.trip.id} expense={e} />
+                    {view.mayChange(e) && (
                       <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={he.money.deleteExpense}
+                        accessibilityLabel={he.money.editExpense}
                         hitSlop={4}
-                        onPress={() => setConfirmDelete(e.id)}
+                        {...testId('expense-edit')}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/trips/[tripId]/expenses/[expenseId]/edit',
+                            params: { tripId: data.trip.id, expenseId: e.id },
+                          })
+                        }
                         style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.75 }]}
                       >
-                        <Icon name="trash" size={20} color={colors.inkFaint} />
+                        <Icon name="pencil" size={20} color={colors.primaryStrong} />
                       </Pressable>
-                    ))}
+                    )}
+                    {view.mayChange(e) &&
+                      (confirmDelete === e.id ? (
+                        <PillButton
+                          label={he.money.confirmDelete}
+                          variant="danger"
+                          size="sm"
+                          onPress={() => {
+                            act({ type: 'deleteExpense', expenseId: e.id });
+                            setConfirmDelete(undefined);
+                          }}
+                        />
+                      ) : (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={he.money.deleteExpense}
+                          hitSlop={4}
+                          onPress={() => setConfirmDelete(e.id)}
+                          style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.75 }]}
+                        >
+                          <Icon name="trash" size={20} color={colors.inkFaint} />
+                        </Pressable>
+                      ))}
+                  </View>
                 </View>
               </View>
-            </View>
+            </RevealTarget>
           ))}
         </ListGroup>
       )}
