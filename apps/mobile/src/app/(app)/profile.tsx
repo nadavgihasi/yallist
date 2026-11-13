@@ -33,7 +33,7 @@ import { signInWithGoogle } from '@/lib/api';
 import { useBag } from '@/state/bag';
 import { useAvatar, useProfile, useUpdateProfile, type Profile } from '@/state/profile';
 import { useSession } from '@/state/store';
-import { avatarSize, colors, layout, radius, size, space, type } from '@/theme';
+import { avatarSize, colors, layout, radius, size, space, surface, type } from '@/theme';
 import { useBreakpoint, type Breakpoint } from '@/theme/breakpoint';
 
 /** react-native-web adds these to Pressable's state. */
@@ -454,6 +454,8 @@ const styles = StyleSheet.create({
     height: size.avatar,
     borderRadius: size.avatar / 2,
     backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairline,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -492,8 +494,7 @@ const styles = StyleSheet.create({
     gap: space[3],
     minHeight: 72,
     paddingHorizontal: space[5],
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
+    ...surface,
   },
   bagIcon: {
     width: size.avatar,

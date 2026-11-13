@@ -451,6 +451,8 @@ const styles = StyleSheet.create({
     height: size.avatar,
     borderRadius: size.avatar / 2,
     backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairline,
     alignItems: 'center',
     justifyContent: 'center',
   },

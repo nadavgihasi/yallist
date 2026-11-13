@@ -104,6 +104,9 @@ importers:
       '@expo-google-fonts/rubik':
         specifier: ^0.4.2
         version: 0.4.2
+      '@expo-google-fonts/suez-one':
+        specifier: ^0.4.1
+        version: 0.4.1
       '@react-native-async-storage/async-storage':
         specifier: 2.2.0
         version: 2.2.0(react-native@0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))
@@ -1315,6 +1318,9 @@ packages:
 
   '@expo-google-fonts/rubik@0.4.2':
     resolution: {integrity: sha512-WJtpQEw4lDKjCVnVIBF9qiZn+BTOB3juWvSchpZ+mnHFFV0gh4PyOvLLJCOMmKVgSj/pzFDtNe4apqexrD0+pA==}
+
+  '@expo-google-fonts/suez-one@0.4.1':
+    resolution: {integrity: sha512-aIAjCsOm27Zf+Mryof+uXHxmls08V4fXqosp9uMznUtNg998fvOHWXXL427WD5s6juJ28hRVVGZjKs4JkydIQw==}
 
   '@expo/cli@58.1.15':
     resolution: {integrity: sha512-+gBvfvmttvNqs8ceJe1SdiWBa6reocb/ZC8jMxsF8qFlCijAUQNqFMGCPkT/6zasFkQLUL8ZOFhf/9DKj2XaLg==}
@@ -6886,6 +6892,8 @@ snapshots:
       levn: 0.4.1
 
   '@expo-google-fonts/rubik@0.4.2': {}
+
+  '@expo-google-fonts/suez-one@0.4.1': {}
 
   '@expo/cli@58.1.15(@expo/dom-webview@58.0.2)(@expo/metro-runtime@58.0.15)(expo-constants@58.0.13)(expo-font@58.0.10(expo@58.0.19)(react-native@0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0))(expo-router@58.0.26)(expo@58.0.19)(react-dom@19.3.0(react@19.3.0))(react-native@0.88.0(@babel/core@7.29.7)(@react-native/metro-config@0.88.0(@babel/core@7.29.7))(@types/react@19.3.0)(react@19.3.0))(react@19.3.0)(typescript@6.0.3)':
     dependencies:

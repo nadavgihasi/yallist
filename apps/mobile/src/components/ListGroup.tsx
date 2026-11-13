@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, radius, space, type } from '@/theme';
+import { colors, space, surface, type } from '@/theme';
 
-/** The white card: the only container. No border, no shadow, never nested. */
+/** The white card: the only container. A hairline outline, no shadow, never nested. */
 export function Card({
   children,
   gap = space[4],
@@ -50,13 +50,13 @@ export function ListGroup({
 }
 
 const styles = StyleSheet.create({
-  card: { padding: space[5], borderRadius: radius.card, backgroundColor: colors.card },
+  card: { ...surface, padding: space[5] },
   header: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'space-between',
     gap: space[3],
   },
-  title: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.inkMuted },
+  title: { ...type.label, color: colors.inkMuted },
   aside: { ...type.caption, color: colors.inkMuted },
 });

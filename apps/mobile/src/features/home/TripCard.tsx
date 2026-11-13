@@ -20,7 +20,7 @@ import {
 import { formatRange, monthName } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import type { TripSummary } from '@/state/types';
-import { colors, radius, space, type } from '@/theme';
+import { colors, space, surface, type } from '@/theme';
 
 import { pastTripState } from './pastTrip';
 
@@ -120,12 +120,12 @@ export function PastTripRow({ data }: { data: TripSummary }) {
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
+  card: { ...surface, overflow: 'hidden' },
   cover: { height: 88 },
   countdown: { position: 'absolute', top: space[3], start: space[3] },
   body: { padding: space[5], gap: space[4] },
   texts: { flex: 1, gap: space[1] },
-  name: { ...type.sectionTitle, fontSize: 24, lineHeight: 30, color: colors.ink },
+  name: { ...type.sectionTitle, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   side: { flexShrink: 1, gap: space[2] },
@@ -136,8 +136,7 @@ const styles = StyleSheet.create({
   // One object, not `[card, past]`: an array style on the `Link asChild` Pressable reaches the DOM
   // as indexed keys on web and crashes the home screen (YALLIST-APP-1).
   past: {
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
+    ...surface,
     overflow: 'hidden',
     flexDirection: 'row',
     alignItems: 'center',

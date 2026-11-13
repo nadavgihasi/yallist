@@ -5,7 +5,7 @@ import { TripTile } from './TripTile';
 
 import { he, itemsCount } from '@/i18n/he';
 import { testId } from '@/lib/testId';
-import { colors, radius, space, type } from '@/theme';
+import { colors, space, surface, type } from '@/theme';
 
 /**
  * A trip template to start from: its tile, name and how many items it brings. `row` lays it out
@@ -51,11 +51,11 @@ export function TemplateTile({
 }
 
 const styles = StyleSheet.create({
-  tile: { padding: space[4], borderRadius: radius.card, backgroundColor: colors.card },
+  tile: { ...surface, padding: space[4] },
   stack: { minHeight: 120, gap: space[2] },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   texts: { gap: space[2], flexShrink: 1 },
-  on: { backgroundColor: colors.primaryTint },
+  on: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
   pressed: { opacity: 0.75 },
   name: { ...type.itemTitle, color: colors.ink },
   meta: { ...type.caption, color: colors.inkMuted },

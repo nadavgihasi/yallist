@@ -4,7 +4,7 @@ import { Animated, Easing, StyleSheet, View, type StyleProp, type ViewStyle } fr
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { useReducedMotion } from '@/lib/useReducedMotion';
-import { colors, radius, space } from '@/theme';
+import { colors, space, surface } from '@/theme';
 
 /** Placeholder fill (`well`). */
 const WELL = colors.ground;
@@ -81,6 +81,6 @@ export const Skeleton = Object.assign(SkeletonRoot, {
 });
 
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
+  card: { ...surface, overflow: 'hidden' },
   body: { padding: space[5], gap: space[3] },
 });
