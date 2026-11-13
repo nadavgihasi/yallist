@@ -163,6 +163,155 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
     ]);
   });
 
+  const edit = (
+    user: Guest,
+    tripId: string,
+    expenseId: string,
+    json: {
+      description?: string;
+      amountAgorot?: number;
+      paidBy?: string;
+      shares?: string[];
+      parts?: { label: string; amountAgorot: number; shares: string[] }[];
+    },
+  ) =>
+    client.trips[':tripId'].expenses[':expenseId'].$patch(
+      { param: { tripId, expenseId }, json },
+      as(user),
+    );
+
+  it('edits an expense in place, and balances follow', async () => {
+    const { a, b, c, tripId } = await trip();
+    const expense = await (
+      await addExpense(b, tripId, { amountAgorot: 900, shares: [a.id, b.id, c.id] })
+    ).json();
+    expect(expense.createdBy).toBe(b.id);
+
+    const res = await edit(b, tripId, expense.id, {
+      description: 'קרח',
+      amountAgorot: 1200,
+      paidBy: c.id,
+      shares: [a.id, c.id, a.id],
+    });
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      id: expense.id,
+      description: 'קרח',
+      amountAgorot: 1200,
+      paidBy: c.id,
+      createdBy: b.id,
+      shares: expect.arrayContaining([a.id, c.id]),
+    });
+    const after = await detail(a, tripId);
+    expect(after.expenses).toHaveLength(1);
+    expect(after.expenses[0]!.shares).toHaveLength(2);
+    expect(after.balances).toEqual({ [a.id]: -600, [b.id]: 0, [c.id]: 600 });
+    expect(after.transfers).toEqual([{ from: a.id, to: c.id, amountAgorot: 600 }]);
+
+    // Only what's given changes.
+    await edit(a, tripId, expense.id, { description: 'קרח ופחמים' });
+    expect((await detail(c, tripId)).expenses[0]).toMatchObject({
+      description: 'קרח ופחמים',
+      amountAgorot: 1200,
+      paidBy: c.id,
+    });
+
+    const logged = await sql<{ payload: Record<string, unknown> }[]>`
+      select payload from activity where trip_id = ${tripId} and type = 'expense_edited'
+      order by created_at`;
+    expect(logged.map((l) => l.payload)).toEqual([
+      { expenseId: expense.id, fromAgorot: 900, amountAgorot: 1200 },
+      { expenseId: expense.id, fromAgorot: 1200, amountAgorot: 1200 },
+    ]);
+  });
+
+  it('keeps the receipt and the bought item through an edit', async () => {
+    const { a, b, tripId, items } = await trip();
+    const buy = items.find((i) => i.list === 'buy')!;
+    const expense = await (
+      await addExpense(a, tripId, { amountAgorot: 4500, shares: [a.id, b.id], itemId: buy.id })
+    ).json();
+    await sql`update expenses set receipt_path = 'r.jpg' where id = ${expense.id}`;
+
+    expect((await edit(a, tripId, expense.id, { amountAgorot: 5000 })).status).toBe(200);
+    const [after] = (await detail(b, tripId)).expenses;
+    expect(after).toMatchObject({ amountAgorot: 5000, itemIds: [buy.id], hasReceipt: true });
+    // Still bought: a second purchase of it is refused.
+    expect(
+      (await addExpense(b, tripId, { amountAgorot: 100, shares: [b.id], itemId: buy.id })).status,
+    ).toBe(409);
+  });
+
+  it('lets only whoever may delete an expense edit it', async () => {
+    const { a, b, c, tripId } = await trip();
+    // Added by b, paid by c; a organizes.
+    const expense = await (
+      await addExpense(b, tripId, { amountAgorot: 600, shares: [a.id, b.id], paidBy: c.id })
+    ).json();
+    for (const user of [a, b, c]) {
+      expect((await edit(user, tripId, expense.id, { amountAgorot: 700 })).status).toBe(200);
+    }
+    const mine = await (await addExpense(a, tripId, { amountAgorot: 100, shares: [a.id] })).json();
+    expect((await edit(b, tripId, mine.id, { amountAgorot: 1 })).status).toBe(403);
+    const stranger = await signInAsGuest(app, 'stranger');
+    expect((await edit(stranger, tripId, mine.id, { amountAgorot: 1 })).status).toBe(404);
+    expect((await detail(a, tripId)).expenses.find((e) => e.id === mine.id)!.amountAgorot).toBe(
+      100,
+    );
+  });
+
+  it('validates an edit as it validates a new expense', async () => {
+    const { a, b, c, tripId } = await trip();
+    const stranger = await signInAsGuest(app, 'stranger');
+    const { id } = await (
+      await addExpense(a, tripId, { amountAgorot: 1000, shares: [a.id, b.id] })
+    ).json();
+    expect((await edit(a, tripId, id, { amountAgorot: 0 })).status).toBe(400);
+    expect((await edit(a, tripId, id, { description: ' ' })).status).toBe(400);
+    expect((await edit(a, tripId, id, { shares: [] })).status).toBe(400);
+    expect((await edit(a, tripId, id, { shares: [a.id, stranger.id] })).status).toBe(400);
+    expect((await edit(a, tripId, id, { paidBy: stranger.id })).status).toBe(400);
+
+    // Someone who left can keep their place on it, but isn't added to it.
+    await addExpense(a, tripId, { amountAgorot: 100, shares: [c.id] });
+    expect((await remove(a, tripId, b.id)).status).toBe(200);
+    expect((await edit(a, tripId, id, { amountAgorot: 2000, shares: [a.id, b.id] })).status).toBe(
+      200,
+    );
+    expect((await detail(a, tripId)).balances[b.id]).toBe(-1000);
+  });
+
+  it('edits the parts, and refuses parts that no longer fit under the total', async () => {
+    const { a, b, c, tripId } = await trip();
+    const { id } = await (
+      await addExpense(a, tripId, { amountAgorot: 1000, shares: [a.id, b.id, c.id] })
+    ).json();
+    const parts = [{ label: 'אלכוהול', amountAgorot: 400, shares: [a.id, b.id] }];
+    expect((await edit(a, tripId, id, { parts })).status).toBe(200);
+    // 400 between a and b, the 600 left between all three.
+    expect((await detail(a, tripId)).balances).toEqual({
+      [a.id]: 1000 - 400,
+      [b.id]: -400,
+      [c.id]: -200,
+    });
+
+    expect((await edit(a, tripId, id, { amountAgorot: 400 })).status).toBe(400);
+    expect(
+      (await edit(a, tripId, id, { parts: [{ ...parts[0]!, amountAgorot: 1000 }] })).status,
+    ).toBe(400);
+    const [kept] = (await detail(a, tripId)).expenses;
+    expect(kept!.amountAgorot).toBe(1000);
+    expect(kept!.parts).toEqual([
+      { ...parts[0], shares: expect.arrayContaining(parts[0]!.shares) },
+    ]);
+
+    // An empty list drops the parts.
+    expect((await edit(a, tripId, id, { amountAgorot: 400, parts: [] })).status).toBe(200);
+    const [after] = (await detail(a, tripId)).expenses;
+    expect(after!.parts).toBeUndefined();
+    expect(after!.amountAgorot).toBe(400);
+  });
+
   it('records payments, confirmed by the receiver and deletable until then', async () => {
     const { a, b, c, tripId } = await trip();
     await addExpense(a, tripId, { amountAgorot: 900, shares: [a.id, b.id, c.id] });

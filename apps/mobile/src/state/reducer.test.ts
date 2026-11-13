@@ -1,7 +1,7 @@
 import type { Item } from '@yallist/domain';
 import { describe, expect, it } from 'vitest';
 
-import { applyAction, repricedPurchase } from './reducer';
+import { applyAction } from './reducer';
 import type { TripData, TripMember } from './types';
 
 const member = (userId: string, role: TripMember['role'] = 'member'): TripMember => ({
@@ -395,23 +395,42 @@ describe('shopping runs', () => {
   });
 });
 
-describe('repricedPurchase', () => {
-  it("stays the item's purchase, so a new price doesn't unmark it as bought", () => {
-    const bamba = {
-      id: 'e1',
-      itemIds: ['bamba'],
-      itemCount: 1,
-      description: 'במבה',
-      amountAgorot: 1550,
-      paidBy: 'me',
-      shares: ['me', 'noa'],
-    };
-    expect(repricedPurchase(bamba, 'bamba')).toEqual({
-      description: 'במבה',
-      amountAgorot: 1550,
-      paidBy: 'me',
-      shares: ['me', 'noa'],
-      itemId: 'bamba',
-    });
+describe('editExpense', () => {
+  const dinner = {
+    id: 'e1',
+    description: 'ארוחה',
+    amountAgorot: 30000,
+    paidBy: 'me',
+    createdBy: 'me',
+    shares: ['me', 'noa', 'ron'],
+    parts: [{ label: 'יין', amountAgorot: 6000, shares: ['me', 'noa'] }],
+    hasReceipt: true,
+    itemIds: ['wine'],
+  };
+  const t = { ...trip(), expenses: [dinner] };
+
+  it('changes only the fields given, keeping the receipt and items', () => {
+    const edited = applyAction(
+      t,
+      { type: 'editExpense', expenseId: 'e1', changes: { amountAgorot: 32000, paidBy: 'noa' } },
+      'me',
+    );
+    expect(edited.expenses).toEqual([{ ...dinner, amountAgorot: 32000, paidBy: 'noa' }]);
+  });
+
+  it('replaces the parts, and drops them when given none', () => {
+    const parts = [{ label: 'בירה', amountAgorot: 2000, shares: ['ron'] }];
+    const replaced = applyAction(
+      t,
+      { type: 'editExpense', expenseId: 'e1', changes: { parts } },
+      'me',
+    );
+    expect(replaced.expenses[0]!.parts).toEqual(parts);
+    const dropped = applyAction(
+      t,
+      { type: 'editExpense', expenseId: 'e1', changes: { parts: [] } },
+      'me',
+    );
+    expect(dropped.expenses[0]).not.toHaveProperty('parts');
   });
 });

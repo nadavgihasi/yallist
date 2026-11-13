@@ -75,6 +75,7 @@ export function toExpense(
     description: row.description,
     amountAgorot: row.amountAgorot,
     paidBy: row.paidBy,
+    createdBy: row.createdBy,
     shares,
     // Absent unless split in parts, as before parts existed.
     ...(parts.length > 0 && { parts }),

@@ -30,14 +30,24 @@ const itemParam = z.object({ tripId: z.uuid(), itemId: z.uuid() });
 const MAX_RUN_AGOROT = 10_000_000;
 
 /** At most this many parts split apart from the rest of a run (alcohol, meat, …). */
-const MAX_PARTS = 10;
+export const MAX_PARTS = 10;
 
 /** A part of the run's total split between other people than the rest (expense_parts). */
-const part = z.object({
+export const part = z.object({
   label: z.string().trim().min(1).max(40),
   amountAgorot: z.int().min(1).max(MAX_RUN_AGOROT),
   shares: z.array(z.uuid()).min(1).max(100),
 });
+
+/**
+ * Something must be left for an expense's `shares`: one that is all one part is split between
+ * its people by `shares` alone.
+ */
+export function assertPartsFit(parts: { amountAgorot: number }[], amountAgorot: number) {
+  if (parts.reduce((sum, p) => sum + p.amountAgorot, 0) >= amountAgorot) {
+    throw fail(400, 'Parts must add up to less than the total');
+  }
+}
 
 /** `קניות · 4 פריטים`: the run's expense, as the money tab lists it. */
 const runDescription = (n: number) => `קניות · ${n === 1 ? 'פריט אחד' : `${n} פריטים`}`;
@@ -171,11 +181,7 @@ export const runRoutes = (auth: Auth, db: Db) =>
         const result = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
           await lockActiveRun(tx, tripId, runId, me);
-          // Something must be left for `shares`: a run that is all one part is split between its
-          // people by `shares` alone.
-          if (parts.reduce((sum, p) => sum + p.amountAgorot, 0) >= amountAgorot) {
-            throw fail(400, 'Parts must add up to less than the total');
-          }
+          assertPartsFit(parts, amountAgorot);
           const active = await activeUserIds(tx, tripId);
           if (![...shares, ...parts.flatMap((p) => p.shares)].every((id) => active.has(id))) {
             throw fail(400, 'Every share must be an active member');

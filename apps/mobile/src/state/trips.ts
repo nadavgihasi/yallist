@@ -213,6 +213,13 @@ async function send(tripId: string, action: Action): Promise<unknown> {
       }
       return expense;
     }
+    case 'editExpense':
+      return parseResponse(
+        trip.expenses[':expenseId'].$patch({
+          param: { ...param, expenseId: action.expenseId },
+          json: action.changes,
+        }),
+      );
     case 'deleteExpense':
       return parseResponse(
         trip.expenses[':expenseId'].$delete({ param: { ...param, expenseId: action.expenseId } }),

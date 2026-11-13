@@ -290,6 +290,7 @@ export const he = {
     paymentConfirmed: 'התקבל',
     confirmReceived: 'קיבלתי את הכסף',
     deleteExpense: 'מחיקה',
+    editExpense: 'עריכה',
     confirmDelete: 'למחוק?',
     transfers: 'מי מעביר למי',
     settled: 'אין העברות פתוחות',
@@ -405,6 +406,11 @@ export const he = {
     paidBy: 'מי שילם?',
     save: 'שמירת ההוצאה',
     saved: (amount: string) => `ההוצאה נשמרה: ${amount}`,
+  },
+  editExpense: {
+    title: 'עריכת הוצאה',
+    save: 'שמירת השינויים',
+    saved: (amount: string) => `ההוצאה עודכנה: ${amount}`,
   },
   /** Shopping runs (PACKING_SHOPPING_SPEC §6.5–6.8). */
   shop: {

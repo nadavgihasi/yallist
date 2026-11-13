@@ -32,14 +32,10 @@ export interface NewExpenseInput {
   itemId?: string;
 }
 
-/**
- * The purchase that replaces an item's own `expense` once its price or split is changed: still
- * that item's, so it stays bought. Expenses aren't edited in place.
- */
-export function repricedPurchase(expense: Expense, itemId: string): NewExpenseInput {
-  const { description, amountAgorot, paidBy, shares } = expense;
-  return { description, amountAgorot, paidBy, shares, itemId };
-}
+/** A change to an expense: only the fields given change; `parts: []` drops its parts. */
+export type ExpenseChanges = Partial<
+  Pick<Expense, 'description' | 'amountAgorot' | 'paidBy' | 'shares'> & { parts: ExpensePart[] }
+>;
 
 /** A change to a trip, sent to the API by `useTripAction`. */
 export type Action =
@@ -62,6 +58,7 @@ export type Action =
   | { type: 'setNote'; itemId: string; note: string }
   // `receipt`: a local photo (`pickReceipt`) to upload once the expense exists.
   | { type: 'addExpense'; expense: NewExpenseInput; receipt?: string }
+  | { type: 'editExpense'; expenseId: string; changes: ExpenseChanges }
   | { type: 'deleteExpense'; expenseId: string }
   | { type: 'deleteReceipt'; expenseId: string }
   /** `fromUser` (default: me) is for a former member's payment, which the receiver records. */
@@ -187,6 +184,20 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
           i.id === action.itemId ? { ...i, note: action.note || undefined } : i,
         ),
       };
+    case 'editExpense': {
+      const { parts, ...fields } = action.changes;
+      return {
+        ...data,
+        expenses: data.expenses.map((e) => {
+          if (e.id !== action.expenseId) return e;
+          const edited = { ...e, ...fields };
+          if (parts === undefined) return edited;
+          // Absent unless split in parts, as the API sends it.
+          const { parts: _old, ...rest } = edited;
+          return parts.length > 0 ? { ...rest, parts } : rest;
+        }),
+      };
+    }
     case 'deleteExpense':
       return { ...data, expenses: data.expenses.filter((e) => e.id !== action.expenseId) };
     case 'deleteReceipt':
