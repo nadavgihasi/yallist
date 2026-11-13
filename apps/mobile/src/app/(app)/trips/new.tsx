@@ -258,7 +258,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   h1: { ...type.pageTitle, color: colors.ink },
-  cover: { height: 220, borderRadius: radius.card },
+  // Phone and tablet: short enough that the form starts in view, the name field right under it.
+  cover: { height: 150, borderRadius: radius.card },
   coverLabel: {
     position: 'absolute',
     start: 14,
