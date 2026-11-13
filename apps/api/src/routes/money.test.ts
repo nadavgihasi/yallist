@@ -389,6 +389,53 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
     expect(after.transfers).toEqual([{ from: b.id, to: a.id, amountAgorot: 300 }]);
   });
 
+  const setPhone = (user: Guest, paymentPhone: string) =>
+    app.request('/me', {
+      method: 'PATCH',
+      headers: { ...user.headers, 'content-type': 'application/json' },
+      body: JSON.stringify({ paymentPhone }),
+    });
+
+  it("shows active members' payment phones to their trip-mates only", async () => {
+    const { a, b, c, tripId } = await trip();
+    expect((await setPhone(a, '050-123 4567')).status).toBe(200);
+    expect((await setPhone(c, '052-765 4321')).status).toBe(200);
+    const phoneOf = (data: { members: { userId: string; paymentPhone?: string }[] }, id: string) =>
+      data.members.find((m) => m.userId === id)?.paymentPhone;
+
+    const data = await detail(b, tripId);
+    expect(phoneOf(data, a.id)).toBe('+972501234567');
+    expect(phoneOf(data, b.id)).toBeUndefined();
+    expect(phoneOf(data, c.id)).toBe('+972527654321');
+
+    // Not on the home screen's cards, nor in the public invite preview.
+    const home = await (await client.trips.$get({}, as(b))).json();
+    expect(JSON.stringify(home)).not.toContain('+9725');
+    const preview = await client.invites[':token'].$get({ param: { token: data.inviteToken } });
+    expect(JSON.stringify(await preview.json())).not.toContain('+9725');
+    // Someone outside the trip doesn't get the trip at all.
+    const stranger = await signInAsGuest(app, 'stranger');
+    expect((await client.trips[':tripId'].$get({ param: { tripId } }, as(stranger))).status).toBe(
+      404,
+    );
+
+    // A member who left keeps their number to themselves.
+    await remove(a, tripId, c.id);
+    expect(phoneOf(await detail(b, tripId), c.id)).toBeUndefined();
+  });
+
+  it('lowers what is left to pay by a partial payment', async () => {
+    const { a, b, c, tripId } = await trip();
+    await addExpense(a, tripId, { amountAgorot: 900, shares: [a.id, b.id, c.id] });
+    expect((await pay(b, tripId, a.id, 100)).status).toBe(201);
+    expect((await detail(b, tripId)).transfers).toEqual(
+      expect.arrayContaining([
+        { from: b.id, to: a.id, amountAgorot: 200 },
+        { from: c.id, to: a.id, amountAgorot: 300 },
+      ]),
+    );
+  });
+
   it('rejects payments with someone who was never a member', async () => {
     const { a, tripId } = await trip();
     const stranger = await signInAsGuest(app, 'stranger');

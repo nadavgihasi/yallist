@@ -19,6 +19,7 @@ import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
+import { PayRow } from './PayRow';
 import { sharedText } from './runSplit';
 
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
@@ -48,10 +49,12 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
     amount = sum(toMe);
   }
 
-  const markPaid = () => {
-    myOpen.forEach((t) => act({ type: 'markPayment', toUser: t.to, amountAgorot: t.amountAgorot }));
-    showToast(he.money.markedToast(formatShekel(sum(myOpen))), 'success');
+  const markPaid = (toUser: string, amountAgorot: number) => {
+    act({ type: 'markPayment', toUser, amountAgorot });
+    showToast(he.money.markedToast(formatShekel(amountAgorot)), 'success');
   };
+  // Owed money with nowhere to receive it: ask for a number once there's something to receive.
+  const needsPhone = toMe.length > 0 && !view.memberById.get(me)?.paymentPhone;
   // A payment the receiver already confirmed stays.
   const unmarkPaid = () =>
     myUnconfirmed.forEach((p) => act({ type: 'deletePayment', paymentId: p.id }));
@@ -67,15 +70,19 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           </Text>
         )}
         {myOpen.length > 0 ? (
-          <PillButton
-            label={he.money.markPaid}
-            variant="soft"
-            size="md"
-            wide
-            style={styles.heroButton}
-            disabled={saving}
-            onPress={markPaid}
-          />
+          <View style={styles.payRows}>
+            <Text style={styles.heroText}>{he.settle.payIn}</Text>
+            {myOpen.map((t) => (
+              <PayRow
+                key={t.to}
+                view={view}
+                transfer={t}
+                tripName={data.trip.name}
+                saving={saving}
+                onMark={(amountAgorot) => markPaid(t.to, amountAgorot)}
+              />
+            ))}
+          </View>
         ) : (
           myPaid.length > 0 && (
             <>
@@ -99,6 +106,14 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           )
         )}
       </Card>
+
+      {needsPhone && (
+        <Callout
+          title={he.settle.addPhoneTitle}
+          text={he.settle.addPhoneText}
+          action={{ label: he.settle.addPhone, onPress: () => router.push('/profile') }}
+        />
+      )}
 
       {view.transfers.length === 0 ? (
         // With no expenses yet, the empty expenses card below says it all.
@@ -343,7 +358,7 @@ const styles = StyleSheet.create({
   heroTitle: { ...type.caption, color: colors.inkMuted },
   heroAmount: { ...type.bigNumber, color: colors.ink },
   heroText: { ...type.caption, color: colors.inkMuted },
-  heroButton: { marginTop: space[3] },
+  payRows: { gap: space[3], marginTop: space[3] },
   heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },
   paymentEnd: { alignItems: 'flex-end' },
   payment: { gap: space[1] },
