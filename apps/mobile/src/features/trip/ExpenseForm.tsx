@@ -1,6 +1,6 @@
 import { formatShekel, linkedExpense, parseShekel, shekelInput } from '@yallist/domain';
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState, type ComponentRef } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { SuggestionChip } from '@/components/Chips';
@@ -18,6 +18,7 @@ import { colors, fonts, space, type } from '@/theme';
 import { useCloseSheet } from './closeSheet';
 import { deriveTrip } from './derive';
 import { ReceiptField } from './ReceiptField';
+import { requestReveal } from './reveal';
 import { RunParts } from './RunParts';
 import { runSplit, type PartDraft } from './runSplit';
 import { SharePicker, useShares } from './SharePicker';
@@ -46,6 +47,10 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   const [shares, setShares] = useShares(view, expense?.shares);
   const [parts, setParts] = useState<PartDraft[]>(() => expense?.parts?.map(toDraft) ?? []);
   const [receipt, setReceipt] = useState<string>();
+  // Save was tapped with something missing: each empty field says so.
+  const [tried, setTried] = useState(false);
+  const amountRef = useRef<ComponentRef<typeof TextInput>>(null);
+  const whatRef = useRef<ComponentRef<typeof TextInput>>(null);
 
   const close = useCloseSheet(data.trip.id);
   const agorot = parseShekel(amount);
@@ -60,7 +65,13 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   const payers = view.activeIds.includes(payer) ? view.activeIds : [payer, ...view.activeIds];
 
   const save = () => {
-    if (!valid) return;
+    if (!valid) {
+      // Rather than a button that does nothing: say what's missing and go to the first of it.
+      setTried(true);
+      if (!agorot) amountRef.current?.focus();
+      else if (!what.trim()) whatRef.current?.focus();
+      return;
+    }
     close(() => {
       const fields = { description: what.trim(), amountAgorot: agorot, paidBy: payer, shares };
       if (expense) {
@@ -73,6 +84,13 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         return;
       }
       act({ type: 'addExpense', expense: { ...fields, itemId }, receipt });
+      // Once the API answers, the money tab scrolls to it and marks it.
+      requestReveal(data.trip.id, {
+        kind: 'expense',
+        description: fields.description,
+        amountAgorot: agorot,
+        before: data.expenses.map((e) => e.id),
+      });
       // The list shows it only once the API answers, so say it went through.
       showToast(he.addExpense.saved(formatShekel(agorot)), 'success');
     });
@@ -87,7 +105,6 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
           label={expense ? he.editExpense.save : he.addExpense.save}
           size="lg"
           wide
-          disabled={!valid}
           onPress={save}
           {...testId('expense-save')}
         />
@@ -100,7 +117,14 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         size="lg"
         testID="expense-amount"
         onSubmitEditing={save}
-        error={amount.trim() && agorot === undefined ? he.invalidAmount : undefined}
+        ref={amountRef}
+        error={
+          amount.trim() && agorot === undefined
+            ? he.invalidAmount
+            : tried && !agorot
+              ? he.addExpense.needAmount
+              : undefined
+        }
       />
 
       <View style={styles.field}>
@@ -112,6 +136,8 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
             setItemId(undefined);
           }}
           placeholder={he.addExpense.whatPlaceholder}
+          ref={whatRef}
+          error={tried && !what.trim() ? he.addExpense.needWhat : undefined}
           {...testId('expense-what')}
           onSubmitEditing={save}
           returnKeyType="done"
@@ -180,6 +206,11 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         }
         showHint={false}
       />
+      {tried && shares.length === 0 && (
+        <Text style={styles.error} accessibilityLiveRegion="polite">
+          {he.addExpense.needShares}
+        </Text>
+      )}
 
       {withParts && (
         <>

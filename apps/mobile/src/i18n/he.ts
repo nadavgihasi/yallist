@@ -426,6 +426,10 @@ export const he = {
     paidBy: 'מי שילם?',
     save: 'שמירת ההוצאה',
     saved: (amount: string) => `ההוצאה נשמרה: ${amount}`,
+    /** Tapping save with a field still empty says which. */
+    needAmount: 'רושמים כמה זה עלה',
+    needWhat: 'רושמים על מה',
+    needShares: 'בוחרים לפחות משתתף אחד',
   },
   editExpense: {
     title: 'עריכת הוצאה',
