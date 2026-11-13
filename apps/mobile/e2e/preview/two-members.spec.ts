@@ -31,8 +31,9 @@ const sessionToken = (page: Page) =>
  * Dana makes a trip with a Tent that needs her approval to join, and copies its invite link;
  * Noa opens it in her own session, sees Dana is in, and asks to join; Dana approves her. Ends
  * with Noa on the trip (past the "what will you bring" prompt) and Dana on its people tab.
+ * `onTrip` runs once the trip exists, before anyone joins.
  */
-async function join(dana: Page, noa: Page) {
+async function join(dana: Page, noa: Page, onTrip?: (tripId: string) => Promise<void>) {
   await signIn(dana, 'Dana');
   await newTrip(dana);
   await addItem(dana, 'Tent');
@@ -52,6 +53,7 @@ async function join(dana: Page, noa: Page) {
     [API_URL!, tripId, await sessionToken(dana)] as const,
   );
   expect(res).toBe(200);
+  await onTrip?.(tripId);
 
   // While alone, the hero invites: the invite sheet shows the message with the link in it, and
   // copies the link alone too.
@@ -77,7 +79,13 @@ async function join(dana: Page, noa: Page) {
     await dana.reload();
     await expect(dana.locator('#people-approve')).toBeVisible({ timeout: 5_000 });
   }).toPass({ timeout: 45_000 });
+  // The button hides at once, before the API has the approval: wait for its answer, or Noa's
+  // check can reach the API first (and find her still waiting).
+  const approved = dana.waitForResponse(
+    (r) => r.request().method() === 'POST' && r.url().endsWith('/approve'),
+  );
   await dana.locator('#people-approve').click();
+  expect((await approved).ok()).toBe(true);
   await expect(dana.locator('#people-approve')).toBeHidden();
   await noa.locator('#join-check').click();
   await expect(noa.locator('#trip-title')).toHaveText('E2E trip');
@@ -103,48 +111,53 @@ test('join through an invite link; the hero then points at what is missing', asy
 
 test('a claim reaches the other member over AppSync Events', async ({ page: dana, noa }) => {
   test.skip(!REALTIME_HOST, 'E2E_REALTIME_HOST (the preview stage output `realtime`) not set');
-  const tripId = await join(dana, noa);
+  // Dana's session subscribes to the trip's channel, as the app would: a WebSocket from the
+  // site's origin, with her session token for the realtime authorizer. From a tab of its own,
+  // which her reloads while joining don't close, and from the start: AppSync can drop events for
+  // a few seconds after confirming a subscription (src/lib/realtime.ts), and joining takes longer.
+  const listener = await dana.context().newPage();
+  const tripId = await join(dana, noa, async (tripId) => {
+    await listener.goto('./');
+    await listener.evaluate(
+      async ([httpHost, tripId, token]) => {
+        const auth = { host: httpHost, Authorization: token };
+        const header = btoa(JSON.stringify(auth))
+          .replace(/\+/g, '-')
+          .replace(/\//g, '_')
+          .replace(/=+$/, '');
+        const ws = new WebSocket(
+          `wss://${httpHost.replace('appsync-api', 'appsync-realtime-api')}/event/realtime`,
+          ['aws-appsync-event-ws', `header-${header}`],
+        );
+        const events: string[] = [];
+        Object.assign(window, { realtimeEvents: events });
+        await new Promise<void>((resolve, reject) => {
+          ws.onopen = () => ws.send(JSON.stringify({ type: 'connection_init' }));
+          ws.onerror = () => reject(new Error('WebSocket failed'));
+          ws.onmessage = ({ data }) => {
+            const message = JSON.parse(data as string) as { type: string; event?: string };
+            if (message.type === 'connection_ack') {
+              const channel = `/trips/${tripId}`;
+              const id = crypto.randomUUID();
+              ws.send(JSON.stringify({ type: 'subscribe', id, channel, authorization: auth }));
+            } else if (message.type === 'subscribe_success') resolve();
+            else if (message.type === 'data') events.push(message.event!);
+            else if (message.type.endsWith('error')) reject(new Error(String(data)));
+          };
+        });
+      },
+      [REALTIME_HOST!, tripId, await sessionToken(dana)] as const,
+    );
+  });
   await dana.locator('#trip-tab-bring').click();
-
-  // Dana's session subscribes to the trip's channel from her page, as the app would: a
-  // WebSocket from the site's origin, with her session token for the realtime authorizer.
-  await dana.evaluate(
-    async ([httpHost, tripId, token]) => {
-      const auth = { host: httpHost, Authorization: token };
-      const header = btoa(JSON.stringify(auth))
-        .replace(/\+/g, '-')
-        .replace(/\//g, '_')
-        .replace(/=+$/, '');
-      const ws = new WebSocket(
-        `wss://${httpHost.replace('appsync-api', 'appsync-realtime-api')}/event/realtime`,
-        ['aws-appsync-event-ws', `header-${header}`],
-      );
-      const events: string[] = [];
-      Object.assign(window, { realtimeEvents: events });
-      await new Promise<void>((resolve, reject) => {
-        ws.onopen = () => ws.send(JSON.stringify({ type: 'connection_init' }));
-        ws.onerror = () => reject(new Error('WebSocket failed'));
-        ws.onmessage = ({ data }) => {
-          const message = JSON.parse(data as string) as { type: string; event?: string };
-          if (message.type === 'connection_ack') {
-            const channel = `/trips/${tripId}`;
-            const id = crypto.randomUUID();
-            ws.send(JSON.stringify({ type: 'subscribe', id, channel, authorization: auth }));
-          } else if (message.type === 'subscribe_success') resolve();
-          else if (message.type === 'data') events.push(message.event!);
-          else if (message.type.endsWith('error')) reject(new Error(String(data)));
-        };
-      });
-    },
-    [REALTIME_HOST!, tripId, await sessionToken(dana)] as const,
-  );
+  const events = () =>
+    listener.evaluate(() => (window as unknown as { realtimeEvents: string[] }).realtimeEvents);
+  const before = (await events()).length;
 
   await noa.locator('#item-claim').click();
   await expect(noa.locator('#item-release')).toBeVisible();
   await expect
-    .poll(() =>
-      dana.evaluate(() => (window as unknown as { realtimeEvents: string[] }).realtimeEvents),
-    )
+    .poll(async () => (await events()).slice(before))
     .toContainEqual(JSON.stringify({ type: 'changed', tripId }));
 
   // The app subscribes too (src/lib/realtime.ts), so Dana's list shows the claim without a reload.

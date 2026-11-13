@@ -110,9 +110,11 @@ export async function uploadReceipt(tripId: string, expenseId: string, uri: stri
       receipt['upload-url'].$post({ param, json: { contentType: 'image/jpeg', size: file.size } }),
     );
     await postForm(form, file, uri, report);
-    await parseResponse(receipt.$post({ param, json: { key: form.key } }));
-    // The viewer's link to a receipt this one replaces (receipt.tsx) points at a deleted photo.
+    // The viewer's link to a receipt this one replaces or that was deleted (receipt.tsx) points at
+    // a deleted photo. Dropped before attaching: a trip refetch can show the new receipt before
+    // this answer arrives (a realtime event or catch-up), and opens the viewer on that link.
     queryClient.removeQueries({ queryKey: ['receipt', expenseId] });
+    await parseResponse(receipt.$post({ param, json: { key: form.key } }));
     await queryClient.invalidateQueries({ queryKey: tripKey(tripId) });
     setUpload(expenseId, undefined);
   } catch (error) {

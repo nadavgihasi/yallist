@@ -56,7 +56,7 @@ Write these as migrations. Column names are suggestions; keep the semantics.
 
 **profiles** — `id` (= `auth.users.id`), `display_name`, `avatar_color`, `payment_phone` (nullable; shown to friends so they can pay via Bit/PayBox), notification prefs (`notify_updates`, `notify_day_before`, `notify_settle`, all default true), timestamps.
 
-**trips** — `id`, `name`, `starts_on`, `ends_on`, `meetup_text`, `meetup_lat`, `meetup_lng` (nullable: where the group meets, a name or map link and a point on the map), `album_url` (nullable, a Google Photos link), `template` (`camp|grill|zimmer|beach|blank`, also selects the cover scene), `currency` default `'ILS'`, `require_approval` bool default false, `invite_token` (unique, ≥128 bits of randomness, URL-safe), `status` (`planning|ended|archived`), `created_by`, timestamps.
+**trips** — `id`, `name`, `starts_on`, `ends_on`, `meetup_text`, `meetup_lat`, `meetup_lng` (nullable: where the group meets, a name or map link and a point on the map), `album_url` (nullable, a Google Photos link), `template` (`camp|grill|zimmer|beach|hike|trek|flight|ski|blank`, also selects the cover scene), `currency` default `'ILS'`, `require_approval` bool default false, `invite_token` (unique, ≥128 bits of randomness, URL-safe), `status` (`planning|ended|archived`), `created_by`, timestamps.
 
 **trip_members** — PK (`trip_id`, `user_id`), `role` (`organizer|member`), `status` (`pending|active|removed`), `display_name` (snapshot at join, editable), `joined_at`. The creator is an active organizer.
 
@@ -294,6 +294,35 @@ Ask before deciding these:
 - bring / כללי: צידנית; מטקות; רמקול; קרם הגנה; מגבת (each); שקיות זבל
 - buy / אוכל: אבטיח; כריכים; חטיפים; פירות
 - buy / שתייה: מים; שתייה קלה; קרח
+
+**hike (טיול)** — a day hike
+
+- bring / מסלול: תיק יום (each); בקבוק מים (each); כובע (each); נעלי הליכה (each); קרם הגנה; ערכת עזרה ראשונה
+- bring / פיקניק: מחצלת; גזייה; שקיות זבל
+- buy / אוכל: כריכים; פירות; חטיפים; אגוזים
+- buy / שתייה: מים; קפה; קרח
+
+**trek (טרק)** — a multi-day hike, sleeping out
+
+- bring / ציוד אישי: תרמיל טיולים (each); שק שינה (each); מזרן (each); פנס ראש (each); מקלות הליכה (each); שקית מים (each); מעיל גשם (each)
+- bring / ציוד קבוצתי: אוהלים (qty 2); גזייה ובלון גז; סיר; ערכת עזרה ראשונה; מפה; פאוור בנק
+- buy / אוכל לדרך: ארוחה מוכנה; פתיתים; חטיפים; אגוזים; קפה; תה
+- buy / שתייה: מים (display 6 שישיות)
+
+**flight (טיסה)** — a trip abroad
+
+- bring / מסמכים וכסף: דרכון (each); ביטוח נסיעות; אישור הזמנה; מטבע זר
+- bring / ציוד: מזוודה (each); מתאם חשמל (each); פאוור בנק (each); כרית נסיעה (each); ערכת עזרה ראשונה
+- buy / לטיסה: נשנושים; מים
+
+**ski (סקי)**
+
+- bring / ביגוד: מעיל סקי (each); מכנסי סקי (each); שכבה תרמית (each); כפפות (each); כובע גרב (each); גרבי סקי (each)
+- bring / ציוד: משקפי סקי (each); קסדה (each); קרם הגנה; שפתון הגנה; פאוור בנק
+- buy / ארוחת בוקר: לחמים ומאפים; גבינות וממרחים; אבקת שוקו; תה
+- buy / ערב: בשר לערב; יין; נשנושים
+
+The new templates use existing cover scenes: hike → forest, trek → trail, flight → flight, ski → winter.
 
 **blank** — no items.
 

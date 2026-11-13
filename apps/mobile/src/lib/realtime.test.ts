@@ -81,6 +81,41 @@ describe('subscribe', () => {
     expect(onSubscribed).toHaveBeenCalledOnce();
   });
 
+  it('catches up 2, 5 and 10 s after subscribing, while connected', () => {
+    const { onSubscribed } = start();
+    latest().accept();
+    expect(onSubscribed).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(2000);
+    expect(onSubscribed).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(3000);
+    expect(onSubscribed).toHaveBeenCalledTimes(3);
+    vi.advanceTimersByTime(5000);
+    expect(onSubscribed).toHaveBeenCalledTimes(4);
+    vi.advanceTimersByTime(60_000);
+    expect(onSubscribed).toHaveBeenCalledTimes(4);
+  });
+
+  it('drops the catch-ups of a lost connection', () => {
+    const { onSubscribed, stop } = start();
+    latest().accept();
+    latest().close();
+    vi.advanceTimersByTime(999);
+    expect(onSubscribed).toHaveBeenCalledTimes(1);
+    stop();
+    vi.advanceTimersByTime(60_000);
+    expect(onSubscribed).toHaveBeenCalledTimes(1);
+  });
+
+  it('drops the catch-ups on unsubscribe, before the socket reports closing', () => {
+    const { onSubscribed, stop } = start();
+    latest().accept();
+    // A browser fires close once the close handshake ends: late when the network is gone.
+    latest().close = () => {};
+    stop();
+    vi.advanceTimersByTime(60_000);
+    expect(onSubscribed).toHaveBeenCalledOnce();
+  });
+
   it('reports each event', () => {
     const { onEvent } = start();
     latest().accept();

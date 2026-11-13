@@ -172,16 +172,19 @@ export default function TripScreen() {
             router.push({ pathname: '/trips/[tripId]/items/new', params: { tripId, list: tab } });
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
-  const back = (
+  // Its own id in the pinned bar, which shows while the cover's copy is still on the page.
+  const backButton = (id: string) => (
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={he.trip.back}
       onPress={goBack}
       style={styles.back}
+      {...testId(id)}
     >
       <Icon name="back" strokeWidth={2.5} />
     </Pressable>
   );
+  const back = backButton('trip-back');
   const inviteButton = (
     <PillButton
       label={he.trip.invite}
@@ -367,7 +370,7 @@ export default function TripScreen() {
         <View style={[styles.pinned, { paddingTop: space[2] + insets.top }]}>
           <View style={[styles.pinnedInner, styles.column]}>
             <View style={styles.pinnedBar}>
-              {back}
+              {backButton('trip-pinned-back')}
               <Text style={styles.pinnedTitle} numberOfLines={1}>
                 {trip.name}
               </Text>

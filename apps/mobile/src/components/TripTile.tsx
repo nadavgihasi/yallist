@@ -13,6 +13,10 @@ const TILES: Record<TemplateId, { icon: IconName; bg: string; fg: string }> = {
   grill: { icon: 'flame', bg: illo.sun, fg: colors.ink },
   zimmer: { icon: 'mountain', bg: illo.hill, fg: colors.onPrimary },
   beach: { icon: 'sun', bg: illo.sky, fg: colors.ink },
+  hike: { icon: 'pin', bg: illo.tent, fg: colors.ink },
+  trek: { icon: 'mountain', bg: illo.hillDeep, fg: colors.onPrimary },
+  flight: { icon: 'plane', bg: illo.water, fg: colors.onPrimary },
+  ski: { icon: 'snowflake', bg: illo.sky, fg: colors.ink },
   blank: { icon: 'bring', bg: illo.water, fg: colors.onPrimary },
 };
 
