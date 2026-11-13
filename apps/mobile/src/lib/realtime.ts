@@ -22,9 +22,20 @@ interface Options {
    * deleted before we subscribed): either way, the screen should refetch to find out.
    */
   onEvent: () => void;
-  /** Subscribed, first or after a reconnect: events may have been missed while away. */
+  /**
+   * Subscribed, first or after a reconnect: events may have been missed while away. Told again
+   * at each of `CATCH_UP_MS` after it, while still connected.
+   */
   onSubscribed: () => void;
 }
+
+/**
+ * `subscribe_success` doesn't mean every event reaches us yet: for a few seconds after it, AppSync
+ * Events can drop what is published to the channel (it accepted every publish; on a preview, about
+ * 1 in 7 subscriptions under a second old missed one, and some up to 3.2 s old). So a new
+ * subscription also refetches 2, 5 and 10 s in: a change in that window shows by then.
+ */
+const CATCH_UP_MS = [2000, 5000, 10_000];
 
 const base64Url = (text: string) =>
   btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -41,6 +52,9 @@ export function subscribe({ host, channel, token, onEvent, onSubscribed }: Optio
   let failures = 0;
   let retry: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
+  // Cleared by the unsubscribe itself, not only by the close event, which a browser fires only
+  // once the close handshake ends: late when the network is gone, after we left the trip.
+  let catchUps: ReturnType<typeof setTimeout>[] = [];
 
   const connect = () => {
     const authorization = { host: httpHost, Authorization: token() ?? '' };
@@ -59,6 +73,7 @@ export function subscribe({ host, channel, token, onEvent, onSubscribed }: Optio
       if (socket !== ws) return;
       socket = undefined;
       clearTimeout(watchdog);
+      catchUps.forEach(clearTimeout);
       ws.close();
       if (!stopped) retry = setTimeout(connect, backoff(failures++));
     }
@@ -77,6 +92,7 @@ export function subscribe({ host, channel, token, onEvent, onSubscribed }: Optio
           return alive();
         case 'subscribe_success':
           failures = 0;
+          catchUps = CATCH_UP_MS.map((ms) => setTimeout(onSubscribed, ms));
           return onSubscribed();
         case 'data':
           return onEvent();
@@ -94,6 +110,7 @@ export function subscribe({ host, channel, token, onEvent, onSubscribed }: Optio
   return () => {
     stopped = true;
     clearTimeout(retry);
+    catchUps.forEach(clearTimeout);
     socket?.close();
   };
 }
