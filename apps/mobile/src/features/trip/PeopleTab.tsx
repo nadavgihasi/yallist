@@ -72,7 +72,10 @@ export function PeopleTab({
 
   const name = (m: TripMember) => (
     <View style={styles.nameRow}>
-      <Text style={styles.name}>{view.nameOf(m.userId)}</Text>
+      {/* One line: someone added by email is shown by it until they sign in. */}
+      <Text style={styles.name} numberOfLines={1}>
+        {view.nameOf(m.userId)}
+      </Text>
       {m.role === 'organizer' && <Text style={styles.badge}>{he.people.organizer}</Text>}
       {m.invited && <Text style={styles.badge}>{he.people.invited}</Text>}
     </View>
@@ -277,7 +280,7 @@ const styles = StyleSheet.create({
   person: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
   personBody: { flex: 1, gap: space[1] },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: space[2] },
-  name: { ...type.itemTitle, color: colors.ink },
+  name: { ...type.itemTitle, color: colors.ink, flexShrink: 1 },
   badge: {
     ...type.caption,
     paddingHorizontal: space[2],

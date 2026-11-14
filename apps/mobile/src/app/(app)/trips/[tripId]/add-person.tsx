@@ -17,7 +17,7 @@ const looksLikeEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emai
 
 /**
  * Adds a person to the trip by email, so expenses can be split with them before they open the
- * app. Until they sign in they're shown by their email's first part; signing in with Google with
+ * app. Until they sign in they're shown by their email; signing in with Google with
  * that email brings their name, and the trip is theirs. Closes once the API added them.
  */
 export default function AddPerson() {

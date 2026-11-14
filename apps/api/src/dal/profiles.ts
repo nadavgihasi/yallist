@@ -41,26 +41,22 @@ export async function updateProfile(
 export const insertProfile = (tx: Executor, values: typeof profiles.$inferInsert) =>
   tx.insert(profiles).values(values);
 
-/** What a person added by email is called until they sign in: their email's local part. */
-export const standInName = (email: string) => email.split('@')[0]!.slice(0, 50);
-
 /**
  * The user with this email, or a new one who hasn't signed in yet: a user and profile with the
- * email, a stand-in name and no way to sign in. When they first sign in with Google with that
- * email, Better Auth links the Google account to this user and their name replaces the stand-in
+ * email as their name and no way to sign in. When they first sign in with Google with that
+ * email, Better Auth links the Google account to this user and their name replaces the email
  * (src/auth.ts), so they find the trips and expenses they were added to.
  */
 export async function userForEmail(tx: Executor, email: string) {
   const [existing] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email));
   if (existing) return existing.id;
-  const name = standInName(email);
   const [user] = await tx
     .insert(users)
-    .values({ name, email, emailVerified: false, isAnonymous: false })
+    .values({ name: email, email, emailVerified: false, isAnonymous: false })
     .returning({ id: users.id });
   await insertProfile(tx, {
     id: user!.id,
-    displayName: name,
+    displayName: email,
     avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]!,
     awaitingName: true,
   });
@@ -68,8 +64,8 @@ export async function userForEmail(tx: Executor, email: string) {
 }
 
 /**
- * A person added by email signed in, bringing their name: it replaces their stand-in name in
- * their profile and wherever a trip still shows it. Anyone else is left as is.
+ * A person added by email signed in, bringing their name: it replaces their email in their
+ * profile and wherever a trip still shows it. Anyone else is left as is.
  */
 export async function takeSignInName(db: Db, userId: string, name: string) {
   const trimmed = name.trim().slice(0, 50);

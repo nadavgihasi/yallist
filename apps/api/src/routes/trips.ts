@@ -245,8 +245,8 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
 
     // Adds a person by email, so expenses can be split with them before they ever open the app:
     // the user with that email, or one made for it who joins the account they later sign in
-    // with (dal/profiles.ts). No name: they're shown by their profile's, a stand-in for a new
-    // person until their sign-in brings their own. Like the invite link: any member, or only organizers when joining
+    // with (dal/profiles.ts). No name: they're shown by their profile's, their email for a new
+    // person until their sign-in brings their name. Like the invite link: any member, or only organizers when joining
     // needs approval. Someone already in the trip stays as they are; one who was removed, left
     // or waits for approval is back in, as a plain member.
     .post(

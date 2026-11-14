@@ -158,8 +158,8 @@ export const profiles = pgTable('profiles', {
    */
   showItemIcons: boolean('show_item_icons'),
   /**
-   * True for a person added to a trip by email who hasn't signed in yet: their name is a stand-in
-   * (their email's local part) until their first Google sign-in brings their name (src/auth.ts).
+   * True for a person added to a trip by email who hasn't signed in yet: they're shown by their
+   * email until their first Google sign-in brings their name (src/auth.ts).
    * Null otherwise.
    */
   awaitingName: boolean('awaiting_name'),

@@ -57,7 +57,7 @@ export function createAuth(db: Db, config: AuthConfig) {
         // to that user, so they find what they were added to. Safe because there are no
         // passwords: the only users with a real email are Google's, verified, and those.
         requireLocalEmailVerified: false,
-        // Their Google name then replaces the stand-in they were added with (user update hook).
+        // Their Google name then replaces the email they were added with (user update hook).
         updateUserInfoOnLink: true,
       },
     },

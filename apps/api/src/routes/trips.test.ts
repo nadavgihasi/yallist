@@ -530,7 +530,7 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
 
       const trip = await (await detail(member, tripId)).json();
       expect(trip.members.find((m) => m.userId === userId)).toMatchObject({
-        displayName: 'yossi',
+        displayName: 'yossi@example.com',
         role: 'member',
         status: 'active',
         invited: true,
