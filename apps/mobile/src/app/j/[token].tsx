@@ -21,7 +21,7 @@ import { inviteToken, whoIsIn } from '@/lib/invite';
 import { testId } from '@/lib/testId';
 import { useSession } from '@/state/store';
 import { joinTrip, tripsKey, useInvite } from '@/state/trips';
-import { avatarSize, colors, layout, radius, space, type } from '@/theme';
+import { avatarSize, colors, layout, space, surface, type } from '@/theme';
 
 /** Invite links land here (JoinV2): a preview anyone can see, then sign in and join. */
 export default function Join() {
@@ -251,12 +251,7 @@ const styles = StyleSheet.create({
     gap: space[4],
   },
   kicker: { ...type.buttonSm, color: colors.inkMuted },
-  card: {
-    padding: space[5],
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
-    gap: space[2],
-  },
+  card: { ...surface, padding: space[5], gap: space[2] },
   // The cover runs edge to edge across the card's top.
   invite: { overflow: 'hidden' },
   cover: { height: 120, margin: -space[5], marginBottom: space[2] },

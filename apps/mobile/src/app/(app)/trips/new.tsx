@@ -25,7 +25,7 @@ import { he } from '@/i18n/he';
 import { addDays, endAfterMovingStart, formatRange, today } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useCreateTrip } from '@/state/trips';
-import { colors, radius, size, space, type } from '@/theme';
+import { colors, radius, size, space, surface, type } from '@/theme';
 import { useBreakpoint } from '@/theme/breakpoint';
 
 const KINDS: TemplateId[] = [
@@ -254,6 +254,8 @@ const styles = StyleSheet.create({
     height: size.avatar,
     borderRadius: size.avatar / 2,
     backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairline,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -269,7 +271,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     borderRadius: 20,
     // 0.55 and opaque text: the caption over the sun reaches 4.74:1 (was 3.19).
-    backgroundColor: 'rgba(16,23,37,0.55)',
+    backgroundColor: 'rgba(26,24,51,0.6)',
     gap: 2,
   },
   coverName: { ...type.sectionTitle, color: colors.onPrimary },
@@ -282,12 +284,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   // Strict two columns, so a lone last tile stays half width (NewTripV2 grid).
   tile: { width: '48.8%' },
-  card: {
-    padding: space[5],
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
-    gap: space[3],
-  },
+  card: { ...surface, padding: space[5], gap: space[3] },
   field: { gap: space[2] },
   dates: { flexDirection: 'row', gap: space[2] },
   previewLine: { ...type.body, color: colors.ink },

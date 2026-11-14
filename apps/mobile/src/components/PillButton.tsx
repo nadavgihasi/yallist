@@ -13,11 +13,11 @@ import { colors, shadow, size as sizes, type } from '@/theme';
 
 type Variant = 'solid' | 'soft' | 'quiet' | 'card' | 'danger';
 
-/** solid = primary, soft = tonal (primaryTint), quiet = gray, card = white on the page, danger = text only. */
+/** solid = night, soft = tonal sand, quiet = paper (on a card), card = white on the page, danger = text only. */
 const VARIANTS: Record<Variant, { bg: string; fg: string }> = {
   solid: { bg: colors.primary, fg: colors.onPrimary },
   soft: { bg: colors.primaryTint, fg: colors.primaryStrong },
-  quiet: { bg: colors.ground, fg: colors.inkMuted },
+  quiet: { bg: colors.ground, fg: colors.ink },
   card: { bg: colors.card, fg: colors.ink },
   danger: { bg: 'transparent', fg: colors.brandStrong },
 };
@@ -26,7 +26,7 @@ const VARIANTS: Record<Variant, { bg: string; fg: string }> = {
 const SIZES = {
   sm: { height: sizes.buttonSm, padding: 16, text: type.buttonSm },
   md: { height: sizes.buttonSm, padding: 20, text: type.buttonSm },
-  lg: { height: sizes.buttonLg, padding: 28, text: type.buttonLg },
+  lg: { height: sizes.buttonLg, padding: 26, text: type.buttonLg },
 } as const;
 
 export function PillButton({
@@ -65,9 +65,10 @@ export function PillButton({
           minHeight: s.height,
           backgroundColor: v.bg,
           paddingHorizontal: s.padding,
-          gap: size === 'lg' ? 16 : 8,
+          gap: size === 'lg' ? 12 : 8,
           opacity: disabled ? 0.4 : pressed ? 0.75 : 1,
         },
+        variant === 'card' && styles.outlined,
         wide && styles.wide,
         float && shadow.float,
         style,
@@ -92,6 +93,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 999,
   },
+  outlined: { borderWidth: 1, borderColor: colors.hairline },
   wide: { alignSelf: 'stretch' },
   shrink: { flexShrink: 1 },
 });

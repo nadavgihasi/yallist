@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   },
   receiptPercent: { ...type.caption, color: colors.primaryStrong },
   heroTitle: { ...type.caption, color: colors.inkMuted },
-  heroAmount: { ...type.bigNumber, color: colors.ink },
+  heroAmount: { ...type.bigNumber, color: colors.primaryStrong },
   heroText: { ...type.caption, color: colors.inkMuted },
   payRows: { gap: space[3], marginTop: space[3] },
   heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },

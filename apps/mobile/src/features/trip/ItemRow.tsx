@@ -42,6 +42,7 @@ export function ItemRow({
   onOpen,
   onClaim,
   onPack,
+  accent,
 }: {
   item: Item;
   claims: readonly Claim[];
@@ -52,6 +53,8 @@ export function ItemRow({
   onOpen: () => void;
   onClaim: (quantity: number) => void;
   onPack: (packed: boolean) => void;
+  /** Its category card's accent, for the item's icon. */
+  accent?: string;
 }) {
   const status = view.status(item);
   const line = bagLine(
@@ -144,7 +147,7 @@ export function ItemRow({
       ) : (
         <StatusRing state={ring} label={line.label} />
       )}
-      <ItemIcon name={item.name} list={item.list} />
+      <ItemIcon name={item.name} list={item.list} color={accent} />
       <Pressable style={styles.main} onPress={onOpen} accessibilityRole="button">
         <Text style={styles.name}>
           {item.name}

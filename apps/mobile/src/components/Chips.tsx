@@ -5,7 +5,7 @@ import { Avatar, type AvatarPerson } from './Avatar';
 
 import { colors, type } from '@/theme';
 
-/** Filter / choice chip with an optional count (`הכול 20`): solid primary when selected, tonal otherwise. */
+/** Filter / choice chip with an optional count (`הכול 20`): solid night when selected, an outlined card otherwise. */
 export function FilterChip({
   label,
   count,
@@ -17,16 +17,20 @@ export function FilterChip({
   selected: boolean;
   onPress: () => void;
 }) {
-  const color = selected ? colors.onPrimary : colors.primaryStrong;
+  const color = selected ? colors.onPrimary : colors.ink;
   return (
     <Pressable
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
       onPress={onPress}
-      style={[styles.chip, { backgroundColor: selected ? colors.primary : colors.primaryTint }]}
+      style={[styles.chip, styles.filter, selected && styles.filterOn]}
     >
       <Text style={[type.buttonSm, { color }]}>{label}</Text>
-      {count !== undefined && <Text style={[styles.count, { color }]}>{count}</Text>}
+      {count !== undefined && (
+        <Text style={[styles.count, { color: selected ? colors.onPrimary : colors.inkMuted }]}>
+          {count}
+        </Text>
+      )}
     </Pressable>
   );
 }
@@ -112,7 +116,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
-  count: { ...type.caption, opacity: 0.8 },
+  filter: { borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.card },
+  filterOn: { borderColor: colors.primary, backgroundColor: colors.primary },
+  count: { ...type.caption, fontVariant: ['tabular-nums'] },
   person: { paddingStart: 6, maxWidth: '100%' },
   personName: { flexShrink: 1 },
   suggestion: { maxWidth: 220, backgroundColor: colors.ground },

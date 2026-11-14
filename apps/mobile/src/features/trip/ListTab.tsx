@@ -19,7 +19,7 @@ import { testId } from '@/lib/testId';
 import { useBag } from '@/state/bag';
 import { useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
-import { colors, space, type } from '@/theme';
+import { accentAt, colors, space, type } from '@/theme';
 import { useBreakpoint } from '@/theme/breakpoint';
 
 import { BagCards } from './BagCards';
@@ -158,10 +158,11 @@ export function ListTab({
         ) : (
           <EmptyState {...he.trip.empty.missing} />
         ))}
-      {groups.map(({ category, total, missing, items }) => (
+      {groups.map(({ category, total, missing, items }, index) => (
         <Card key={category?.id ?? 'none'} gap={space[3]}>
           {/* The card's small muted title (trip.html "ציוד"), with ✎ for the category sheet. */}
           <View style={styles.header}>
+            <View style={[styles.dot, { backgroundColor: accentAt(index) }]} />
             <Text style={styles.title} accessibilityRole="header">
               {category?.name ?? he.trip.uncategorized}
             </Text>
@@ -194,6 +195,7 @@ export function ListTab({
                 }
                 onClaim={(quantity) => act({ type: 'setClaim', itemId: item.id, quantity })}
                 onPack={(packed) => act({ type: 'setPacked', itemId: item.id, packed })}
+                accent={accentAt(index)}
               />
             </RevealTarget>
           ))}
@@ -233,12 +235,9 @@ const styles = StyleSheet.create({
   filters: { gap: space[2] },
   chips: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: space[2] },
   header: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: 36 },
-  title: {
-    ...type.caption,
-    fontFamily: type.itemTitle.fontFamily,
-    color: colors.inkMuted,
-    flex: 1,
-  },
+  // The category's accent, which its items' icons share.
+  dot: { width: 10, height: 10, borderRadius: 5 },
+  title: { ...type.itemTitle, color: colors.ink, flex: 1 },
   aside: { ...type.caption, color: colors.inkMuted },
   progress: { ...type.itemTitle, color: colors.ink, flex: 1 },
   progressWrap: { gap: space[2], paddingHorizontal: space[1] },

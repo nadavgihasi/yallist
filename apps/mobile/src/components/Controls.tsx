@@ -98,6 +98,8 @@ const styles = StyleSheet.create({
     gap: 4,
     padding: 4,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.hairline,
     backgroundColor: colors.card,
   },
   // Grow from each label's own width, so a long label ("קניות • 10") isn't cut at 390px.

@@ -4,7 +4,7 @@
 
 Yallist is a group-trip app for Israel: one shared list for who brings what and what still needs buying. It is Hebrew-first and right-to-left, warm, quick, and a little playful, like the WhatsApp group it replaces.
 
-**Where this came from.** The colors were sampled pixel-exact from a 2× screenshot of the trips home screen (the empty state), and the logo is the chosen Check-Y. Sizes, spacing and type sizes are that screenshot halved, so treat them as close estimates until they are synced from the code. Lines marked *proposed* are recommendations, not yet in the app.
+**The look in one line.** Warm paper, night ink, sunset violet for what you tap and orange for what's done: the colors of the cover illustrations' evening sky, not of a generic blue app.
 
 ## Voice
 
@@ -28,34 +28,36 @@ The Check-Y is a Y whose arms form a checkmark, and it *is* the Y of the name. T
 - **Clear space.** Keep at least half the mark’s height free on every side of the lockup.
 - **Minimum sizes.** The icon works down to 24px. Keep the lockup at least 24px tall.
 - **Live reference.** The Logo card below shows both lockups, the icon at real sizes and the clear-space zone, all drawn from the files in Logos.
-- **Don’ts.** Don’t recolor the mark blue, put it on a blue fill, add shadows, or retype the letters. The wordmark is Rubik Bold, outlined in the files.
+- **Don’ts.** Don’t recolor the mark, add shadows, or retype the letters. The wordmark is Rubik Bold, outlined in the files.
 
 ## Color
 
-Two hues, each with one job:
+Four roles, each with one job:
 
-- **Primary blue (`primary`) means *do something*.** It colors the floating button, links, the avatar and step numerals. Its quiet form, `primary-tint`, is for tonal buttons and step circles.
-- **Brand orange (`brand`) means *Yallist*.** It is for the logo and the app icon. *Proposed:* also use it for the one moment the product is about, an item checked as brought, so the check in the logo and the check in the list are the same thing. Never use orange for buttons, and never use blue for the logo.
-- **Neutrals.** Use `surface` for the page, `card` for content, `ink` for headings, and `ink-muted` for everything secondary. No borders: separation comes from card on surface.
-- **Illustration.** The `illo-*` sunset palette is for illustrations only. Its warm sky is why the orange logo sits comfortably beside the blue UI.
+- **Paper (`surface`, `line`, `hairline`) is the place.** The page is warm paper, and cards are white on it with a `hairline` outline. No cold grays.
+- **Night ink (`ink`, `ink-muted`) is for reading.** Headings and text.
+- **Sunset violet (`primary`, `primary-tint`, `primary-strong`) means *do something*.** Solid buttons, selected chips and tabs, links, the default avatar, step numerals. `primary-tint` is the quiet fill for tonal buttons, step circles and tips. The screen's key number may be set in `primary-strong` (the money balance).
+- **Brand orange (`brand`) means *done* and *Yallist*.** The logo, a done check, progress. Never a button fill, and never text; `brand-strong` is the orange that can be read (“אצלך”, errors, delete).
+- **Category accents (`accent-*`)** give each category card on a list its own hue, cycling in order: a dot beside its name and the color of its items' icons. They are decoration; the name always says which category it is.
+- **Illustration.** The `illo-*` sunset palette is for illustrations, trip tiles and covers only. Violet and orange are taken from it, which is why the UI and the covers sit together.
 
-**Contrast to watch.** The app sets `primary` text on `primary-tint` (4.4:1). That passes for the 18px/800 step numerals, which count as large text, but not for the 15px “טיול לדוגמה” label. Use `primary-strong` there (4.9:1). `brand` on white is 3.1:1, which is fine for the logo and icons but not for text; use `brand-strong` for text.
+**Contrast to watch.** White on `primary` is 6.6:1; `primary` on paper is 5.9:1. `brand` on white is 3.1:1, fine for the logo and icons but not text: use `brand-strong` (5.9:1 on card, 5.2:1 on paper). Every accent is at least 4.3:1 on card. Placeholders (`ink-faint`) are 3.3:1 on card and are never the only label.
 
 ## Type
 
-Rubik covers Latin and Hebrew in one family. Use 800 for display and button-lg, 700 for item titles and small buttons, and 400 for reading. Load it with `@expo-google-fonts/rubik` on native and Google Fonts on web, at weights 400, 700 and 800. Display sizes get slightly tight tracking (`-0.01em`). Hebrew needs no other adjustment.
+Rubik covers Latin and Hebrew in one family. Use 800 for titles, numbers and stats, 700 for item titles, labels and buttons, and 400 for reading. Titles get slightly tight tracking (`-0.01em`). Numbers that change use tabular digits. Load it with `@expo-google-fonts/rubik`, one file per weight.
 
 ## Layout
 
 - **One column, at most `content-max` (448px)**, centered on web. The screen is a stack of cards on `surface` with `space-4` between them.
-- **Cards** use `card` on `surface`, `radius-card`, `space-5` padding, and no border or shadow.
-- **One floating primary action per screen**, bottom-centered, `space-6` from the edge, with `shadow-float`. It is the only element with a shadow.
+- **Cards** use `card` on `surface`, `radius-card`, `space-5` padding, a 1px `hairline` outline, and no shadow.
+- **One floating primary action per screen**, bottom-centered, `space-6` from the edge, with `shadow-float`. Only what floats has a shadow (this button and the toast).
 - **RTL is the default.** Lay out with start/end, never left/right (`paddingStart`, `marginInlineStart`). The page title sits at the start (right) and the avatar at the end.
 - **Touch targets** are at least 44px (`size-avatar`, `size-button-sm`).
 
 ## Iconography
 
-So far there is one icon, the plus in the floating button: a rounded 2.5px stroke on a 24px grid, set in `on-primary`. *Proposed:* keep every icon in that style, using a rounded-stroke set such as Lucide at a matching stroke weight. Icons sit before their label, so they land on the right in RTL. No emoji as icons.
+Icons are a rounded stroke on a 24px grid (Lucide), in the color of the text beside them. Item icons on a list take their category's accent. Icons sit before their label, so they land on the right in RTL. No emoji as icons.
 
 ## Components
 
@@ -75,8 +77,8 @@ The Yallist logo: the orange Check-Y mark standing in for the Y, followed by “
 
 - **Clear space:** half the mark’s height on every side, shown as the dashed zone in the preview.
 - **Minimums:** the icon at 24px, the lockup at 24px tall.
-- **Never** set the mark beside the full word “yallist”, retype the letters, recolor the mark (no blue, no white-on-blue), or add shadows or outlines.
-- The logo is the only place `brand` appears at full size. Screens stay blue for actions.
+- **Never** set the mark beside the full word “yallist”, retype the letters, recolor the mark, or add shadows or outlines.
+- The logo is the only place `brand` appears at full size. On screens it marks what's done: a check, a ring.
 
 The consumer provides only placement and size, because the files are final artwork.
 
@@ -101,9 +103,9 @@ Pill buttons in two strengths: the floating primary for the one main action on a
 | Tonal | `size-button-sm` | `primary-tint` | `button-sm` in `primary-strong` | Secondary actions inside a card, such as “טיול לדוגמה” |
 
 - Both use `radius-pill` and the Rubik label, with no border.
-- The icon comes before the label (`space-4` gap), so it sits on the right in RTL. It is a 2.5px rounded stroke in the label color.
+- The icon comes before the label (`space-3` gap), so it sits on the right in RTL. It is a rounded stroke in the label color.
 - Labels are actions as nouns (“פתיחת טיול ראשון”), at most three words.
-- Never more than one floating primary per screen, and never orange: `brand` is reserved for the logo.
+- Never more than one floating primary per screen, and never an orange fill.
 
 The consumer provides the label, an optional leading icon, and the press handler.
 
@@ -111,7 +113,7 @@ The consumer provides the label, an optional leading icon, and the press handler
 
 The white card is Yallist’s only container: every block of content on a screen is one card on `surface`.
 
-- `card` fill, `radius-card` corners, `space-5` padding, no border or shadow. Cards stack with `space-4` between them inside the `content-max` column.
+- `card` fill, `radius-card` corners, `space-5` padding, a 1px `hairline` outline, no shadow. Cards stack with `space-4` between them inside the `content-max` column.
 - **Text card:** a `section-title` in `ink`, then `space-3`, then `body` in `ink-muted`.
 - **Action row:** an `item-title` and `caption` at the start, with a tonal Button at the end, vertically centered.
 - **Illustrated card:** the illustration bleeds to the card edges at the top, sharing the top `radius-card` corners, with the text card content below it. Illustrations use only `illo-*` colors.

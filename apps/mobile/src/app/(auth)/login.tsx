@@ -16,7 +16,7 @@ import { he } from '@/i18n/he';
 import { signInAsGuest, signInWithGoogle, type AuthResult } from '@/lib/api';
 import { testId } from '@/lib/testId';
 import { useSession } from '@/state/store';
-import { colors, layout, radius, space, type } from '@/theme';
+import { colors, layout, radius, size, space, type } from '@/theme';
 
 export default function Login() {
   const { me, signIn } = useSession();
@@ -194,9 +194,11 @@ const styles = StyleSheet.create({
   footer: { alignItems: 'center', gap: space[2] },
   footerLink: { ...type.caption, color: colors.inkMuted, textDecorationLine: 'underline' },
   input: {
-    minHeight: 60,
+    minHeight: size.buttonLg,
     paddingHorizontal: space[5],
     borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.hairline,
     backgroundColor: colors.card,
     ...type.body,
     color: colors.ink,
