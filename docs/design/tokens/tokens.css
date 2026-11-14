@@ -15,7 +15,6 @@
   --illo-hill-deep: #7457af;
   --illo-water: #364ed0;
   --illo-tent: #f7d15c;
-  --font-display: "Suez One", Rubik, system-ui, serif;
   --font-sans: Rubik, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   --space-1: 4px;
   --space-3: 12px;
@@ -59,8 +58,8 @@
   --shadow-float: 0 8px 24px rgba(69, 40, 196, 0.28);
 }
 
-.page-title { font-family: var(--font-display); font-size: 34px; line-height: 40px; font-weight: 400; }
-.section-title { font-family: var(--font-display); font-size: 24px; line-height: 30px; font-weight: 400; }
+.page-title { font-family: var(--font-sans); font-size: 34px; line-height: 40px; font-weight: 800; letter-spacing: -0.01em; }
+.section-title { font-family: var(--font-sans); font-size: 24px; line-height: 30px; font-weight: 800; }
 .body { font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 400; }
 .item-title { font-family: var(--font-sans); font-size: 16px; line-height: 22px; font-weight: 700; }
 .caption { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 400; }

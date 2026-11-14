@@ -1,6 +1,6 @@
 # Design
 
-The current design is **design system v3**: warm paper, night ink, sunset violet for what you tap and orange for what's done, with Suez One for titles and Rubik for the rest. It keeps v2's logo, components and layout, and changes what they are drawn with. The source of truth for values is `apps/mobile/src/theme`; [DESIGN.md](DESIGN.md) explains the rules.
+The current design is **design system v3**: warm paper, night ink, sunset violet for what you tap and orange for what's done, set in Rubik. It keeps v2's logo, components and layout, and changes what they are drawn with. The source of truth for values is `apps/mobile/src/theme`; [DESIGN.md](DESIGN.md) explains the rules.
 
 | Path                                           | What it is                                                                                        |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
@@ -39,7 +39,7 @@ v2 read as a generic blue app on a cold gray page, and the brand hardly appeared
 
 - **Color.** The page is warm paper (`#F6F2EA`, was the cold `#F4F5F8`). `primary` is sunset violet (`#5B3DE0`, was blue `#425AF4`), taken from the covers' evening hills, so buttons, selected chips and tabs, and links are violet and `primary-tint` is pale violet. Orange stays for done checks and progress. `brand-strong` is a shade deeper (`#B8370B`) so it passes on paper as well as on cards.
 - **Category accents.** Each category card on a list gets a hue (violet, teal, orange, berry, gold, sky, in order): a dot by its name and its items' icons. The money balance is set in violet.
-- **Type.** Titles are Suez One. Rubik stays for everything else; the large button label drops from 800 to 700.
+- **Type.** Rubik as before; the large button label drops from 800 to 700.
 - **Cards** have a 1px `hairline` outline and a 20px radius (was 24, no outline). Unselected filter chips, the tabs' track and round header buttons are outlined the same way.
 - **Buttons.** The floating button is 56px tall (was 60). The row buttons are pale violet with violet labels.
 - **Unchanged.** The logo, the illustrations and covers, the icons, the status ring, the spacing scale, the 44px touch target, the layouts and every string.

@@ -65,15 +65,14 @@ export const motion = {
 export const isRTL = true;
 
 export const fontFamily = {
-  display: 'SuezOne_400Regular',
   regular: 'Rubik_400Regular',
   bold: 'Rubik_700Bold',
   extraBold: 'Rubik_800ExtraBold',
 } as const;
 
 export const typography = {
-  pageTitle: { fontFamily: fontFamily.display, fontWeight: '400', fontSize: 34, lineHeight: 40 },
-  sectionTitle: { fontFamily: fontFamily.display, fontWeight: '400', fontSize: 24, lineHeight: 30 },
+  pageTitle: { fontFamily: fontFamily.extraBold, fontWeight: '800', fontSize: 34, lineHeight: 40, letterSpacing: -0.34 },
+  sectionTitle: { fontFamily: fontFamily.extraBold, fontWeight: '800', fontSize: 24, lineHeight: 30 },
   body: { fontFamily: fontFamily.regular, fontWeight: '400', fontSize: 16, lineHeight: 24 },
   itemTitle: { fontFamily: fontFamily.bold, fontWeight: '700', fontSize: 16, lineHeight: 22 },
   caption: { fontFamily: fontFamily.regular, fontWeight: '400', fontSize: 14, lineHeight: 20 },

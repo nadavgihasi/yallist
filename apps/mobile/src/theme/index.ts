@@ -51,12 +51,8 @@ export const accents = ['#5B3DE0', '#0A7C76', '#D9480F', '#C2387A', '#A86A0A', '
 /** The accent for the category card at `index`, cycling. */
 export const accentAt = (index: number) => accents[index % accents.length]!;
 
-/**
- * Suez One for titles (one weight), Rubik at 400, 700 and 800 for everything else
- * (`@expo-google-fonts`). Numbers stay in Rubik: Suez One has old-style digits.
- */
+/** Rubik at 400, 700 and 800 (`@expo-google-fonts/rubik`). */
 export const fonts = {
-  display: 'SuezOne_400Regular',
   regular: 'Rubik_400Regular',
   bold: 'Rubik_700Bold',
   extraBold: 'Rubik_800ExtraBold',
@@ -67,8 +63,8 @@ export const fonts = {
  * web synthesize bold and Android fall back to the system font.
  */
 export const type = {
-  pageTitle: { fontFamily: fonts.display, fontSize: 34, lineHeight: 40 },
-  sectionTitle: { fontFamily: fonts.display, fontSize: 24, lineHeight: 30 },
+  pageTitle: { fontFamily: fonts.extraBold, fontSize: 34, lineHeight: 40, letterSpacing: -0.34 },
+  sectionTitle: { fontFamily: fonts.extraBold, fontSize: 24, lineHeight: 30 },
   body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24 },
   itemTitle: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 22 },
   caption: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },

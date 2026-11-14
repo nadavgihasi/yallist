@@ -45,7 +45,7 @@ Four roles, each with one job:
 
 ## Type
 
-Two families. **Suez One** sets the titles (`page-title`, `section-title`): one weight, a warm slab with Hebrew and Latin, and the part of the type that is recognizably Yallist. **Rubik** sets everything else: 800 for numbers and stats, 700 for item titles, labels and buttons, 400 for reading. Numbers are always Rubik, with tabular digits where they change: Suez One has old-style digits, which read badly in counts and prices. Load both with `@expo-google-fonts`, one file per weight.
+Rubik covers Latin and Hebrew in one family. Use 800 for titles, numbers and stats, 700 for item titles, labels and buttons, and 400 for reading. Titles get slightly tight tracking (`-0.01em`). Numbers that change use tabular digits. Load it with `@expo-google-fonts/rubik`, one file per weight.
 
 ## Layout
 
