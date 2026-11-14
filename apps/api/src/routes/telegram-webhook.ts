@@ -9,6 +9,8 @@ import {
   answerPrompt,
   approve,
   askDetails,
+  merge,
+  notNow,
   reject,
   type Actor,
   type PipelineConfig,
@@ -30,13 +32,17 @@ type Update = {
   };
 };
 
+/** Buttons on a request (approvers) and on a merge offer (mergers). */
 const ACTIONS = {
   a: (db: Db, pipeline: PipelineConfig, id: string, by: Actor) =>
     approve(db, pipeline, id, by, null),
   d: askDetails,
   r: reject,
+  m: merge,
+  n: notNow,
 };
-const CALLBACK = /^([adr]):([0-9a-f-]{36})$/;
+const MERGE_ACTIONS = new Set(['m', 'n']);
+const CALLBACK = /^([adrmn]):([0-9a-f-]{36})$/;
 
 const sameSecret = (given: string | undefined, secret: string) =>
   !!given &&
@@ -45,8 +51,8 @@ const sameSecret = (given: string | undefined, secret: string) =>
 
 /**
  * The bot's webhook (setWebhook with `secret_token`, docs/deploy.md): button presses on a feature
- * request and replies to a details prompt, in the pipeline chat, from an approver; everything
- * else is ignored. `/chatid` in any chat answers with the chat's id and the sender's user id, for
+ * request and replies to a details prompt, in the pipeline chat, from an approver, and Merge /
+ * Not now on a merge offer, from a merger; everything else is ignored. `/chatid` in any chat answers with the chat's id and the sender's user id, for
  * setting up the pipeline chat and the approvers. Every update, and every failure, is answered 200
  * so Telegram doesn't redeliver; each step is a conditional move, so a redelivery would be a no-op.
  */
@@ -60,14 +66,22 @@ export const telegramWebhookRoutes = (db: Db, pipeline: PipelineConfig | null) =
     const here = (chat?: Chat) => String(chat?.id) === pipeline.telegram.chatId;
     const approver = (from?: Actor): from is Actor =>
       !!from && pipeline.approvers.includes(String(from.id));
+    const merger = (from?: Actor): from is Actor =>
+      !!from && pipeline.mergers.includes(String(from.id));
     try {
       const press = update.callback_query;
-      if (press && here(press.message?.chat) && approver(press.from)) {
+      if (press) {
         const [, action, id] = CALLBACK.exec(press.data ?? '') ?? [];
-        let toast = 'Unknown button';
+        const merging = !!action && MERGE_ACTIONS.has(action);
+        const allowed =
+          here(press.message?.chat) && (merging ? merger(press.from) : approver(press.from));
+        let toast = merging ? 'Only the owner can merge' : 'Only approvers can decide';
         try {
-          if (action && id) {
-            toast = await ACTIONS[action as keyof typeof ACTIONS](db, pipeline, id, press.from);
+          if (allowed) {
+            toast = 'Unknown button';
+            if (action && id) {
+              toast = await ACTIONS[action as keyof typeof ACTIONS](db, pipeline, id, press.from);
+            }
           }
         } finally {
           await callTelegram(pipeline.telegram, 'answerCallbackQuery', {
@@ -75,11 +89,6 @@ export const telegramWebhookRoutes = (db: Db, pipeline: PipelineConfig | null) =
             text: toast,
           }).catch((err: unknown) => console.error('answerCallbackQuery failed', err));
         }
-      } else if (press) {
-        await callTelegram(pipeline.telegram, 'answerCallbackQuery', {
-          callback_query_id: press.id,
-          text: 'Only approvers can decide',
-        }).catch((err: unknown) => console.error('answerCallbackQuery failed', err));
       }
       const message = update.message;
       if (message?.text && /^\/chatid(@\w+)?$/.test(message.text.trim())) {

@@ -103,6 +103,12 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
   // them too. Unset: the alerts chat, and its id as the only approver.
   const telegramPipelineChatId = new sst.Secret('TelegramPipelineChatId', 'unset');
   const telegramApproverIds = new sst.Secret('TelegramApproverIds', 'unset');
+  // Merging from Telegram (pipeline.ts, merge): a fine-grained token with Contents and Pull
+  // requests read/write on the repo, used only when Merge is pressed, and who may press it
+  // (Telegram user ids; unset: the alerts chat id, i.e. the owner). Without the token there's no
+  // Merge button.
+  const feedbackMergeToken = new sst.Secret('FeedbackMergeToken', 'unset');
+  const telegramMergerIds = new sst.Secret('TelegramMergerIds', 'unset');
   const authEnvironment = { GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage] ?? 'unset' };
 
   // Realtime (apps/api/src/realtime.ts): an AppSync Events API with a channel per trip,
@@ -224,6 +230,8 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
       githubWebhookSecret,
       telegramPipelineChatId,
       telegramApproverIds,
+      feedbackMergeToken,
+      telegramMergerIds,
     ],
     environment: {
       ...authEnvironment,

@@ -1,10 +1,21 @@
-import { isNull } from 'drizzle-orm';
+import { and, isNull, ne, or, sql } from 'drizzle-orm';
 
 import { countRunning, findFeedback, moveFeedback, type Feedback } from './dal/feedback';
 import type { Db } from './db/client';
 import { feedback } from './db/schema';
 import { transact } from './db/tx';
-import { breakMentions, closeIssue, commentOnIssue, issueUrl, pullUrl } from './github';
+import {
+  breakMentions,
+  closeIssue,
+  commentOnIssue,
+  deleteBranch,
+  getPull,
+  GitHubError,
+  issueUrl,
+  markReady,
+  mergePull,
+  pullUrl,
+} from './github';
 import {
   editTelegram,
   escapeHtml,
@@ -24,6 +35,8 @@ export interface PipelineConfig {
   telegram: Telegram;
   /** Telegram user ids allowed to press the buttons and answer a details prompt. */
   approvers: string[];
+  /** Telegram user ids allowed to press Merge; usually only the owner. */
+  mergers: string[];
   /** The `secret_token` the bot's webhook was set with. */
   telegramSecret: string;
   /** GithubFeedbackToken, to comment on and close issues; null: only Telegram changes. */
@@ -32,6 +45,11 @@ export interface PipelineConfig {
   routine: Routine | null;
   /** The repo webhook's secret; null turns /webhooks/github off. */
   githubSecret: string | null;
+  /**
+   * FeedbackMergeToken (Contents and Pull requests: read and write), to merge from Telegram; null:
+   * no Merge button, you merge on GitHub.
+   */
+  mergeToken: string | null;
 }
 
 /** Who pressed a button or replied, from Telegram's `from`. */
@@ -52,13 +70,19 @@ export function pipelineTelegram(
   telegram: Telegram | null,
   pipelineChatId: string | null,
   approverIds: string | null,
+  mergerIds: string | null = null,
 ) {
   if (!telegram) return null;
-  const approvers = (approverIds ?? telegram.chatId)
-    .split(',')
-    .map((id) => id.trim())
-    .filter((id) => /^\d+$/.test(id));
-  return { telegram: { ...telegram, chatId: pipelineChatId ?? telegram.chatId }, approvers };
+  const ids = (list: string | null) =>
+    (list ?? telegram.chatId)
+      .split(',')
+      .map((id) => id.trim())
+      .filter((id) => /^\d+$/.test(id));
+  return {
+    telegram: { ...telegram, chatId: pipelineChatId ?? telegram.chatId },
+    approvers: ids(approverIds),
+    mergers: ids(mergerIds),
+  };
 }
 
 /** Runs at once (approved, without a PR or with an open one) before Approve waits. */
@@ -364,4 +388,117 @@ export async function previewDeployed(
       `⚠️ Preview of PR #${deployment.pr} failed${log ? ` · <a href="${log}">run</a>` : ''}`,
     );
   }
+}
+
+const mergeButtons = (id: string): Buttons => [
+  { text: 'Merge', data: `m:${id}` },
+  { text: 'Not now', data: `n:${id}` },
+];
+
+const short = (sha: string) => `<code>${escapeHtml(sha.slice(0, 7))}</code>`;
+const offeredSha = (sha: string) => sql`${feedback.mergeSha} = ${sha}`;
+
+const mergeOffer = (pr: number, sha: string, ...status: string[]) =>
+  [
+    `✅ <b>PR #${pr}</b> passed every check on ${short(sha)} · <a href="${pullUrl(pr)}">PR</a>`,
+    ...status,
+  ].join('\n');
+
+/**
+ * The PR workflow passed on a commit of a request's PR (every check, `all-pass` included): offers
+ * Merge for that commit, once. An older offer on the same PR loses its buttons, since GitHub would
+ * refuse to merge a commit that is no longer the PR's head.
+ */
+export async function checksPassed(
+  db: Db,
+  config: PipelineConfig,
+  run: { pr: number; sha: string },
+) {
+  if (!config.mergeToken) return;
+  const row = await findFeedback(db, 'prNumber', run.pr);
+  if (!row || row.pipelineState !== 'approved') return;
+  const moved = await moveFeedback(
+    db,
+    row.id,
+    ['approved'],
+    { mergeSha: run.sha, mergeMessageId: null, mergedBy: null },
+    and(or(isNull(feedback.mergeSha), ne(feedback.mergeSha, run.sha)), isNull(feedback.mergedBy)),
+  );
+  if (!moved) return;
+  if (row.mergeMessageId && row.mergeSha) {
+    await editTelegram(
+      config.telegram,
+      row.mergeMessageId,
+      `PR #${run.pr} on ${short(row.mergeSha)}: superseded by ${short(run.sha)}`,
+    ).catch((err: unknown) => console.error('Old merge offer not updated', err));
+  }
+  const messageId = await sendTelegram(config.telegram, mergeOffer(run.pr, run.sha), {
+    replyTo: row.telegramMessageId ?? undefined,
+    buttons: mergeButtons(row.id),
+  });
+  await moveFeedback(db, row.id, ['approved'], { mergeMessageId: messageId }, offeredSha(run.sha));
+}
+
+/**
+ * Merge: squash-merges the request's PR at the offered commit, with the merge token. The claim
+ * (`mergedBy`) stops a double press; GitHub refusing (new commits, failing rules, conflicts) gives
+ * it back and shows why, with the buttons. Returns the toast.
+ */
+export async function merge(db: Db, config: PipelineConfig, id: string, by: Actor) {
+  const row = await findFeedback(db, 'id', id);
+  if (!config.mergeToken || !row?.prNumber || !row.mergeSha || !row.mergeMessageId) {
+    return 'Nothing to merge';
+  }
+  const { prNumber: pr, mergeSha: sha, mergeMessageId: messageId } = row;
+  const claimed = await moveFeedback(
+    db,
+    id,
+    ['approved'],
+    { mergedBy: recordOf(by) },
+    and(isNull(feedback.mergedBy), offeredSha(sha)),
+  );
+  if (!claimed) return 'Already handled';
+  const token = config.mergeToken;
+  try {
+    const pull = await getPull(token, pr);
+    if (pull.state !== 'open') throw new GitHubError(409, 'the PR is not open', 'Merge');
+    if (pull.head.sha !== sha) {
+      throw new GitHubError(
+        409,
+        `the PR has newer commits (${pull.head.sha.slice(0, 7)})`,
+        'Merge',
+      );
+    }
+    if (pull.draft) await markReady(token, pr);
+    await mergePull(token, pr, sha, pull.title);
+    await deleteBranch(token, pull.head.ref).catch((err: unknown) =>
+      console.error('Merged branch not deleted', err),
+    );
+  } catch (err) {
+    if (!(err instanceof GitHubError)) throw err;
+    await moveFeedback(db, id, ['approved'], { mergedBy: null }, offeredSha(sha));
+    await editTelegram(
+      config.telegram,
+      messageId,
+      mergeOffer(pr, sha, `⚠️ Not merged: ${escapeHtml(err.reason || String(err.status))}`),
+      mergeButtons(id),
+    );
+    return 'Not merged';
+  }
+  await editTelegram(config.telegram, messageId, mergeOffer(pr, sha, `🚀 Merged by ${nameOf(by)}`));
+  return 'Merged';
+}
+
+/** Not now: the offer loses its buttons; a new commit that passes gets a new one. */
+export async function notNow(db: Db, config: PipelineConfig, id: string, by: Actor) {
+  const row = await findFeedback(db, 'id', id);
+  if (!row?.prNumber || !row.mergeSha || !row.mergeMessageId || row.mergedBy) {
+    return 'Already handled';
+  }
+  await editTelegram(
+    config.telegram,
+    row.mergeMessageId,
+    mergeOffer(row.prNumber, row.mergeSha, `⏸ Not now (${nameOf(by)}): merge on GitHub when ready`),
+  );
+  return 'Not now';
 }
