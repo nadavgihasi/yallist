@@ -32,6 +32,8 @@ To keep runs short, `dev` builds (and the compile check on PRs) target arm64 pho
 
 ## Play Console setup (after Google verifies the account)
 
+The listing text, graphics and the answers to every App content form are in [play-store/](play-store/README.md), step by step.
+
 - [ ] Create the upload key: `./scripts/create-android-upload-key.sh`, then back up `~/.yallist-keys/`.
 - [ ] Run **Android build** and confirm the log no longer says "debug signing".
 - [ ] Create app: name Yallist, default language Hebrew (he-IL), App, Free.
