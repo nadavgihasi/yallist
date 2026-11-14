@@ -3,10 +3,10 @@ export const colors = {
   card: '#FFFFFF',
   ink: '#1A1833',
   inkMuted: '#5C5A6E',
-  primary: '#1A1833',
+  primary: '#5B3DE0',
   onPrimary: '#FFFFFF',
-  primaryTint: '#EBE4D6',
-  primaryStrong: '#1A1833',
+  primaryTint: '#ECE7FF',
+  primaryStrong: '#4528C4',
   brand: '#FF5A1F',
   brandStrong: '#B8370B',
   illustration: {
@@ -20,6 +20,8 @@ export const colors = {
   line: '#DDD5C7',
   hairline: '#E7E0D3',
 } as const;
+
+export const accents = ['#5B3DE0', '#0A7C76', '#D9480F', '#C2387A', '#A86A0A', '#2F6FD0'] as const;
 
 export const space = {
   1: 4,
@@ -84,17 +86,18 @@ export const typography = {
 
 export const shadow = {
   float: {
-    shadowColor: '#1A1833',
+    shadowColor: '#4528C4',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.24,
+    shadowOpacity: 0.28,
     shadowRadius: 12,
     elevation: 8,
   },
-  floatCss: '0 8px 24px rgba(26, 24, 51, 0.24)',
+  floatCss: '0 8px 24px rgba(69, 40, 196, 0.28)',
 } as const;
 
 export const theme = {
   colors,
+  accents,
   space,
   layout,
   radius,

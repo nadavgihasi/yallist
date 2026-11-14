@@ -4,7 +4,7 @@
 
 Yallist is a group-trip app for Israel: one shared list for who brings what and what still needs buying. It is Hebrew-first and right-to-left, warm, quick, and a little playful, like the WhatsApp group it replaces.
 
-**The look in one line.** Warm paper, night ink, and one orange spark: the app looks like its own logo (an orange mark beside ink letters) and like the sunset in its illustrations, not like a blue web app.
+**The look in one line.** Warm paper, night ink, sunset violet for what you tap and orange for what's done: the colors of the cover illustrations' evening sky, not of a generic blue app.
 
 ## Voice
 
@@ -32,14 +32,16 @@ The Check-Y is a Y whose arms form a checkmark, and it *is* the Y of the name. T
 
 ## Color
 
-Three roles, each with one job:
+Four roles, each with one job:
 
-- **Paper (`surface`, `primary-tint`, `line`, `hairline`) is the place.** The page is warm paper, cards are white on it with a `hairline` outline, and sand (`primary-tint`) is the quiet fill for tonal buttons, step circles and tips. No cold grays.
-- **Night ink (`ink`, `primary`) means *read this* and *do something*.** It is one color: headings, solid buttons, selected chips and tabs, links. What tells a button from text is its shape, never a second hue.
-- **Brand orange (`brand`) is the spark.** It is the logo, a done check, progress, and the icon on the floating button: orange on night, the same pair as the mark beside the wordmark. One spark per view is enough. Never an orange button fill, and never orange text; `brand-strong` is the orange that can be read (“אצלך”, errors, delete).
-- **Illustration.** The `illo-*` sunset palette is for illustrations, trip tiles and covers only. With the UI down to paper, ink and orange, they carry the color.
+- **Paper (`surface`, `line`, `hairline`) is the place.** The page is warm paper, and cards are white on it with a `hairline` outline. No cold grays.
+- **Night ink (`ink`, `ink-muted`) is for reading.** Headings and text.
+- **Sunset violet (`primary`, `primary-tint`, `primary-strong`) means *do something*.** Solid buttons, selected chips and tabs, links, the default avatar, step numerals. `primary-tint` is the quiet fill for tonal buttons, step circles and tips. One card per screen may be filled with `primary` when it holds the screen's key number (the money balance).
+- **Brand orange (`brand`) means *done* and *Yallist*.** The logo, a done check, progress. Never a button fill, and never text; `brand-strong` is the orange that can be read (“אצלך”, errors, delete).
+- **Category accents (`accent-*`)** give each category card on a list its own hue, cycling in order: a dot beside its name and the color of its items' icons. They are decoration; the name always says which category it is.
+- **Illustration.** The `illo-*` sunset palette is for illustrations, trip tiles and covers only. Violet and orange are taken from it, which is why the UI and the covers sit together.
 
-**Contrast to watch.** `brand` on white is 3.1:1, which is fine for the logo and icons but not for text; use `brand-strong` (5.9:1 on card, 5.2:1 on paper). `brand` on `primary` is 5.5:1. Placeholders (`ink-faint`) are 3.3:1 on card and are never the only label.
+**Contrast to watch.** White on `primary` is 6.6:1; `primary` on paper is 5.9:1. `brand` on white is 3.1:1, fine for the logo and icons but not text: use `brand-strong` (5.9:1 on card, 5.2:1 on paper). Every accent is at least 4.3:1 on card. Placeholders (`ink-faint`) are 3.3:1 on card and are never the only label.
 
 ## Type
 
@@ -55,7 +57,7 @@ Two families. **Suez One** sets the titles (`page-title`, `section-title`): one 
 
 ## Iconography
 
-Icons are a rounded stroke on a 24px grid (Lucide), in the color of the text beside them. The one exception is the icon on the floating button, which is `brand`. Icons sit before their label, so they land on the right in RTL. No emoji as icons.
+Icons are a rounded stroke on a 24px grid (Lucide), in the color of the text beside them. Item icons on a list take their category's accent. Icons sit before their label, so they land on the right in RTL. No emoji as icons.
 
 ## Components
 
@@ -76,7 +78,7 @@ The Yallist logo: the orange Check-Y mark standing in for the Y, followed by “
 - **Clear space:** half the mark’s height on every side, shown as the dashed zone in the preview.
 - **Minimums:** the icon at 24px, the lockup at 24px tall.
 - **Never** set the mark beside the full word “yallist”, retype the letters, recolor the mark, or add shadows or outlines.
-- The logo is the only place `brand` appears at full size. On screens it is a spark: a check, a ring, one icon.
+- The logo is the only place `brand` appears at full size. On screens it marks what's done: a check, a ring.
 
 The consumer provides only placement and size, because the files are final artwork.
 
@@ -97,11 +99,11 @@ Pill buttons in two strengths: the floating primary for the one main action on a
 
 | Variant | Height | Fill | Label | Use |
 |---|---|---|---|---|
-| Floating primary | `size-button-lg` | `primary` + `shadow-float` | `button-lg` in `on-primary`, icon in `brand` | The screen’s one main action, bottom-centered, `space-6` from the edge |
+| Floating primary | `size-button-lg` | `primary` + `shadow-float` | `button-lg` in `on-primary` | The screen’s one main action, bottom-centered, `space-6` from the edge |
 | Tonal | `size-button-sm` | `primary-tint` | `button-sm` in `primary-strong` | Secondary actions inside a card, such as “טיול לדוגמה” |
 
 - Both use `radius-pill` and the Rubik label, with no border.
-- The icon comes before the label (`space-3` gap), so it sits on the right in RTL. It is a rounded stroke in the label color; on the floating button it is `brand`.
+- The icon comes before the label (`space-3` gap), so it sits on the right in RTL. It is a rounded stroke in the label color.
 - Labels are actions as nouns (“פתיחת טיול ראשון”), at most three words.
 - Never more than one floating primary per screen, and never an orange fill.
 

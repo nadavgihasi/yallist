@@ -10,7 +10,8 @@ import { ITEM_GLYPHS } from './itemGlyphs';
 const FALLBACK = { bring: 'backpack', buy: 'shopping-basket' } as const;
 
 /**
- * An item's line icon, by its name: thin, gray and with no background, so the row's name leads.
+ * An item's line icon, by its name: thin and with no background, so the row's name leads; gray,
+ * or its category card's accent (`color`).
  * Decorative, so hidden from screen readers, which read the name beside it. Nothing at all when
  * the user turned item icons off in their profile.
  */
@@ -18,17 +19,19 @@ export function ItemIcon({
   name,
   list = 'bring',
   size = 22,
+  color = colors.inkMuted,
 }: {
   name: string;
   list?: ListKind;
   size?: number;
+  color?: string;
 }) {
   const show = useShowItemIcons();
   if (!show) return null;
   const Glyph = ITEM_GLYPHS[catalogIcon(name) ?? FALLBACK[list]];
   return (
     <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Glyph size={size} color={colors.inkMuted} strokeWidth={1.75} absoluteStrokeWidth />
+      <Glyph size={size} color={color} strokeWidth={1.75} absoluteStrokeWidth />
     </View>
   );
 }

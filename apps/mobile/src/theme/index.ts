@@ -1,7 +1,8 @@
 import { Platform, type TextStyle } from 'react-native';
 
 /**
- * Design system v3 tokens (docs/design/DESIGN.md): warm paper, night ink and one orange spark.
+ * Design system v3 tokens (docs/design/DESIGN.md): warm paper, night ink, sunset violet for what
+ * you tap, and orange for what's done.
  * The page background is `ground` and cards are `card`, so "surface" never has two meanings.
  */
 export const colors = {
@@ -9,17 +10,17 @@ export const colors = {
   ground: '#F6F2EA',
   /** Cards and sheets, always on `ground`, outlined with `hairline`. */
   card: '#FFFFFF',
-  /** Night ink: headings, and (as `primary`) everything you can tap. */
+  /** Night ink: headings and body text. */
   ink: '#1A1833',
   inkMuted: '#5C5A6E',
-  /** Solid buttons, selected chips and tabs, links. The same night as `ink`. */
-  primary: '#1A1833',
+  /** Sunset violet: everything you can tap (solid buttons, selected chips and tabs, links). */
+  primary: '#5B3DE0',
   onPrimary: '#FFFFFF',
-  /** Tonal buttons, step circles, selected tiles: sand, a step deeper than `ground`. */
-  primaryTint: '#EBE4D6',
-  /** Text on `primaryTint`. */
-  primaryStrong: '#1A1833',
-  /** Yallist orange: the logo, done checks, progress, and the icon on a solid button. Graphics only. */
+  /** Tonal buttons, step circles, selected tiles: pale violet. */
+  primaryTint: '#ECE7FF',
+  /** Violet text and icons on `primaryTint` and `card`. */
+  primaryStrong: '#4528C4',
+  /** Yallist orange: the logo, done checks and progress. Graphics only; never buttons. */
   brand: '#FF5A1F',
   /** Orange text on `card` and `ground` (e.g. "אצלך", errors). */
   brandStrong: '#B8370B',
@@ -40,6 +41,15 @@ export const colors = {
   hairline: '#E7E0D3',
   scrim: 'rgba(26,24,51,0.45)',
 } as const;
+
+/**
+ * One hue per category card, in order: its dot and its items' icons. Each is at least 4.3:1 on
+ * `card`, so an icon in it reads as clearly as `inkMuted`.
+ */
+export const accents = ['#5B3DE0', '#0A7C76', '#D9480F', '#C2387A', '#A86A0A', '#2F6FD0'] as const;
+
+/** The accent for the category card at `index`, cycling. */
+export const accentAt = (index: number) => accents[index % accents.length]!;
 
 /**
  * Suez One for titles (one weight), Rubik at 400, 700 and 800 for everything else
@@ -142,7 +152,7 @@ export const webDir = (Platform.OS === 'web' ? { dir: isRTL ? 'rtl' : 'ltr' } : 
 
 /** Only what floats has a shadow: the floating button and the toast. Cards stay flat. */
 export const shadow = {
-  float: { boxShadow: '0 8px 24px rgba(26,24,51,0.24)' },
+  float: { boxShadow: '0 8px 24px rgba(69,40,196,0.28)' },
 } as const;
 
 /** The card: white on `ground`, outlined with a hairline. Spread into any view that is one. */

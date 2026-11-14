@@ -58,7 +58,8 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
 
   return (
     <View style={styles.wrap}>
-      <Card gap={space[1]}>
+      {/* The one colored card: what I owe or am owed, on violet. */}
+      <Card gap={space[1]} style={styles.hero}>
         <Text style={styles.heroTitle}>{title}</Text>
         <Text style={styles.heroAmount}>{formatShekel(amount)}</Text>
         {view.totalSpent > 0 && (
@@ -80,7 +81,7 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           myPaid.length > 0 && (
             <>
               <View style={styles.heroStatus}>
-                <Icon name="check" size={18} color={colors.primaryStrong} />
+                <Icon name="check" size={18} color={colors.onPrimary} />
                 <Text style={styles.heroText}>
                   {myUnconfirmed.length > 0 ? he.money.waiting : he.money.received}
                 </Text>
@@ -340,9 +341,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   receiptPercent: { ...type.caption, color: colors.primaryStrong },
-  heroTitle: { ...type.caption, color: colors.inkMuted },
-  heroAmount: { ...type.bigNumber, color: colors.ink },
-  heroText: { ...type.caption, color: colors.inkMuted },
+  hero: { backgroundColor: colors.primary, borderColor: colors.primary },
+  heroTitle: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.onPrimary },
+  heroAmount: { ...type.bigNumber, color: colors.onPrimary },
+  heroText: { ...type.caption, color: colors.onPrimary },
   heroButton: { marginTop: space[3] },
   heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },
   paymentEnd: { alignItems: 'flex-end' },

@@ -8,8 +8,8 @@ import { testId } from '@/lib/testId';
 import { colors, space } from '@/theme';
 
 /**
- * The screen's one floating primary action: bottom-centered, `space-6` from the edge. Its icon
- * (a plus by default) is the orange spark on night, like the mark beside the wordmark.
+ * The screen's one floating primary action: bottom-centered, `space-6` from the edge, a plus
+ * icon by default.
  */
 export function FloatingAction({
   label,
@@ -37,7 +37,7 @@ export function FloatingAction({
         disabled={disabled}
         accessibilityLabel={accessibilityLabel}
         {...testId(testID)}
-        icon={icon ? <Icon name={icon} color={colors.brand} strokeWidth={3} /> : undefined}
+        icon={icon ? <Icon name={icon} color={colors.onPrimary} strokeWidth={2.75} /> : undefined}
         onPress={onPress}
       />
     </View>
