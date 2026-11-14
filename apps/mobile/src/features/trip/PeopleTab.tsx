@@ -79,7 +79,37 @@ export function PeopleTab({
 
   return (
     <View style={styles.wrap}>
-      {/* First: what every member needs on the day, before managing anything. */}
+      {/* First, its own section: the trip's name and dates, which organizers edit. */}
+      {organizer && (
+        <Card gap={space[3]}>
+          <View style={styles.nameRow}>
+            <Icon name="calendar" size={20} color={colors.inkMuted} />
+            <Text style={[styles.title, styles.grow]}>{he.renameTrip.title}</Text>
+            <PillButton
+              label={he.links.edit}
+              accessibilityLabel={he.renameTrip.edit}
+              variant="quiet"
+              size="sm"
+              icon={<Icon name="pencil" size={16} color={colors.inkMuted} />}
+              {...testId('trip-rename-edit')}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/[tripId]/rename',
+                  params: { tripId: data.trip.id },
+                })
+              }
+            />
+          </View>
+          <View style={styles.texts}>
+            <Text style={styles.name} {...testId('trip-details-name')}>
+              {data.trip.name}
+            </Text>
+            <Text style={styles.text}>{formatRange(data.trip.startsOn, data.trip.endsOn)}</Text>
+          </View>
+        </Card>
+      )}
+
+      {/* Then what every member needs on the day, before managing anything. */}
       <MeetupSection trip={data.trip} organizer={organizer} />
       <AlbumSection trip={data.trip} organizer={organizer} />
 
@@ -97,34 +127,6 @@ export function PeopleTab({
           onPress={onInvite}
         />
       </Card>
-
-      {organizer && (
-        <Card gap={space[3]}>
-          <View style={styles.nameRow}>
-            <Icon name="calendar" size={20} color={colors.inkMuted} />
-            <View style={styles.personBody}>
-              <Text style={styles.title} {...testId('trip-details-name')}>
-                {data.trip.name}
-              </Text>
-              <Text style={styles.text}>{formatRange(data.trip.startsOn, data.trip.endsOn)}</Text>
-            </View>
-            <PillButton
-              label={he.links.edit}
-              accessibilityLabel={he.renameTrip.edit}
-              variant="quiet"
-              size="sm"
-              icon={<Icon name="pencil" size={16} color={colors.inkMuted} />}
-              {...testId('trip-rename-edit')}
-              onPress={() =>
-                router.push({
-                  pathname: '/trips/[tripId]/rename',
-                  params: { tripId: data.trip.id },
-                })
-              }
-            />
-          </View>
-        </Card>
-      )}
 
       {organizer && pending.length > 0 && (
         <ListGroup title={he.people.pending}>
@@ -253,6 +255,7 @@ const styles = StyleSheet.create({
   wrap: { gap: space[4] },
   actions: { flexDirection: 'row', gap: space[2] },
   texts: { gap: space[1] },
+  grow: { flex: 1 },
   title: { ...type.itemTitle, color: colors.ink },
   text: { ...type.caption, color: colors.inkMuted },
   member: { gap: space[2] },
