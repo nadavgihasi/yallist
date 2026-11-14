@@ -30,6 +30,7 @@ export default function TripLayout() {
       <Stack.Screen name="meetup" options={sheet} />
       <Stack.Screen name="album" options={sheet} />
       <Stack.Screen name="invite" options={sheet} />
+      <Stack.Screen name="add-person" options={sheet} />
       <Stack.Screen name="shop/index" />
       <Stack.Screen name="shop/start" options={sheet} />
       <Stack.Screen name="shop/finish" options={sheet} />

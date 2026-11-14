@@ -281,6 +281,19 @@ export const he = {
     organizer: 'מארגן/ת',
     bring: (n: number) => `${n} להבאה`,
     buy: (n: number) => `${n} לקנייה`,
+    /** A person added by email who hasn't signed in yet. */
+    invited: 'עוד לא התחבר/ה',
+  },
+  addPerson: {
+    action: 'הוספה לפי מייל',
+    title: 'הוספת משתתף',
+    hint: 'אפשר לחלק איתו הוצאות כבר עכשיו. כשיתחבר עם Google עם המייל הזה, הכל יחכה לו.',
+    name: 'שם',
+    namePlaceholder: 'איך לקרוא לו בטיול',
+    email: 'מייל',
+    emailError: 'זה לא נראה כמו כתובת מייל',
+    save: 'הוספה לטיול',
+    added: (name: string) => `${name} נוסף/ה לטיול`,
   },
   money: {
     /** The money tab's two views: the expenses, then who pays whom. */

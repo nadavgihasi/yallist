@@ -3,6 +3,7 @@ import { testClient } from 'hono/testing';
 import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
+import { createAuth, type AuthConfig } from '../auth';
 import { createDb } from '../db/client';
 import { migrate } from '../db/migrate';
 import { createTestDatabase, DATABASE_URL, signInAsGuest, testApp } from '../test-db';
@@ -513,6 +514,125 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         (await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(organizer))).status,
       ).toBe(200);
       expect((await detail(member, tripId)).status).toBe(200);
+    });
+  });
+
+  describe('adding people by email', () => {
+    const addPerson = (user: Guest, tripId: string, displayName: string, email: string) =>
+      client.trips[':tripId'].members.$post(
+        { param: { tripId }, json: { displayName, email } },
+        as(user),
+      );
+
+    it('adds someone who never signed in, so expenses can be split with them', async () => {
+      const { member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const res = await addPerson(member, tripId, 'יוסי', ' Yossi@Example.com ');
+      expect(res.status).toBe(201);
+      const { userId } = await res.json();
+
+      const trip = await (await detail(member, tripId)).json();
+      expect(trip.members.find((m) => m.userId === userId)).toMatchObject({
+        displayName: 'יוסי',
+        role: 'member',
+        status: 'active',
+        invited: true,
+      });
+      expect(trip.members.find((m) => m.userId === member.id)?.invited).toBeUndefined();
+      const [user] = await sql<{ email: string }[]>`select email from users where id = ${userId}`;
+      expect(user!.email).toBe('yossi@example.com');
+      expect(await activityTypes(tripId)).toContain('member_added');
+
+      const expense = await client.trips[':tripId'].expenses.$post(
+        {
+          param: { tripId },
+          json: { description: 'דלק', amountAgorot: 1000, shares: [member.id, userId] },
+        },
+        as(member),
+      );
+      expect(expense.status).toBe(201);
+      const after = await (await detail(member, tripId)).json();
+      expect(after.balances[userId]).toBe(-500);
+    });
+
+    it('adds the same person again in another trip, and changes nothing when already in', async () => {
+      const a = await tripWithMember();
+      const b = await tripWithMember();
+      const first = await (
+        await addPerson(a.organizer, a.data.trip.id, 'רוני', 'roni@example.com')
+      ).json();
+      const again = await addPerson(a.organizer, a.data.trip.id, 'רון', 'roni@example.com');
+      expect(await again.json()).toEqual(first);
+      const other = await (
+        await addPerson(b.organizer, b.data.trip.id, 'רון', 'RONI@example.com')
+      ).json();
+      expect(other.userId).toBe(first.userId);
+      const [row] = await sql<{ n: number }[]>`
+        select count(*)::int as n from trip_members where user_id = ${first.userId}`;
+      expect(row?.n).toBe(2);
+    });
+
+    it('adds an existing user by their email, and brings back one who was removed', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      await sql`update users set email = 'member@example.com' where id = ${member.id}`;
+      await client.trips[':tripId'].members[':userId'].$delete(
+        { param: { tripId, userId: member.id } },
+        as(organizer),
+      );
+      const res = await addPerson(organizer, tripId, 'חבר', 'member@example.com');
+      expect(await res.json()).toEqual({ userId: member.id, status: 'active' });
+      expect((await detail(member, tripId)).status).toBe(200);
+    });
+
+    it("links their first Google sign-in to them, with the trip and what's on them", async () => {
+      // Google stubbed: any id token is valid and names this person.
+      const auth = createAuth(createDb(sql), {
+        baseURL: 'http://localhost:3000',
+        secret: 'test-secret-at-least-32-characters-long',
+        google: {
+          clientId: 'test',
+          clientSecret: 'test',
+          verifyIdToken: async () => true,
+          getUserInfo: async () => ({
+            user: { id: 'g-1', email: 'Dana@Example.com', emailVerified: true, name: 'Dana' },
+            data: { sub: 'g-1' },
+          }),
+        } as AuthConfig['google'],
+      });
+      const { organizer, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const { userId } = await (
+        await addPerson(organizer, tripId, 'דנה', 'dana@example.com')
+      ).json();
+
+      const signedIn = await auth.api.signInSocial({
+        body: { provider: 'google', idToken: { token: 'x' } },
+      });
+      expect('user' in signedIn && signedIn.user.id).toBe(userId);
+      const trip = await (await detail(organizer, tripId)).json();
+      expect(trip.members.find((m) => m.userId === userId)?.invited).toBeUndefined();
+    });
+
+    it('takes organizers only when joining needs approval, and no strangers', async () => {
+      const organizer = await guest('organizer');
+      const data = await createTrip(organizer, { requireApproval: true });
+      const tripId = data.trip.id;
+      const member = await guest('member');
+      await join(member, data.inviteToken);
+      await client.trips[':tripId'].members[':userId'].approve.$post(
+        { param: { tripId, userId: member.id } },
+        as(organizer),
+      );
+      expect((await addPerson(member, tripId, 'x', 'x@example.com')).status).toBe(403);
+      expect((await addPerson(await guest('stranger'), tripId, 'x', 'x@example.com')).status).toBe(
+        404,
+      );
+      expect((await addPerson(organizer, tripId, 'x', 'not-an-email')).status).toBe(400);
+      expect((await addPerson(organizer, tripId, 'x', 'deleted-1@deleted.invalid')).status).toBe(
+        400,
+      );
+      expect((await addPerson(organizer, tripId, 'x', 'x@example.com')).status).toBe(201);
     });
   });
 

@@ -21,6 +21,7 @@ These were decided during design. Do not re-open them without asking.
 - **Anyone in the trip can add and delete items.** Organizers additionally manage members, settings, and can delete the trip.
 - **Joining needs no account.** A friend opens the invite link in a browser, types a name, and is in (anonymous auth). Installing the app is offered, never required.
 - **Optional organizer approval:** per-trip switch. When on, link-joiners land in a pending state until an organizer approves.
+- **People can be added by email before they sign in.** Any active member (only organizers when the trip requires approval) adds a name and email; the person is an active member at once, so expenses can be split with them. Their first Google sign-in with that email links to them, with everything they were added to. Until then the people list marks them "עוד לא התחבר/ה".
 - **Invite link can be rotated;** the old link stops working immediately.
 - **Sign-in for app users:** Google and Apple (Apple's App Store rules require an equivalent privacy-focused option when offering Google sign-in). Anonymous users can later link Google/Apple without losing data.
 - **Costs split equally** among an expense's participants. By default every active member participates; each expense can exclude people (e.g. beer only for those who drink). No per-household or weighted splits.

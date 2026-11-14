@@ -74,6 +74,7 @@ export function PeopleTab({
     <View style={styles.nameRow}>
       <Text style={styles.name}>{view.nameOf(m.userId)}</Text>
       {m.role === 'organizer' && <Text style={styles.badge}>{he.people.organizer}</Text>}
+      {m.invited && <Text style={styles.badge}>{he.people.invited}</Text>}
     </View>
   );
 
@@ -96,6 +97,22 @@ export function PeopleTab({
           {...testId('people-invite')}
           onPress={onInvite}
         />
+        {/* Like the invite link: anyone, or only organizers when joining needs approval. */}
+        {(organizer || !data.trip.requireApproval) && (
+          <PillButton
+            label={he.addPerson.action}
+            variant="quiet"
+            wide
+            icon={<Icon name="userPlus" size={18} color={colors.inkMuted} />}
+            {...testId('people-add-person')}
+            onPress={() =>
+              router.push({
+                pathname: '/trips/[tripId]/add-person',
+                params: { tripId: data.trip.id },
+              })
+            }
+          />
+        )}
       </Card>
 
       {organizer && (

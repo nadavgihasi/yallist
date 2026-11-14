@@ -1,3 +1,4 @@
+import { AVATAR_COLORS } from '@yallist/domain';
 import { and, count, eq, inArray, sql } from 'drizzle-orm';
 
 import type { Db } from '../db/client';
@@ -39,6 +40,27 @@ export async function updateProfile(
 
 export const insertProfile = (tx: Executor, values: typeof profiles.$inferInsert) =>
   tx.insert(profiles).values(values);
+
+/**
+ * The user with this email, or a new one who hasn't signed in yet: a user and profile with the
+ * email and no way to sign in. When they first sign in with Google with that email, Better Auth
+ * links the Google account to this user (src/auth.ts), so they find the trips and expenses
+ * they were added to.
+ */
+export async function userForEmail(tx: Executor, email: string, name: string) {
+  const [existing] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email));
+  if (existing) return existing.id;
+  const [user] = await tx
+    .insert(users)
+    .values({ name, email, emailVerified: false, isAnonymous: false })
+    .returning({ id: users.id });
+  await insertProfile(tx, {
+    id: user!.id,
+    displayName: name,
+    avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]!,
+  });
+  return user!.id;
+}
 
 /** The user's name as they set it in their profile. */
 export const displayNameOf = async (tx: Executor, user: { id: string; name: string }) =>

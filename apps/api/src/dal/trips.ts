@@ -1,9 +1,10 @@
 import type { Claim, Payment } from '@yallist/domain';
-import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import { fail } from '../access';
 import { avatarUrl } from '../avatars';
 import {
+  accounts,
   activity,
   claims,
   expenseItems,
@@ -135,6 +136,9 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
         avatarKey: profiles.avatarKey,
         image: users.image,
         paymentPhone: profiles.paymentPhone,
+        // Added by email (POST /trips/:id/members) and not signed in yet: no guest, no account.
+        invited: sql<boolean>`not coalesce(${users.isAnonymous}, false) and not exists (
+          select 1 from ${accounts} where ${accounts.userId} = ${tripMembers.userId})`,
       })
       .from(tripMembers)
       .innerJoin(profiles, eq(profiles.id, tripMembers.userId))
@@ -240,12 +244,15 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
           avatarKey: _k,
           image: _i,
           paymentPhone,
+          invited,
           ...member
         }): typeof member & {
           avatarUrl?: string;
           paymentPhone?: string;
+          invited?: true;
         } => ({
           ...member,
+          ...(invited && { invited: true as const }),
           avatarUrl: member.status === 'active' ? avatars.get(member.userId) : undefined,
           // Where to send them money (Bit, PayBox): only active members', for their trip-mates.
           // Callers that answer anyone else pick the fields they show (the invite preview).

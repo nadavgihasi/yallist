@@ -23,12 +23,13 @@ import { seedItems } from '../dal/items';
 import {
   activeTripIds,
   countActiveOrganizers,
+  findMember,
   insertMember,
   lockMember,
   requireMember,
   setMember,
 } from '../dal/members';
-import { displayNameOf } from '../dal/profiles';
+import { displayNameOf, userForEmail } from '../dal/profiles';
 import { cancelMemberRuns } from '../dal/runs';
 import { deleteActivity, deleteTrip, insertTrip, loadTrips, lockTrip, setTrip } from '../dal/trips';
 import type { Db } from '../db/client';
@@ -241,6 +242,54 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
       });
       return c.json({ inviteToken });
     })
+
+    // Adds a person by email, so expenses can be split with them before they ever open the app:
+    // the user with that email, or one made for it who joins the account they later sign in
+    // with (dal/profiles.ts). Like the invite link: any member, or only organizers when joining
+    // needs approval. Someone already in the trip stays as they are; one who was removed, left
+    // or waits for approval is back in, as a plain member.
+    .post(
+      '/:tripId/members',
+      validate('param', tripParam),
+      validate(
+        'json',
+        z.object({
+          displayName: z.string().trim().min(1).max(50),
+          // Not a deleted user's stand-in address (dal/profiles.ts).
+          email: z
+            .string()
+            .trim()
+            .toLowerCase()
+            .pipe(z.email().max(254))
+            .refine((e) => !e.endsWith('.invalid'), 'Not an email address'),
+        }),
+      ),
+      async (c) => {
+        const { tripId } = c.req.valid('param');
+        const { displayName, email } = c.req.valid('json');
+        const result = await transact(db, async (tx) => {
+          const trip = await lockTrip(tx, tripId);
+          const caller = await requireMember(tx, tripId, c.var.user.id, { lock: true });
+          if (trip.requireApproval && caller.role !== 'organizer')
+            throw fail(403, 'Organizers only');
+          const userId = await userForEmail(tx, email, displayName);
+          const existing = await findMember(tx, tripId, userId, { lock: true });
+          if (existing?.status === 'active') return { userId, status: 'active' as const };
+          if (existing) await setMember(tx, existing, { role: 'member', status: 'active' });
+          else
+            await insertMember(tx, {
+              tripId,
+              userId,
+              role: 'member',
+              status: 'active',
+              displayName,
+            });
+          await logActivity(tx, tripId, c.var.user.id, 'member_added', { userId });
+          return { userId, status: 'active' as const };
+        });
+        return c.json(result, 201);
+      },
+    )
 
     .post('/:tripId/members/:userId/approve', validate('param', memberParam), async (c) => {
       const { tripId, userId } = c.req.valid('param');
