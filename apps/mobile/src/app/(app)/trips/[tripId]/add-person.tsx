@@ -16,26 +16,24 @@ import { colors, space } from '@/theme';
 const looksLikeEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
 /**
- * Adds a person to the trip by name and email, so expenses can be split with them before they
- * open the app. When they sign in with Google with that email, the trip is theirs. Closes once
- * the API added them (their id comes from it).
+ * Adds a person to the trip by email, so expenses can be split with them before they open the
+ * app. Until they sign in they're shown by their email's first part; signing in with Google with
+ * that email brings their name, and the trip is theirs. Closes once the API added them.
  */
 export default function AddPerson() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
   const close = useCloseSheet(tripId);
   const add = useAddPerson(tripId);
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [touched, setTouched] = useState(false);
 
-  const displayName = name.trim();
   const address = email.trim();
   const validEmail = looksLikeEmail(address);
-  const ready = displayName.length > 0 && validEmail && !add.isPending;
+  const ready = validEmail && !add.isPending;
   const save = () => {
     setTouched(true);
     if (!ready) return;
-    add.mutate({ displayName, email: address }, { onSuccess: () => close() });
+    add.mutate({ email: address }, { onSuccess: () => close() });
   };
 
   return (
@@ -57,22 +55,13 @@ export default function AddPerson() {
     >
       <View style={styles.form}>
         <TextField
-          label={he.addPerson.name}
-          value={name}
-          onChangeText={setName}
-          placeholder={he.addPerson.namePlaceholder}
-          maxLength={50}
-          autoFocus
-          returnKeyType="next"
-          {...testId('add-person-name')}
-        />
-        <TextField
           label={he.addPerson.email}
           value={email}
           onChangeText={setEmail}
           onBlur={() => setTouched(true)}
           placeholder="name@gmail.com"
           maxLength={254}
+          autoFocus
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}

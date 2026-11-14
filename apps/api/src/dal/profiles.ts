@@ -41,15 +41,19 @@ export async function updateProfile(
 export const insertProfile = (tx: Executor, values: typeof profiles.$inferInsert) =>
   tx.insert(profiles).values(values);
 
+/** What a person added by email is called until they sign in: their email's local part. */
+export const standInName = (email: string) => email.split('@')[0]!.slice(0, 50);
+
 /**
  * The user with this email, or a new one who hasn't signed in yet: a user and profile with the
- * email and no way to sign in. When they first sign in with Google with that email, Better Auth
- * links the Google account to this user (src/auth.ts), so they find the trips and expenses
- * they were added to.
+ * email, a stand-in name and no way to sign in. When they first sign in with Google with that
+ * email, Better Auth links the Google account to this user and their name replaces the stand-in
+ * (src/auth.ts), so they find the trips and expenses they were added to.
  */
-export async function userForEmail(tx: Executor, email: string, name: string) {
+export async function userForEmail(tx: Executor, email: string) {
   const [existing] = await tx.select({ id: users.id }).from(users).where(eq(users.email, email));
   if (existing) return existing.id;
+  const name = standInName(email);
   const [user] = await tx
     .insert(users)
     .values({ name, email, emailVerified: false, isAnonymous: false })
@@ -58,8 +62,27 @@ export async function userForEmail(tx: Executor, email: string, name: string) {
     id: user!.id,
     displayName: name,
     avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]!,
+    awaitingName: true,
   });
   return user!.id;
+}
+
+/**
+ * A person added by email signed in, bringing their name: it replaces their stand-in name in
+ * their profile and wherever a trip still shows it. Anyone else is left as is.
+ */
+export async function takeSignInName(db: Db, userId: string, name: string) {
+  const trimmed = name.trim().slice(0, 50);
+  if (!trimmed) return;
+  await transact(db, async (tx) => {
+    const profile = await findProfile(tx, userId);
+    if (!profile?.awaitingName || profile.displayName === trimmed) return;
+    await tx
+      .update(tripMembers)
+      .set({ displayName: trimmed })
+      .where(and(eq(tripMembers.userId, userId), eq(tripMembers.displayName, profile.displayName)));
+    await updateProfile(tx, userId, { displayName: trimmed, awaitingName: null });
+  });
 }
 
 /** The user's name as they set it in their profile. */

@@ -50,7 +50,14 @@ const profileChanges = z.strictObject({
  * their Google picture; `customAvatar` says it's a photo they can remove.
  */
 async function toMe(profile: typeof profiles.$inferSelect, user: User, photos: ReceiptStore) {
-  const { createdAt: _c, updatedAt: _u, avatarKey, showItemIcons, ...fields } = profile;
+  const {
+    createdAt: _c,
+    updatedAt: _u,
+    awaitingName: _a,
+    avatarKey,
+    showItemIcons,
+    ...fields
+  } = profile;
   return {
     ...fields,
     showItemIcons: showItemIcons ?? true,

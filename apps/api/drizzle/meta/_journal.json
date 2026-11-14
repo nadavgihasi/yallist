@@ -148,6 +148,13 @@
       "when": 1794648221156,
       "tag": "0020_category_color",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1794653434510,
+      "tag": "0021_profile_awaiting_name",
+      "breakpoints": true
     }
   ]
 }

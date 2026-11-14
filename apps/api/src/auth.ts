@@ -5,7 +5,7 @@ import { anonymous } from 'better-auth/plugins/anonymous';
 import { bearer } from 'better-auth/plugins/bearer';
 import { createMiddleware } from 'hono/factory';
 
-import { insertProfile, mergeUser } from './dal/profiles';
+import { insertProfile, mergeUser, takeSignInName } from './dal/profiles';
 import type { Db } from './db/client';
 import * as schema from './db/schema';
 import { deleteReceipt, type ReceiptStore } from './receipts';
@@ -57,6 +57,8 @@ export function createAuth(db: Db, config: AuthConfig) {
         // to that user, so they find what they were added to. Safe because there are no
         // passwords: the only users with a real email are Google's, verified, and those.
         requireLocalEmailVerified: false,
+        // Their Google name then replaces the stand-in they were added with (user update hook).
+        updateUserInfoOnLink: true,
       },
     },
     databaseHooks: {
@@ -68,6 +70,11 @@ export function createAuth(db: Db, config: AuthConfig) {
               displayName: user.name,
               avatarColor: AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)]!,
             });
+          },
+        },
+        update: {
+          after: async (user) => {
+            await takeSignInName(db, user.id, user.name);
           },
         },
       },

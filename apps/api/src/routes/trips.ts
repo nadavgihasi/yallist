@@ -29,7 +29,7 @@ import {
   requireMember,
   setMember,
 } from '../dal/members';
-import { displayNameOf, userForEmail } from '../dal/profiles';
+import { displayNameOf, findProfile, userForEmail } from '../dal/profiles';
 import { cancelMemberRuns } from '../dal/runs';
 import { deleteActivity, deleteTrip, insertTrip, loadTrips, lockTrip, setTrip } from '../dal/trips';
 import type { Db } from '../db/client';
@@ -245,7 +245,8 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
 
     // Adds a person by email, so expenses can be split with them before they ever open the app:
     // the user with that email, or one made for it who joins the account they later sign in
-    // with (dal/profiles.ts). Like the invite link: any member, or only organizers when joining
+    // with (dal/profiles.ts). No name: they're shown by their profile's, a stand-in for a new
+    // person until their sign-in brings their own. Like the invite link: any member, or only organizers when joining
     // needs approval. Someone already in the trip stays as they are; one who was removed, left
     // or waits for approval is back in, as a plain member.
     .post(
@@ -254,7 +255,6 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
       validate(
         'json',
         z.object({
-          displayName: z.string().trim().min(1).max(50),
           // Not a deleted user's stand-in address (dal/profiles.ts).
           email: z
             .string()
@@ -266,13 +266,13 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
       ),
       async (c) => {
         const { tripId } = c.req.valid('param');
-        const { displayName, email } = c.req.valid('json');
+        const { email } = c.req.valid('json');
         const result = await transact(db, async (tx) => {
           const trip = await lockTrip(tx, tripId);
           const caller = await requireMember(tx, tripId, c.var.user.id, { lock: true });
           if (trip.requireApproval && caller.role !== 'organizer')
             throw fail(403, 'Organizers only');
-          const userId = await userForEmail(tx, email, displayName);
+          const userId = await userForEmail(tx, email);
           const existing = await findMember(tx, tripId, userId, { lock: true });
           if (existing?.status === 'active') return { userId, status: 'active' as const };
           if (existing) await setMember(tx, existing, { role: 'member', status: 'active' });
@@ -282,7 +282,7 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
               userId,
               role: 'member',
               status: 'active',
-              displayName,
+              displayName: (await findProfile(tx, userId))!.displayName,
             });
           await logActivity(tx, tripId, c.var.user.id, 'member_added', { userId });
           return { userId, status: 'active' as const };

@@ -518,22 +518,19 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
   });
 
   describe('adding people by email', () => {
-    const addPerson = (user: Guest, tripId: string, displayName: string, email: string) =>
-      client.trips[':tripId'].members.$post(
-        { param: { tripId }, json: { displayName, email } },
-        as(user),
-      );
+    const addPerson = (user: Guest, tripId: string, email: string) =>
+      client.trips[':tripId'].members.$post({ param: { tripId }, json: { email } }, as(user));
 
     it('adds someone who never signed in, so expenses can be split with them', async () => {
       const { member, data } = await tripWithMember();
       const tripId = data.trip.id;
-      const res = await addPerson(member, tripId, 'יוסי', ' Yossi@Example.com ');
+      const res = await addPerson(member, tripId, ' Yossi@Example.com ');
       expect(res.status).toBe(201);
       const { userId } = await res.json();
 
       const trip = await (await detail(member, tripId)).json();
       expect(trip.members.find((m) => m.userId === userId)).toMatchObject({
-        displayName: 'יוסי',
+        displayName: 'yossi',
         role: 'member',
         status: 'active',
         invited: true,
@@ -558,14 +555,10 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
     it('adds the same person again in another trip, and changes nothing when already in', async () => {
       const a = await tripWithMember();
       const b = await tripWithMember();
-      const first = await (
-        await addPerson(a.organizer, a.data.trip.id, 'רוני', 'roni@example.com')
-      ).json();
-      const again = await addPerson(a.organizer, a.data.trip.id, 'רון', 'roni@example.com');
+      const first = await (await addPerson(a.organizer, a.data.trip.id, 'roni@example.com')).json();
+      const again = await addPerson(a.organizer, a.data.trip.id, 'roni@example.com');
       expect(await again.json()).toEqual(first);
-      const other = await (
-        await addPerson(b.organizer, b.data.trip.id, 'רון', 'RONI@example.com')
-      ).json();
+      const other = await (await addPerson(b.organizer, b.data.trip.id, 'RONI@example.com')).json();
       expect(other.userId).toBe(first.userId);
       const [row] = await sql<{ n: number }[]>`
         select count(*)::int as n from trip_members where user_id = ${first.userId}`;
@@ -580,7 +573,7 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         { param: { tripId, userId: member.id } },
         as(organizer),
       );
-      const res = await addPerson(organizer, tripId, 'חבר', 'member@example.com');
+      const res = await addPerson(organizer, tripId, 'member@example.com');
       expect(await res.json()).toEqual({ userId: member.id, status: 'active' });
       expect((await detail(member, tripId)).status).toBe(200);
     });
@@ -595,22 +588,23 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
           clientSecret: 'test',
           verifyIdToken: async () => true,
           getUserInfo: async () => ({
-            user: { id: 'g-1', email: 'Dana@Example.com', emailVerified: true, name: 'Dana' },
+            user: { id: 'g-1', email: 'Dana@Example.com', emailVerified: true, name: 'Dana Levi' },
             data: { sub: 'g-1' },
           }),
         } as AuthConfig['google'],
       });
       const { organizer, data } = await tripWithMember();
       const tripId = data.trip.id;
-      const { userId } = await (
-        await addPerson(organizer, tripId, 'דנה', 'dana@example.com')
-      ).json();
+      const { userId } = await (await addPerson(organizer, tripId, 'dana@example.com')).json();
 
       const signedIn = await auth.api.signInSocial({
         body: { provider: 'google', idToken: { token: 'x' } },
       });
       expect('user' in signedIn && signedIn.user.id).toBe(userId);
       const trip = await (await detail(organizer, tripId)).json();
+      expect(trip.members.find((m) => m.userId === userId)).toMatchObject({
+        displayName: 'Dana Levi',
+      });
       expect(trip.members.find((m) => m.userId === userId)?.invited).toBeUndefined();
     });
 
@@ -624,15 +618,11 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         { param: { tripId, userId: member.id } },
         as(organizer),
       );
-      expect((await addPerson(member, tripId, 'x', 'x@example.com')).status).toBe(403);
-      expect((await addPerson(await guest('stranger'), tripId, 'x', 'x@example.com')).status).toBe(
-        404,
-      );
-      expect((await addPerson(organizer, tripId, 'x', 'not-an-email')).status).toBe(400);
-      expect((await addPerson(organizer, tripId, 'x', 'deleted-1@deleted.invalid')).status).toBe(
-        400,
-      );
-      expect((await addPerson(organizer, tripId, 'x', 'x@example.com')).status).toBe(201);
+      expect((await addPerson(member, tripId, 'x@example.com')).status).toBe(403);
+      expect((await addPerson(await guest('stranger'), tripId, 'x@example.com')).status).toBe(404);
+      expect((await addPerson(organizer, tripId, 'not-an-email')).status).toBe(400);
+      expect((await addPerson(organizer, tripId, 'deleted-1@deleted.invalid')).status).toBe(400);
+      expect((await addPerson(organizer, tripId, 'x@example.com')).status).toBe(201);
     });
   });
 

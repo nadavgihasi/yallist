@@ -157,6 +157,12 @@ export const profiles = pgTable('profiles', {
    * default, so the API reads null as true (routes/me.ts).
    */
   showItemIcons: boolean('show_item_icons'),
+  /**
+   * True for a person added to a trip by email who hasn't signed in yet: their name is a stand-in
+   * (their email's local part) until their first Google sign-in brings their name (src/auth.ts).
+   * Null otherwise.
+   */
+  awaitingName: boolean('awaiting_name'),
   createdAt: createdAt(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 });

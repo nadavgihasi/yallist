@@ -279,13 +279,11 @@ export const he = {
   addPerson: {
     action: 'הוספה לפי מייל',
     title: 'הוספת משתתף',
-    hint: 'אפשר לחלק איתו הוצאות כבר עכשיו. כשיתחבר עם Google עם המייל הזה, הכל יחכה לו.',
-    name: 'שם',
-    namePlaceholder: 'איך לקרוא לו בטיול',
+    hint: 'אפשר לחלק איתו הוצאות כבר עכשיו. כשיתחבר עם Google עם המייל הזה, השם שלו יופיע והכל יחכה לו.',
     email: 'מייל',
     emailError: 'זה לא נראה כמו כתובת מייל',
     save: 'הוספה לטיול',
-    added: (name: string) => `${name} נוסף/ה לטיול`,
+    added: 'נוסף/ה לטיול',
   },
   money: {
     payTo: (names: string) => `להעביר ל${names}`,
