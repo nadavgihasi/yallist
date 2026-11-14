@@ -1,28 +1,29 @@
 import { Platform, type TextStyle } from 'react-native';
 
 /**
- * Design system v2 tokens (docs/design/tokens). Names follow the handoff, except the page
- * background: the handoff's `surface` is `ground` here, so `surface` never silently changes
- * meaning from "card" to "page".
+ * Design system v3 tokens (docs/design/DESIGN.md): warm paper, night ink, sunset violet for what
+ * you tap, and orange for what's done.
+ * The page background is `ground` and cards are `card`, so "surface" never has two meanings.
  */
 export const colors = {
-  /** Page background behind cards (handoff `surface`). */
-  ground: '#F4F5F8',
-  /** Cards and sheets, always on `ground`. */
+  /** Page background behind cards: warm paper. */
+  ground: '#F6F2EA',
+  /** Cards and sheets, always on `ground`, outlined with `hairline`. */
   card: '#FFFFFF',
-  ink: '#101725',
-  inkMuted: '#4D5564',
-  /** Everything you can tap. */
-  primary: '#425AF4',
+  /** Night ink: headings and body text. */
+  ink: '#1A1833',
+  inkMuted: '#5C5A6E',
+  /** Sunset violet: everything you can tap (solid buttons, selected chips and tabs, links). */
+  primary: '#5B3DE0',
   onPrimary: '#FFFFFF',
-  /** Tonal buttons, step circles, selected chips. */
-  primaryTint: '#E8EBFE',
-  /** Blue text on `primaryTint` at small sizes. */
-  primaryStrong: '#3D53E8',
+  /** Tonal buttons, step circles, selected tiles: pale violet. */
+  primaryTint: '#ECE7FF',
+  /** Violet text and icons on `primaryTint` and `card`. */
+  primaryStrong: '#4528C4',
   /** Yallist orange: the logo, done checks and progress. Graphics only; never buttons. */
   brand: '#FF5A1F',
-  /** Orange text on `card` (e.g. "אצלך", errors). */
-  brandStrong: '#C93F0E',
+  /** Orange text on `card` and `ground` (e.g. "אצלך", errors). */
+  brandStrong: '#B8370B',
   /** Empty-state and cover illustrations only. */
   illustration: {
     sky: '#F4BA7E',
@@ -32,13 +33,23 @@ export const colors = {
     water: '#364ED0',
     tent: '#F7D15C',
   },
-  // App additions the handoff doesn't cover.
   /** Placeholders. */
-  inkFaint: '#8B93A1',
-  /** Switch track when off. */
-  line: '#D5D9E2',
-  scrim: 'rgba(16,23,37,0.38)',
+  inkFaint: '#8E8B9C',
+  /** Tracks: the switch when off, progress, the sheet grabber. */
+  line: '#DDD5C7',
+  /** The 1px outline of a card on `ground`. */
+  hairline: '#E7E0D3',
+  scrim: 'rgba(26,24,51,0.45)',
 } as const;
+
+/**
+ * One hue per category card, in order: its dot and its items' icons. Each is at least 4.3:1 on
+ * `card`, so an icon in it reads as clearly as `inkMuted`.
+ */
+export const accents = ['#5B3DE0', '#0A7C76', '#D9480F', '#C2387A', '#A86A0A', '#2F6FD0'] as const;
+
+/** The accent for the category card at `index`, cycling. */
+export const accentAt = (index: number) => accents[index % accents.length]!;
 
 /** Rubik at 400, 700 and 800 (`@expo-google-fonts/rubik`). */
 export const fonts = {
@@ -48,18 +59,19 @@ export const fonts = {
 } as const;
 
 /**
- * Text styles. Sizes within 2px of what the app already used keep the app's value (handoff
- * task 2). No `fontWeight`: each weight is its own font family, and a weight on top of it makes
+ * Text styles. No `fontWeight`: each weight is its own font family, and a weight on top of it makes
  * web synthesize bold and Android fall back to the system font.
  */
 export const type = {
-  pageTitle: { fontFamily: fonts.extraBold, fontSize: 36, lineHeight: 40, letterSpacing: -0.36 },
-  sectionTitle: { fontFamily: fonts.extraBold, fontSize: 26, lineHeight: 32 },
+  pageTitle: { fontFamily: fonts.extraBold, fontSize: 34, lineHeight: 40, letterSpacing: -0.34 },
+  sectionTitle: { fontFamily: fonts.extraBold, fontSize: 24, lineHeight: 30 },
   body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24 },
   itemTitle: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 22 },
   caption: { fontFamily: fonts.regular, fontSize: 14, lineHeight: 20 },
+  /** The small bold heading of a group of rows ("בישול ועל האש"). */
+  label: { fontFamily: fonts.bold, fontSize: 13, lineHeight: 18, letterSpacing: 0.2 },
   stepNumber: { fontFamily: fonts.extraBold, fontSize: 19, lineHeight: 24 },
-  buttonLg: { fontFamily: fonts.extraBold, fontSize: 17, lineHeight: 24 },
+  buttonLg: { fontFamily: fonts.bold, fontSize: 17, lineHeight: 24 },
   buttonSm: { fontFamily: fonts.bold, fontSize: 15, lineHeight: 20 },
   /** App addition: the money total. */
   bigNumber: { fontFamily: fonts.extraBold, fontSize: 56, lineHeight: 60 },
@@ -91,8 +103,8 @@ export const layout = {
 } as const;
 
 export const radius = {
-  card: 24,
-  input: 16,
+  card: 20,
+  input: 14,
   pill: 999,
   /** The icon tile: 22.5% of its size. */
   iconRatio: 0.225,
@@ -103,7 +115,7 @@ export const size = {
   /** Kept until every avatar uses `avatarSize`. */
   avatar: 44,
   buttonSm: 44,
-  buttonLg: 60,
+  buttonLg: 56,
   /** `ProgressRing` on the trip hero and on cards; `status` is the row check (`StatusRing`). */
   ring: { hero: 72, card: 56, status: 28 },
   /** A 4:3 crop of a scene, or a state spot. */
@@ -134,7 +146,15 @@ export const isRTL = true;
 /** react-native-web resolves start/end styles from the nearest `dir`, not from `<html dir>`. */
 export const webDir = (Platform.OS === 'web' ? { dir: isRTL ? 'rtl' : 'ltr' } : {}) as object;
 
-/** Only the floating primary button has a shadow; cards stay flat. */
+/** Only what floats has a shadow: the floating button and the toast. Cards stay flat. */
 export const shadow = {
-  float: { boxShadow: '0 10px 24px rgba(16,23,37,0.18)' },
+  float: { boxShadow: '0 8px 24px rgba(69,40,196,0.28)' },
+} as const;
+
+/** The card: white on `ground`, outlined with a hairline. Spread into any view that is one. */
+export const surface = {
+  borderRadius: radius.card,
+  borderWidth: 1,
+  borderColor: colors.hairline,
+  backgroundColor: colors.card,
 } as const;

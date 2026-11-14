@@ -25,7 +25,7 @@ import { he } from '@/i18n/he';
 import { addDays, endAfterMovingStart, formatRange, today } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useCreateTrip } from '@/state/trips';
-import { colors, radius, size, space, type } from '@/theme';
+import { colors, radius, size, space, surface, type } from '@/theme';
 import { useBreakpoint } from '@/theme/breakpoint';
 
 const KINDS: TemplateId[] = [
@@ -130,6 +130,33 @@ export default function NewTrip() {
           </View>
 
           <View style={[styles.body, desktop && styles.formCol]}>
+            {/* What it's called and when first: the card above shows them as they're typed. */}
+            <Card>
+              <TextField
+                label={he.newTrip.name}
+                value={name}
+                onChangeText={setName}
+                placeholder={he.newTrip.namePlaceholder}
+                {...testId('new-trip-name')}
+              />
+              <View style={styles.field}>
+                <Text style={fieldStyles.label}>{he.newTrip.when}</Text>
+                <View style={styles.dates}>
+                  <DateField
+                    label={he.newTrip.from}
+                    value={startsOn}
+                    min={today()}
+                    onChange={setStart}
+                  />
+                  <DateField
+                    label={he.newTrip.to}
+                    value={endsOn}
+                    min={startsOn}
+                    onChange={setEndsOn}
+                  />
+                </View>
+              </View>
+            </Card>
             <View style={styles.section}>
               <View style={styles.sectionHead}>
                 <Text style={styles.h2}>{he.newTrip.kind}</Text>
@@ -161,33 +188,6 @@ export default function NewTrip() {
               </View>
               <CoverPicker value={cover} onChange={setCover} />
             </View>
-
-            <Card>
-              <TextField
-                label={he.newTrip.name}
-                value={name}
-                onChangeText={setName}
-                placeholder={he.newTrip.namePlaceholder}
-                {...testId('new-trip-name')}
-              />
-              <View style={styles.field}>
-                <Text style={fieldStyles.label}>{he.newTrip.when}</Text>
-                <View style={styles.dates}>
-                  <DateField
-                    label={he.newTrip.from}
-                    value={startsOn}
-                    min={today()}
-                    onChange={setStart}
-                  />
-                  <DateField
-                    label={he.newTrip.to}
-                    value={endsOn}
-                    min={startsOn}
-                    onChange={setEndsOn}
-                  />
-                </View>
-              </View>
-            </Card>
 
             <View style={styles.card} accessibilityLiveRegion="polite">
               <Text style={styles.h3}>{he.newTrip.preview}</Text>
@@ -254,11 +254,14 @@ const styles = StyleSheet.create({
     height: size.avatar,
     borderRadius: size.avatar / 2,
     backgroundColor: colors.card,
+    borderWidth: 1,
+    borderColor: colors.hairline,
     alignItems: 'center',
     justifyContent: 'center',
   },
   h1: { ...type.pageTitle, color: colors.ink },
-  cover: { height: 220, borderRadius: radius.card },
+  // Phone and tablet: short enough that the form starts in view, the name field right under it.
+  cover: { height: 150, borderRadius: radius.card },
   coverLabel: {
     position: 'absolute',
     start: 14,
@@ -268,7 +271,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space[4],
     borderRadius: 20,
     // 0.55 and opaque text: the caption over the sun reaches 4.74:1 (was 3.19).
-    backgroundColor: 'rgba(16,23,37,0.55)',
+    backgroundColor: 'rgba(26,24,51,0.6)',
     gap: 2,
   },
   coverName: { ...type.sectionTitle, color: colors.onPrimary },
@@ -281,12 +284,7 @@ const styles = StyleSheet.create({
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
   // Strict two columns, so a lone last tile stays half width (NewTripV2 grid).
   tile: { width: '48.8%' },
-  card: {
-    padding: space[5],
-    borderRadius: radius.card,
-    backgroundColor: colors.card,
-    gap: space[3],
-  },
+  card: { ...surface, padding: space[5], gap: space[3] },
   field: { gap: space[2] },
   dates: { flexDirection: 'row', gap: space[2] },
   previewLine: { ...type.body, color: colors.ink },

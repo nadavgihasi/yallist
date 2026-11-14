@@ -1,14 +1,14 @@
 :root {
-  --surface: #f4f5f8;
+  --surface: #f6f2ea;
   --card: #ffffff;
-  --ink: #101725;
-  --ink-muted: #4d5564;
-  --primary: #425af4;
+  --ink: #1a1833;
+  --ink-muted: #5c5a6e;
+  --primary: #5b3de0;
   --on-primary: #ffffff;
-  --primary-tint: #e8ebfe;
-  --primary-strong: #3d53e8;
+  --primary-tint: #ece7ff;
+  --primary-strong: #4528c4;
   --brand: #ff5a1f;
-  --brand-strong: #c93f0e;
+  --brand-strong: #b8370b;
   --illo-sky: #f4ba7e;
   --illo-sun: #fae4a4;
   --illo-hill: #a87ec1;
@@ -22,13 +22,13 @@
   --space-5: 20px;
   --space-6: 24px;
   --content-max: 448px;
-  --radius-card: 24px;
+  --radius-card: 20px;
   --radius-pill: 999px;
   --radius-icon: 22.5%;
   --size-step: 40px;
   --size-avatar: 44px;
   --size-button-sm: 44px;
-  --size-button-lg: 60px;
+  --size-button-lg: 56px;
   --size-ring-hero: 72px;
   --size-ring-card: 56px;
   --size-ring-status: 28px;
@@ -40,7 +40,14 @@
   --avatar-lg: 44px;
   --avatar-xl: 56px;
   --avatar-xxl: 96px;
-  --line: #d5d9e2;
+  --line: #ddd5c7;
+  --hairline: #e7e0d3;
+  --accent-1: #5b3de0;
+  --accent-2: #0a7c76;
+  --accent-3: #d9480f;
+  --accent-4: #c2387a;
+  --accent-5: #a86a0a;
+  --accent-6: #2f6fd0;
   --progress-fill: var(--brand);
   --progress-track: var(--line);
   --motion-fast: 150ms;
@@ -48,7 +55,7 @@
   --motion-slow: 400ms;
   --motion-celebrate: 1200ms;
   --easing-out: cubic-bezier(0.2, 0, 0, 1);
-  --shadow-float: 0 10px 24px rgba(16, 23, 37, 0.18);
+  --shadow-float: 0 8px 24px rgba(69, 40, 196, 0.28);
 }
 
 .page-title { font-family: var(--font-sans); font-size: 34px; line-height: 40px; font-weight: 800; letter-spacing: -0.01em; }
@@ -56,7 +63,8 @@
 .body { font-family: var(--font-sans); font-size: 16px; line-height: 24px; font-weight: 400; }
 .item-title { font-family: var(--font-sans); font-size: 16px; line-height: 22px; font-weight: 700; }
 .caption { font-family: var(--font-sans); font-size: 14px; line-height: 20px; font-weight: 400; }
-.step-number { font-family: var(--font-sans); font-size: 18px; line-height: 24px; font-weight: 800; }
-.button-lg { font-family: var(--font-sans); font-size: 18px; line-height: 24px; font-weight: 800; }
+.label { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 700; letter-spacing: 0.2px; }
+.step-number { font-family: var(--font-sans); font-size: 19px; line-height: 24px; font-weight: 800; }
+.button-lg { font-family: var(--font-sans); font-size: 17px; line-height: 24px; font-weight: 700; }
 .button-sm { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 700; }
 .stat { font-family: var(--font-sans); font-size: 28px; line-height: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }

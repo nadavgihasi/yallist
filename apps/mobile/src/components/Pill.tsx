@@ -10,7 +10,7 @@ const TONES: Record<Tone, { bg: string; fg: string; border?: string }> = {
   neutral: { bg: colors.ground, fg: colors.ink },
   primary: { bg: colors.primaryTint, fg: colors.primaryStrong },
   /** "אצלך": orange text needs `card` under it, so it gets a hairline instead of a fill. */
-  brand: { bg: colors.card, fg: colors.brandStrong, border: colors.line },
+  brand: { bg: colors.card, fg: colors.brandStrong, border: colors.hairline },
   onCover: { bg: colors.card, fg: colors.ink },
 };
 

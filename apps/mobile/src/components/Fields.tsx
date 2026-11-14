@@ -1,3 +1,4 @@
+import type { ComponentRef, Ref } from 'react';
 import { Platform, StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
 
 import { Icon } from '@/components/Icon';
@@ -9,7 +10,9 @@ import { colors, fonts, radius } from '@/theme';
  * Text input for Hebrew text. react-native-web sets `dir="auto"`, which makes an empty input LTR
  * (placeholder and caret on the left), so on web it's pinned to RTL. Native follows I18nManager.
  */
-export function Input(props: TextInputProps) {
+type InputRef = Ref<ComponentRef<typeof TextInput>>;
+
+export function Input(props: TextInputProps & { ref?: InputRef }) {
   return <TextInput placeholderTextColor={colors.inkFaint} {...webRtl} {...props} />;
 }
 
@@ -23,6 +26,7 @@ export function TextField({
   style,
   ...input
 }: TextInputProps & {
+  ref?: InputRef;
   label: string;
   hint?: string;
   /** Shown under the field, e.g. when the text isn't a link it takes. */
@@ -59,10 +63,13 @@ export function AmountField({
   onSubmitEditing,
   error,
   testID,
+  ref,
 }: {
   label: string;
   value: string;
   onChangeText: (text: string) => void;
+  /** The input, e.g. to focus it when the amount is missing. */
+  ref?: InputRef;
   size?: keyof typeof AMOUNT_SIZES;
   onSubmitEditing?: () => void;
   /** Shown under the field, e.g. when the text isn't a valid amount. */
@@ -76,6 +83,7 @@ export function AmountField({
       <View style={[styles.amountBox, { minHeight: sz.box, borderRadius: sz.radius }]}>
         <Text style={[styles.currency, { fontSize: sz.sign }]}>₪</Text>
         <TextInput
+          ref={ref}
           value={value}
           onChangeText={onChangeText}
           onSubmitEditing={onSubmitEditing}

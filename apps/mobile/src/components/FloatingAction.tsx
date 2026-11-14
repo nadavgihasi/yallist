@@ -7,7 +7,10 @@ import { PillButton } from './PillButton';
 import { testId } from '@/lib/testId';
 import { colors, space } from '@/theme';
 
-/** The screen's one floating primary action: bottom-centered, `space-6` from the edge, plus icon by default. */
+/**
+ * The screen's one floating primary action: bottom-centered, `space-6` from the edge, a plus
+ * icon by default.
+ */
 export function FloatingAction({
   label,
   onPress,
@@ -34,7 +37,7 @@ export function FloatingAction({
         disabled={disabled}
         accessibilityLabel={accessibilityLabel}
         {...testId(testID)}
-        icon={icon ? <Icon name={icon} color={colors.onPrimary} strokeWidth={2.5} /> : undefined}
+        icon={icon ? <Icon name={icon} color={colors.onPrimary} strokeWidth={2.75} /> : undefined}
         onPress={onPress}
       />
     </View>

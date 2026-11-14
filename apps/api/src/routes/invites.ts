@@ -4,8 +4,8 @@ import { z } from 'zod';
 
 import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
-import { logActivity } from '../dal/activity';
-import { findMember, insertMember } from '../dal/members';
+import { leftOnTheirOwn, logActivity } from '../dal/activity';
+import { findMember, insertMember, setMember } from '../dal/members';
 import { displayNameOf } from '../dal/profiles';
 import { loadTrips, tripByToken } from '../dal/trips';
 import type { Db } from '../db/client';
@@ -34,7 +34,7 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
       });
       const activeIds = activeMemberIds(data.members);
       const status = session && data.members.find((m) => m.userId === session.user.id)?.status;
-      // A removed member gets `none`: joining says so (403).
+      // A removed member, or one who left, gets `none`: joining again says whether they may (403).
       const membership: Membership | undefined = !session
         ? undefined
         : status === 'active' || status === 'pending'
@@ -60,7 +60,8 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
       });
     })
 
-    // Joins the trip, or asks to when it requires approval. Joining again changes nothing.
+    // Joins the trip, or asks to when it requires approval. Joining again changes nothing. A member
+    // who left can join again, as a plain member; one an organizer removed or declined can't.
     .post(
       '/:token/join',
       requireUser(auth),
@@ -72,18 +73,22 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
         const user = c.var.user;
         const result = await transact(db, async (tx) => {
           const trip = await tripByToken(tx, token);
-          const existing = await findMember(tx, trip.id, user.id);
-          if (existing?.status === 'removed') throw fail(403, 'Removed from this trip');
-          if (existing) return { tripId: trip.id, status: existing.status };
+          const existing = await findMember(tx, trip.id, user.id, { lock: true });
+          if (existing?.status === 'removed' && !(await leftOnTheirOwn(tx, trip.id, user.id)))
+            throw fail(403, 'Removed from this trip');
+          if (existing && existing.status !== 'removed')
+            return { tripId: trip.id, status: existing.status };
 
           const status = trip.requireApproval ? 'pending' : 'active';
-          await insertMember(tx, {
-            tripId: trip.id,
-            userId: user.id,
-            role: 'member',
-            status,
-            displayName: displayName ?? (await displayNameOf(tx, user)),
-          });
+          if (existing) await setMember(tx, existing, { role: 'member', status });
+          else
+            await insertMember(tx, {
+              tripId: trip.id,
+              userId: user.id,
+              role: 'member',
+              status,
+              displayName: displayName ?? (await displayNameOf(tx, user)),
+            });
           await logActivity(
             tx,
             trip.id,

@@ -28,7 +28,9 @@ test('home shows a past trip without crashing', async ({ page }) => {
   expect((await saved).ok()).toBe(true);
   // Home through the app, as a person goes back to it. Its trip list is the in-memory one the save
   // just refreshed; a reload could restore the persisted list from before the save.
-  await page.getByRole('button', { name: 'חזרה לכל הטיולים' }).click();
+  // The last one: scrolled down to the edit button, the page has a pinned bar with its own back
+  // button on top of the page's.
+  await page.getByRole('button', { name: 'חזרה לכל הטיולים' }).last().click();
   await expect(page.locator('#home-past-trip')).toBeVisible();
   await expect(page.locator('#home-past-trip')).toContainText('Past trip');
   await expect(page.locator('#error-retry')).toBeHidden();

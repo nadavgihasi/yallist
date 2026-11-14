@@ -19,6 +19,8 @@ import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
 import { PayRow } from './PayRow';
+import { expenseKey } from './reveal';
+import { RevealTarget } from './RevealTarget';
 import { sharedText } from './runSplit';
 
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
@@ -203,35 +205,37 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
         <ListGroup title={he.money.expenses} aside={he.money.total(formatShekel(view.totalSpent))}>
           {data.expenses.map((e) => (
             // The row opens the expense; its receipt has its own button beside it.
-            <View key={e.id} style={styles.expense}>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={he.expense.open(e.description)}
-                {...testId('expense-row')}
-                onPress={() =>
-                  router.push({
-                    pathname: '/trips/[tripId]/expenses/[expenseId]',
-                    params: { tripId: data.trip.id, expenseId: e.id },
-                  })
-                }
-                style={({ pressed }) => [styles.expenseOpen, pressed && { opacity: 0.75 }]}
-              >
-                <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
-                <View style={styles.expenseBody}>
-                  <Text style={styles.expenseWhat} numberOfLines={1}>
-                    {e.description}
-                  </Text>
-                  {/* A split in parts wraps: who shares each part is the point of it. */}
-                  <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
-                    {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </Text>
-                </View>
-                <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
-              </Pressable>
-              <ReceiptButton tripId={data.trip.id} expense={e} />
-            </View>
+            <RevealTarget key={e.id} id={expenseKey(e.id)}>
+              <View style={styles.expense}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={he.expense.open(e.description)}
+                  {...testId('expense-row')}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/trips/[tripId]/expenses/[expenseId]',
+                      params: { tripId: data.trip.id, expenseId: e.id },
+                    })
+                  }
+                  style={({ pressed }) => [styles.expenseOpen, pressed && { opacity: 0.75 }]}
+                >
+                  <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
+                  <View style={styles.expenseBody}>
+                    <Text style={styles.expenseWhat} numberOfLines={1}>
+                      {e.description}
+                    </Text>
+                    {/* A split in parts wraps: who shares each part is the point of it. */}
+                    <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
+                      {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
+                  </View>
+                  <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+                </Pressable>
+                <ReceiptButton tripId={data.trip.id} expense={e} />
+              </View>
+            </RevealTarget>
           ))}
         </ListGroup>
       )}
@@ -323,7 +327,7 @@ const styles = StyleSheet.create({
   },
   receiptPercent: { ...type.caption, color: colors.primaryStrong },
   heroTitle: { ...type.caption, color: colors.inkMuted },
-  heroAmount: { ...type.bigNumber, color: colors.ink },
+  heroAmount: { ...type.bigNumber, color: colors.primaryStrong },
   heroText: { ...type.caption, color: colors.inkMuted },
   payRows: { gap: space[3], marginTop: space[3] },
   heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },

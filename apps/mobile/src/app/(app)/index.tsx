@@ -25,7 +25,7 @@ import { he } from '@/i18n/he';
 import { daysBetween } from '@/lib/dates';
 import { useToday } from '@/lib/useToday';
 import { useTrips } from '@/state/trips';
-import { colors, radius, size, space, type } from '@/theme';
+import { colors, size, space, surface, type } from '@/theme';
 import { contentMaxWidth, useBreakpoint } from '@/theme/breakpoint';
 
 /** The templates home offers as one-tap starts (the blank list stays in the new-trip picker). */
@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   },
   caption: { ...type.caption, color: colors.inkMuted },
   body: { ...type.body, color: colors.inkMuted },
-  illustrated: { borderRadius: radius.card, backgroundColor: colors.card, overflow: 'hidden' },
+  illustrated: { ...surface, overflow: 'hidden' },
   // Tall enough that the `slice` crop keeps the tent in view at any card width.
   illustration: { aspectRatio: 390 / 240 },
   illustratedBody: { padding: space[5], gap: space[3] },

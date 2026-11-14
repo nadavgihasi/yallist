@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
   dialog: { maxHeight: '100%' },
   dialogTop: { height: 14 },
   grabberRow: { alignItems: 'center', paddingTop: 10 },
-  grabber: { width: 40, height: 5, borderRadius: 3, backgroundColor: colors.line },
+  grabber: { width: 36, height: 4, borderRadius: 2, backgroundColor: colors.line },
   body: { paddingHorizontal: 20, paddingBottom: 20 },
   header: {
     paddingHorizontal: 20,
