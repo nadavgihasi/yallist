@@ -12,6 +12,16 @@ export const COVER_IDS = [
   'picnic',
   'winter',
   'flight',
+  'ski',
+  'dunes',
+  'woods',
+  'bonfire',
+  'kayak',
+  'waterfall',
+  'bike',
+  'spring',
+  'roadtrip',
+  'sail',
 ] as const;
 export type CoverId = (typeof COVER_IDS)[number];
 

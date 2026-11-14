@@ -147,32 +147,35 @@ function Settings({ profile, bp }: { profile: Profile; bp: Breakpoint }) {
     <>
       <Card>
         <Photo profile={profile} />
-        <View
-          style={styles.swatches}
-          accessibilityRole="radiogroup"
-          accessibilityLabel={he.profile.color}
-        >
-          {AVATAR_COLORS.map((color, i) => {
-            const selected = color === profile.avatarColor;
-            return (
-              <Pressable
-                key={color}
-                accessibilityRole="radio"
-                accessibilityLabel={he.profile.colorOption(i + 1)}
-                accessibilityState={{ checked: selected }}
-                onPress={() => selected || update.mutate({ avatarColor: color })}
-                style={(state: WebState) => [
-                  styles.swatch,
-                  state.hovered && styles.swatchHover,
-                  selected && styles.swatchOn,
-                  state.focused && styles.focus,
-                ]}
-              >
-                <View style={[styles.swatchFill, { backgroundColor: color }]} />
-              </Pressable>
-            );
-          })}
-        </View>
+        {/* A photo covers the color, so picking one only matters without a photo. */}
+        {!profile.avatarUrl && (
+          <View
+            style={styles.swatches}
+            accessibilityRole="radiogroup"
+            accessibilityLabel={he.profile.color}
+          >
+            {AVATAR_COLORS.map((color, i) => {
+              const selected = color === profile.avatarColor;
+              return (
+                <Pressable
+                  key={color}
+                  accessibilityRole="radio"
+                  accessibilityLabel={he.profile.colorOption(i + 1)}
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => selected || update.mutate({ avatarColor: color })}
+                  style={(state: WebState) => [
+                    styles.swatch,
+                    state.hovered && styles.swatchHover,
+                    selected && styles.swatchOn,
+                    state.focused && styles.focus,
+                  ]}
+                >
+                  <View style={[styles.swatchFill, { backgroundColor: color }]} />
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
         <TextField
           label={he.profile.name}
           hint={he.profile.nameHint}

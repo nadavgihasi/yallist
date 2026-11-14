@@ -1,4 +1,4 @@
-import { TEMPLATES, type CoverId, type TemplateId } from '@yallist/domain';
+import { COVER_IDS, TEMPLATES, type CoverId, type TemplateId } from '@yallist/domain';
 import { testClient } from 'hono/testing';
 import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -192,6 +192,18 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         as(organizer),
       );
       expect(bad.status).toBe(400);
+    });
+
+    it('saves every cover, the newer ones included', async () => {
+      const { organizer, data } = await tripWithMember();
+      for (const cover of COVER_IDS) {
+        const res = await client.trips[':tripId'].$patch(
+          { param: { tripId: data.trip.id }, json: { cover } },
+          as(organizer),
+        );
+        expect(res.status).toBe(200);
+        expect(await res.json()).toMatchObject({ cover });
+      }
     });
 
     it('sets the meetup place, its point and the photo album: organizers only, allowed links only', async () => {

@@ -8,7 +8,7 @@ import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
 import { colors, space } from '@/theme';
 
-/** The ten covers as a grid of thumbnails, one of them picked. */
+/** The covers as a grid of thumbnails, one of them picked. */
 export function CoverPicker({
   value,
   onChange,

@@ -397,4 +397,6 @@ Flat layered illustrations, `viewBox="0 0 390 300"`, rendered with `preserveAspe
 <rect x="110" y="150" width="150" height="26" rx="13" fill="#FFFFFF" opacity="0.6"/>
 ```
 
+Besides these, a trip can pick any cover in `COVER_IDS` (`packages/domain/src/covers.ts`): desert, forest, trail, city, picnic, winter, flight, and ski, dunes (friends walking in the desert), woods (friends walking in the forest), bonfire, kayak, waterfall, bike, spring, roadtrip and sail. Their scenes live in `apps/mobile/src/components/coverScenes.tsx`, in the same flat style.
+
 The beach scene's sand is light, so on that cover put the title on a dark glass panel (as `NewTripV2` does) instead of directly on the scene.

@@ -1,5 +1,5 @@
 {
-  "id": "3b5cd5cf-9939-4425-97a8-cb423a9d9b5f",
+  "id": "c2686d40-7d65-468d-81ca-5b564b13837a",
   "prevId": "0ce7581f-2428-44bc-9613-ddf14b04c171",
   "version": "7",
   "dialect": "postgresql",
@@ -1787,12 +1787,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "color": {
-          "name": "color",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1852,10 +1846,6 @@
         "trip_categories_list_check": {
           "name": "trip_categories_list_check",
           "value": "\"trip_categories\".\"list\" in ('bring', 'buy')"
-        },
-        "trip_categories_color_check": {
-          "name": "trip_categories_color_check",
-          "value": "\"trip_categories\".\"color\" between 0 and 5"
         }
       },
       "isRLSEnabled": false
@@ -2121,7 +2111,7 @@
         },
         "trips_cover_check": {
           "name": "trips_cover_check",
-          "value": "\"trips\".\"cover\" in ('camp', 'beach', 'desert', 'forest', 'zimmer', 'trail', 'city', 'picnic', 'winter', 'flight')"
+          "value": "\"trips\".\"cover\" in ('camp', 'beach', 'desert', 'forest', 'zimmer', 'trail', 'city', 'picnic', 'winter', 'flight', 'ski', 'dunes', 'woods', 'bonfire', 'kayak', 'waterfall', 'bike', 'spring', 'roadtrip', 'sail')"
         }
       },
       "isRLSEnabled": false
