@@ -12,12 +12,17 @@ export interface Member {
   status: MemberStatus;
 }
 
+/** How many accent colors a category can pick from (`Category.color` is an index into them). */
+export const CATEGORY_COLORS = 6;
+
 /** A named group of items within one list of a trip. */
 export interface Category {
   id: string;
   list: ListKind;
   name: string;
   position: number;
+  /** The accent picked for it, `0`–`CATEGORY_COLORS - 1`. Absent: by its place on the list. */
+  color?: number;
 }
 
 export interface Item {

@@ -1,0 +1,2 @@
+ALTER TABLE "trip_categories" ADD COLUMN "color" integer;--> statement-breakpoint
+ALTER TABLE "trip_categories" ADD CONSTRAINT "trip_categories_color_check" CHECK ("trip_categories"."color" between 0 and 5);

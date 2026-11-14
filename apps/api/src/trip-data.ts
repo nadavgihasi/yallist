@@ -57,7 +57,9 @@ export function toItem(row: typeof items.$inferSelect): Item {
 }
 
 export function toCategory(row: typeof tripCategories.$inferSelect): Category {
-  return { id: row.id, list: row.list, name: row.name, position: row.position };
+  const category: Category = { id: row.id, list: row.list, name: row.name, position: row.position };
+  if (row.color !== null) category.color = row.color;
+  return category;
 }
 
 export function toExpense(

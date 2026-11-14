@@ -224,10 +224,22 @@ describe('categories', () => {
   it('renames and reorders at once', () => {
     const renamed = applyAction(
       t(),
-      { type: 'renameCategory', categoryId: 'sitting', name: 'כיסאות' },
+      { type: 'editCategory', categoryId: 'sitting', name: 'כיסאות' },
       'me',
     );
     expect(renamed.categories[0]).toMatchObject({ id: 'sitting', name: 'כיסאות' });
+    const colored = applyAction(
+      t(),
+      { type: 'editCategory', categoryId: 'sitting', color: 2 },
+      'me',
+    );
+    expect(colored.categories[0]).toMatchObject({ id: 'sitting', name: 'ישיבה', color: 2 });
+    const cleared = applyAction(
+      colored,
+      { type: 'editCategory', categoryId: 'sitting', color: null },
+      'me',
+    );
+    expect(cleared.categories[0]).not.toHaveProperty('color');
     const order = ['sleeping', 'sitting'];
     const action = { type: 'reorderCategories', list: 'bring', categoryIds: order } as const;
     expect(applyAction(t(), action, 'me').categories.map((c) => [c.id, c.position])).toEqual([

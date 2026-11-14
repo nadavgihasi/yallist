@@ -49,7 +49,11 @@ export const colors = {
 export const accents = ['#5B3DE0', '#0A7C76', '#D9480F', '#C2387A', '#A86A0A', '#2F6FD0'] as const;
 
 /** The accent for the category card at `index`, cycling. */
-export const accentAt = (index: number) => accents[index % accents.length]!;
+const accentAt = (index: number) => accents[index % accents.length]!;
+
+/** A category's accent: the one picked for it (`Category.color`), else that of its `index`. */
+export const categoryAccent = (color: number | undefined, index: number) =>
+  accentAt(color ?? index);
 
 /** Rubik at 400, 700 and 800 (`@expo-google-fonts/rubik`). */
 export const fonts = {

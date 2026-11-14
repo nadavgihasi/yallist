@@ -141,6 +141,13 @@
       "when": 1794644887296,
       "tag": "0019_more_covers",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1794648221156,
+      "tag": "0020_category_color",
+      "breakpoints": true
     }
   ]
 }

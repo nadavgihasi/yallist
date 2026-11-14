@@ -359,6 +359,8 @@ export const he = {
     save: 'שמירה',
     moveUp: 'הזזה למעלה',
     moveDown: 'הזזה למטה',
+    color: 'צבע',
+    colorNames: ['סגול', 'טורקיז', 'כתום', 'פטל', 'זהב', 'תכלת'],
     delete: 'מחיקת הקטגוריה',
     confirmDelete: 'למחוק את הקטגוריה?',
     keepsItems: (n: number) => `${itemsCount(n)} יעברו ל״ללא קטגוריה״`,

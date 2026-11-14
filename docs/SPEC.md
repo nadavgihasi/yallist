@@ -60,7 +60,7 @@ Write these as migrations. Column names are suggestions; keep the semantics.
 
 **trip_members** — PK (`trip_id`, `user_id`), `role` (`organizer|member`), `status` (`pending|active|removed`), `display_name` (snapshot at join, editable), `joined_at`. The creator is an active organizer.
 
-**trip_categories** — `id`, `trip_id`, `list` (`bring|buy`), `name` (unique per trip and list, ignoring case), `position`, `created_at`. Any active member adds, renames, reorders or deletes them; deleting one makes its items uncategorized. A trip made from a template starts with the template's categories.
+**trip_categories** — `id`, `trip_id`, `list` (`bring|buy`), `name` (unique per trip and list, ignoring case), `position`, `color` (nullable accent index 0–5; null: the accent of its place on the list), `created_at`. Any active member adds, renames, recolors, reorders or deletes them; deleting one makes its items uncategorized. A trip made from a template starts with the template's categories.
 
 **items** — `id`, `trip_id`, `list` (`bring|buy`), `category_id` (nullable: uncategorized, shown last), `position`, `name`, `kind` (`single|qty|each`), `quantity_needed` int (1 for single; ≥2 for qty; ignored for each), `unit` (nullable, e.g. "שקים"), `display_qty` (nullable free text for buy items, e.g. "4 ק״ג", "30"), `note`, `created_by`, `created_at`, `deleted_at` (soft delete).
 
