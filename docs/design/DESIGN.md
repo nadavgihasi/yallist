@@ -36,7 +36,7 @@ Four roles, each with one job:
 
 - **Paper (`surface`, `line`, `hairline`) is the place.** The page is warm paper, and cards are white on it with a `hairline` outline. No cold grays.
 - **Night ink (`ink`, `ink-muted`) is for reading.** Headings and text.
-- **Sunset violet (`primary`, `primary-tint`, `primary-strong`) means *do something*.** Solid buttons, selected chips and tabs, links, the default avatar, step numerals. `primary-tint` is the quiet fill for tonal buttons, step circles and tips. One card per screen may be filled with `primary` when it holds the screen's key number (the money balance).
+- **Sunset violet (`primary`, `primary-tint`, `primary-strong`) means *do something*.** Solid buttons, selected chips and tabs, links, the default avatar, step numerals. `primary-tint` is the quiet fill for tonal buttons, step circles and tips. The screen's key number may be set in `primary-strong` (the money balance).
 - **Brand orange (`brand`) means *done* and *Yallist*.** The logo, a done check, progress. Never a button fill, and never text; `brand-strong` is the orange that can be read (“אצלך”, errors, delete).
 - **Category accents (`accent-*`)** give each category card on a list its own hue, cycling in order: a dot beside its name and the color of its items' icons. They are decoration; the name always says which category it is.
 - **Illustration.** The `illo-*` sunset palette is for illustrations, trip tiles and covers only. Violet and orange are taken from it, which is why the UI and the covers sit together.

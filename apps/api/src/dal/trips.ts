@@ -134,6 +134,7 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
         color: profiles.avatarColor,
         avatarKey: profiles.avatarKey,
         image: users.image,
+        paymentPhone: profiles.paymentPhone,
       })
       .from(tripMembers)
       .innerJoin(profiles, eq(profiles.id, tripMembers.userId))
@@ -238,12 +239,17 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
           tripId: _,
           avatarKey: _k,
           image: _i,
+          paymentPhone,
           ...member
         }): typeof member & {
           avatarUrl?: string;
+          paymentPhone?: string;
         } => ({
           ...member,
           avatarUrl: member.status === 'active' ? avatars.get(member.userId) : undefined,
+          // Where to send them money (Bit, PayBox): only active members', for their trip-mates.
+          // Callers that answer anyone else pick the fields they show (the invite preview).
+          paymentPhone: (member.status === 'active' && paymentPhone) || undefined,
         }),
       ),
     categories: categoryRows.filter((c) => c.tripId === trip.id).map(toCategory),

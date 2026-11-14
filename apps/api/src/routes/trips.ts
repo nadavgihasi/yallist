@@ -156,7 +156,10 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
           const missing = d.items.filter((i) => !isDone(i, d.claims, d.expenses, activeIds));
           return {
             trip: d.trip,
-            members: d.members.filter((m) => m.status === 'active'),
+            // The cards don't send money: no payment phones.
+            members: d.members
+              .filter((m) => m.status === 'active')
+              .map(({ paymentPhone: _, ...m }) => m),
             itemCount: d.items.length,
             doneCount: d.items.length - missing.length,
             /** The first few still missing, in list order: what the next trip's card names. */

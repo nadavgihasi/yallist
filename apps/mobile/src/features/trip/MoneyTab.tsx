@@ -19,6 +19,9 @@ import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
+import { PayRow } from './PayRow';
+import { expenseKey } from './reveal';
+import { RevealTarget } from './RevealTarget';
 import { sharedText } from './runSplit';
 
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
@@ -48,18 +51,19 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
     amount = sum(toMe);
   }
 
-  const markPaid = () => {
-    myOpen.forEach((t) => act({ type: 'markPayment', toUser: t.to, amountAgorot: t.amountAgorot }));
-    showToast(he.money.markedToast(formatShekel(sum(myOpen))), 'success');
+  const markPaid = (toUser: string, amountAgorot: number) => {
+    act({ type: 'markPayment', toUser, amountAgorot });
+    showToast(he.money.markedToast(formatShekel(amountAgorot)), 'success');
   };
+  // Owed money with nowhere to receive it: ask for a number once there's something to receive.
+  const needsPhone = toMe.length > 0 && !view.memberById.get(me)?.paymentPhone;
   // A payment the receiver already confirmed stays.
   const unmarkPaid = () =>
     myUnconfirmed.forEach((p) => act({ type: 'deletePayment', paymentId: p.id }));
 
   return (
     <View style={styles.wrap}>
-      {/* The one colored card: what I owe or am owed, on violet. */}
-      <Card gap={space[1]} style={styles.hero}>
+      <Card gap={space[1]}>
         <Text style={styles.heroTitle}>{title}</Text>
         <Text style={styles.heroAmount}>{formatShekel(amount)}</Text>
         {view.totalSpent > 0 && (
@@ -68,20 +72,24 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           </Text>
         )}
         {myOpen.length > 0 ? (
-          <PillButton
-            label={he.money.markPaid}
-            variant="soft"
-            size="md"
-            wide
-            style={styles.heroButton}
-            disabled={saving}
-            onPress={markPaid}
-          />
+          <View style={styles.payRows}>
+            <Text style={styles.heroText}>{he.settle.payIn}</Text>
+            {myOpen.map((t) => (
+              <PayRow
+                key={t.to}
+                view={view}
+                transfer={t}
+                tripName={data.trip.name}
+                saving={saving}
+                onMark={(amountAgorot) => markPaid(t.to, amountAgorot)}
+              />
+            ))}
+          </View>
         ) : (
           myPaid.length > 0 && (
             <>
               <View style={styles.heroStatus}>
-                <Icon name="check" size={18} color={colors.onPrimary} />
+                <Icon name="check" size={18} color={colors.primaryStrong} />
                 <Text style={styles.heroText}>
                   {myUnconfirmed.length > 0 ? he.money.waiting : he.money.received}
                 </Text>
@@ -100,6 +108,14 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           )
         )}
       </Card>
+
+      {needsPhone && (
+        <Callout
+          title={he.settle.addPhoneTitle}
+          text={he.settle.addPhoneText}
+          action={{ label: he.settle.addPhone, onPress: () => router.push('/profile') }}
+        />
+      )}
 
       {view.transfers.length === 0 ? (
         // With no expenses yet, the empty expenses card below says it all.
@@ -192,65 +208,67 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           {data.expenses.map((e) => (
             // Two lines at phone width: what and who on the start, the amount over the actions
             // on the end, so the description keeps the room.
-            <View key={e.id} style={styles.expense}>
-              <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
-              <View style={styles.expenseBody}>
-                <Text style={styles.expenseWhat} numberOfLines={1}>
-                  {e.description}
-                </Text>
-                {/* A split in parts wraps: who shares each part is the point of it. */}
-                <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
-                  {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Text>
-              </View>
-              <View style={styles.expenseEnd}>
-                <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
-                <View style={styles.expenseActions}>
-                  <ReceiptButton tripId={data.trip.id} expense={e} />
-                  {view.mayChange(e) && (
-                    <Pressable
-                      accessibilityRole="button"
-                      accessibilityLabel={he.money.editExpense}
-                      hitSlop={4}
-                      {...testId('expense-edit')}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/trips/[tripId]/expenses/[expenseId]/edit',
-                          params: { tripId: data.trip.id, expenseId: e.id },
-                        })
-                      }
-                      style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.75 }]}
-                    >
-                      <Icon name="pencil" size={20} color={colors.primaryStrong} />
-                    </Pressable>
-                  )}
-                  {view.mayChange(e) &&
-                    (confirmDelete === e.id ? (
-                      <PillButton
-                        label={he.money.confirmDelete}
-                        variant="danger"
-                        size="sm"
-                        onPress={() => {
-                          act({ type: 'deleteExpense', expenseId: e.id });
-                          setConfirmDelete(undefined);
-                        }}
-                      />
-                    ) : (
+            <RevealTarget key={e.id} id={expenseKey(e.id)}>
+              <View style={styles.expense}>
+                <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
+                <View style={styles.expenseBody}>
+                  <Text style={styles.expenseWhat} numberOfLines={1}>
+                    {e.description}
+                  </Text>
+                  {/* A split in parts wraps: who shares each part is the point of it. */}
+                  <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
+                    {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </Text>
+                </View>
+                <View style={styles.expenseEnd}>
+                  <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+                  <View style={styles.expenseActions}>
+                    <ReceiptButton tripId={data.trip.id} expense={e} />
+                    {view.mayChange(e) && (
                       <Pressable
                         accessibilityRole="button"
-                        accessibilityLabel={he.money.deleteExpense}
+                        accessibilityLabel={he.money.editExpense}
                         hitSlop={4}
-                        onPress={() => setConfirmDelete(e.id)}
+                        {...testId('expense-edit')}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/trips/[tripId]/expenses/[expenseId]/edit',
+                            params: { tripId: data.trip.id, expenseId: e.id },
+                          })
+                        }
                         style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.75 }]}
                       >
-                        <Icon name="trash" size={20} color={colors.inkFaint} />
+                        <Icon name="pencil" size={20} color={colors.primaryStrong} />
                       </Pressable>
-                    ))}
+                    )}
+                    {view.mayChange(e) &&
+                      (confirmDelete === e.id ? (
+                        <PillButton
+                          label={he.money.confirmDelete}
+                          variant="danger"
+                          size="sm"
+                          onPress={() => {
+                            act({ type: 'deleteExpense', expenseId: e.id });
+                            setConfirmDelete(undefined);
+                          }}
+                        />
+                      ) : (
+                        <Pressable
+                          accessibilityRole="button"
+                          accessibilityLabel={he.money.deleteExpense}
+                          hitSlop={4}
+                          onPress={() => setConfirmDelete(e.id)}
+                          style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.75 }]}
+                        >
+                          <Icon name="trash" size={20} color={colors.inkFaint} />
+                        </Pressable>
+                      ))}
+                  </View>
                 </View>
               </View>
-            </View>
+            </RevealTarget>
           ))}
         </ListGroup>
       )}
@@ -341,11 +359,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   receiptPercent: { ...type.caption, color: colors.primaryStrong },
-  hero: { backgroundColor: colors.primary, borderColor: colors.primary },
-  heroTitle: { ...type.caption, fontFamily: type.itemTitle.fontFamily, color: colors.onPrimary },
-  heroAmount: { ...type.bigNumber, color: colors.onPrimary },
-  heroText: { ...type.caption, color: colors.onPrimary },
-  heroButton: { marginTop: space[3] },
+  heroTitle: { ...type.caption, color: colors.inkMuted },
+  heroAmount: { ...type.bigNumber, color: colors.primaryStrong },
+  heroText: { ...type.caption, color: colors.inkMuted },
+  payRows: { gap: space[3], marginTop: space[3] },
   heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },
   paymentEnd: { alignItems: 'flex-end' },
   payment: { gap: space[1] },

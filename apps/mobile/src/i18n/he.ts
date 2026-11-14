@@ -280,7 +280,6 @@ export const he = {
     nothingToPay: 'אין לך מה להעביר',
     getFrom: (names: string) => `מגיע לך מ${names}`,
     share: (mine: string, total: string) => `החלק שלך ${mine} מתוך ${total}`,
-    markPaid: 'סימון כשולם',
     markedToast: (amount: string) => `סומן ששילמת ${amount}`,
     waiting: 'מחכה לאישור שהכסף הגיע',
     received: 'הכסף התקבל',
@@ -309,6 +308,27 @@ export const he = {
     part: (label: string, amount: string, names: string) => `${label} ${amount}: ${names}`,
     rest: (names: string) => `השאר: ${names}`,
     everyone: 'כולם',
+  },
+  /** Settling one debt (MoneyTab's pay rows): pay it in Bit or PayBox, then mark it. */
+  settle: {
+    to: (name: string) => `ל${name}`,
+    copyAmount: 'העתקת הסכום',
+    copyPhone: 'העתקת המספר',
+    copied: 'הועתק',
+    markPaid: 'סימון כשולם',
+    otherAmount: 'שילמתי סכום אחר',
+    howMuch: 'כמה שילמת?',
+    markPart: (amount: string) => `סימון ${amount} כשולם`,
+    overOwed: 'יותר ממה שנשאר להעביר',
+    cancel: 'ביטול',
+    noPhone: (name: string) => `ל${name} אין עדיין מספר לביט או לפייבוקס`,
+    askPhone: 'לבקש מספר',
+    askPhoneMessage: (name: string, amount: string, trip: string) =>
+      `היי ${name}, רוצה להעביר לך ${amount} על ${trip}. לאיזה מספר לשלוח בביט או בפייבוקס?`,
+    payIn: 'מעבירים בביט או בפייבוקס, ואז מסמנים כאן',
+    addPhoneTitle: 'לאן להעביר לך?',
+    addPhoneText: 'מוסיפים מספר לביט או לפייבוקס בפרופיל, וחברי הטיול רואים אותו כשהם משלמים לך.',
+    addPhone: 'הוספת מספר',
   },
   item: {
     inBring: 'ברשימת ההבאה',
@@ -406,6 +426,10 @@ export const he = {
     paidBy: 'מי שילם?',
     save: 'שמירת ההוצאה',
     saved: (amount: string) => `ההוצאה נשמרה: ${amount}`,
+    /** Tapping save with a field still empty says which. */
+    needAmount: 'רושמים כמה זה עלה',
+    needWhat: 'רושמים על מה',
+    needShares: 'בוחרים לפחות משתתף אחד',
   },
   editExpense: {
     title: 'עריכת הוצאה',

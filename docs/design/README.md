@@ -38,7 +38,7 @@ The app follows the token names, except:
 v2 read as a generic blue app on a cold gray page, and the brand hardly appeared in the product. v3 takes its colors from the brand's own sunset: paper, violet and orange.
 
 - **Color.** The page is warm paper (`#F6F2EA`, was the cold `#F4F5F8`). `primary` is sunset violet (`#5B3DE0`, was blue `#425AF4`), taken from the covers' evening hills, so buttons, selected chips and tabs, and links are violet and `primary-tint` is pale violet. Orange stays for done checks and progress. `brand-strong` is a shade deeper (`#B8370B`) so it passes on paper as well as on cards.
-- **Category accents.** Each category card on a list gets a hue (violet, teal, orange, berry, gold, sky, in order): a dot by its name and its items' icons. The money balance is a violet card.
+- **Category accents.** Each category card on a list gets a hue (violet, teal, orange, berry, gold, sky, in order): a dot by its name and its items' icons. The money balance is set in violet.
 - **Type.** Titles are Suez One. Rubik stays for everything else; the large button label drops from 800 to 700.
 - **Cards** have a 1px `hairline` outline and a 20px radius (was 24, no outline). Unselected filter chips, the tabs' track and round header buttons are outlined the same way.
 - **Buttons.** The floating button is 56px tall (was 60). The row buttons are pale violet with violet labels.

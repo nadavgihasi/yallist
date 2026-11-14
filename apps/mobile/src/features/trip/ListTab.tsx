@@ -26,6 +26,8 @@ import { BagCards } from './BagCards';
 import { CopyFromTripButton } from './bulk/AddManyLinks';
 import type { TripView } from './derive';
 import { ItemRow } from './ItemRow';
+import { itemKey } from './reveal';
+import { RevealTarget } from './RevealTarget';
 import { groupSummary } from './labels';
 import { ShopBanner } from './ShopBanner';
 
@@ -178,23 +180,24 @@ export function ListTab({
             )}
           </View>
           {items.map((item) => (
-            <ItemRow
-              key={item.id}
-              item={item}
-              claims={data.claims}
-              view={view}
-              me={me}
-              bag={list === 'bring' ? bag : undefined}
-              onOpen={() =>
-                router.push({
-                  pathname: '/trips/[tripId]/items/[itemId]',
-                  params: { tripId, itemId: item.id },
-                })
-              }
-              onClaim={(quantity) => act({ type: 'setClaim', itemId: item.id, quantity })}
-              onPack={(packed) => act({ type: 'setPacked', itemId: item.id, packed })}
-              accent={accentAt(index)}
-            />
+            <RevealTarget key={item.id} id={itemKey(item.list, item.name)}>
+              <ItemRow
+                item={item}
+                claims={data.claims}
+                view={view}
+                me={me}
+                bag={list === 'bring' ? bag : undefined}
+                onOpen={() =>
+                  router.push({
+                    pathname: '/trips/[tripId]/items/[itemId]',
+                    params: { tripId, itemId: item.id },
+                  })
+                }
+                onClaim={(quantity) => act({ type: 'setClaim', itemId: item.id, quantity })}
+                onPack={(packed) => act({ type: 'setPacked', itemId: item.id, packed })}
+                accent={accentAt(index)}
+              />
+            </RevealTarget>
           ))}
           {category && filter === 'all' && (
             <Pressable
