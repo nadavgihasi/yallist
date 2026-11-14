@@ -19,7 +19,7 @@ What's left from the overnight review (security, backend, frontend, infra, code 
 
 - **API rate limiting:** API Gateway throttling, then Better Auth rateLimit with DB storage; a prerequisite for [email sign-up](plans/email-signup.md) — `apps/api/src/auth.ts`, `infra/app/stacks/app.ts`
 - **Receipt orphan cleanup:** S3 lifecycle rule expiring unattached uploads — `infra/app/core.ts`
-- **Removal sticks:** removed users can rejoin via the same link; mergeUser reactivates them — `routes/trips.ts`, `dal/profiles.ts`
+- **Removal sticks:** the API already refuses a removed account (`routes/invites.ts`, 403), but the same person can rejoin as a new guest from another browser, and a removed member sees a Join button before learning they're blocked ([QA](plans/reviews/2026-11-08/qa.md), [UX](plans/reviews/2026-11-08/ux.md); M1 adds a same-name check) — `app/j/[token].tsx`
 - **Offline mutations across restart:** queued changes are in memory only (#61) and lost when the app closes; `setMutationDefaults` + refetch on resume, with Phase 7 — `apps/mobile/src/state/`
 - **Overlapping optimistic writes:** roll back by refetching — `state/trips.ts`
 - **Token and personal data at rest:** secure-store on native, CSP on web, don't persist `['me']` — `apps/mobile/src/`
