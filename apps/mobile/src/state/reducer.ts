@@ -51,8 +51,9 @@ export type Action =
   | { type: 'addItem'; item: NewItemInput; claim: number; newCategory?: string; runId?: string }
   | { type: 'deleteItem'; itemId: string }
   | { type: 'editItem'; itemId: string; changes: NewItemInput; newCategory?: string }
-  | { type: 'addCategory'; list: ListKind; name: string }
-  | { type: 'renameCategory'; categoryId: string; name: string }
+  // `color`: an accent index (`Category.color`); null or absent: by its place on the list.
+  | { type: 'addCategory'; list: ListKind; name: string; color?: number | null }
+  | { type: 'editCategory'; categoryId: string; name?: string; color?: number | null }
   | { type: 'reorderCategories'; list: ListKind; categoryIds: string[] }
   | { type: 'deleteCategory'; categoryId: string }
   | { type: 'setNote'; itemId: string; note: string }
@@ -154,13 +155,19 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
         ),
       };
     }
-    case 'renameCategory':
+    case 'editCategory': {
+      const { categoryId, name, color } = action;
       return {
         ...data,
-        categories: data.categories.map((c) =>
-          c.id === action.categoryId ? { ...c, name: action.name } : c,
-        ),
+        categories: data.categories.map((c) => {
+          if (c.id !== categoryId) return c;
+          const next = { ...c, name: name ?? c.name };
+          if (color === null) delete next.color;
+          else if (color !== undefined) next.color = color;
+          return next;
+        }),
       };
+    }
     case 'reorderCategories':
       return {
         ...data,

@@ -134,6 +134,13 @@
       "when": 1794518357832,
       "tag": "0018_more_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1794644757268,
+      "tag": "0019_category_color",
+      "breakpoints": true
     }
   ]
 }

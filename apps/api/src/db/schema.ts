@@ -1,4 +1,5 @@
 import {
+  CATEGORY_COLORS,
   COVER_IDS,
   type ItemKind,
   type ListKind,
@@ -231,11 +232,17 @@ export const tripCategories = pgTable(
     list: text('list', { enum: LISTS }).notNull(),
     name: text('name').notNull(),
     position: integer('position').notNull(),
+    /** An accent index picked by a member; null: the accent of its place on the list. */
+    color: integer('color'),
     createdAt: createdAt(),
   },
   (t) => [
     uniqueIndex('trip_categories_name_idx').on(t.tripId, t.list, t.name),
     oneOf('trip_categories_list_check', t.list, LISTS),
+    check(
+      'trip_categories_color_check',
+      sql`${t.color} between 0 and ${sql.raw(String(CATEGORY_COLORS - 1))}`,
+    ),
   ],
 );
 

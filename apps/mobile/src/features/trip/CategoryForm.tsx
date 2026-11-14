@@ -1,18 +1,20 @@
 import type { ListKind } from '@yallist/domain';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View, type PressableStateCallbackType } from 'react-native';
 
-import { TextField } from '@/components/Fields';
+import { fieldStyles, TextField } from '@/components/Fields';
 import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { he } from '@/i18n/he';
 import { useTrip, useTripAction } from '@/state/trips';
-import { colors, fonts } from '@/theme';
+import { accents, colors, fonts, size, space } from '@/theme';
+
+type WebState = PressableStateCallbackType & { hovered?: boolean; focused?: boolean };
 
 /**
- * Adds a category to `list`, or, given `categoryId`, renames, moves or deletes it. Deleting a
- * category with items asks once more: its items stay, uncategorized.
+ * Adds a category to `list`, or, given `categoryId`, renames, recolors, moves or deletes it.
+ * Deleting a category with items asks once more: its items stay, uncategorized.
  */
 export function CategoryForm({
   tripId,
@@ -30,27 +32,45 @@ export function CategoryForm({
   const act = useTripAction(tripId);
   const category = data?.categories.find((c) => c.id === categoryId);
   const [name, setName] = useState(category?.name ?? '');
+  // null: not picked here, so the color it has (picked before, or of its place on the list).
+  const [picked, setPicked] = useState<number | null>(null);
   const [confirming, setConfirming] = useState(false);
   if (!data) return null;
+
+  const siblings = data.categories
+    .filter((c) => c.list === (category?.list ?? list))
+    .sort((a, b) => a.position - b.position)
+    .map((c) => c.id);
+  const index = category ? siblings.indexOf(category.id) : -1;
+  // The color its card has now; a new category goes last on the list.
+  const current = category?.color ?? (category ? index : siblings.length) % accents.length;
+  const shownColor = picked ?? current;
 
   const trimmed = name.trim();
   const save = () => {
     if (!trimmed) return;
     onClose(() => {
-      if (!category) act({ type: 'addCategory', list, name: trimmed });
-      else if (trimmed !== category.name) {
-        act({ type: 'renameCategory', categoryId: category.id, name: trimmed });
+      if (!category) {
+        act({
+          type: 'addCategory',
+          list,
+          name: trimmed,
+          ...(picked !== null && { color: picked }),
+        });
+        return;
+      }
+      const renamed = trimmed !== category.name;
+      const recolored = picked !== null && picked !== current;
+      if (renamed || recolored) {
+        act({
+          type: 'editCategory',
+          categoryId: category.id,
+          ...(renamed && { name: trimmed }),
+          ...(recolored && { color: picked }),
+        });
       }
     });
   };
-
-  const siblings = category
-    ? data.categories
-        .filter((c) => c.list === category.list)
-        .sort((a, b) => a.position - b.position)
-        .map((c) => c.id)
-    : [];
-  const index = category ? siblings.indexOf(category.id) : -1;
   // Guards rather than `category!`: the React Compiler reads such paths during render.
   const move = (by: -1 | 1) => {
     if (!category) return;
@@ -101,6 +121,37 @@ export function CategoryForm({
         maxLength={40}
         autoFocus={!category}
       />
+      <View style={styles.colorField}>
+        <Text style={fieldStyles.label}>{he.category.color}</Text>
+        <View
+          style={styles.swatches}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={he.category.color}
+        >
+          {accents.map((accent, i) => {
+            const selected = i === shownColor;
+            return (
+              <Pressable
+                key={accent}
+                accessibilityRole="radio"
+                accessibilityLabel={he.category.colorNames[i]}
+                accessibilityState={{ checked: selected }}
+                onPress={() => setPicked(i)}
+                style={(state: WebState) => [
+                  styles.swatch,
+                  state.hovered && styles.swatchHover,
+                  selected && { borderColor: accent },
+                  state.focused && styles.focus,
+                ]}
+              >
+                <View style={[styles.swatchFill, { backgroundColor: accent }]}>
+                  {selected && <Icon name="check" size={18} color={colors.card} strokeWidth={3} />}
+                </View>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
       {category && siblings.length > 1 && (
         <View style={styles.moves}>
           <PillButton
@@ -123,6 +174,25 @@ export function CategoryForm({
 
 const styles = StyleSheet.create({
   moves: { flexDirection: 'row', gap: 8 },
+  colorField: { gap: 8 },
+  swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
+  // 44px: a full touch target.
+  swatch: {
+    width: size.avatar,
+    height: size.avatar,
+    borderRadius: size.avatar / 2,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    padding: 3,
+  },
+  swatchHover: { borderColor: colors.line },
+  swatchFill: {
+    flex: 1,
+    borderRadius: size.avatar / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  focus: { outlineColor: colors.primary, outlineStyle: 'solid', outlineWidth: 2, outlineOffset: 2 },
   hint: {
     fontFamily: fonts.regular,
     fontSize: 14,

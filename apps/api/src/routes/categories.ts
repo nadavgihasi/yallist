@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 
+import { CATEGORY_COLORS } from '@yallist/domain';
 import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
 import { logActivity } from '../dal/activity';
@@ -10,8 +11,8 @@ import {
   deleteCategory,
   listCategories,
   lockCategory,
-  renameCategory,
   setCategoryOrder,
+  updateCategory,
 } from '../dal/categories';
 import { requireMember } from '../dal/members';
 import { lockTrip } from '../dal/trips';
@@ -21,6 +22,13 @@ import { transact, type Tx } from '../db/tx';
 import { toCategory } from '../trip-data';
 
 const name = z.string().trim().min(1).max(40);
+/** An accent index; null: the accent of its place on the list. */
+const color = z
+  .number()
+  .int()
+  .min(0)
+  .max(CATEGORY_COLORS - 1)
+  .nullable();
 const tripParam = z.object({ tripId: z.uuid() });
 const categoryParam = z.object({ tripId: z.uuid(), categoryId: z.uuid() });
 
@@ -34,7 +42,8 @@ async function categoryWrite(tx: Tx, tripId: string, me: string) {
 }
 
 /**
- * The categories of the bring and buy lists. Any active member may change them. Deleting a
+ * The categories of the bring and buy lists. Any active member may add, rename, recolor, reorder
+ * or delete them. Deleting a
  * category keeps its items: they become uncategorized.
  */
 export const categoryRoutes = (auth: Auth, db: Db) =>
@@ -53,7 +62,7 @@ export const categoryRoutes = (auth: Auth, db: Db) =>
     .post(
       '/:tripId/categories',
       validate('param', tripParam),
-      validate('json', z.object({ list: z.enum(LISTS), name })),
+      validate('json', z.object({ list: z.enum(LISTS), name, color: color.optional() })),
       async (c) => {
         const { tripId } = c.req.valid('param');
         const input = c.req.valid('json');
@@ -61,7 +70,7 @@ export const categoryRoutes = (auth: Auth, db: Db) =>
         const category = await transact(db, async (tx) => {
           await categoryWrite(tx, tripId, me);
           await assertNameFree(tx, tripId, input.list, input.name);
-          const created = await appendCategory(tx, tripId, input.list, input.name);
+          const created = await appendCategory(tx, tripId, input.list, input.name, input.color);
           await logActivity(tx, tripId, me, 'category_added', {
             categoryId: created.id,
             name: created.name,
@@ -75,7 +84,13 @@ export const categoryRoutes = (auth: Auth, db: Db) =>
     .patch(
       '/:tripId/categories/:categoryId',
       validate('param', categoryParam),
-      validate('json', z.object({ name })),
+      // Either or both: a new name, a new color.
+      validate(
+        'json',
+        z
+          .object({ name: name.optional(), color: color.optional() })
+          .refine((v) => v.name !== undefined || v.color !== undefined, 'Nothing to change'),
+      ),
       async (c) => {
         const { tripId, categoryId } = c.req.valid('param');
         const input = c.req.valid('json');
@@ -83,15 +98,25 @@ export const categoryRoutes = (auth: Auth, db: Db) =>
         const category = await transact(db, async (tx) => {
           await categoryWrite(tx, tripId, me);
           const current = await lockCategory(tx, tripId, categoryId);
-          if (current.name === input.name) return current;
-          await assertNameFree(tx, tripId, current.list, input.name, categoryId);
-          const renamed = await renameCategory(tx, categoryId, input.name);
-          await logActivity(tx, tripId, me, 'category_renamed', {
-            categoryId,
-            name: renamed.name,
-            from: current.name,
-          });
-          return renamed;
+          const changes: { name?: string; color?: number | null } = {};
+          if (input.name !== undefined && input.name !== current.name) changes.name = input.name;
+          if (input.color !== undefined && input.color !== current.color) {
+            changes.color = input.color;
+          }
+          if (Object.keys(changes).length === 0) return current;
+          if (changes.name !== undefined) {
+            await assertNameFree(tx, tripId, current.list, changes.name, categoryId);
+          }
+          const updated = await updateCategory(tx, categoryId, changes);
+          // A color is decoration: only a new name goes on the feed.
+          if (changes.name !== undefined) {
+            await logActivity(tx, tripId, me, 'category_renamed', {
+              categoryId,
+              name: updated.name,
+              from: current.name,
+            });
+          }
+          return updated;
         });
         return c.json(toCategory(category));
       },

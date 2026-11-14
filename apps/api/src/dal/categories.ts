@@ -47,15 +47,21 @@ export async function assertNameFree(
   if (taken) throw fail(409, 'A category with this name exists');
 }
 
-/** Adds the category at the end of its list. */
-export async function appendCategory(tx: Executor, tripId: string, list: List, name: string) {
+/** Adds the category at the end of its list; `color` null: by its place on the list. */
+export async function appendCategory(
+  tx: Executor,
+  tripId: string,
+  list: List,
+  name: string,
+  color: number | null = null,
+) {
   const [last] = await tx
     .select({ position: max(tripCategories.position) })
     .from(tripCategories)
     .where(and(eq(tripCategories.tripId, tripId), eq(tripCategories.list, list)));
   const [created] = await tx
     .insert(tripCategories)
-    .values({ tripId, list, name, position: (last?.position ?? -1) + 1 })
+    .values({ tripId, list, name, color, position: (last?.position ?? -1) + 1 })
     .returning();
   return created!;
 }
@@ -80,10 +86,15 @@ export async function insertCategories(
   return new Map(rows.map((r) => [`${r.list}/${r.name}`, r.id]));
 }
 
-export async function renameCategory(tx: Executor, categoryId: string, name: string) {
+/** Renames the category or sets its color (null: by its place on the list). */
+export async function updateCategory(
+  tx: Executor,
+  categoryId: string,
+  changes: { name?: string; color?: number | null },
+) {
   const [category] = await tx
     .update(tripCategories)
-    .set({ name })
+    .set(changes)
     .where(eq(tripCategories.id, categoryId))
     .returning();
   return category!;

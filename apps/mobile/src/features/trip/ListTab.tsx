@@ -19,7 +19,7 @@ import { testId } from '@/lib/testId';
 import { useBag } from '@/state/bag';
 import { useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
-import { accentAt, colors, space, type } from '@/theme';
+import { categoryAccent, colors, space, type } from '@/theme';
 import { useBreakpoint } from '@/theme/breakpoint';
 
 import { BagCards } from './BagCards';
@@ -162,7 +162,9 @@ export function ListTab({
         <Card key={category?.id ?? 'none'} gap={space[3]}>
           {/* The card's small muted title (trip.html "ציוד"), with ✎ for the category sheet. */}
           <View style={styles.header}>
-            <View style={[styles.dot, { backgroundColor: accentAt(index) }]} />
+            <View
+              style={[styles.dot, { backgroundColor: categoryAccent(category?.color, index) }]}
+            />
             <Text style={styles.title} accessibilityRole="header">
               {category?.name ?? he.trip.uncategorized}
             </Text>
@@ -201,7 +203,7 @@ export function ListTab({
                 }
                 onClaim={(quantity) => act({ type: 'setClaim', itemId: item.id, quantity })}
                 onPack={(packed) => act({ type: 'setPacked', itemId: item.id, packed })}
-                accent={accentAt(index)}
+                accent={categoryAccent(category?.color, index)}
               />
             </RevealTarget>
           ))}

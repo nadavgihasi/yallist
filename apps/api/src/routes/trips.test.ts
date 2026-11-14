@@ -845,6 +845,40 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       ]);
     });
 
+    it('sets and clears a category color, without logging it', async () => {
+      const { member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const patch = (categoryId: string, json: { name?: string; color?: number | null }) =>
+        categories()[':categoryId'].$patch({ param: { tripId, categoryId }, json }, as(member));
+      const category = data.categories[0]!;
+      expect(category).not.toHaveProperty('color');
+
+      expect(await (await patch(category.id, { color: 3 })).json()).toMatchObject({
+        id: category.id,
+        name: category.name,
+        color: 3,
+      });
+      const after = await (await detail(member, tripId)).json();
+      expect(after.categories.find((cat) => cat.id === category.id)?.color).toBe(3);
+      // A rename keeps the color; null goes back to the color of its place.
+      expect((await (await patch(category.id, { name: 'חדש' })).json()).color).toBe(3);
+      expect(await (await patch(category.id, { color: null })).json()).not.toHaveProperty('color');
+      for (const color of [-1, 6, 1.5]) {
+        expect((await patch(category.id, { color })).status).toBe(400);
+      }
+      expect((await patch(category.id, {})).status).toBe(400);
+
+      const created = await categories().$post(
+        { param: { tripId }, json: { list: 'buy', name: 'פירות', color: 0 } },
+        as(member),
+      );
+      expect(await created.json()).toMatchObject({ name: 'פירות', color: 0 });
+      expect((await activityTypes(tripId)).slice(2)).toEqual([
+        'category_renamed',
+        'category_added',
+      ]);
+    });
+
     it('deletes a category with items: they become uncategorized', async () => {
       const { member, data } = await tripWithMember();
       const tripId = data.trip.id;

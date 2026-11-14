@@ -176,16 +176,18 @@ async function send(tripId: string, action: Action): Promise<unknown> {
         }),
       );
     case 'addCategory': {
-      const { list, name } = action;
-      return parseResponse(trip.categories.$post({ param, json: { list, name } }));
+      const { list, name, color } = action;
+      return parseResponse(trip.categories.$post({ param, json: { list, name, color } }));
     }
-    case 'renameCategory':
+    case 'editCategory': {
+      const { categoryId, name, color } = action;
       return parseResponse(
         trip.categories[':categoryId'].$patch({
-          param: { ...param, categoryId: action.categoryId },
-          json: { name: action.name },
+          param: { ...param, categoryId },
+          json: { name, color },
         }),
       );
+    }
     case 'reorderCategories': {
       const { list, categoryIds } = action;
       return parseResponse(trip.categories.order.$put({ param, json: { list, categoryIds } }));
@@ -349,7 +351,7 @@ export function useTripAction(tripId: string) {
         ? he.errors.failed
         : action.type === 'setClaim' || action.type === 'addToRun'
           ? he.errors.claimTaken
-          : action.type === 'addCategory' || action.type === 'renameCategory'
+          : action.type === 'addCategory' || action.type === 'editCategory'
             ? he.errors.categoryExists
             : action.type === 'editItem'
               ? he.errors.itemEditRefused
