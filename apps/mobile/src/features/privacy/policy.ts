@@ -19,7 +19,7 @@ export interface Policy {
 export const policy: Record<'he' | 'en', Policy> = {
   he: {
     title: 'מדיניות פרטיות',
-    updated: 'עודכן: 12 בנובמבר 2026',
+    updated: 'עודכן: 14 בנובמבר 2026',
     intro:
       'Yallist היא רשימה משותפת לטיולים קבוצתיים: מי מביא מה, קניות והוצאות. כאן כתוב מה אנחנו שומרים, למה ומי רואה את זה. בקצרה: רק מה שהאפליקציה צריכה כדי לעבוד. אין פרסומות, אין כלי אנליטיקה, ואנחנו לא מוכרים מידע.',
     sections: [
@@ -29,10 +29,11 @@ export const policy: Record<'he' | 'en', Policy> = {
           'חשבון: בכניסה כאורח, רק השם שבחרת. בכניסה עם Google, השם, כתובת המייל ותמונת הפרופיל מ-Google, ומזהה חשבון Google.',
           'פרופיל: שם תצוגה, צבע, תמונה אם העלית, ומספר טלפון ל-Bit או PayBox אם הוספת.',
           'טיולים: הטיולים שיצרת או שהצטרפת אליהם (שם, תאריכים, מקום, תמונת רקע), החברים ותפקידם, פריטים וקטגוריות, מי מביא, קנה או ארז מה, סבבי קניות, הוצאות ואיך הן מתחלקות, תשלומים בין החברים, ויומן של השינויים בטיול.',
+          'מיקום: אם בחרת לסמן את המקום שבו את/ה נמצא/ת כנקודת המפגש של טיול, האפליקציה קוראת את המיקום המדויק פעם אחת, באישורך, ושומרת אותו כנקודת המפגש שחברי הטיול רואים. היא לא עוקבת אחריך ולא קוראת את המיקום ברקע.',
           'תמונות: קבלות שצירפת להוצאות ותמונת הפרופיל שלך.',
           'משוב: אם שלחת רעיון או דיווח על תקלה, הכותרת, הטקסט, גרסת האפליקציה והפלטפורמה.',
           'חיבור: כשנכנסים נשמרים מפתח חיבור, כתובת ה-IP וסוג הדפדפן או המכשיר.',
-          'דיווחי שגיאות (Sentry): כשמשהו נכשל באפליקציה או בשרת, נשלחים פרטים טכניים על השגיאה. לפני השליחה מוסרים מהם מזהה המשתמש, כתובת ה-IP, מיילים, מספרי טלפון, מפתחות וכל טקסט בעברית (שמות, טיולים ופריטים). באתר נשלחים גם נתוני ביצועים מ-5% מהטעינות, מנוקים באותה דרך.',
+          'דיווחי שגיאות (Sentry): כשמשהו נכשל באפליקציה או בשרת, נשלחים פרטים טכניים על השגיאה. לפני השליחה מוסרים מהם מזהה המשתמש, כתובת ה-IP, מיילים, מספרי טלפון, מפתחות וכל טקסט בעברית (שמות, טיולים ופריטים). באתר נשלחים גם נתוני ביצועים מ-5% מהטעינות, ובאפליקציה לאנדרואיד מכל שימוש, מנוקים באותה דרך.',
         ],
       },
       {
@@ -86,7 +87,7 @@ export const policy: Record<'he' | 'en', Policy> = {
   },
   en: {
     title: 'Privacy policy',
-    updated: 'Updated: November 12, 2026',
+    updated: 'Updated: November 14, 2026',
     intro:
       "Yallist is a shared list for group trips: who brings what, shopping and expenses. This page says what we keep, why, and who sees it. In short: only what the app needs to work. No ads, no analytics, and we don't sell data.",
     sections: [
@@ -96,10 +97,11 @@ export const policy: Record<'he' | 'en', Policy> = {
           'Account: as a guest, only the name you choose. With Google sign-in, your name, email address and profile photo from Google, and your Google account ID.',
           'Profile: display name, color, a photo if you upload one, and a phone number for Bit or PayBox if you add one.',
           "Trips: the trips you create or join (name, dates, place, cover image), members and their roles, items and categories, who's bringing, bought or packed what, shopping runs, expenses and how they're split, payments between members, and a log of changes in the trip.",
+          "Location: if you choose to mark where you are as a trip's meeting point, the app reads your precise location once, with your permission, and saves it as the meeting point the trip's members see. It doesn't track you or read your location in the background.",
           'Photos: receipts you attach to expenses, and your profile photo.',
           'Feedback: if you send an idea or a bug report, its title, text, app version and platform.',
           'Sign-in: a session token, the IP address and the browser or device type, recorded when you sign in.',
-          'Error reports (Sentry): when something fails in the app or on the server, technical details of the error are sent. Before sending, they are stripped of your user ID, IP address, emails, phone numbers, tokens and all Hebrew text (names, trips and items). The website also sends performance data from 5% of page loads, scrubbed the same way.',
+          'Error reports (Sentry): when something fails in the app or on the server, technical details of the error are sent. Before sending, they are stripped of your user ID, IP address, emails, phone numbers, tokens and all Hebrew text (names, trips and items). The website also sends performance data from 5% of page loads, and the Android app from every session, scrubbed the same way.',
         ],
       },
       {
