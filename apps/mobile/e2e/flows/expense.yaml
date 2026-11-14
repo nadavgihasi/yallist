@@ -26,6 +26,12 @@ tags: [money]
 - assertVisible: Gas
 - assertVisible: .*120.*
 - tapOn:
+    id: money-part-settle
+- assertVisible: אין העברות פתוחות
+- assertNotVisible: Gas
+- tapOn:
+    id: money-part-expenses
+- tapOn:
     id: expense-row
 - assertVisible:
     id: expense-owed
@@ -38,7 +44,3 @@ tags: [money]
 - tapOn:
     id: expense-save
 - assertVisible: .*150.*
-- tapOn:
-    id: money-part-settle
-- assertVisible: אין העברות פתוחות
-- assertNotVisible: Gas
