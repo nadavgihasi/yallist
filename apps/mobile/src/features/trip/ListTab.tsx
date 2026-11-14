@@ -193,6 +193,12 @@ export function ListTab({
                     params: { tripId, itemId: item.id },
                   })
                 }
+                onOpenExpense={(expenseId) =>
+                  router.push({
+                    pathname: '/trips/[tripId]/expenses/[expenseId]',
+                    params: { tripId, expenseId },
+                  })
+                }
                 onClaim={(quantity) => act({ type: 'setClaim', itemId: item.id, quantity })}
                 onPack={(packed) => act({ type: 'setPacked', itemId: item.id, packed })}
                 accent={accentAt(index)}

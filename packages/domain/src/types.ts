@@ -87,6 +87,8 @@ export interface Expense {
   parts?: ExpensePart[];
   /** A receipt photo is attached (fetched separately, as a short-lived link). */
   hasReceipt?: boolean;
+  /** When it was added (ISO). From the API. */
+  createdAt?: string;
 }
 
 /** A part of an expense with its own participants; see `owedShares`. */

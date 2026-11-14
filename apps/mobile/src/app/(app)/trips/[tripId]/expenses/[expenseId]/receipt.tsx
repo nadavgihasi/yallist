@@ -1,6 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
 import { useLocalSearchParams } from 'expo-router';
-import { parseResponse } from 'hono/client';
 import { useEffect, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,11 +8,11 @@ import { PillButton } from '@/components/PillButton';
 import { Progress } from '@/components/Progress';
 import { Sheet } from '@/components/Sheet';
 import { useCloseSheet } from '@/features/trip/closeSheet';
+import { deriveTrip } from '@/features/trip/derive';
 import { ReceiptSources } from '@/features/trip/ReceiptField';
 import { he } from '@/i18n/he';
-import { api } from '@/lib/api';
 import { testId } from '@/lib/testId';
-import { uploadReceipt, useReceiptUpload } from '@/state/receipts';
+import { uploadReceipt, useReceiptLink, useReceiptUpload } from '@/state/receipts';
 import { useMe } from '@/state/store';
 import { useTrip, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
@@ -85,21 +83,9 @@ function Viewer({ data, expense }: { data: TripData; expense: Expense }) {
   const insets = useSafeAreaInsets();
   const [confirm, setConfirm] = useState(false);
   const close = useCloseSheet(tripId);
-  // The link expires after 5 minutes; fetch a fresh one before that.
-  const { data: link, isError } = useQuery({
-    queryKey: ['receipt', expense.id],
-    queryFn: () =>
-      parseResponse(
-        api.trips[':tripId'].expenses[':expenseId'].receipt.$get({
-          param: { tripId, expenseId: expense.id },
-        }),
-      ),
-    staleTime: 4 * 60_000,
-    gcTime: 4 * 60_000,
-  });
-  // As for deleting the expense: the API also lets whoever added it, but the app doesn't know who.
-  const organizer = data.members.find((m) => m.userId === me)?.role === 'organizer';
-  const mayDelete = expense.paidBy === me || organizer;
+  const { data: link, isError } = useReceiptLink(tripId, expense.id);
+  // As for the expense: whoever added it, whoever paid, or an organizer.
+  const mayDelete = deriveTrip(data, me).mayChange(expense);
 
   return (
     <View style={[styles.viewer, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>

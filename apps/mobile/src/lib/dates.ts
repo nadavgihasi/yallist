@@ -60,6 +60,14 @@ export function formatShort(iso: string): string {
   return `${WEEKDAYS[d.getDay()]}, ${d.getDate()}.${d.getMonth() + 1}`;
 }
 
+/** A moment (ISO timestamp) in local time: `חמישי, 12 בנובמבר · 21:40`. */
+export function formatMoment(iso: string): string {
+  const d = new Date(iso);
+  const day = toISODate(d);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${formatRange(day, day)} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 /** `אוגוסט` / `אוגוסט 2025` */
 export function monthName(iso: string): string {
   const d = parseDate(iso);

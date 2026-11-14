@@ -1,4 +1,4 @@
-# Add an expense from the money tab and see it listed, then fix its amount in place.
+# Add an expense from the money tab and see it listed, open it, then fix its amount in place.
 appId: app.yallist
 url: ${WEB_URL}
 # A video per flow, kept even when it fails (onFlowComplete always runs).
@@ -25,6 +25,10 @@ tags: [money]
 - assertVisible: Gas
 - assertVisible: .*120.*
 - tapOn:
+    id: expense-row
+- assertVisible:
+    id: expense-owed
+- tapOn:
     id: expense-edit
 - tapOn:
     id: expense-amount
@@ -32,5 +36,4 @@ tags: [money]
 - inputText: '150'
 - tapOn:
     id: expense-save
-- assertVisible: Gas
 - assertVisible: .*150.*

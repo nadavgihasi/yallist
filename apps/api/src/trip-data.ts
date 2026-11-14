@@ -80,6 +80,7 @@ export function toExpense(
     // Absent unless split in parts, as before parts existed.
     ...(parts.length > 0 && { parts }),
     hasReceipt: row.receiptPath !== null,
+    createdAt: row.createdAt.toISOString(),
   };
 }
 

@@ -1,4 +1,5 @@
 import {
+  formatShekel,
   bagItemFor,
   claimCap,
   packingStatus,
@@ -40,6 +41,7 @@ export function ItemRow({
   me,
   bag = [],
   onOpen,
+  onOpenExpense,
   onClaim,
   onPack,
   accent,
@@ -51,6 +53,8 @@ export function ItemRow({
   /** My bag: a bring item of the same name is marked, or offered, as mine. */
   bag?: readonly BagItem[];
   onOpen: () => void;
+  /** A bought item's price opens its purchase. */
+  onOpenExpense?: (expenseId: string) => void;
   onClaim: (quantity: number) => void;
   onPack: (packed: boolean) => void;
   /** Its category card's accent, for the item's icon. */
@@ -88,6 +92,19 @@ export function ItemRow({
         icon={mine ? <Icon name="check" size={16} color={colors.onPrimary} /> : undefined}
         accessibilityState={{ checked: mine > 0 }}
         onPress={() => onClaim(mine ? 0 : 1)}
+      />
+    );
+  } else if (status.kind === 'bought' && onOpenExpense) {
+    // The price, tappable: the purchase it's part of (who paid, each person's part, the receipt).
+    const { expense } = status;
+    action = (
+      <PillButton
+        label={formatShekel(expense.amountAgorot)}
+        variant="soft"
+        size="sm"
+        accessibilityLabel={he.expense.open(expense.description)}
+        {...testId('item-expense')}
+        onPress={() => onOpenExpense(expense.id)}
       />
     );
   } else if (item.kind === 'qty' && !bought) {

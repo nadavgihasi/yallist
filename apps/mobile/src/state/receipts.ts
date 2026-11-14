@@ -1,5 +1,6 @@
 import { SaveFormat, ImageManipulator } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import { useQuery } from '@tanstack/react-query';
 import { parseResponse } from 'hono/client';
 import { useSyncExternalStore } from 'react';
 import { Platform } from 'react-native';
@@ -123,3 +124,21 @@ export async function uploadReceipt(tripId: string, expenseId: string, uri: stri
   }
   return true;
 }
+
+/**
+ * A short-lived link to the expense's receipt photo, while `enabled` (it has one). The link
+ * expires after 5 minutes: a fresh one is fetched before that.
+ */
+export const useReceiptLink = (tripId: string, expenseId: string, enabled = true) =>
+  useQuery({
+    queryKey: ['receipt', expenseId],
+    queryFn: () =>
+      parseResponse(
+        api.trips[':tripId'].expenses[':expenseId'].receipt.$get({
+          param: { tripId, expenseId },
+        }),
+      ),
+    enabled,
+    staleTime: 4 * 60_000,
+    gcTime: 4 * 60_000,
+  });

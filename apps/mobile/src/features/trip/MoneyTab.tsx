@@ -1,7 +1,6 @@
 import { useIsMutating } from '@tanstack/react-query';
 import { formatShekel } from '@yallist/domain';
 import { router } from 'expo-router';
-import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
@@ -26,7 +25,6 @@ import { sharedText } from './runSplit';
 
 export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
   const act = useTripAction(data.trip.id);
-  const [confirmDelete, setConfirmDelete] = useState<string>();
   // Transfers come from the API: until it answers, a second tap would pay twice.
   const saving = useIsMutating({ mutationKey: tripKey(data.trip.id) }) > 0;
   const sum = (xs: { amountAgorot: number }[]) => xs.reduce((n, x) => n + x.amountAgorot, 0);
@@ -206,67 +204,36 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
       ) : (
         <ListGroup title={he.money.expenses} aside={he.money.total(formatShekel(view.totalSpent))}>
           {data.expenses.map((e) => (
-            // Two lines at phone width: what and who on the start, the amount over the actions
-            // on the end, so the description keeps the room.
+            // The row opens the expense; its receipt has its own button beside it.
             <RevealTarget key={e.id} id={expenseKey(e.id)}>
               <View style={styles.expense}>
-                <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
-                <View style={styles.expenseBody}>
-                  <Text style={styles.expenseWhat} numberOfLines={1}>
-                    {e.description}
-                  </Text>
-                  {/* A split in parts wraps: who shares each part is the point of it. */}
-                  <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
-                    {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </Text>
-                </View>
-                <View style={styles.expenseEnd}>
-                  <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
-                  <View style={styles.expenseActions}>
-                    <ReceiptButton tripId={data.trip.id} expense={e} />
-                    {view.mayChange(e) && (
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={he.money.editExpense}
-                        hitSlop={4}
-                        {...testId('expense-edit')}
-                        onPress={() =>
-                          router.push({
-                            pathname: '/trips/[tripId]/expenses/[expenseId]/edit',
-                            params: { tripId: data.trip.id, expenseId: e.id },
-                          })
-                        }
-                        style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.75 }]}
-                      >
-                        <Icon name="pencil" size={20} color={colors.primaryStrong} />
-                      </Pressable>
-                    )}
-                    {view.mayChange(e) &&
-                      (confirmDelete === e.id ? (
-                        <PillButton
-                          label={he.money.confirmDelete}
-                          variant="danger"
-                          size="sm"
-                          onPress={() => {
-                            act({ type: 'deleteExpense', expenseId: e.id });
-                            setConfirmDelete(undefined);
-                          }}
-                        />
-                      ) : (
-                        <Pressable
-                          accessibilityRole="button"
-                          accessibilityLabel={he.money.deleteExpense}
-                          hitSlop={4}
-                          onPress={() => setConfirmDelete(e.id)}
-                          style={({ pressed }) => [styles.iconButton, pressed && { opacity: 0.75 }]}
-                        >
-                          <Icon name="trash" size={20} color={colors.inkFaint} />
-                        </Pressable>
-                      ))}
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={he.expense.open(e.description)}
+                  {...testId('expense-row')}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/trips/[tripId]/expenses/[expenseId]',
+                      params: { tripId: data.trip.id, expenseId: e.id },
+                    })
+                  }
+                  style={({ pressed }) => [styles.expenseOpen, pressed && { opacity: 0.75 }]}
+                >
+                  <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
+                  <View style={styles.expenseBody}>
+                    <Text style={styles.expenseWhat} numberOfLines={1}>
+                      {e.description}
+                    </Text>
+                    {/* A split in parts wraps: who shares each part is the point of it. */}
+                    <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
+                      {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
                   </View>
-                </View>
+                  <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+                </Pressable>
+                <ReceiptButton tripId={data.trip.id} expense={e} />
               </View>
             </RevealTarget>
           ))}
@@ -371,16 +338,9 @@ const styles = StyleSheet.create({
   transferPerson: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
   transferName: { ...type.itemTitle, color: colors.ink, flexShrink: 1 },
   amount: { ...type.itemTitle, color: colors.ink },
-  expense: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
+  expense: { flexDirection: 'row', alignItems: 'center', gap: space[1], minHeight: space.touch },
+  expenseOpen: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[3] },
   expenseBody: { flex: 1, gap: space[1] },
-  expenseEnd: { alignItems: 'flex-end' },
-  expenseActions: { flexDirection: 'row', alignItems: 'center' },
-  iconButton: {
-    width: space.touch,
-    height: space.touch,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   expenseWhat: { ...type.itemTitle, color: colors.ink },
   expenseWho: { ...type.caption, color: colors.inkMuted },
 });
