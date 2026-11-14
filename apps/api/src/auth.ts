@@ -50,6 +50,15 @@ export function createAuth(db: Db, config: AuthConfig) {
     database: drizzleAdapter(db, { provider: 'pg', schema, usePlural: true }),
     advanced: { database: { generateId: 'uuid' } },
     socialProviders: { google: config.google },
+    account: {
+      accountLinking: {
+        // A person added to a trip by email (POST /trips/:id/members) is a user with that email
+        // and no way to sign in, its email unverified. Their first Google sign-in with it links
+        // to that user, so they find what they were added to. Safe because there are no
+        // passwords: the only users with a real email are Google's, verified, and those.
+        requireLocalEmailVerified: false,
+      },
+    },
     databaseHooks: {
       user: {
         create: {

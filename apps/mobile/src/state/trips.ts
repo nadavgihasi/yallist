@@ -115,6 +115,22 @@ export function useExitTrip(tripId: string) {
   });
 }
 
+/**
+ * Adds a person to the trip by name and email, so expenses can be split with them before they
+ * sign in. Not optimistic: their user id comes from the API. Refetches the trip once added.
+ */
+export function useAddPerson(tripId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: [...tripKey(tripId), 'addPerson'],
+    mutationFn: (json: { displayName: string; email: string }) =>
+      parseResponse(api.trips[':tripId'].members.$post({ param: { tripId }, json })),
+    onSuccess: (_, { displayName }) => showToast(he.addPerson.added(displayName)),
+    onError: () => showToast(he.errors.failed, 'error'),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: tripKey(tripId) }),
+  });
+}
+
 export const useInvite = (token: string) =>
   useQuery({
     queryKey: ['invite', token],
