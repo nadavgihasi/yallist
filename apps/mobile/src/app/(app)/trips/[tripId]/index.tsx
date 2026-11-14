@@ -25,6 +25,7 @@ import { deriveTrip, toAvatar } from '@/features/trip/derive';
 import { JoinedPrompt } from '@/features/trip/JoinedPrompt';
 import { ListTab } from '@/features/trip/ListTab';
 import { MoneyTab } from '@/features/trip/MoneyTab';
+import { bringPart, moneyPart, myItems, partOf, sharedItems } from '@/features/trip/parts';
 import { PeopleTab } from '@/features/trip/PeopleTab';
 import { pinOffset, tabsMinHeight } from '@/features/trip/pin';
 import { ReadinessHero } from '@/features/trip/ReadinessHero';
@@ -62,6 +63,8 @@ export default function TripScreen() {
   const params = useLocalSearchParams<{
     tripId: string;
     tab?: string;
+    /** The view inside the tab (`features/trip/parts.ts`): `mine`, `settle`. */
+    part?: string;
     itemId?: string;
     list?: string;
     categoryId?: string;
@@ -79,7 +82,15 @@ export default function TripScreen() {
   const desktop = bp === 'desktop';
   // The tab lives in the URL (`?tab=buy`) so reload and Back keep it.
   const tab: Tab = TABS.find((t) => t === params.tab) ?? 'bring';
-  const setTab = (next: Tab) => router.setParams({ tab: next });
+  // A tab opens on its first view unless told which.
+  const setTab = (next: Tab, part?: string) => router.setParams({ tab: next, part });
+  // The view inside the tab, also in the URL; each tab reads its own.
+  const bringView = bringPart(params.part);
+  const moneyView = moneyPart(params.part);
+  const setPart = (next: string) => {
+    router.setParams({ part: next });
+    setFilter('all');
+  };
   // Lifted from ListTab, so the hero's "missing" button can open a list already filtered.
   const [filter, setFilter] = useState<ListFilter>('all');
   const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -151,14 +162,27 @@ export default function TripScreen() {
     const target = reveal && revealTarget(reveal, data);
     if (!target) return;
     clearReveal();
-    if (target.tab !== tab) setTab(target.tab);
     const item = data.items.find((i) => i.id === target.itemId);
-    if (target.tab !== tab || (item && filter !== 'all')) {
+    // The view it shows in: my list keeps what's on it, the rest goes where it lives.
+    const part =
+      target.tab === 'money'
+        ? 'expenses'
+        : target.tab === 'bring' && item
+          ? tab === 'bring' &&
+            bringView === 'mine' &&
+            myItems([item], data.claims, me.userId).length > 0
+            ? 'mine'
+            : partOf(item)
+          : undefined;
+    const current = tab === 'money' ? moneyView : tab === 'bring' ? bringView : undefined;
+    const moved = target.tab !== tab || part !== current;
+    if (moved) setTab(target.tab, part);
+    if (moved || (item && filter !== 'all')) {
       const ids = deriveTrip(data, me.userId).activeIds;
       const hidden =
         item &&
         filterItems([item], filter, data.claims, data.expenses, ids, me.userId).length === 0;
-      if (target.tab !== tab || hidden) setFilter('all');
+      if (moved || hidden) setFilter('all');
     }
     setFlashing(target.key);
     // `tab` and `filter` are read, not watched: changing them shouldn't show the row again.
@@ -248,14 +272,28 @@ export default function TripScreen() {
       me={me.userId}
       now={now}
       onMissing={() => {
-        setTab(view.missingIn('bring') >= view.missingIn('buy') ? 'bring' : 'buy');
-        setFilter('missing');
+        if (view.missingIn('bring') >= view.missingIn('buy')) {
+          // Only "each" items missing: they're on my list, which has no filters.
+          const shared = sharedItems(view.items.filter((i) => i.list === 'bring'));
+          const sharedMissing = shared.some((i) => !view.done(i));
+          setTab('bring', sharedMissing ? 'shared' : 'mine');
+          setFilter(sharedMissing ? 'missing' : 'all');
+        } else {
+          setTab('buy');
+          setFilter('missing');
+        }
         focusList();
       }}
       onMine={() => {
         const mineIn = (l: 'bring' | 'buy') => view.mine.filter((i) => i.list === l).length;
-        setTab(mineIn('bring') >= mineIn('buy') ? 'bring' : 'buy');
-        setFilter('mine');
+        if (mineIn('bring') >= mineIn('buy')) {
+          // My own list is the bring list's "mine".
+          setTab('bring', 'mine');
+          setFilter('all');
+        } else {
+          setTab('buy');
+          setFilter('mine');
+        }
         focusList();
       }}
       onInvite={invite}
@@ -268,7 +306,15 @@ export default function TripScreen() {
       : tab === 'money'
         ? () => router.push({ pathname: '/trips/[tripId]/expenses/new', params: { tripId } })
         : () =>
-            router.push({ pathname: '/trips/[tripId]/items/new', params: { tripId, list: tab } });
+            router.push({
+              pathname: '/trips/[tripId]/items/new',
+              // From my own list, a new item starts as "everyone brings their own".
+              params: {
+                tripId,
+                list: tab,
+                ...(tab === 'bring' && bringView === 'mine' && { kind: 'each' }),
+              },
+            });
 
   const goBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
   // Its own id in the pinned bar, which shows while the cover's copy is still on the page.
@@ -447,23 +493,34 @@ export default function TripScreen() {
                 <ListTab
                   key={tab}
                   list={tab}
+                  part={tab === 'bring' ? bringView : undefined}
                   data={data}
                   view={view}
                   me={me.userId}
                   filter={filter}
                   onFilter={setFilter}
+                  onPart={tab === 'bring' ? setPart : undefined}
                 />
               )}
               {tab === 'people' && (
                 <PeopleTab data={data} view={view} me={me.userId} onInvite={invite} />
               )}
-              {tab === 'money' && <MoneyTab data={data} view={view} me={me.userId} />}
+              {tab === 'money' && (
+                <MoneyTab
+                  data={data}
+                  view={view}
+                  me={me.userId}
+                  part={moneyView}
+                  onPart={setPart}
+                />
+              )}
             </RevealProvider>
           </View>
           {desktop && (
             <View style={[styles.side, sticky]}>
               {hero}
-              {view.totalSpent > 0 && tab !== 'money' && (
+              {/* Beside the expenses too: that view has no balance of its own. */}
+              {view.totalSpent > 0 && (tab !== 'money' || moneyView === 'expenses') && (
                 <Card gap={space[1]}>
                   <Text style={styles.sideTitle}>{he.trip.tabs.money}</Text>
                   <Text style={styles.caption}>

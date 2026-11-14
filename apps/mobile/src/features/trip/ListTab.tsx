@@ -2,6 +2,7 @@ import {
   QUICK_SUGGESTIONS,
   filterItems,
   listProgress,
+  type Item,
   type ListFilter,
   type ListKind,
 } from '@yallist/domain';
@@ -9,6 +10,7 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FilterChip, SuggestionChip } from '@/components/Chips';
+import { SubTabs } from '@/components/Controls';
 import { EmptyState } from '@/components/EmptyState';
 import { Icon } from '@/components/Icon';
 import { Card } from '@/components/ListGroup';
@@ -29,25 +31,36 @@ import { ItemRow } from './ItemRow';
 import { itemKey } from './reveal';
 import { RevealTarget } from './RevealTarget';
 import { groupSummary } from './labels';
+import { BRING_PARTS, myItems, myPackedCount, sharedItems, type BringPart } from './parts';
 import { ShopBanner } from './ShopBanner';
 
 const FILTERS: ListFilter[] = ['all', 'missing', 'mine'];
+/** The shared equipment has no "אצלי": my own list is the view beside it. */
+const SHARED_FILTERS: ListFilter[] = ['all', 'missing'];
 
-/** One list (bring or buy) by category. The trip screen owns `filter`, so the hero can set it. */
+/**
+ * One list (bring or buy) by category. The bring list has two views (`part`): what the group
+ * shares, and my own list, every "each" item and the shared ones I took, to pack. The trip
+ * screen owns `filter` and `part`, so the hero can set them.
+ */
 export function ListTab({
   list,
+  part = 'shared',
   data,
   view,
   me,
-  filter,
+  filter: listFilter,
   onFilter,
+  onPart,
 }: {
   list: ListKind;
+  part?: BringPart;
   data: TripData;
   view: TripView;
   me: string;
   filter: ListFilter;
   onFilter: (filter: ListFilter) => void;
+  onPart?: (part: BringPart) => void;
 }) {
   const tripId = data.trip.id;
   const act = useTripAction(tripId);
@@ -56,29 +69,40 @@ export function ListTab({
   // Phone and tablet: a little tighter, as the trip screen around it, so the list starts higher.
   const tight = useBreakpoint() !== 'desktop';
   const listItems = view.items.filter((i) => i.list === list);
+  const bring = list === 'bring';
+  const mineView = bring && part === 'mine';
+  const shared = sharedItems(listItems);
+  const mine = myItems(listItems, data.claims, me);
+  // What this view lists, before its filter.
+  const scope = !bring ? listItems : mineView ? mine : shared;
+  // My list is short and all mine: no filters. A filter the view lacks shows everything.
+  const filters = mineView ? [] : bring ? SHARED_FILTERS : FILTERS;
+  const filter = filters.includes(listFilter) ? listFilter : 'all';
   const shown = (f: ListFilter) =>
-    filterItems(listItems, f, data.claims, data.expenses, view.activeIds, me);
+    filterItems(scope, f, data.claims, data.expenses, view.activeIds, me);
   const visible = new Set(shown(filter).map((i) => i.id));
+  const sharedMissing = shared.filter((i) => !view.done(i)).length;
 
   // The list's categories in order, then uncategorized items. Empty categories show under "all",
-  // so there's somewhere to add the first item.
+  // so there's somewhere to add the first item; one with only another view's items doesn't.
   const categories = data.categories
     .filter((c) => c.list === list)
     .sort((a, b) => a.position - b.position);
   const known = new Set(categories.map((c) => c.id));
   const groups = [...categories, undefined]
     .map((category) => {
-      const all = listItems.filter((i) =>
-        category ? i.categoryId === category.id : !i.categoryId || !known.has(i.categoryId),
-      );
+      const inGroup = (i: Item) =>
+        category ? i.categoryId === category.id : !i.categoryId || !known.has(i.categoryId);
+      const all = scope.filter(inGroup);
       return {
         category,
+        empty: !listItems.some(inGroup),
         total: all.length,
         missing: all.filter((i) => !view.done(i)).length,
         items: all.filter((i) => visible.has(i.id)),
       };
     })
-    .filter((g) => g.items.length > 0 || (g.category && filter === 'all'));
+    .filter((g) => g.items.length > 0 || (g.category && g.empty && filter === 'all' && !mineView));
 
   const addItem = (categoryId: string) =>
     router.push({ pathname: '/trips/[tripId]/items/new', params: { tripId, list, categoryId } });
@@ -88,12 +112,34 @@ export function ListTab({
       params: { tripId, categoryId },
     });
 
-  const progress = list === 'bring' && listProgress(listItems, data.claims, view.activeIds);
+  const progress = bring && !mineView && listProgress(scope, data.claims, view.activeIds);
+  const packed = mineView ? myPackedCount(mine, data.claims, me) : 0;
+  // Adding goes on the shared view: my list only shows what's already there.
+  const adds = filter === 'all' && !mineView;
 
   return (
     <View style={[styles.wrap, tight && styles.wrapTight]}>
+      {bring && onPart && (
+        <SubTabs
+          options={BRING_PARTS.map((p) => ({
+            value: p,
+            label: he.trip.tabCount(he.trip.parts[p], (p === 'mine' ? mine : shared).length),
+          }))}
+          value={part}
+          onChange={onPart}
+          testID="trip-part"
+        />
+      )}
       {list === 'buy' && <ShopBanner data={data} view={view} me={me} />}
-      {list === 'bring' && <BagCards data={data} view={view} me={me} bag={bag} />}
+      {mineView && <BagCards data={data} view={view} me={me} bag={bag} />}
+      {mineView && mine.length > 0 && (
+        <View style={styles.progressWrap}>
+          <Text style={styles.progress} {...testId('mine-packed')}>
+            {he.trip.minePacked(packed, mine.length)}
+          </Text>
+          <Progress done={packed} total={mine.length} />
+        </View>
+      )}
       {progress && progress.total > 0 && (
         // Slim, not a card: the list starts right under it.
         <View style={styles.progressWrap}>
@@ -108,24 +154,44 @@ export function ListTab({
           <Progress done={progress.covered} total={progress.total} />
         </View>
       )}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filters}
-        accessibilityRole="radiogroup"
-      >
-        {FILTERS.map((f) => (
-          <FilterChip
-            key={f}
-            label={he.trip.filters[f]}
-            count={shown(f).length}
-            selected={filter === f}
-            onPress={() => onFilter(f)}
-          />
-        ))}
-      </ScrollView>
+      {filters.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filters}
+          accessibilityRole="radiogroup"
+        >
+          {filters.map((f) => (
+            <FilterChip
+              key={f}
+              label={he.trip.filters[f]}
+              count={shown(f).length}
+              selected={filter === f}
+              onPress={() => onFilter(f)}
+            />
+          ))}
+        </ScrollView>
+      )}
       {groups.length === 0 &&
-        (filter === 'all' ? (
+        (mineView ? (
+          <EmptyState
+            spot={data.trip.cover}
+            {...he.trip.empty.mineList}
+            actions={
+              sharedMissing > 0
+                ? [
+                    {
+                      label: he.trip.empty.toMissing,
+                      onPress: () => {
+                        onPart?.('shared');
+                        onFilter('missing');
+                      },
+                    },
+                  ]
+                : undefined
+            }
+          />
+        ) : filter === 'all' ? (
           // A new blank list: one tap adds a common item.
           <EmptyState {...he.trip.empty.all}>
             <View style={styles.chips}>
@@ -205,7 +271,7 @@ export function ListTab({
               />
             </RevealTarget>
           ))}
-          {category && filter === 'all' && (
+          {category && adds && (
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={he.trip.addToCategoryLabel(category.name)}
@@ -220,7 +286,7 @@ export function ListTab({
           )}
         </Card>
       ))}
-      {filter === 'all' && (
+      {adds && (
         <PillButton
           label={he.trip.addCategory}
           variant="card"

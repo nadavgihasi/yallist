@@ -1,4 +1,4 @@
-# An empty list offers one-tap suggestions; an empty "אצלי" filter points to what's missing.
+# An empty list offers one-tap suggestions; an empty "הרשימה שלי" points to what's missing.
 appId: app.yallist
 url: ${WEB_URL}
 # A video per flow, kept even when it fails (onFlowComplete always runs).
@@ -14,7 +14,8 @@ tags: [trip]
 # The bring list's first suggestion.
 - tapOn: מלקחיים
 - assertNotVisible: הרשימה ריקה
-- tapOn: אצלי.*
+- tapOn:
+    id: trip-part-mine
 - tapOn:
     id: empty-state-action
 # The "missing" filter, showing the item no one took yet.

@@ -1,4 +1,5 @@
 # Add an expense from the money tab and see it listed, open it, then fix its amount in place.
+# Alone on the trip, settling up has nothing to transfer.
 appId: app.yallist
 url: ${WEB_URL}
 # A video per flow, kept even when it fails (onFlowComplete always runs).
@@ -37,3 +38,7 @@ tags: [money]
 - tapOn:
     id: expense-save
 - assertVisible: .*150.*
+- tapOn:
+    id: money-part-settle
+- assertVisible: אין העברות פתוחות
+- assertNotVisible: Gas
