@@ -160,6 +160,10 @@ export const he = {
     back: 'חזרה לכל הטיולים',
     tabs: { bring: 'ציוד', buy: 'קניות', money: 'כסף', people: 'ניהול' },
     filters: { all: 'הכול', missing: 'חסר', mine: 'אצלי' },
+    /** The equipment tab's two views: what the group shares, then my own list. */
+    parts: { shared: 'משותף', mine: 'הרשימה שלי' },
+    /** My list's progress: `ארזת 3 מתוך 9`. */
+    minePacked: (packed: number, total: number) => `ארזת ${packed} מתוך ${total}`,
     allCovered: 'הכול מכוסה',
     coveredOf: (done: number, total: number) => `${done} מתוך ${total} כבר מכוסים`,
     claimBring: 'אני אביא',
@@ -179,6 +183,10 @@ export const he = {
       mine: { title: 'עוד לא לקחת כלום', text: 'בוחרים פריט חסר ולוחצים על ״אני אביא״.' },
       mineBuy: { title: 'עוד לא לקחת כלום', text: 'בוחרים פריט חסר ולוחצים על ״אני אקנה״.' },
       all: { title: 'הרשימה ריקה', text: 'מתחילים מהצעות או מוסיפים לבד.' },
+      mineList: {
+        title: 'הרשימה שלך ריקה',
+        text: 'כאן יופיע מה שכל אחד מביא לעצמו, ומה שלקחת מהציוד המשותף.',
+      },
       toMissing: 'מה עוד חסר',
     },
     uncategorized: 'ללא קטגוריה',
@@ -275,6 +283,8 @@ export const he = {
     buy: (n: number) => `${n} לקנייה`,
   },
   money: {
+    /** The money tab's two views: the expenses, then who pays whom. */
+    parts: { expenses: 'הוצאות', settle: 'התחשבנות' },
     payTo: (names: string) => `להעביר ל${names}`,
     paidTo: (names: string) => `שולם ל${names}`,
     nothingToPay: 'אין לך מה להעביר',

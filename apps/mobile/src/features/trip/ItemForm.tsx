@@ -53,6 +53,7 @@ export function ItemForm({
   item,
   list: initialList = 'bring',
   categoryId: initialCategory,
+  kind: initialKind = 'single',
   onSubmit,
   onOpen,
   onClose,
@@ -62,6 +63,8 @@ export function ItemForm({
   list?: ListKind;
   /** Preselected for a new item, e.g. when added from inside a category. */
   categoryId?: string;
+  /** Preselected for a new item, e.g. "each" when added from my own list. */
+  kind?: ItemKind;
   /** A promise keeps the sheet saving until it settles; a rejection shows on the name field. */
   onSubmit: (item: NewItemInput, claim: boolean, newCategory?: string) => Promise<void> | void;
   /** Opens an item the list already has, offered when the new one would be a duplicate. */
@@ -71,7 +74,7 @@ export function ItemForm({
   const data = useTrip(tripId);
   const [list, setList] = useState<ListKind>(item?.list ?? initialList);
   const [name, setName] = useState(item?.name ?? '');
-  const [kind, setKind] = useState<ItemKind>(item?.kind ?? 'single');
+  const [kind, setKind] = useState<ItemKind>(item?.kind ?? initialKind);
   const [qty, setQty] = useState(item?.kind === 'qty' ? item.quantityNeeded : 4);
   const [category, setCategory] = useState(item ? item.categoryId : initialCategory);
   const [newName, setNewName] = useState('');

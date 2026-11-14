@@ -60,6 +60,52 @@ export function SegmentedControl<T extends string>({
   );
 }
 
+/**
+ * The views inside a tab ("משותף" / "הרשימה שלי"): equal halves over a hairline, the selected
+ * one underlined. Lighter than the tabs above it and unlike the filter chips below it.
+ */
+export function SubTabs<T extends string>({
+  options,
+  value,
+  onChange,
+  testID,
+}: {
+  options: { value: T; label: string }[];
+  value: T;
+  onChange: (value: T) => void;
+  /** Each tab gets `<testID>-<value>`. */
+  testID?: string;
+}) {
+  return (
+    <View style={styles.subTrack} accessibilityRole="tablist">
+      {options.map((o) => {
+        const selected = o.value === value;
+        return (
+          <Pressable
+            key={o.value}
+            accessibilityRole="tab"
+            accessibilityState={{ selected }}
+            {...testId(testID && `${testID}-${o.value}`)}
+            onPress={() => onChange(o.value)}
+            style={(state: WebState) => [
+              styles.subTab,
+              selected && styles.subTabOn,
+              state.hovered && !selected && styles.switchHover,
+            ]}
+          >
+            <Text
+              style={[type.buttonSm, { color: selected ? colors.primaryStrong : colors.inkMuted }]}
+              numberOfLines={1}
+            >
+              {o.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
 /** On/off switch. Knob sits at the start when off and the end when on (RTL-aware via flex). */
 export function Switch({
   value,
@@ -113,6 +159,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   selected: { backgroundColor: colors.primary },
+  subTrack: { flexDirection: 'row', borderBottomWidth: 1, borderBottomColor: colors.line },
+  subTab: {
+    flex: 1,
+    minHeight: 44,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
+    marginBottom: -1,
+  },
+  subTabOn: { borderBottomColor: colors.primary },
   switchTrack: {
     width: 52,
     height: 32,

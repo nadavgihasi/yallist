@@ -1,4 +1,5 @@
-# "אצלי" lists every "each" item (everyone brings their own), before I mark that I have it.
+# My own list ("הרשימה שלי") has every "each" item (everyone brings their own), before I mark
+# that I have it; the shared list doesn't.
 appId: app.yallist
 url: ${WEB_URL}
 # A video per flow, kept even when it fails (onFlowComplete always runs).
@@ -18,8 +19,13 @@ tags: [items]
 - tapOn: לכל אחד.*
 - tapOn:
     id: item-form-save
+# Added from the shared list, it shows on my list, where it lives.
 - assertVisible: Sleeping bag
-- tapOn: אצלי.*
+- tapOn:
+    id: trip-part-shared
+- assertNotVisible: Sleeping bag
+- tapOn:
+    id: trip-part-mine
 - assertVisible: Sleeping bag
 - assertNotVisible:
     id: empty-state-action

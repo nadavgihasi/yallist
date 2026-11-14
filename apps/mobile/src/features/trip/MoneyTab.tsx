@@ -5,6 +5,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { Callout } from '@/components/Callout';
+import { SubTabs } from '@/components/Controls';
 import { EmptyState } from '@/components/EmptyState';
 import { Icon } from '@/components/Icon';
 import { Card, ListGroup } from '@/components/ListGroup';
@@ -18,12 +19,29 @@ import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
 import type { TripView } from './derive';
+import { MONEY_PARTS, type MoneyPart } from './parts';
 import { PayRow } from './PayRow';
 import { expenseKey } from './reveal';
 import { RevealTarget } from './RevealTarget';
 import { sharedText } from './runSplit';
 
-export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; me: string }) {
+/**
+ * The money tab, in two views (`part`): the expenses, and settling up (my number, who pays
+ * whom, the payments). The trip screen keeps the view in the URL.
+ */
+export function MoneyTab({
+  data,
+  view,
+  me,
+  part,
+  onPart,
+}: {
+  data: TripData;
+  view: TripView;
+  me: string;
+  part: MoneyPart;
+  onPart: (part: MoneyPart) => void;
+}) {
   const act = useTripAction(data.trip.id);
   // Transfers come from the API: until it answers, a second tap would pay twice.
   const saving = useIsMutating({ mutationKey: tripKey(data.trip.id) }) > 0;
@@ -59,8 +77,33 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
   const unmarkPaid = () =>
     myUnconfirmed.forEach((p) => act({ type: 'deletePayment', paymentId: p.id }));
 
+  const tabs = (
+    <SubTabs
+      options={MONEY_PARTS.map((p) => ({
+        value: p,
+        label:
+          p === 'expenses'
+            ? he.trip.tabCount(he.money.parts.expenses, data.expenses.length)
+            : he.money.parts.settle,
+      }))}
+      value={part}
+      onChange={onPart}
+      testID="money-part"
+    />
+  );
+
+  if (part === 'expenses') {
+    return (
+      <View style={styles.wrap}>
+        {tabs}
+        <Expenses data={data} view={view} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.wrap}>
+      {tabs}
       <Card gap={space[1]}>
         <Text style={styles.heroTitle}>{title}</Text>
         <Text style={styles.heroAmount}>{formatShekel(amount)}</Text>
@@ -116,7 +159,7 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
       )}
 
       {view.transfers.length === 0 ? (
-        // With no expenses yet, the empty expenses card below says it all.
+        // With no expenses yet, there's nothing to settle and nothing more to say.
         data.expenses.length > 0 && (
           <EmptyState title={he.money.settled} text={he.money.settledText} />
         )
@@ -181,65 +224,68 @@ export function MoneyTab({ data, view, me }: { data: TripData; view: TripView; m
           })}
         </ListGroup>
       )}
-
-      {data.expenses.length === 0 ? (
-        <>
-          <EmptyState
-            spot={data.trip.cover}
-            title={he.money.noExpenses}
-            text={he.money.noExpensesText}
-            actions={[
-              {
-                label: he.money.addExpense,
-                onPress: () =>
-                  router.push({
-                    pathname: '/trips/[tripId]/expenses/new',
-                    params: { tripId: data.trip.id },
-                  }),
-              },
-            ]}
-          />
-          <Callout title={he.states.tip} text={he.money.tip} />
-        </>
-      ) : (
-        <ListGroup title={he.money.expenses} aside={he.money.total(formatShekel(view.totalSpent))}>
-          {data.expenses.map((e) => (
-            // The row opens the expense; its receipt has its own button beside it.
-            <RevealTarget key={e.id} id={expenseKey(e.id)}>
-              <View style={styles.expense}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={he.expense.open(e.description)}
-                  {...testId('expense-row')}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/trips/[tripId]/expenses/[expenseId]',
-                      params: { tripId: data.trip.id, expenseId: e.id },
-                    })
-                  }
-                  style={({ pressed }) => [styles.expenseOpen, pressed && { opacity: 0.75 }]}
-                >
-                  <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
-                  <View style={styles.expenseBody}>
-                    <Text style={styles.expenseWhat} numberOfLines={1}>
-                      {e.description}
-                    </Text>
-                    {/* A split in parts wraps: who shares each part is the point of it. */}
-                    <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
-                      {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </Text>
-                  </View>
-                  <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
-                </Pressable>
-                <ReceiptButton tripId={data.trip.id} expense={e} />
-              </View>
-            </RevealTarget>
-          ))}
-        </ListGroup>
-      )}
     </View>
+  );
+}
+
+/** Every expense with the trip's total, or a way to add the first one. */
+function Expenses({ data, view }: { data: TripData; view: TripView }) {
+  return data.expenses.length === 0 ? (
+    <>
+      <EmptyState
+        spot={data.trip.cover}
+        title={he.money.noExpenses}
+        text={he.money.noExpensesText}
+        actions={[
+          {
+            label: he.money.addExpense,
+            onPress: () =>
+              router.push({
+                pathname: '/trips/[tripId]/expenses/new',
+                params: { tripId: data.trip.id },
+              }),
+          },
+        ]}
+      />
+      <Callout title={he.states.tip} text={he.money.tip} />
+    </>
+  ) : (
+    <ListGroup title={he.money.expenses} aside={he.money.total(formatShekel(view.totalSpent))}>
+      {data.expenses.map((e) => (
+        // The row opens the expense; its receipt has its own button beside it.
+        <RevealTarget key={e.id} id={expenseKey(e.id)}>
+          <View style={styles.expense}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={he.expense.open(e.description)}
+              {...testId('expense-row')}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/[tripId]/expenses/[expenseId]',
+                  params: { tripId: data.trip.id, expenseId: e.id },
+                })
+              }
+              style={({ pressed }) => [styles.expenseOpen, pressed && { opacity: 0.75 }]}
+            >
+              <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
+              <View style={styles.expenseBody}>
+                <Text style={styles.expenseWhat} numberOfLines={1}>
+                  {e.description}
+                </Text>
+                {/* A split in parts wraps: who shares each part is the point of it. */}
+                <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
+                  {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Text>
+              </View>
+              <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+            </Pressable>
+            <ReceiptButton tripId={data.trip.id} expense={e} />
+          </View>
+        </RevealTarget>
+      ))}
+    </ListGroup>
   );
 }
 

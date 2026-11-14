@@ -1,4 +1,4 @@
-import type { ListKind } from '@yallist/domain';
+import type { ItemKind, ListKind } from '@yallist/domain';
 import { onlineManager } from '@tanstack/react-query';
 import { router, useLocalSearchParams } from 'expo-router';
 
@@ -9,7 +9,13 @@ import { requestReveal } from '@/features/trip/reveal';
 import { awaitAnswer, useTripAction } from '@/state/trips';
 
 export default function AddItem() {
-  const params = useLocalSearchParams<{ tripId: string; list?: ListKind; categoryId?: string }>();
+  const params = useLocalSearchParams<{
+    tripId: string;
+    list?: ListKind;
+    categoryId?: string;
+    /** From my own list: `each`. */
+    kind?: ItemKind;
+  }>();
   const act = useTripAction(params.tripId);
   const close = useCloseSheet(params.tripId);
   return (
@@ -17,6 +23,7 @@ export default function AddItem() {
       tripId={params.tripId}
       list={params.list === 'buy' ? 'buy' : 'bring'}
       categoryId={params.categoryId}
+      kind={params.kind === 'each' ? 'each' : undefined}
       // Closes once saved: a failed save keeps the sheet, and what was typed, open.
       onSubmit={(item, claim, newCategory) => {
         // Back on the trip, its list scrolls to the new item and marks it.
