@@ -30,6 +30,16 @@ To keep runs short, `dev` builds (and the compile check on PRs) target arm64 pho
 
 `versionCode` is the workflow run number, so every run can be uploaded to Play. `versionName` is the latest release tag (see [releases.md](releases.md)).
 
+## Google sign-in
+
+The app asks Google, through Android's account picker ([`@react-native-google-signin/google-signin`](https://react-native-google-signin.github.io/)), for an ID token for the stage's **web** OAuth client (`EXPO_PUBLIC_GOOGLE_CLIENT_ID`), so the API verifies it as it does on web. Google only answers an app it knows: each key that signs an APK people install needs an OAuth client of type **Android** in the same Google Cloud project as the web clients (APIs & Services → Credentials → Create credentials → OAuth client ID → Android), with package `app.yallist` and the key's SHA-1. Dev and production builds share the package, so one set covers both stages. Without it, the button shows the sign-in error toast and Sentry gets a `DEVELOPER_ERROR`.
+
+| Key                                    | Signs                                | SHA-1                                                                                                                       |
+| -------------------------------------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
+| Upload key (`~/.yallist-keys/`)        | CI's APKs, once the secrets are set  | `openssl x509 -in ~/.yallist-keys/upload-cert.pem -noout -fingerprint -sha1`                                                |
+| Play App Signing key                   | Installs from Play                   | Play Console → Test and release → App integrity → App signing key certificate                                               |
+| Debug key (`expo prebuild`'s template) | CI's APKs without the secrets, local | `keytool -list -v -keystore apps/mobile/android/app/debug.keystore -storepass android` after `npx expo prebuild -p android` |
+
 ## Play Console setup (after Google verifies the account)
 
 The listing text, graphics and the answers to every App content form are in [play-store/](play-store/README.md), step by step.
@@ -39,6 +49,7 @@ The listing text, graphics and the answers to every App content form are in [pla
 - [ ] Create app: name Yallist, default language Hebrew (he-IL), App, Free.
 - [ ] Package name `app.yallist` (permanent; set by the first upload).
 - [ ] Testing → Internal testing → create release, upload `app-release.aab`, accept Play App Signing (our key stays the upload key only).
+- [ ] Register the Play App Signing key's SHA-1 for Google sign-in ([above](#google-sign-in)).
 - [ ] Add testers (email list), open the opt-in link on the phone, install from Play.
 - [ ] App content: privacy policy URL, data safety form, content rating questionnaire, target audience, ads declaration.
 - [ ] Store listing: short/full description, 512×512 icon, 1024×500 feature graphic, 2+ phone screenshots.
