@@ -59,7 +59,6 @@ export const he = {
     starting: 'נכנסים…',
     otherWays: 'דרכים אחרות להיכנס',
     google: 'המשך עם Google',
-    googleSoon: 'כניסה עם Google בקרוב',
     privacy: 'מדיניות פרטיות',
   },
   dates: {
