@@ -32,12 +32,26 @@ claims=$(jq -cn --arg iss "$client_email" --argjson iat "$now" '{
   aud: "https://oauth2.googleapis.com/token"
 }' | b64url)
 signature=$(printf '%s.%s' "$header" "$claims" | openssl dgst -sha256 -sign "$key_file" | b64url)
-token=$(curl -fsS https://oauth2.googleapis.com/token \
+# curl with Google's explanation on an error (e.g. "version code already used"): the response is
+# printed only on success, so a failure's body would otherwise vanish into jq.
+request() {
+  local out
+  out=$(mktemp)
+  if ! curl -sS --fail-with-body -o "$out" "$@"; then
+    echo "::error::Google API: $(jq -r '.error.message // .error_description // .error // empty' "$out" 2>/dev/null)" >&2
+    cat "$out" >&2
+    rm -f "$out"
+    exit 1
+  fi
+  cat "$out"
+  rm -f "$out"
+}
+
+token=$(request https://oauth2.googleapis.com/token \
   --data-urlencode grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer \
   --data-urlencode "assertion=$header.$claims.$signature" | jq -r .access_token)
 
-# --fail-with-body: on an error, print Google's explanation (e.g. "version code already used").
-call() { curl -sS --fail-with-body -H "Authorization: Bearer $token" "$@"; }
+call() { request -H "Authorization: Bearer $token" "$@"; }
 
 edit=$(call -X POST "$api/edits" | jq -r .id)
 echo "Uploading $aab..."
