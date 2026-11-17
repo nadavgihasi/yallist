@@ -138,17 +138,29 @@ jobs:
       SENTRY_ORG: ${{ vars.SENTRY_ORG }}
     steps: *deploy
 
-  # Tags main and creates the GitHub release only once production has it (docs/releases.md).
+  # Tags main and creates the GitHub release only once production has it (docs/releases.md), then
+  # starts the Android build that publishes that version to Google Play (docs/android.md). The
+  # build is its own run so its ~30 minutes don't hold the deploy queue.
   release:
     needs: [production]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
       contents: write
+      actions: write # dispatch android.yml
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - run: scripts/release.sh --publish
+      - id: release
+        run: scripts/release.sh --publish
         env:
           GH_TOKEN: ${{ github.token }}
+      - name: Publish v${{ steps.release.outputs.version }} to Google Play
+        if: steps.release.outputs.released == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.release.outputs.version }}
+        run: |
+          gh workflow run android.yml --ref main -f stage=production -f publish=true -f ref="$TAG"
+          echo "Android build for $TAG started: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/workflows/android.yml" >> "$GITHUB_STEP_SUMMARY"

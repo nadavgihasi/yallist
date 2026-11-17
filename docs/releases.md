@@ -14,7 +14,7 @@ The `version` job only computes the number, for the builds. After production dep
 ## Where the version goes
 
 - **Web:** the `dev` and `production` deploys get it as `APP_VERSION`. [app.config.ts](../apps/mobile/app.config.ts) puts it into the Expo config.
-- **Android:** [android.yml](../.github/workflows/android.yml) uses the latest tag as `versionName`; `versionCode` stays the run number.
+- **Android:** each new release starts [android.yml](../.github/workflows/android.yml) for its tag, which builds it and publishes it to Google Play ([android.md](android.md#publishing-to-google-play)). The tag is the `versionName`; `versionCode` is the run number.
 - **In the app:** the home and login screens show `גרסה X.Y.Z · <short sha>`, plus `· dev` on the dev stage. Local builds show `0.0.0-dev · dev`.
 
 A failed deploy creates no release. The next successful push to `main` releases its commits together with the failed one's, so the version may bump once for both.

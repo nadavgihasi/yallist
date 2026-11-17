@@ -24,11 +24,43 @@ gh variable set EXPO_PUBLIC_WEB_URL --env production --body https://dbnrgj1er7zs
 The run's artifact `yallist-android-<stage>-<run>` contains:
 
 - `app-release.apk`: sideload until Play is ready. Download the artifact from the run page and unzip it (or `gh run download <run-id>`), copy the APK to the phone, open it and allow "install unknown apps" for the browser/file manager.
-- `app-release.aab` (`production` only): upload to Play Console → Testing → Internal testing.
+- `app-release.aab` (`production` only): what Play takes; publishing runs upload it themselves ([below](#publishing-to-google-play)).
 
 To keep runs short, `dev` builds (and the compile check on PRs) target arm64 phones only (`arm64-v8a`, every Android phone from the last ~8 years) and skip lint; their APK won't install on 32-bit phones or x86 emulators. `production` builds every ABI (`armeabi-v7a`, `arm64-v8a`, `x86`, `x86_64`) and runs lint, so the Play bundle reaches every device. Compiled C++ is cached with ccache between runs.
 
 `versionCode` is the workflow run number, so every run can be uploaded to Play. `versionName` is the latest release tag (see [releases.md](releases.md)).
+
+## Publishing to Google Play
+
+Every new version goes to Play by itself. When the `release` job in [deploy.yml](../.github/workflows/deploy.yml) tags a release (see [releases.md](releases.md)), it starts **Android build** for that tag with stage `production` and `publish` on. The run builds the signed AAB and [scripts/play-upload.sh](../scripts/play-upload.sh) uploads it through the Play Developer API and rolls it out on the configured track. Pushes that don't bump the version (`docs:`, `chore:`…) release nothing. The run's summary names the track and version code.
+
+To publish by hand (e.g. retry a failed upload): `gh workflow run android.yml --ref main -f stage=production -f publish=true -f ref=v1.2.3`.
+
+Setup, once:
+
+1. Upload the first AAB by hand (Play's API can't create an app; see [Play Console setup](#play-console-setup-after-google-verifies-the-account)).
+2. Google Cloud console, in any project → IAM & Admin → Service accounts → Create (e.g. `play-publisher`), no roles → Keys → Add key → JSON. Enable the **Google Play Android Developer API** in that project.
+3. Play Console → Users and permissions → Invite new users → the service account's email → App permissions: Yallist → **Release apps to testing tracks** and **Release to production, exclude devices, and use Play App Signing** → Invite.
+4. Store the key on the production environment, then delete the file:
+
+   ```sh
+   gh secret set PLAY_SERVICE_ACCOUNT_JSON --env production < play-publisher.json
+   ```
+
+5. Pick the track (production environment variables):
+
+   | Variable              | Values                                                                 | Default     |
+   | --------------------- | ---------------------------------------------------------------------- | ----------- |
+   | `PLAY_TRACK`          | `internal`, `alpha` (closed testing), `beta` (open), `production`      | `internal`  |
+   | `PLAY_RELEASE_STATUS` | `completed` (roll out), `draft` (until the app's first review is done) | `completed` |
+
+   Start with `internal`; Play's personal accounts need 14 days of closed testing before production access. Once production access is granted, every version goes to the store:
+
+   ```sh
+   gh variable set PLAY_TRACK --env production --body production
+   ```
+
+A publishing run fails early, before building, without the upload key or `PLAY_SERVICE_ACCOUNT_JSON`. Production releases still pass Google's review before users get them.
 
 ## Google sign-in
 
@@ -54,4 +86,6 @@ The listing text, graphics and the answers to every App content form are in [pla
 - [ ] App content: privacy policy URL, data safety form, content rating questionnaire, target audience, ads declaration.
 - [ ] Store listing: short/full description, 512×512 icon, 1024×500 feature graphic, 2+ phone screenshots.
 - [ ] Closed testing with 12+ testers for 14 consecutive days (required for personal accounts before production).
-- [ ] Apply for production access.
+- [ ] Automatic publishing: service account and `PLAY_SERVICE_ACCOUNT_JSON` ([above](#publishing-to-google-play)); from then on every version reaches the internal track.
+- [ ] Closed testing: `PLAY_TRACK=alpha`.
+- [ ] Apply for production access, then `PLAY_TRACK=production`.
