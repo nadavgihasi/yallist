@@ -2,7 +2,8 @@
 # CI (deploy.yml): pick the next version from Conventional Commit subjects since the last v* tag.
 # Without a feat/fix/perf since that tag, reuse its version. Writes version=X.Y.Z to $GITHUB_OUTPUT.
 # With --publish (after production deploys), also tag HEAD and create a GitHub release for it.
-# Needs full history (fetch-depth: 0); --publish needs GH_TOKEN.
+# Needs full history (fetch-depth: 0); --publish needs GH_TOKEN, and writes released=true when it
+# created a release (deploy.yml then publishes that version to Google Play).
 set -euo pipefail
 
 last=$(git describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || true)
@@ -28,5 +29,6 @@ fi
 
 if [[ "${1:-}" == --publish && "v$next" != "$last" ]]; then
   gh release create "v$next" --target "$(git rev-parse HEAD)" --title "v$next" --generate-notes
+  echo "released=true" >>"${GITHUB_OUTPUT:-/dev/stdout}"
 fi
 echo "version=$next" >>"${GITHUB_OUTPUT:-/dev/stdout}"

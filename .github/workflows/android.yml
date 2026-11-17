@@ -8,6 +8,14 @@ on:
         type: choice
         options: [dev, production]
         default: dev
+      publish:
+        description: Upload the AAB to Google Play (production only)
+        type: boolean
+        default: false
+      ref:
+        description: Tag or commit to build (default the branch's head)
+        type: string
+        default: ''
   # PRs call it from pr.yml when .github/workflows/android.yml, apps/mobile/plugins/**,
   # apps/mobile/app.json or apps/mobile/app.config.ts change.
   workflow_call:
@@ -21,9 +29,17 @@ on:
       # Not passed by pr.yml: only manual runs upload source maps.
       SENTRY_AUTH_TOKEN:
         required: false
+      # Production environment secret; only publishing runs use it (docs/android.md).
+      PLAY_SERVICE_ACCOUNT_JSON:
+        required: false
 
 permissions:
   contents: read
+
+# One upload to Play at a time; a second publish for the same version would be rejected anyway.
+concurrency:
+  group: android-${{ inputs.publish && 'publish' || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -33,14 +49,29 @@ jobs:
     # compile check, with no environment (environments accept main only) and so no backend.
     environment: ${{ inputs.stage }}
     steps:
+      # deploy.yml's release job dispatches publishing runs on main with ref set to the new tag:
+      # the job runs as main (environments accept main only) but builds exactly the release.
       - uses: actions/checkout@v7
         with:
+          ref: ${{ inputs.ref || github.sha }}
           fetch-depth: 0 # tags, for the version
       # versionName is the latest release (see docs/releases.md); versionCode is the run number.
       - name: Version from the latest release tag
         run: |
           tag=$(git describe --tags --abbrev=0 --match 'v[0-9]*' || echo v0.0.0)
           echo "APP_VERSION=${tag#v}" >> "$GITHUB_ENV"
+          echo "GIT_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+      # Only signed production bundles go to Play; fail before the 30-minute build, not after.
+      - name: Check publishing setup
+        if: inputs.publish
+        env:
+          STAGE: ${{ inputs.stage }}
+          HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+          HAS_PLAY_KEY: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON != '' }}
+        run: |
+          [ "$STAGE" = production ] || { echo "::error::Only production builds are published to Play."; exit 1; }
+          [ "$HAS_KEYSTORE" = true ] || { echo "::error::No upload key secrets; Play rejects debug-signed bundles (docs/android.md)."; exit 1; }
+          [ "$HAS_PLAY_KEY" = true ] || { echo "::error::Secret PLAY_SERVICE_ACCOUNT_JSON is not set on the production environment (docs/android.md)."; exit 1; }
       - uses: pnpm/action-setup@v6
       - uses: actions/setup-node@v7
         with:
@@ -113,7 +144,7 @@ jobs:
           EXPO_PUBLIC_REALTIME_URL: ${{ vars.EXPO_PUBLIC_REALTIME_URL }}
           EXPO_PUBLIC_GOOGLE_CLIENT_ID: ${{ vars.EXPO_PUBLIC_GOOGLE_CLIENT_ID }}
           EXPO_PUBLIC_WEB_URL: ${{ vars.EXPO_PUBLIC_WEB_URL }} # invite links
-          EXPO_PUBLIC_GIT_SHA: ${{ github.sha }}
+          EXPO_PUBLIC_GIT_SHA: ${{ env.GIT_SHA }}
           EXPO_PUBLIC_STAGE: ${{ inputs.stage }}
           EXPO_PUBLIC_SENTRY_DSN: ${{ vars.EXPO_PUBLIC_SENTRY_DSN }}
           # Source maps to Sentry, as the release and dist the app reports (src/lib/sentryOptions.ts).
@@ -124,7 +155,7 @@ jobs:
           SENTRY_PROJECT: yallist-app
           SENTRY_URL: https://sentry.io/
           SENTRY_RELEASE: yallist@${{ env.APP_VERSION }}
-          SENTRY_DIST: ${{ github.sha }}
+          SENTRY_DIST: ${{ env.GIT_SHA }}
         # Production builds are for Play: an AAB plus APK for every ABI. Dev and PR builds are for
         # phones: an arm64 APK only, without lint, which is a quarter of the native compilation.
         run: |
@@ -144,3 +175,11 @@ jobs:
             apps/mobile/android/app/build/outputs/bundle/release/app-release.aab
             apps/mobile/android/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+
+      - name: Publish to Google Play
+        if: inputs.publish
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PLAY_TRACK: ${{ vars.PLAY_TRACK }}
+          PLAY_RELEASE_STATUS: ${{ vars.PLAY_RELEASE_STATUS }}
+        run: scripts/play-upload.sh apps/mobile/android/app/build/outputs/bundle/release/app-release.aab "$APP_VERSION"
