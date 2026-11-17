@@ -7,18 +7,12 @@ import { Sheet } from '@/components/Sheet';
 import { showToast } from '@/components/Toast';
 import { useCloseSheet } from '@/features/trip/closeSheet';
 import { he } from '@/i18n/he';
-import { invitePayload, inviteUrl } from '@/lib/invite';
+import { invitePayload } from '@/lib/invite';
 import { inviteMessage } from '@/lib/share';
 import { testId } from '@/lib/testId';
+import { tripInviteUrl } from '@/lib/tripInviteUrl';
 import { useTrip } from '@/state/trips';
 import { colors, radius, space, type } from '@/theme';
-
-// The site invite links point to: this page's own on web, under its base path on a PR preview
-// (/pr-<n>); on native, the stage's site (android.yml) or the local Expo web server.
-const WEB_URL =
-  Platform.OS === 'web'
-    ? `${window.location.origin}${process.env.EXPO_BASE_URL ?? ''}`
-    : (process.env.EXPO_PUBLIC_WEB_URL ?? 'http://localhost:8081');
 
 /** Copies where the browser can (web); false where it can't. */
 async function copy(text: string) {
@@ -38,7 +32,7 @@ export default function Invite() {
   const data = useTrip(tripId);
   if (!data) return null;
 
-  const link = inviteUrl(WEB_URL, data.inviteToken);
+  const link = tripInviteUrl(data.inviteToken);
   const message = inviteMessage(data.trip, link);
 
   const share = async () => {

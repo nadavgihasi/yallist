@@ -11,6 +11,19 @@ export function inviteUrl(webOrigin: string, token: string): string {
 }
 
 /**
+ * The site invite links point to: on web, the page's own, under its base path on a PR preview
+ * (/pr-<n>); on native, the stage's site (`EXPO_PUBLIC_WEB_URL`, android.yml) or the local Expo
+ * web server. Never the app's own scheme: chat apps don't linkify `yallist://` links (#210).
+ */
+export function inviteOrigin(
+  os: string,
+  site: { pageOrigin?: string; basePath?: string; webUrl?: string },
+): string {
+  if (os === 'web') return `${site.pageOrigin ?? ''}${site.basePath ?? ''}`;
+  return site.webUrl ?? 'http://localhost:8081';
+}
+
+/**
  * The token of an opened invite link, without the bidi marks around the link in the invite
  * message (`ltr`): a linkifier that takes the closing U+2069 into the URL, as Android's does,
  * would otherwise open a link that isn't valid.

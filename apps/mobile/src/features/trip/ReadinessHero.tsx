@@ -9,6 +9,7 @@ import { firstNames, he, missingCount, openTransfers } from '@/i18n/he';
 import { countdown } from '@/lib/dates';
 import { missingMessage, openWhatsApp } from '@/lib/share';
 import { testId } from '@/lib/testId';
+import { tripInviteUrl } from '@/lib/tripInviteUrl';
 import type { TripData } from '@/state/types';
 import { colors, radius, size, space, type } from '@/theme';
 
@@ -124,8 +125,8 @@ export function ReadinessHero({
                 missingMessage(
                   trip,
                   missing,
-                  // On web, under the site's base path (/pr-<n> on a PR preview).
-                  Linking.createURL(`${process.env.EXPO_BASE_URL ?? ''}/j/${data.inviteToken}`),
+                  // The invite sheet's https link, not the app's own scheme (#210).
+                  tripInviteUrl(data.inviteToken),
                 ),
               )
             }
