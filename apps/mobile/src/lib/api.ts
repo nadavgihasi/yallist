@@ -1,5 +1,6 @@
 import type { AppType } from '@yallist/api/app';
 import { DetailedError, hc } from 'hono/client';
+import { Platform } from 'react-native';
 
 /** Set at build time by SST (`infra/app/core.ts`); locally, the dev API (`pnpm --filter @yallist/api dev`). */
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -36,6 +37,14 @@ export interface AuthResult {
 }
 
 /**
+ * Android's HTTP client keeps the session cookie Better Auth sets, and Better Auth refuses a
+ * request that carries a cookie but no Origin (403 MISSING_OR_NULL_ORIGIN): after the first
+ * sign-in, signing out or in with Google failed. The app's scheme is a trusted origin
+ * (apps/api/src/auth.ts). Browsers send their own Origin.
+ */
+const NATIVE_ORIGIN: Record<string, string> = Platform.OS === 'web' ? {} : { origin: 'yallist://' };
+
+/**
  * Better Auth's endpoints (`/api/auth/*`), which the typed client doesn't cover. Sent with the
  * current session, if any: a guest who signs in with Google this way links the account (the
  * API moves the guest's trips to it).
@@ -45,6 +54,7 @@ async function auth<T = AuthResult>(path: string, body: object): Promise<T> {
     method: 'POST',
     headers: {
       'content-type': 'application/json',
+      ...NATIVE_ORIGIN,
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
     body: JSON.stringify(body),
@@ -55,7 +65,7 @@ async function auth<T = AuthResult>(path: string, body: object): Promise<T> {
 
 export const signInAsGuest = (name: string) => auth('/sign-in/anonymous', { name });
 
-/** Exchanges a Google ID token (from Google Identity Services on web) for a session. */
+/** Exchanges a Google ID token (Google Identity Services on web, the account picker on Android) for a session. */
 export const signInWithGoogle = (idToken: string) =>
   auth('/sign-in/social', { provider: 'google', idToken: { token: idToken } });
 
