@@ -12,6 +12,7 @@ import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, joinNames } from '@/i18n/he';
+import { formatMoment } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useReceiptUpload } from '@/state/receipts';
 import { tripKey, useTripAction } from '@/state/trips';
@@ -50,32 +51,29 @@ export function MoneyTab({
 
   // The greedy matcher can split my debt across several people, so show all of it.
   const myOpen = view.transfers.filter((t) => t.from === me);
-  const myPaid = data.payments.filter((p) => p.fromUser === me);
   const toMe = view.transfers.filter((t) => t.to === me);
-  const myUnconfirmed = myPaid.filter((p) => p.status === 'marked');
+  const myPaid = data.payments.filter((p) => p.fromUser === me);
 
   let title: string = he.money.nothingToPay;
   let amount = 0;
   if (myOpen.length > 0) {
     title = he.money.payTo(names(myOpen.map((t) => t.to)));
     amount = sum(myOpen);
-  } else if (myPaid.length > 0) {
-    title = he.money.paidTo(names(myPaid.map((p) => p.toUser)));
-    amount = sum(myPaid);
   } else if (toMe.length > 0) {
     title = he.money.getFrom(names(toMe.map((t) => t.from)));
     amount = sum(toMe);
+  } else if (myPaid.length > 0) {
+    title = he.money.paidTo(names(myPaid.map((p) => p.toUser)));
+    amount = sum(myPaid);
   }
 
-  const markPaid = (toUser: string, amountAgorot: number) => {
-    act({ type: 'markPayment', toUser, amountAgorot });
-    showToast(he.money.markedToast(formatShekel(amountAgorot)), 'success');
+  // Anyone records any payment, and it counts at once: nobody confirms it.
+  const record = (fromUser: string, toUser: string, amountAgorot: number, toast: string) => {
+    act({ type: 'recordPayment', fromUser, toUser, amountAgorot });
+    showToast(toast, 'success');
   };
   // Owed money with nowhere to receive it: ask for a number once there's something to receive.
   const needsPhone = toMe.length > 0 && !view.memberById.get(me)?.paymentPhone;
-  // A payment the receiver already confirmed stays.
-  const unmarkPaid = () =>
-    myUnconfirmed.forEach((p) => act({ type: 'deletePayment', paymentId: p.id }));
 
   const tabs = (
     <SubTabs
@@ -122,30 +120,38 @@ export function MoneyTab({
                 transfer={t}
                 tripName={data.trip.name}
                 saving={saving}
-                onMark={(amountAgorot) => markPaid(t.to, amountAgorot)}
+                onMark={(amountAgorot) =>
+                  record(me, t.to, amountAgorot, he.money.markedToast(formatShekel(amountAgorot)))
+                }
               />
             ))}
           </View>
         ) : (
-          myPaid.length > 0 && (
-            <>
-              <View style={styles.heroStatus}>
-                <Icon name="check" size={18} color={colors.primaryStrong} />
-                <Text style={styles.heroText}>
-                  {myUnconfirmed.length > 0 ? he.money.waiting : he.money.received}
-                </Text>
-              </View>
-              {myUnconfirmed.length > 0 && (
+          toMe.length > 0 && (
+            <View style={styles.payRows}>
+              {toMe.map((t) => (
                 <PillButton
-                  label={he.money.unmark}
-                  variant="quiet"
-                  size="md"
+                  key={t.from}
+                  label={he.money.receivedFrom(
+                    formatShekel(t.amountAgorot),
+                    view.displayNameOf(t.from),
+                  )}
+                  size="lg"
                   wide
+                  icon={<Icon name="check" size={20} color={colors.onPrimary} />}
                   disabled={saving}
-                  onPress={unmarkPaid}
+                  onPress={() =>
+                    record(
+                      t.from,
+                      me,
+                      t.amountAgorot,
+                      he.money.receivedToast(formatShekel(t.amountAgorot)),
+                    )
+                  }
+                  {...testId(`received-${t.from}`)}
                 />
-              )}
-            </>
+              ))}
+            </View>
           )
         )}
       </Card>
@@ -166,62 +172,94 @@ export function MoneyTab({
       ) : (
         <ListGroup title={he.money.transfers}>
           {view.transfers.map((t) => (
-            <View key={`${t.from}-${t.to}`} style={styles.transfer}>
+            <View key={`${t.from}-${t.to}`} style={styles.transfer} {...testId('transfer')}>
               <FromTo view={view} from={t.from} to={t.to} />
-              <Text style={[styles.amount, t.from === me && { color: colors.brandStrong }]}>
-                {formatShekel(t.amountAgorot)}
-              </Text>
-              {/* Someone who left can't mark their payment, so the receiver records it. */}
-              {t.to === me && view.memberById.get(t.from)?.status === 'removed' && (
+              <View style={styles.transferEnd}>
+                <Text style={[styles.amount, t.from === me && { color: colors.brandStrong }]}>
+                  {formatShekel(t.amountAgorot)}
+                </Text>
                 <PillButton
-                  label={he.money.confirmReceived}
+                  label={he.money.transferPaid}
+                  accessibilityLabel={he.money.transferPaidLabel(
+                    view.displayNameOf(t.from),
+                    view.displayNameOf(t.to),
+                    formatShekel(t.amountAgorot),
+                  )}
+                  variant="soft"
                   size="sm"
                   disabled={saving}
                   onPress={() =>
-                    act({
-                      type: 'markPayment',
-                      fromUser: t.from,
-                      toUser: me,
-                      amountAgorot: t.amountAgorot,
-                    })
+                    record(
+                      t.from,
+                      t.to,
+                      t.amountAgorot,
+                      he.money.recordedToast(formatShekel(t.amountAgorot)),
+                    )
                   }
+                  {...testId('transfer-paid')}
                 />
-              )}
+              </View>
             </View>
           ))}
         </ListGroup>
       )}
 
+      {data.expenses.length > 0 && (
+        <View style={styles.recordOther}>
+          <PillButton
+            label={he.money.recordOther}
+            variant="soft"
+            wide
+            icon={<Icon name="plus" size={18} color={colors.primaryStrong} />}
+            onPress={() =>
+              router.push({
+                pathname: '/trips/[tripId]/payments/new',
+                params: { tripId: data.trip.id },
+              })
+            }
+            {...testId('payment-record')}
+          />
+          <Text style={styles.hint}>{he.money.recordHint}</Text>
+        </View>
+      )}
+
       {data.payments.length > 0 && (
         <ListGroup title={he.money.payments}>
-          {data.payments.map((p) => {
-            const waiting = p.status === 'marked';
-            // The receiver's button goes under the row: beside it, it left the names no room
-            // and the amount ran over the avatars.
-            return (
-              <View key={p.id} style={styles.payment}>
-                <View style={styles.transfer}>
-                  <FromTo view={view} from={p.fromUser} to={p.toUser} />
-                  <View style={styles.paymentEnd}>
-                    <Text style={styles.amount}>{formatShekel(p.amountAgorot)}</Text>
-                    <Text style={styles.expenseWho}>
-                      {waiting ? he.money.paymentWaiting : he.money.paymentConfirmed}
-                    </Text>
-                  </View>
-                </View>
-                {waiting && p.toUser === me && (
-                  <View style={styles.paymentEnd}>
-                    <PillButton
-                      label={he.money.confirmReceived}
-                      size="sm"
-                      disabled={saving}
-                      onPress={() => act({ type: 'confirmPayment', paymentId: p.id })}
-                    />
-                  </View>
-                )}
+          {[...data.payments].reverse().map((p) => (
+            <Pressable
+              key={p.id}
+              accessibilityRole="button"
+              accessibilityLabel={he.money.openPayment(
+                view.displayNameOf(p.fromUser),
+                view.displayNameOf(p.toUser),
+                formatShekel(p.amountAgorot),
+              )}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/[tripId]/payments/[paymentId]',
+                  params: { tripId: data.trip.id, paymentId: p.id },
+                })
+              }
+              style={({ pressed }) => [styles.payment, pressed && { opacity: 0.75 }]}
+              {...testId('payment-row')}
+            >
+              <View style={styles.transfer}>
+                <FromTo view={view} from={p.fromUser} to={p.toUser} />
+                <Text style={styles.amount}>{formatShekel(p.amountAgorot)}</Text>
               </View>
-            );
-          })}
+              <View style={styles.recorded}>
+                <Icon name="check" size={16} color={colors.brand} />
+                <Text style={styles.expenseWho}>
+                  {p.createdBy === me
+                    ? he.money.recordedByMe(formatMoment(p.createdAt))
+                    : he.money.recordedBy(
+                        view.displayNameOf(p.createdBy),
+                        formatMoment(p.createdAt),
+                      )}
+                </Text>
+              </View>
+            </Pressable>
+          ))}
         </ListGroup>
       )}
     </View>
@@ -376,9 +414,11 @@ const styles = StyleSheet.create({
   heroAmount: { ...type.bigNumber, color: colors.primaryStrong },
   heroText: { ...type.caption, color: colors.inkMuted },
   payRows: { gap: space[3], marginTop: space[3] },
-  heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },
-  paymentEnd: { alignItems: 'flex-end' },
   payment: { gap: space[1] },
+  recorded: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
+  transferEnd: { alignItems: 'flex-end', gap: space[1] },
+  recordOther: { gap: space[2] },
+  hint: { ...type.caption, color: colors.inkMuted, textAlign: 'center' },
   transfer: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: space.touch },
   transferWho: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
   transferPerson: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },

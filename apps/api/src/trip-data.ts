@@ -11,7 +11,7 @@ import {
   type Payment,
 } from '@yallist/domain';
 
-import type { expenses, items, tripCategories, trips } from './db/schema';
+import type { expenses, items, payments, tripCategories, trips } from './db/schema';
 
 // The shapes the app already works with (apps/mobile/src/state/types.ts, @yallist/domain).
 // Nullable columns become absent fields rather than nulls.
@@ -85,6 +85,16 @@ export function toExpense(
     createdAt: row.createdAt.toISOString(),
   };
 }
+
+export const toPayment = (row: typeof payments.$inferSelect): Payment => ({
+  id: row.id,
+  fromUser: row.fromUser,
+  toUser: row.toUser,
+  amountAgorot: row.amountAgorot,
+  // Before anyone could record a payment for others, the payer did.
+  createdBy: row.createdBy ?? row.fromUser,
+  createdAt: row.markedAt.toISOString(),
+});
 
 /** Who owes whom: balances (positive: the group owes them) and the transfers that settle them. */
 export function settleUp({

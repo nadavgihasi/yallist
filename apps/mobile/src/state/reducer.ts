@@ -62,10 +62,9 @@ export type Action =
   | { type: 'editExpense'; expenseId: string; changes: ExpenseChanges }
   | { type: 'deleteExpense'; expenseId: string }
   | { type: 'deleteReceipt'; expenseId: string }
-  /** `fromUser` (default: me) is for a former member's payment, which the receiver records. */
-  | { type: 'markPayment'; toUser: string; amountAgorot: number; fromUser?: string }
+  /** Anyone records that `fromUser` (default: me) paid `toUser`; it counts at once. */
+  | { type: 'recordPayment'; toUser: string; amountAgorot: number; fromUser?: string }
   | { type: 'deletePayment'; paymentId: string }
-  | { type: 'confirmPayment'; paymentId: string }
   | { type: 'approveMember' | 'declineMember' | 'removeMember'; userId: string }
   | { type: 'setCover'; cover: CoverId }
   | { type: 'editTrip'; name: string; startsOn: string; endsOn: string }
@@ -216,13 +215,6 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
       };
     case 'deletePayment':
       return { ...data, payments: data.payments.filter((p) => p.id !== action.paymentId) };
-    case 'confirmPayment':
-      return {
-        ...data,
-        payments: data.payments.map((p) =>
-          p.id === action.paymentId ? { ...p, status: 'confirmed' } : p,
-        ),
-      };
     case 'approveMember':
     case 'declineMember':
     case 'removeMember': {

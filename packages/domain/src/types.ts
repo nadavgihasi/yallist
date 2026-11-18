@@ -103,10 +103,14 @@ export interface ExpensePart {
   shares: string[];
 }
 
+/** A settle-up transfer. Anyone in the trip records one, and it counts as soon as it's recorded. */
 export interface Payment {
   id: string;
   fromUser: string;
   toUser: string;
   amountAgorot: number;
-  status: 'marked' | 'confirmed';
+  /** Who recorded it: the payer, the receiver or someone else in the trip. */
+  createdBy: string;
+  /** When it was recorded, ISO 8601. */
+  createdAt: string;
 }

@@ -429,7 +429,10 @@ export const shoppingRuns = pgTable(
   ],
 );
 
-/** A recorded settle-up transfer. */
+/**
+ * A recorded settle-up transfer. Any member records one, for any two people, and it counts at
+ * once: `status` is always `confirmed` for new rows (`marked` is from before, and counts the same).
+ */
 export const payments = pgTable(
   'payments',
   {
@@ -444,6 +447,8 @@ export const payments = pgTable(
     markedAt: timestamp('marked_at', { withTimezone: true }).notNull().defaultNow(),
     confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
     remindedAt: timestamp('reminded_at', { withTimezone: true }),
+    /** Who recorded it; null before anyone could record a payment but its payer. */
+    createdBy: userRef('created_by'),
   },
   (t) => [
     index('payments_trip_idx').on(t.tripId),

@@ -1,10 +1,9 @@
 import { formatShekel, linkedExpense, parseShekel, shekelInput } from '@yallist/domain';
 import { useRef, useState, type ComponentRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Avatar } from '@/components/Avatar';
 import { SuggestionChip } from '@/components/Chips';
-import { AmountField, TextField, fieldStyles } from '@/components/Fields';
+import { AmountField, TextField } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { showToast } from '@/components/Toast';
@@ -21,6 +20,7 @@ import { ReceiptField } from './ReceiptField';
 import { requestReveal } from './reveal';
 import { RunParts } from './RunParts';
 import { runSplit, type PartDraft } from './runSplit';
+import { PersonPicker } from './PersonPicker';
 import { SharePicker, useShares } from './SharePicker';
 
 type Expense = TripData['expenses'][number];
@@ -162,37 +162,13 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         )}
       </View>
 
-      <View style={styles.field}>
-        <Text style={fieldStyles.label}>{he.addExpense.paidBy}</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.payers}
-          accessibilityRole="radiogroup"
-          accessibilityLabel={he.addExpense.paidBy}
-        >
-          {payers.map((id) => {
-            const selected = id === payer;
-            return (
-              <Pressable
-                key={id}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                accessibilityLabel={view.nameOf(id)}
-                onPress={() => setPayer(id)}
-                style={styles.payer}
-              >
-                <View style={[styles.payerRing, selected ? styles.payerOn : { opacity: 0.55 }]}>
-                  <Avatar person={view.avatarOf(id)} size={52} ring={false} />
-                </View>
-                <Text style={[styles.payerName, selected && styles.payerNameOn]}>
-                  {view.nameOf(id)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
+      <PersonPicker
+        view={view}
+        ids={payers}
+        value={payer}
+        onChange={setPayer}
+        label={he.addExpense.paidBy}
+      />
 
       <SharePicker
         view={view}
@@ -248,12 +224,6 @@ const styles = StyleSheet.create({
   field: { gap: 10 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
-  payers: { gap: 10, paddingVertical: 4, paddingHorizontal: 2 },
-  payer: { minWidth: 56, alignItems: 'center', gap: 6 },
-  payerRing: { borderRadius: 30, padding: 3, borderWidth: 2, borderColor: 'transparent' },
-  payerOn: { borderColor: colors.primary },
-  payerName: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
-  payerNameOn: { fontFamily: fonts.bold, color: colors.ink },
   owed: { gap: space[1] },
   owedTitle: { ...type.itemTitle, color: colors.ink },
   owedRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3] },
