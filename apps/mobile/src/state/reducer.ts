@@ -30,11 +30,21 @@ export interface NewExpenseInput {
   paidBy: string;
   shares: string[];
   itemId?: string;
+  /** Amounts split between some people only; see `Expense.parts`. */
+  parts?: ExpensePart[];
+  /** How many shares of the rest each takes, when not 1; see `Expense.weights`. */
+  weights?: Record<string, number>;
 }
 
-/** A change to an expense: only the fields given change; `parts: []` drops its parts. */
+/**
+ * A change to an expense: only the fields given change; `parts: []` drops its parts, `weights: {}`
+ * its weights.
+ */
 export type ExpenseChanges = Partial<
-  Pick<Expense, 'description' | 'amountAgorot' | 'paidBy' | 'shares'> & { parts: ExpensePart[] }
+  Pick<Expense, 'description' | 'amountAgorot' | 'paidBy' | 'shares'> & {
+    parts: ExpensePart[];
+    weights: Record<string, number>;
+  }
 >;
 
 /** A change to a trip, sent to the API by `useTripAction`. */
@@ -192,16 +202,22 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
         ),
       };
     case 'editExpense': {
-      const { parts, ...fields } = action.changes;
+      const { parts, weights, ...fields } = action.changes;
       return {
         ...data,
         expenses: data.expenses.map((e) => {
           if (e.id !== action.expenseId) return e;
-          const edited = { ...e, ...fields };
-          if (parts === undefined) return edited;
-          // Absent unless split in parts, as the API sends it.
-          const { parts: _old, ...rest } = edited;
-          return parts.length > 0 ? { ...rest, parts } : rest;
+          let edited: Expense = { ...e, ...fields };
+          // Absent unless split in parts or by weight, as the API sends it.
+          if (parts !== undefined) {
+            const { parts: _old, ...rest } = edited;
+            edited = parts.length > 0 ? { ...rest, parts } : rest;
+          }
+          if (weights !== undefined) {
+            const { weights: _old, ...rest } = edited;
+            edited = Object.keys(weights).length > 0 ? { ...rest, weights } : rest;
+          }
+          return edited;
         }),
       };
     }

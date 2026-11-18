@@ -1,3 +1,4 @@
+import { MAX_WEIGHT } from '@yallist/domain';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -26,20 +27,35 @@ import { assertPartsFit, MAX_PARTS, part } from './runs';
 /** Agorot, positive; ₪1M is far beyond any trip and well inside a Postgres integer. */
 const agorot = z.int().min(1).max(100_000_000);
 
+/** By user id, 1 to MAX_WEIGHT; see `Expense.weights`. */
+const weights = z.record(z.uuid(), z.int().min(1).max(MAX_WEIGHT));
+
+/** Weights only for people who share the expense. */
+function assertWeightsFit(weightsIn: Record<string, number>, shares: string[]) {
+  if (!Object.keys(weightsIn).every((id) => shares.includes(id))) {
+    throw fail(400, 'Weights are for people who share the expense');
+  }
+}
+
 const addExpense = z.object({
   description: z.string().trim().min(1).max(80),
   amountAgorot: agorot,
   /** Defaults to the caller. */
   paidBy: z.uuid().optional(),
-  /** The active members it is split between, equally (SPEC §4). */
+  /** The active members it is split between: what any parts leave, by their weights. */
   shares: z.array(z.uuid()).min(1).max(100),
   /** A buy-list item this purchase covers; it then counts as bought. */
   itemId: z.uuid().optional(),
+  /** Amounts split between some of the trip only, as at a shopping run's checkout. */
+  parts: z.array(part).max(MAX_PARTS).optional(),
+  /** How many shares of the rest some of `shares` take; anyone else takes 1. */
+  weights: weights.optional(),
 });
 
 /**
- * A change to an expense: only the fields given change. `shares` and `parts` replace what it
- * had; `parts: []` drops its parts.
+ * A change to an expense: only the fields given change. `shares`, `weights` and `parts` replace
+ * what it had; `parts: []` drops its parts, `weights: {}` its weights. New `shares` without
+ * `weights` keep the weights of those still in.
  */
 const editExpense = z.object({
   description: z.string().trim().min(1).max(80).optional(),
@@ -47,6 +63,7 @@ const editExpense = z.object({
   paidBy: z.uuid().optional(),
   shares: z.array(z.uuid()).min(1).max(100).optional(),
   parts: z.array(part).max(MAX_PARTS).optional(),
+  weights: weights.optional(),
 });
 
 const tripParam = z.object({ tripId: z.uuid() });
@@ -75,14 +92,23 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
       validate('json', addExpense),
       async (c) => {
         const { tripId } = c.req.valid('param');
-        const { shares: shareIds, paidBy = c.var.user.id, ...input } = c.req.valid('json');
+        const {
+          shares: shareIds,
+          paidBy = c.var.user.id,
+          parts: partsIn = [],
+          weights: weightsIn = {},
+          ...input
+        } = c.req.valid('json');
         const me = c.var.user.id;
         const shares = [...new Set(shareIds)];
+        const parts = partsIn.map((p) => ({ ...p, shares: [...new Set(p.shares)] }));
+        assertWeightsFit(weightsIn, shares);
+        assertPartsFit(parts, input.amountAgorot);
         const expense = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
           const active = await activeUserIds(tx, tripId);
           if (!active.has(paidBy)) throw fail(400, 'paidBy is not an active member');
-          if (!shares.every((id) => active.has(id))) {
+          if (![...shares, ...parts.flatMap((p) => p.shares)].every((id) => active.has(id))) {
             throw fail(400, 'Every share must be an active member');
           }
           if (input.itemId) {
@@ -96,6 +122,8 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
             { ...input, tripId, paidBy, createdBy: me },
             shares,
             input.itemId ? [input.itemId] : [],
+            parts,
+            weightsIn,
           );
           await logActivity(tx, tripId, me, 'expense_added', {
             expenseId: created.id,
@@ -103,7 +131,17 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           });
           return created;
         });
-        return c.json(toExpense(expense, shares, expense.itemId ? [expense.itemId] : []), 201);
+        return c.json(
+          toExpense(
+            expense,
+            shares,
+            input.itemId ? [input.itemId] : [],
+            undefined,
+            parts,
+            weightsIn,
+          ),
+          201,
+        );
       },
     )
 
@@ -115,7 +153,12 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
       validate('json', editExpense),
       async (c) => {
         const { tripId, expenseId } = c.req.valid('param');
-        const { shares: shareIds, parts: partsIn, ...values } = c.req.valid('json');
+        const {
+          shares: shareIds,
+          parts: partsIn,
+          weights: weightsIn,
+          ...values
+        } = c.req.valid('json');
         const me = c.var.user.id;
         const shares = shareIds && [...new Set(shareIds)];
         const parts = partsIn?.map((p) => ({ ...p, shares: [...new Set(p.shares)] }));
@@ -135,8 +178,21 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           }
           const amountAgorot = values.amountAgorot ?? expense.amountAgorot;
           assertPartsFit(parts ?? before.parts, amountAgorot);
+          const nextShares = shares ?? before.shares;
+          const nextWeights =
+            weightsIn ??
+            Object.fromEntries(
+              Object.entries(before.weights).filter(([id]) => nextShares.includes(id)),
+            );
+          assertWeightsFit(nextWeights, nextShares);
+          // Weights live on the share rows: a change to either rewrites them.
+          const rewrite = shares !== undefined || weightsIn !== undefined;
 
-          const updated = await updateExpense(tx, expenseId, values, { shares, parts });
+          const updated = await updateExpense(tx, expenseId, values, {
+            shares: rewrite ? nextShares : undefined,
+            weights: nextWeights,
+            parts,
+          });
           await logActivity(tx, tripId, me, 'expense_edited', {
             expenseId,
             fromAgorot: expense.amountAgorot,
@@ -144,10 +200,11 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           });
           return toExpense(
             updated,
-            shares ?? before.shares,
+            nextShares,
             before.itemIds,
             before.itemCount,
             parts ?? before.parts,
+            nextWeights,
           );
         });
         return c.json(result);

@@ -313,6 +313,9 @@ export const he = {
     between: (names: string) => `בין ${names}`,
     part: (label: string, amount: string, names: string) => `${label} ${amount}: ${names}`,
     rest: (names: string) => `השאר: ${names}`,
+    /** An expense split by weight: `לפי משקל: דנה ×2, רון ×3`. */
+    byWeight: (who: string) => `לפי משקל: ${who}`,
+    weighted: (name: string, weight: number) => `${name} ×${weight}`,
     everyone: 'כולם',
   },
   /** Settling one debt (MoneyTab's pay rows): pay it in Bit or PayBox, then mark it. */
@@ -438,6 +441,14 @@ export const he = {
     needAmount: 'רושמים כמה זה עלה',
     needWhat: 'רושמים על מה',
     needShares: 'בוחרים לפחות משתתף אחד',
+    /** How the rest is split: equally, by weight, or with parts for some people only. */
+    splitHow: 'איך מחלקים?',
+    split: { equal: 'שווה', weights: 'לפי משקל', parts: 'חלקים' },
+    weightsHint: 'מי שהמשקל שלו 2 משלם פי שניים. למשל מבוגר 2 וילד 1, או זוג כ־2.',
+    weightLess: (name: string) => `פחות משקל ל${name}`,
+    weightMore: (name: string) => `יותר משקל ל${name}`,
+    /** `5 חלקים · ₪60 לחלק` */
+    weightsTotal: (n: number, per: string) => `${n} חלקים · ${per} לחלק`,
   },
   /** An expense's own screen: what it was, what each person's part is. */
   expense: {

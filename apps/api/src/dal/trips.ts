@@ -25,7 +25,7 @@ import type { ReceiptStore } from '../receipts';
 import { toCategory, toExpense, toItem, toTrip } from '../trip-data';
 import { bagClaims, bagMarks, bagRowsFor } from './bag';
 import { listCategories } from './categories';
-import { deleteParts } from './expenses';
+import { deleteParts, toWeights } from './expenses';
 
 export async function insertTrip(tx: Executor, values: typeof trips.$inferInsert) {
   const [trip] = await tx.insert(trips).values(values).returning();
@@ -158,7 +158,11 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
       .where(inArray(expenses.tripId, tripIds))
       .orderBy(asc(expenses.createdAt)),
     tx
-      .select({ expenseId: expenseShares.expenseId, userId: expenseShares.userId })
+      .select({
+        expenseId: expenseShares.expenseId,
+        userId: expenseShares.userId,
+        weight: expenseShares.weight,
+      })
       .from(expenseShares)
       .innerJoin(expenses, eq(expenses.id, expenseShares.expenseId))
       .where(inArray(expenses.tripId, tripIds)),
@@ -259,9 +263,10 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
       .filter((e) => e.tripId === trip.id)
       .map((e) => {
         const purchased = purchaseRows.filter((p) => p.expenseId === e.id);
+        const shares = shareRows.filter((s) => s.expenseId === e.id);
         return toExpense(
           e,
-          shareRows.filter((s) => s.expenseId === e.id).map((s) => s.userId),
+          shares.map((s) => s.userId),
           purchased.filter((p) => p.deletedAt === null).map((p) => p.itemId),
           purchased.length,
           partRows
@@ -271,6 +276,7 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
               amountAgorot: part.amountAgorot,
               shares: partShareRows.filter((s) => s.partId === part.id).map((s) => s.userId),
             })),
+          toWeights(shares),
         );
       }),
     payments: paymentRows

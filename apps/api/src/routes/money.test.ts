@@ -45,7 +45,14 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
   const addExpense = (
     user: Guest,
     tripId: string,
-    json: { amountAgorot: number; shares: string[]; paidBy?: string; itemId?: string },
+    json: {
+      amountAgorot: number;
+      shares: string[];
+      paidBy?: string;
+      itemId?: string;
+      parts?: { label: string; amountAgorot: number; shares: string[] }[];
+      weights?: Record<string, number>;
+    },
   ) =>
     client.trips[':tripId'].expenses.$post(
       { param: { tripId }, json: { description: 'פחמים', ...json } },
@@ -173,6 +180,7 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
       paidBy?: string;
       shares?: string[];
       parts?: { label: string; amountAgorot: number; shares: string[] }[];
+      weights?: Record<string, number>;
     },
   ) =>
     client.trips[':tripId'].expenses[':expenseId'].$patch(
@@ -279,6 +287,75 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
       200,
     );
     expect((await detail(a, tripId)).balances[b.id]).toBe(-1000);
+  });
+
+  it('splits a new expense by weight', async () => {
+    const { a, b, c, tripId } = await trip();
+    // ₪300 by 2, 2, 1: ₪120, ₪120, ₪60.
+    const res = await addExpense(a, tripId, {
+      amountAgorot: 30000,
+      shares: [a.id, b.id, c.id],
+      weights: { [a.id]: 2, [b.id]: 2 },
+    });
+    expect(res.status).toBe(201);
+    expect(await res.json()).toMatchObject({ weights: { [a.id]: 2, [b.id]: 2 } });
+    const after = await detail(c, tripId);
+    expect(after.expenses[0]!.weights).toEqual({ [a.id]: 2, [b.id]: 2 });
+    expect(after.balances).toMatchObject({ [a.id]: 18000, [b.id]: -12000, [c.id]: -6000 });
+
+    // Weights only for people who share it, and at most MAX_WEIGHT.
+    const bad = (weights: Record<string, number>) =>
+      addExpense(a, tripId, { amountAgorot: 100, shares: [a.id, b.id], weights }).then(
+        (r) => r.status,
+      );
+    expect(await bad({ [c.id]: 2 })).toBe(400);
+    expect(await bad({ [a.id]: 11 })).toBe(400);
+    expect(await bad({ [a.id]: 0 })).toBe(400);
+  });
+
+  it('splits a new expense in parts', async () => {
+    const { a, b, c, tripId } = await trip();
+    const wine = { label: 'יין', amountAgorot: 8000, shares: [a.id, b.id] };
+    const res = await addExpense(a, tripId, {
+      amountAgorot: 30000,
+      shares: [a.id, b.id, c.id],
+      parts: [wine],
+    });
+    expect(res.status).toBe(201);
+    const after = await detail(c, tripId);
+    expect(after.expenses[0]!.parts).toEqual([
+      { ...wine, shares: expect.arrayContaining(wine.shares) },
+    ]);
+    // ₪40 + ⅓ of ₪220 each for a and b, ⅓ of ₪220 for c.
+    // ₪220 doesn't divide by 3: one of them pays the extra agora.
+    expect([-7333, -7334]).toContain(after.balances[c.id]);
+    // Parts must leave something for the rest, and share between members only.
+    const over = { ...wine, amountAgorot: 30000 };
+    expect(
+      (await addExpense(a, tripId, { amountAgorot: 30000, shares: [a.id], parts: [over] })).status,
+    ).toBe(400);
+    const stranger = await signInAsGuest(app, 'stranger');
+    const outsider = { ...wine, shares: [stranger.id] };
+    expect(
+      (await addExpense(a, tripId, { amountAgorot: 30000, shares: [a.id], parts: [outsider] }))
+        .status,
+    ).toBe(400);
+  });
+
+  it('edits weights, and keeps them through other edits', async () => {
+    const { a, b, c, tripId } = await trip();
+    const { id } = await (
+      await addExpense(a, tripId, { amountAgorot: 30000, shares: [a.id, b.id, c.id] })
+    ).json();
+    expect((await edit(a, tripId, id, { weights: { [c.id]: 2 } })).status).toBe(200);
+    expect((await detail(a, tripId)).balances[c.id]).toBe(-15000);
+    // An amount-only edit keeps them.
+    expect((await edit(a, tripId, id, { amountAgorot: 40000 })).status).toBe(200);
+    expect((await detail(a, tripId)).expenses[0]!.weights).toEqual({ [c.id]: 2 });
+    // Dropping c from the shares drops c's weight.
+    expect((await edit(a, tripId, id, { shares: [a.id, b.id] })).status).toBe(200);
+    expect((await detail(a, tripId)).expenses[0]!.weights).toBeUndefined();
+    expect((await edit(a, tripId, id, { weights: { [c.id]: 2 } })).status).toBe(400);
   });
 
   it('edits the parts, and refuses parts that no longer fit under the total', async () => {

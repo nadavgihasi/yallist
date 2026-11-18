@@ -69,6 +69,8 @@ export function toExpense(
   /** Deleted items included: a run whose items were deleted is still a run. */
   itemCount = itemIds.length,
   parts: ExpensePart[] = [],
+  /** Weights other than 1, by user id. */
+  weights: Record<string, number> = {},
 ): Expense {
   return {
     id: row.id,
@@ -81,6 +83,7 @@ export function toExpense(
     shares,
     // Absent unless split in parts, as before parts existed.
     ...(parts.length > 0 && { parts }),
+    ...(Object.keys(weights).length > 0 && { weights }),
     hasReceipt: row.receiptPath !== null,
     createdAt: row.createdAt.toISOString(),
   };

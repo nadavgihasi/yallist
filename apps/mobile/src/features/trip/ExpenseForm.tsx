@@ -1,9 +1,10 @@
-import { formatShekel, linkedExpense, parseShekel, shekelInput } from '@yallist/domain';
+import { formatShekel, linkedExpense, owedShares, parseShekel, shekelInput } from '@yallist/domain';
 import { useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
 import { SuggestionChip } from '@/components/Chips';
+import { SegmentedControl } from '@/components/Controls';
 import { AmountField, TextField, fieldStyles } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
@@ -22,8 +23,13 @@ import { requestReveal } from './reveal';
 import { RunParts } from './RunParts';
 import { runSplit, type PartDraft } from './runSplit';
 import { SharePicker, useShares } from './SharePicker';
+import { perWeightText, WeightList } from './WeightList';
 
 type Expense = TripData['expenses'][number];
+
+const SPLIT_MODES = ['equal', 'weights', 'parts'] as const;
+/** How the rest of an expense is split: equally, by weight, or with parts for some only. */
+type SplitMode = (typeof SPLIT_MODES)[number];
 
 const toDraft = (p: NonNullable<Expense['parts']>[number]): PartDraft => ({
   label: p.label,
@@ -46,6 +52,10 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   const [payer, setPayer] = useState(expense?.paidBy ?? me);
   const [shares, setShares] = useShares(view, expense?.shares);
   const [parts, setParts] = useState<PartDraft[]>(() => expense?.parts?.map(toDraft) ?? []);
+  const [weights, setWeights] = useState<Record<string, number>>(expense?.weights ?? {});
+  const [mode, setMode] = useState<SplitMode>(
+    expense?.parts?.length ? 'parts' : expense?.weights ? 'weights' : 'equal',
+  );
   const [receipt, setReceipt] = useState<string>();
   // Save was tapped with something missing: each empty field says so.
   const [tried, setTried] = useState(false);
@@ -54,13 +64,21 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
 
   const close = useCloseSheet(data.trip.id);
   const agorot = parseShekel(amount);
-  const withParts = !!expense?.parts?.length;
-  const split = runSplit(agorot, shares, parts);
+  const usedParts = mode === 'parts' ? parts : [];
+  // Weights for who shares it only: someone unticked takes none.
+  const usedWeights =
+    mode === 'weights'
+      ? Object.fromEntries(Object.entries(weights).filter(([id]) => shares.includes(id)))
+      : {};
+  const split = runSplit(agorot, shares, usedParts);
+  const owed = agorot
+    ? owedShares({ amountAgorot: agorot, shares, parts: split.parts, weights: usedWeights })
+    : new Map<string, number>();
   const unbought = expense
     ? []
     : view.items.filter((i) => i.list === 'buy' && !linkedExpense(i.id, data.expenses)).slice(0, 6);
   const valid =
-    !!agorot && !!what.trim() && shares.length > 0 && (parts.length === 0 || !split.error);
+    !!agorot && !!what.trim() && shares.length > 0 && (usedParts.length === 0 || !split.error);
   // A payer who has since left the trip stays on the expense, so they stay on offer.
   const payers = view.activeIds.includes(payer) ? view.activeIds : [payer, ...view.activeIds];
 
@@ -75,15 +93,20 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
     close(() => {
       const fields = { description: what.trim(), amountAgorot: agorot, paidBy: payer, shares };
       if (expense) {
+        // Both, always: switching to an equal split drops the parts and the weights.
         act({
           type: 'editExpense',
           expenseId: expense.id,
-          changes: withParts ? { ...fields, parts: split.parts } : fields,
+          changes: { ...fields, parts: split.parts, weights: usedWeights },
         });
         showToast(he.editExpense.saved(formatShekel(agorot)), 'success');
         return;
       }
-      act({ type: 'addExpense', expense: { ...fields, itemId }, receipt });
+      const uneven = {
+        ...(split.parts.length > 0 && { parts: split.parts }),
+        ...(Object.keys(usedWeights).length > 0 && { weights: usedWeights }),
+      };
+      act({ type: 'addExpense', expense: { ...fields, ...uneven, itemId }, receipt });
       // Once the API answers, the money tab scrolls to it and marks it.
       requestReveal(data.trip.id, {
         kind: 'expense',
@@ -194,13 +217,23 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         </ScrollView>
       </View>
 
+      <View style={styles.field}>
+        <Text style={fieldStyles.label}>{he.addExpense.splitHow}</Text>
+        <SegmentedControl
+          options={SPLIT_MODES.map((value) => ({ value, label: he.addExpense.split[value] }))}
+          value={mode}
+          onChange={setMode}
+          testID="expense-split"
+        />
+      </View>
+
       <SharePicker
         view={view}
         shares={shares}
         onChange={setShares}
-        amount={parts.length > 0 ? split.rest : agorot}
+        amount={mode === 'equal' ? agorot : undefined}
         label={
-          parts.length > 0 && split.rest !== undefined && split.rest > 0
+          mode === 'parts' && split.rest !== undefined && split.rest > 0
             ? he.shop.finish.rest(formatShekel(split.rest))
             : undefined
         }
@@ -212,7 +245,23 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         </Text>
       )}
 
-      {withParts && (
+      {mode === 'weights' && (
+        <View style={styles.field}>
+          <Text style={styles.meta}>{he.addExpense.weightsHint}</Text>
+          <WeightList
+            view={view}
+            shares={shares}
+            weights={weights}
+            owed={owed}
+            onChange={setWeights}
+          />
+          {perWeightText(agorot, shares, usedWeights) && (
+            <Text style={styles.meta}>{perWeightText(agorot, shares, usedWeights)}</Text>
+          )}
+        </View>
+      )}
+
+      {mode === 'parts' && (
         <>
           <RunParts view={view} parts={parts} onChange={setParts} />
           {parts.length > 0 && (
@@ -226,11 +275,11 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
                 </Text>
               )}
               {[...split.owed]
-                .filter(([, owed]) => owed > 0)
-                .map(([id, owed]) => (
+                .filter(([, amount]) => amount > 0)
+                .map(([id, amount]) => (
                   <View key={id} style={styles.owedRow}>
                     <Text style={styles.owedName}>{view.displayNameOf(id)}</Text>
-                    <Text style={styles.owedAmount}>{formatShekel(owed)}</Text>
+                    <Text style={styles.owedAmount}>{formatShekel(amount)}</Text>
                   </View>
                 ))}
             </View>

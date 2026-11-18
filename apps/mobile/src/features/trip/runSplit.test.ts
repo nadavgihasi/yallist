@@ -66,6 +66,15 @@ describe('runSplit', () => {
 });
 
 describe('sharedText', () => {
+  it('names who takes more than one share', () => {
+    expect(sharedText({ shares: everyone, weights: { a: 2, c: 3 } }, everyone, nameOf)).toBe(
+      'לפי משקל: דנה ×2, יעל ×3',
+    );
+    expect(sharedText({ shares: ['a', 'b'], weights: { a: 2 } }, everyone, nameOf)).toBe(
+      'בין דנה ורון · לפי משקל: דנה ×2',
+    );
+  });
+
   it('says nothing when everyone shares it', () => {
     expect(sharedText({ shares: everyone }, everyone, nameOf)).toBeUndefined();
   });

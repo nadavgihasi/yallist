@@ -445,4 +445,19 @@ describe('editExpense', () => {
     );
     expect(dropped.expenses[0]).not.toHaveProperty('parts');
   });
+
+  it('sets weights, and drops them when given none', () => {
+    const weighted = applyAction(
+      t,
+      { type: 'editExpense', expenseId: 'e1', changes: { weights: { noa: 2 } } },
+      'me',
+    );
+    expect(weighted.expenses[0]!.weights).toEqual({ noa: 2 });
+    const equal = applyAction(
+      weighted,
+      { type: 'editExpense', expenseId: 'e1', changes: { weights: {} } },
+      'me',
+    );
+    expect(equal.expenses[0]).not.toHaveProperty('weights');
+  });
 });

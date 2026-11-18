@@ -1,6 +1,7 @@
 import {
   CATEGORY_COLORS,
   COVER_IDS,
+  MAX_WEIGHT,
   type ItemKind,
   type ListKind,
   type MemberRole,
@@ -342,8 +343,16 @@ export const expenseShares = pgTable(
       .notNull()
       .references(() => expenses.id),
     userId: userRef('user_id').notNull(),
+    /** How many shares of the rest they take (an adult 2, a child 1); null is 1. */
+    weight: integer('weight'),
   },
-  (t) => [primaryKey({ columns: [t.expenseId, t.userId] })],
+  (t) => [
+    primaryKey({ columns: [t.expenseId, t.userId] }),
+    check(
+      'expense_shares_weight_check',
+      sql`${t.weight} between 1 and ${sql.raw(String(MAX_WEIGHT))}`,
+    ),
+  ],
 );
 
 /**

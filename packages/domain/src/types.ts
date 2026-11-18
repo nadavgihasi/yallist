@@ -90,6 +90,11 @@ export interface Expense {
   shares: string[];
   /** Amounts split between other people than the rest, such as a run's alcohol. */
   parts?: ExpensePart[];
+  /**
+   * How many shares of the rest each person takes (an adult 2, a child 1), by user id; anyone
+   * not in it takes 1. Absent when everyone takes 1, as before weights existed.
+   */
+  weights?: Record<string, number>;
   /** A receipt photo is attached (fetched separately, as a short-lived link). */
   hasReceipt?: boolean;
   /** When it was added (ISO). From the API. */
