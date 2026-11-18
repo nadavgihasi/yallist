@@ -251,7 +251,7 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
             />
           ))}
         </View>
-        <DateField label={he.addExpense.when} value={day} onChange={setDay} />
+        <DateField label={he.addExpense.date} value={day} onChange={setDay} />
       </View>
 
       <View style={styles.field}>

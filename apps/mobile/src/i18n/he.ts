@@ -441,6 +441,7 @@ export const he = {
     /** After saving one I share: what it costs me. */
     savedMine: (mine: string) => `נשמר · החלק שלך ${mine}`,
     when: 'מתי?',
+    date: 'תאריך',
     today: 'היום',
     yesterday: 'אתמול',
     /** The split picker starts from the last expense I added. */
