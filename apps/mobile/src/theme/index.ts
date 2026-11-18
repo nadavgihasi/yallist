@@ -22,8 +22,10 @@ export const colors = {
   primaryStrong: '#4528C4',
   /** Yallist orange: the logo, done checks and progress. Graphics only; never buttons. */
   brand: '#FF5A1F',
-  /** Orange text on `card` and `ground` (e.g. "אצלך", errors). */
+  /** Orange text on `card` and `ground` (e.g. "אצלך", errors), and money someone owes. */
   brandStrong: '#B8370B',
+  /** Money someone gets back (a balance the group owes them): teal, the category accent. */
+  owed: '#0A7C76',
   /** Empty-state and cover illustrations only. */
   illustration: {
     sky: '#F4BA7E',

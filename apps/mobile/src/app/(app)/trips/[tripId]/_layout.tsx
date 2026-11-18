@@ -24,6 +24,7 @@ export default function TripLayout() {
       <Stack.Screen name="expenses/[expenseId]/edit" options={sheet} />
       <Stack.Screen name="expenses/[expenseId]/receipt" options={sheet} />
       <Stack.Screen name="payments/new" options={sheet} />
+      <Stack.Screen name="balances/[userId]" options={sheet} />
       <Stack.Screen name="payments/[paymentId]" options={sheet} />
       <Stack.Screen name="categories/new" options={sheet} />
       <Stack.Screen name="categories/[categoryId]" options={sheet} />

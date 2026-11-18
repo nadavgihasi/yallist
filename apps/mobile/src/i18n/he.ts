@@ -491,6 +491,34 @@ export const he = {
     openReceipt: 'פתיחת הקבלה',
     open: (description: string) => `פרטי ההוצאה: ${description}`,
   },
+  /** Each person's balance (התחשבנות) and what it's made of. */
+  balances: {
+    title: 'היתרה של כל אחד',
+    hint: 'כולל התשלומים שנרשמו. לוחצים על מישהו כדי לראות ממה זה מורכב.',
+    gets: 'מקבל/ת',
+    owes: 'חייב/ת',
+    settled: 'מסודר/ת',
+    /** Under a name: `שילם/ה ₪1,200 · חלק ₪630`. */
+    paidAndShare: (paid: string, share: string) => `שילם/ה ${paid} · חלק ${share}`,
+    open: (name: string, amount: string, state: string) => `היתרה של ${name}: ${amount}, ${state}`,
+    /** The sheet. */
+    mine: 'היתרה שלך',
+    of: (name: string) => `היתרה של ${name}`,
+    getsMine: 'מגיע לך',
+    owesMine: 'עליך להעביר',
+    paid: 'הוצאות ששילם/ה',
+    share: 'פחות החלק בהוצאות',
+    sent: 'ועוד תשלומים ששלח/ה',
+    received: 'פחות תשלומים שקיבל/ה',
+    paidList: 'מה ששילם/ה',
+    shareList: 'החלק בכל הוצאה',
+    payments: 'תשלומים',
+    /** An expense line: `שישי, 13.11 · 4 מתחלקים` / `דנה שילמה ₪1,200`. */
+    paidBy: (name: string, amount: string) => `${name} · ${amount}`,
+    paymentTo: (name: string) => `ל${name}`,
+    paymentFrom: (name: string) => `מ${name}`,
+    nothing: 'עוד אין הוצאות או תשלומים',
+  },
   /** Recording a payment (anyone, for any two people) and opening one to delete it. */
   payment: {
     title: 'רישום תשלום',

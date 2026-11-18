@@ -19,6 +19,7 @@ import { tripKey, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
+import { BalanceList } from './BalanceList';
 import type { TripView } from './derive';
 import { MONEY_PARTS, type MoneyPart } from './parts';
 import { PayRow } from './PayRow';
@@ -262,6 +263,8 @@ export function MoneyTab({
           ))}
         </ListGroup>
       )}
+
+      {data.expenses.length > 0 && <BalanceList data={data} view={view} me={me} />}
     </View>
   );
 }
