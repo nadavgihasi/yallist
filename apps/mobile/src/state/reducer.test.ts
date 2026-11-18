@@ -273,20 +273,21 @@ describe('members', () => {
 });
 
 describe('payments', () => {
-  it('confirms a payment at once', () => {
+  it('deletes a payment at once', () => {
     const payment = {
       id: 'p1',
       fromUser: 'ron',
       toUser: 'me',
       amountAgorot: 9000,
-      status: 'marked',
-    } as const;
+      createdBy: 'dana',
+      createdAt: '2026-11-14T10:00:00.000Z',
+    };
     const next = applyAction(
       trip({ payments: [payment] }),
-      { type: 'confirmPayment', paymentId: 'p1' },
+      { type: 'deletePayment', paymentId: 'p1' },
       'me',
     );
-    expect(next.payments).toEqual([{ ...payment, status: 'confirmed' }]);
+    expect(next.payments).toEqual([]);
   });
 });
 

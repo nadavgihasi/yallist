@@ -65,6 +65,7 @@ const USER_COLUMNS = [
   ['expense_part_shares', 'user_id'],
   ['payments', 'from_user'],
   ['payments', 'to_user'],
+  ['payments', 'created_by'],
   ['activity', 'actor'],
   ['feedback', 'user_id'],
   ['shopping_runs', 'shopper_id'],

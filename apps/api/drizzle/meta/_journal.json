@@ -169,6 +169,13 @@
       "when": 1795023270147,
       "tag": "0023_expense_spent_on",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1795023580935,
+      "tag": "0024_payment_created_by",
+      "breakpoints": true
     }
   ]
 }

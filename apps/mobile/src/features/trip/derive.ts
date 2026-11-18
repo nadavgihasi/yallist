@@ -8,6 +8,7 @@ import {
   type Expense,
   type Item,
   type ListKind,
+  type Payment,
 } from '@yallist/domain';
 
 import type { AvatarPerson } from '@/components/Avatar';
@@ -75,6 +76,9 @@ export function deriveTrip(data: TripData, me: string) {
     /** Who may edit or delete an expense, as the API allows: who added it, who paid, organizers. */
     mayChange: (e: Pick<Expense, 'createdBy' | 'paidBy'>) =>
       e.createdBy === me || e.paidBy === me || organizer,
+    /** Who may delete a payment, as the API allows: who recorded it, either side, organizers. */
+    mayDeletePayment: (p: Pick<Payment, 'createdBy' | 'fromUser' | 'toUser'>) =>
+      p.createdBy === me || p.fromUser === me || p.toUser === me || organizer,
     /** Who pays whom to settle up, worked out by the API. */
     transfers: data.transfers,
     totalSpent: data.expenses.reduce((sum, e) => sum + e.amountAgorot, 0),

@@ -15,12 +15,12 @@ import {
 } from '../dal/expenses';
 import { findItem } from '../dal/items';
 import { activeUserIds, findMember, requireMember } from '../dal/members';
-import { confirmPayment, deletePayment, insertPayment, lockPayment } from '../dal/payments';
+import { deletePayment, insertPayment, lockPayment } from '../dal/payments';
 import type { Db } from '../db/client';
 import type { expenses, tripMembers } from '../db/schema';
 import { transact } from '../db/tx';
 import { deleteReceipt, type ReceiptStore } from '../receipts';
-import { toExpense } from '../trip-data';
+import { toExpense, toPayment } from '../trip-data';
 
 import { assertPartsFit, MAX_PARTS, part } from './runs';
 
@@ -237,9 +237,9 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
       return c.body(null, 204);
     })
 
-    // I paid someone back, or (only for someone no longer in the trip) they paid me.
-    // The counterparty can be a former member: removal leaves their balance to settle. A former
-    // member can't use the trip, so the receiver records their payment, already confirmed.
+    // Someone paid someone back. Anyone in the trip records it, for any two people in it, and it
+    // counts at once: nobody confirms it. The counterparties can be former members: removal
+    // leaves their balance to settle, and they can't record it themselves.
     .post(
       '/:tripId/payments',
       validate('param', tripParam),
@@ -252,23 +252,22 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
         const me = c.var.user.id;
         const { toUser, amountAgorot, fromUser = me } = c.req.valid('json');
         if (toUser === fromUser) throw fail(400, 'Cannot pay yourself');
-        if (fromUser !== me && toUser !== me) throw fail(400, 'Only your own payments');
-        const received = fromUser !== me;
         const payment = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
-          const other = await findMember(tx, tripId, received ? fromUser : toUser);
-          if (other?.status !== 'active' && other?.status !== 'removed') {
-            throw fail(400, 'Not a member of the trip');
-          }
-          if (received && other.status !== 'removed') {
-            throw fail(400, 'Members mark their own payments');
+          for (const userId of [fromUser, toUser]) {
+            const member = await findMember(tx, tripId, userId);
+            if (member?.status !== 'active' && member?.status !== 'removed') {
+              throw fail(400, 'Not a member of the trip');
+            }
           }
           const created = await insertPayment(tx, {
             tripId,
             fromUser,
             toUser,
             amountAgorot,
-            ...(received && { status: 'confirmed', confirmedAt: new Date() }),
+            status: 'confirmed',
+            confirmedAt: new Date(),
+            createdBy: me,
           });
           await logActivity(tx, tripId, me, 'payment_marked', {
             paymentId: created.id,
@@ -278,39 +277,28 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           });
           return created;
         });
-        return c.json(
-          { id: payment.id, fromUser, toUser, amountAgorot, status: payment.status },
-          201,
-        );
+        return c.json(toPayment(payment), 201);
       },
     )
 
-    // The receiver confirms the money arrived.
-    .post('/:tripId/payments/:paymentId/confirm', validate('param', paymentParam), async (c) => {
-      const { tripId, paymentId } = c.req.valid('param');
-      const me = c.var.user.id;
-      await transact(db, async (tx) => {
-        await requireMember(tx, tripId, me, { lock: true });
-        const payment = await lockPayment(tx, tripId, paymentId);
-        if (payment.toUser !== me) throw fail(403, 'Only the receiver confirms');
-        if (payment.status === 'confirmed') return;
-        await confirmPayment(tx, paymentId);
-        await logActivity(tx, tripId, me, 'payment_confirmed', { paymentId });
-      });
-      return c.json({ id: paymentId, status: 'confirmed' as const });
-    })
-
-    // The sender takes back a payment the receiver hasn't confirmed yet.
+    // A payment recorded by mistake: by whoever recorded it, either side of it, or an organizer.
     .delete('/:tripId/payments/:paymentId', validate('param', paymentParam), async (c) => {
       const { tripId, paymentId } = c.req.valid('param');
       const me = c.var.user.id;
       await transact(db, async (tx) => {
-        await requireMember(tx, tripId, me, { lock: true });
-        const payment = await lockPayment(tx, tripId, paymentId);
-        if (payment.fromUser !== me) throw fail(403, 'Only the sender deletes');
-        if (payment.status === 'confirmed') throw fail(409, 'Already confirmed');
+        const member = await requireMember(tx, tripId, me, { lock: true });
+        const payment = toPayment(await lockPayment(tx, tripId, paymentId));
+        const involved = [payment.createdBy, payment.fromUser, payment.toUser].includes(me);
+        if (!involved && member.role !== 'organizer') {
+          throw fail(403, 'Only who recorded it, its payer or receiver, or an organizer');
+        }
         await deletePayment(tx, paymentId);
-        await logActivity(tx, tripId, me, 'payment_deleted', { paymentId });
+        await logActivity(tx, tripId, me, 'payment_deleted', {
+          paymentId,
+          fromUser: payment.fromUser,
+          toUser: payment.toUser,
+          amountAgorot: payment.amountAgorot,
+        });
       });
       return c.body(null, 204);
     });

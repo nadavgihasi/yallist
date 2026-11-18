@@ -69,7 +69,14 @@ describe('balances', () => {
 
   it('includes recorded payments', () => {
     const payments: Payment[] = [
-      { id: 'p', fromUser: 'c', toUser: 'a', amountAgorot: 300, status: 'marked' },
+      {
+        id: 'p',
+        fromUser: 'c',
+        toUser: 'a',
+        amountAgorot: 300,
+        createdBy: 'b',
+        createdAt: '2026-11-18T10:00:00.000Z',
+      },
     ];
     const b = balances(['a', 'b', 'c'], [expense('a', 900, ['a', 'b', 'c'])], payments);
     expect(Object.fromEntries(b)).toEqual({ a: 300, b: -300, c: 0 });

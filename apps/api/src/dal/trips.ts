@@ -1,4 +1,4 @@
-import type { Claim, Payment } from '@yallist/domain';
+import type { Claim } from '@yallist/domain';
 import { and, asc, eq, inArray, isNull } from 'drizzle-orm';
 
 import { fail } from '../access';
@@ -22,7 +22,7 @@ import {
 } from '../db/schema';
 import type { Executor, Tx } from '../db/tx';
 import type { ReceiptStore } from '../receipts';
-import { toCategory, toExpense, toItem, toTrip } from '../trip-data';
+import { toCategory, toExpense, toItem, toPayment, toTrip } from '../trip-data';
 import { bagClaims, bagMarks, bagRowsFor } from './bag';
 import { listCategories } from './categories';
 import { deleteParts, toWeights } from './expenses';
@@ -279,15 +279,7 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
           toWeights(shares),
         );
       }),
-    payments: paymentRows
-      .filter((p) => p.tripId === trip.id)
-      .map((p): Payment => ({
-        id: p.id,
-        fromUser: p.fromUser,
-        toUser: p.toUser,
-        amountAgorot: p.amountAgorot,
-        status: p.status,
-      })),
+    payments: paymentRows.filter((p) => p.tripId === trip.id).map(toPayment),
     /** Who is out shopping right now (active runs only). */
     runs: runRows
       .filter((r) => r.tripId === trip.id)
