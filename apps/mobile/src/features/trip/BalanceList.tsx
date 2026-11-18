@@ -61,7 +61,7 @@ export function BalanceList({ data, view, me }: { data: TripData; view: TripView
               <Text style={styles.name} numberOfLines={1}>
                 {view.nameOf(id)}
               </Text>
-              <Text style={styles.caption} numberOfLines={1}>
+              <Text style={styles.caption} numberOfLines={2}>
                 {he.balances.paidAndShare(
                   formatShekel(parts.paidTotal),
                   formatShekel(parts.owedTotal),
