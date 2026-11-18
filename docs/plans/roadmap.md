@@ -15,7 +15,7 @@ So the app has login (guest + Google on the API), My trips with covers and the n
 | 4 — Faster lists        | Bulk add; personal premade lists applied to any trip          | 3          | M    | D10, D11                                   |
 | Packing and shopping    | Packed state, my bag, shopping runs, essentials; trip links   | 5 (2 done) | L    | —                                          |
 | 5 — Money, finished     | Edit expenses, receipts, settle up with payment phone         | 3 (1 done) | M    | Bit/PayBox deep link check                 |
-| 6 — Activity and push   | Feed, to-dos, notifications, day-before reminder              | 5          | L    | FCM credentials                            |
+| 6 — Activity and push   | Feed, to-dos, notifications, day-before reminder              | 6          | L    | FCM credentials                            |
 | 7 — Offline, trip day   | Works at the campsite; "מה הגיע?" checklist                   | 2          | M    | —                                          |
 | 8 — After the trip      | Summary, duplicate, archive                                   | 2          | M    | —                                          |
 | 9 — Release and ops     | Play production, observability, e2e, license, OTA             | 7 (1 done) | L    | Sentry account (#106), license choice      |
@@ -79,13 +79,14 @@ So the app has login (guest + Google on the API), My trips with covers and the n
 
 ## Phase 6 — Activity and push
 
-| PR                                       | Status | Ref                       | Scope                                                                                                                                                       | Depends       | Size |
-| ---------------------------------------- | ------ | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | ---- |
-| `feat(api): activity feed and to-dos`    | M      | §8 `ActivityV2`           | `GET /trips/:id/activity` (paged, by day) plus "מחכה לך" to-dos (unpriced purchases, money I owe) and a per-member last-seen cursor for the unread dot.     | #21           | M    |
-| `feat(app): activity screen`             | M      | §8 `ActivityV2`, `TripV2` | Timeline with הכול / פריטים / כסף filters, to-dos, header button with unread dot.                                                                           | Previous      | M    |
-| `feat(api): push tokens and sender`      | M      | §3, §6                    | `push_tokens` + `trip_member_prefs` tables; after-commit sender to Expo's push service for claims, expenses, join requests and reminders, respecting prefs. | Profile prefs | M    |
-| `feat(app): push registration and prefs` | M      | §6, `TripSettingsV2`      | `expo-notifications` registration (FCM v1 credentials for Android), tap → deep link, per-trip notification switches in settings.                            | Previous      | S    |
-| `feat(infra): scheduled reminders`       | M      | §6, tech-decisions        | EventBridge Scheduler → Lambda: day-before reminder (what's missing, what's on you) at 18:00 Israel time; settle-up nudges after `ends_on`.                 | Push sender   | M    |
+| PR                                             | Status | Ref                                               | Scope                                                                                                                                                                                                           | Depends  | Size |
+| ---------------------------------------------- | ------ | ------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ---- |
+| `feat(api): activity feed and to-dos`          | M      | §8 `ActivityV2`                                   | `GET /trips/:id/activity` (paged, by day) plus "מחכה לך" to-dos (unpriced purchases, money I owe) and a per-member last-seen cursor for the unread dot.                                                         | #21      | M    |
+| `feat(app): activity screen`                   | M      | §8 `ActivityV2`, `TripV2`                         | Timeline with הכול / פריטים / כסף filters, to-dos, header button with unread dot.                                                                                                                               | Previous | M    |
+| `feat(api): notifications and the in-app list` | M      | [notifications](../specs/notifications/README.md) | `notifications` table written from activity in the same transaction (rules per type and group), `GET /me/notifications`, mark read; the bell with an unread count and the `/notifications` list with "מחכה לך". | —        | M    |
+| `feat(app): notification settings`             | M      | [notifications](../specs/notifications/README.md) | Profile: updates, day-before time (09/13/18/20), morning of, settle up, quiet hours; per trip: updates and reminders switches (`trip_members`).                                                                 | Previous | S    |
+| `feat(api,app): push`                          | M      | [notifications](../specs/notifications/README.md) | `push_tokens`, `expo-notifications` (FCM v1 for Android), the permission card, sender + every-minute sweeper (3-minute batching, quiet hours), buttons on the push, open the right screen on tap.               | Previous | M    |
+| `feat(infra): reminders`                       | M      | [notifications](../specs/notifications/README.md) | On the sweeper: day-before at each person's time, morning of at 08:00, settle up 1 and 4 days after `ends_on`.                                                                                                  | Push     | S    |
 
 ## Phase 7 — Offline and trip day
 
