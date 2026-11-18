@@ -16,4 +16,5 @@ One file per phase from the [SPEC build plan](../SPEC.md#11-build-plan), adapted
 | UI plan         | [ui-plan.md](../design/plans/ui-plan.md)                                       | PRs 1–4 done                            |
 | Packing spec    | [PACKING_SHOPPING_SPEC.md](../specs/packing-shopping/PACKING_SHOPPING_SPEC.md) | Steps 1, 3 done; 2, 4 in progress       |
 | My bag          | [my-bag](../specs/my-bag/README.md)                                            | Built                                   |
+| Notifications   | [notifications](../specs/notifications/README.md)                              | Design; Phase 6                         |
 | 2+ — Roadmap    | [roadmap.md](roadmap.md)                                                       | Updated 2026-10-27                      |

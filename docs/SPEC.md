@@ -155,7 +155,7 @@ Treat the invite link as a bearer capability and the database as the enforcement
 - Mutations pause when offline and resume in order on reconnect. Show a "ממתין" chip on rows with queued changes and a dark "אין קליטה" banner with the queued count (see `OfflineV2`).
 - On resume, a rejected claim (cap exceeded) rolls back and shows a short Hebrew message.
 
-**Notifications** (Expo push, sent by an Edge Function triggered from `activity` inserts):
+**Notifications:** superseded by [specs/notifications](specs/notifications/README.md). The original list:
 
 - Claims and new expenses (respect `notify_updates` and per-trip `on_claims` / `daily_digest`).
 - Day-before reminder to everyone with what's still missing and what's on you (scheduled job, e.g. `pg_cron`).
