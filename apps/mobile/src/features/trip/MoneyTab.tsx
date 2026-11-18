@@ -272,8 +272,11 @@ function Expenses({ data, view }: { data: TripData; view: TripView }) {
                 <Text style={styles.expenseWhat} numberOfLines={1}>
                   {e.description}
                 </Text>
-                {/* A split in parts wraps: who shares each part is the point of it. */}
-                <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
+                {/* An uneven split wraps: who shares each part, or takes more, is the point of it. */}
+                <Text
+                  style={styles.expenseWho}
+                  numberOfLines={e.parts || e.weights ? undefined : 1}
+                >
                   {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
                     .filter(Boolean)
                     .join(' · ')}
