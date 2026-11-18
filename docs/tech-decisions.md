@@ -36,7 +36,7 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 - Builds: local (Gradle for Android; a Mac for iOS later) or GitHub Actions.
 - Store upload: Play Console by hand, or Fastlane.
 - Over-the-air updates: Hot Updater, self-hosted on S3 + CloudFront / Lambda@Edge.
-- Push notifications: Expo's free push service.
+- Push notifications: straight to Firebase Cloud Messaging (FCM HTTP v1) from our Lambda, with the device's own FCM token. Expo's push service needs an Expo project ID and only passes messages on to FCM, so it's skipped. `expo-notifications` (a local library, no Expo account) still asks for permission, gets the token and handles taps. AppSync Events only reaches an open app, so it keeps the bell live but can't wake a closed one.
 
 ## Maps
 
