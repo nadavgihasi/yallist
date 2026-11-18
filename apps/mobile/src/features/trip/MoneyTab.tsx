@@ -1,5 +1,5 @@
 import { useIsMutating } from '@tanstack/react-query';
-import { formatShekel } from '@yallist/domain';
+import { formatShekel, owedShares } from '@yallist/domain';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -12,15 +12,16 @@ import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, joinNames } from '@/i18n/he';
-import { formatMoment } from '@/lib/dates';
+import { formatMoment, today } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useReceiptUpload } from '@/state/receipts';
 import { tripKey, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, space, type } from '@/theme';
 
-import { BalanceList } from './BalanceList';
+import { balanceState, BalanceList } from './BalanceList';
 import type { TripView } from './derive';
+import { dayLabel, expenseDays } from './expenseDays';
 import { MONEY_PARTS, type MoneyPart } from './parts';
 import { PayRow } from './PayRow';
 import { expenseKey } from './reveal';
@@ -73,6 +74,8 @@ export function MoneyTab({
     act({ type: 'recordPayment', fromUser, toUser, amountAgorot });
     showToast(toast, 'success');
   };
+  // Square: nothing open either way (what I paid is already in the transfers).
+  const square = myOpen.length === 0 && toMe.length === 0;
   // Owed money with nowhere to receive it: ask for a number once there's something to receive.
   const needsPhone = toMe.length > 0 && !view.memberById.get(me)?.paymentPhone;
 
@@ -95,7 +98,7 @@ export function MoneyTab({
     return (
       <View style={styles.wrap}>
         {tabs}
-        <Expenses data={data} view={view} />
+        <Expenses data={data} view={view} me={me} onSettle={() => onPart('settle')} />
       </View>
     );
   }
@@ -104,8 +107,29 @@ export function MoneyTab({
     <View style={styles.wrap}>
       {tabs}
       <Card gap={space[1]}>
-        <Text style={styles.heroTitle}>{title}</Text>
-        <Text style={styles.heroAmount}>{formatShekel(amount)}</Text>
+        {square ? (
+          // Nothing to pay or receive: the done check, as on a packed item, instead of ₪0.
+          <View style={styles.square}>
+            <View style={styles.squareCheck}>
+              <Icon name="check" size={28} color={colors.onPrimary} />
+            </View>
+            <Text style={styles.squareTitle}>{he.money.allSquare}</Text>
+            <Text style={styles.heroText}>{he.money.allSquareText}</Text>
+          </View>
+        ) : (
+          <>
+            <Text style={styles.heroTitle}>{title}</Text>
+            {/* Owing in orange, owed in teal: the same colours as the balances below. */}
+            <Text
+              style={[
+                styles.heroAmount,
+                { color: myOpen.length > 0 ? colors.brandStrong : colors.owed },
+              ]}
+            >
+              {formatShekel(amount)}
+            </Text>
+          </>
+        )}
         {view.totalSpent > 0 && (
           <Text style={styles.heroText}>
             {he.money.share(formatShekel(view.myShare), formatShekel(view.totalSpent))}
@@ -165,13 +189,12 @@ export function MoneyTab({
         />
       )}
 
-      {view.transfers.length === 0 ? (
-        // With no expenses yet, there's nothing to settle and nothing more to say.
-        data.expenses.length > 0 && (
-          <EmptyState title={he.money.settled} text={he.money.settledText} />
-        )
-      ) : (
-        <ListGroup title={he.money.transfers}>
+      {/* What's open and what was paid, in one place: open first, then recorded payments. */}
+      {data.expenses.length + data.payments.length > 0 && (
+        <ListGroup title={he.money.settling}>
+          {view.transfers.length === 0 && (
+            <Text style={styles.expenseWho}>{he.money.noneOpen}</Text>
+          )}
           {view.transfers.map((t) => (
             <View key={`${t.from}-${t.to}`} style={styles.transfer} {...testId('transfer')}>
               <FromTo view={view} from={t.from} to={t.to} />
@@ -202,30 +225,13 @@ export function MoneyTab({
               </View>
             </View>
           ))}
-        </ListGroup>
-      )}
 
-      {data.expenses.length > 0 && (
-        <View style={styles.recordOther}>
-          <PillButton
-            label={he.money.recordOther}
-            variant="soft"
-            wide
-            icon={<Icon name="plus" size={18} color={colors.primaryStrong} />}
-            onPress={() =>
-              router.push({
-                pathname: '/trips/[tripId]/payments/new',
-                params: { tripId: data.trip.id },
-              })
-            }
-            {...testId('payment-record')}
-          />
-          <Text style={styles.hint}>{he.money.recordHint}</Text>
-        </View>
-      )}
-
-      {data.payments.length > 0 && (
-        <ListGroup title={he.money.payments}>
+          {data.payments.length > 0 && (
+            <>
+              <View style={styles.divider} />
+              <Text style={styles.subhead}>{he.money.paidSoFar}</Text>
+            </>
+          )}
           {[...data.payments].reverse().map((p) => (
             <Pressable
               key={p.id}
@@ -246,7 +252,7 @@ export function MoneyTab({
             >
               <View style={styles.transfer}>
                 <FromTo view={view} from={p.fromUser} to={p.toUser} />
-                <Text style={styles.amount}>{formatShekel(p.amountAgorot)}</Text>
+                <Text style={[styles.amount, styles.paid]}>{formatShekel(p.amountAgorot)}</Text>
               </View>
               <View style={styles.recorded}>
                 <Icon name="check" size={16} color={colors.brand} />
@@ -261,6 +267,23 @@ export function MoneyTab({
               </View>
             </Pressable>
           ))}
+
+          <View style={styles.recordOther}>
+            <PillButton
+              label={he.money.recordOther}
+              variant="soft"
+              wide
+              icon={<Icon name="plus" size={18} color={colors.primaryStrong} />}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/[tripId]/payments/new',
+                  params: { tripId: data.trip.id },
+                })
+              }
+              {...testId('payment-record')}
+            />
+            <Text style={styles.hint}>{he.money.recordHint}</Text>
+          </View>
         </ListGroup>
       )}
 
@@ -269,8 +292,23 @@ export function MoneyTab({
   );
 }
 
-/** Every expense with the trip's total, or a way to add the first one. */
-function Expenses({ data, view }: { data: TripData; view: TripView }) {
+/**
+ * The expense log: the trip's total and my share (with where I stand, opening settling up), then
+ * each day's expenses, newest first, each with my part of it. Or a way to add the first one.
+ */
+function Expenses({
+  data,
+  view,
+  me,
+  onSettle,
+}: {
+  data: TripData;
+  view: TripView;
+  me: string;
+  onSettle: () => void;
+}) {
+  const balance = data.balances[me] ?? 0;
+  const state = balanceState(balance);
   return data.expenses.length === 0 ? (
     <>
       <EmptyState
@@ -291,45 +329,85 @@ function Expenses({ data, view }: { data: TripData; view: TripView }) {
       <Callout title={he.states.tip} text={he.money.tip} />
     </>
   ) : (
-    <ListGroup title={he.money.expenses} aside={he.money.total(formatShekel(view.totalSpent))}>
-      {data.expenses.map((e) => (
-        // The row opens the expense; its receipt has its own button beside it.
-        <RevealTarget key={e.id} id={expenseKey(e.id)}>
-          <View style={styles.expense}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={he.expense.open(e.description)}
-              {...testId('expense-row')}
-              onPress={() =>
-                router.push({
-                  pathname: '/trips/[tripId]/expenses/[expenseId]',
-                  params: { tripId: data.trip.id, expenseId: e.id },
-                })
-              }
-              style={({ pressed }) => [styles.expenseOpen, pressed && { opacity: 0.75 }]}
-            >
-              <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
-              <View style={styles.expenseBody}>
-                <Text style={styles.expenseWhat} numberOfLines={1}>
-                  {e.description}
-                </Text>
-                {/* An uneven split wraps: who shares each part, or takes more, is the point of it. */}
-                <Text
-                  style={styles.expenseWho}
-                  numberOfLines={e.parts || e.weights ? undefined : 1}
-                >
-                  {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Text>
-              </View>
-              <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
-            </Pressable>
-            <ReceiptButton tripId={data.trip.id} expense={e} />
+    <>
+      <Card gap={space[3]}>
+        <View style={styles.totals}>
+          <View style={styles.total}>
+            <Text style={styles.heroText}>{he.money.wholeTrip}</Text>
+            <Text style={styles.stat}>{formatShekel(view.totalSpent)}</Text>
           </View>
-        </RevealTarget>
+          <View style={styles.totalsRule} />
+          <View style={styles.total}>
+            <Text style={styles.heroText}>{he.money.myShare}</Text>
+            <Text style={styles.stat}>{formatShekel(view.myShare)}</Text>
+          </View>
+        </View>
+        {balance !== 0 && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onSettle}
+            style={({ pressed }) => [styles.balanceLink, pressed && { opacity: 0.75 }]}
+            {...testId('money-balance-link')}
+          >
+            <Text style={[styles.balanceLinkText, { color: state.color }]}>
+              {he.money.balanceLink(
+                balance > 0 ? he.balances.getsMine : he.balances.owesMine,
+                formatShekel(Math.abs(balance)),
+              )}
+            </Text>
+            <Icon name="chevronEnd" size={16} color={state.color} />
+          </Pressable>
+        )}
+      </Card>
+      {expenseDays(data.expenses).map(({ day, expenses, totalAgorot }) => (
+        <ListGroup key={day} title={dayLabel(day, today())} aside={formatShekel(totalAgorot)}>
+          {expenses.map((e) => (
+            // The row opens the expense; its receipt has its own button beside it.
+            <RevealTarget key={e.id} id={expenseKey(e.id)}>
+              <View style={styles.expense}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={he.expense.open(e.description)}
+                  {...testId('expense-row')}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/trips/[tripId]/expenses/[expenseId]',
+                      params: { tripId: data.trip.id, expenseId: e.id },
+                    })
+                  }
+                  style={({ pressed }) => [styles.expenseOpen, pressed && { opacity: 0.75 }]}
+                >
+                  <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
+                  <View style={styles.expenseBody}>
+                    <Text style={styles.expenseWhat} numberOfLines={1}>
+                      {e.description}
+                    </Text>
+                    {/* An uneven split wraps: who shares each part, or takes more, is the point of it. */}
+                    <Text
+                      style={styles.expenseWho}
+                      numberOfLines={e.parts || e.weights ? undefined : 1}
+                    >
+                      {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
+                  </View>
+                  <View style={styles.expenseEnd}>
+                    <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+                    {(owedShares(e).get(me) ?? 0) > 0 && (
+                      <Text style={styles.myPart}>
+                        {he.money.myPart(formatShekel(owedShares(e).get(me)!))}
+                      </Text>
+                    )}
+                  </View>
+                </Pressable>
+                <ReceiptButton tripId={data.trip.id} expense={e} />
+              </View>
+            </RevealTarget>
+          ))}
+        </ListGroup>
       ))}
-    </ListGroup>
+    </>
   );
 }
 
@@ -421,6 +499,38 @@ const styles = StyleSheet.create({
   heroText: { ...type.caption, color: colors.inkMuted },
   payRows: { gap: space[3], marginTop: space[3] },
   payment: { gap: space[1] },
+  paid: { color: colors.inkMuted },
+  divider: { height: 1, backgroundColor: colors.hairline, marginVertical: space[1] },
+  subhead: { ...type.label, color: colors.inkMuted },
+  square: { alignItems: 'center', gap: space[2], paddingVertical: space[2] },
+  squareCheck: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  squareTitle: { ...type.sectionTitle, color: colors.ink },
+  totals: { flexDirection: 'row', alignItems: 'stretch', gap: space[3] },
+  total: { flex: 1, gap: 2 },
+  totalsRule: { width: 1, backgroundColor: colors.hairline },
+  stat: { ...type.stat, color: colors.ink },
+  balanceLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[1],
+    minHeight: space.touch,
+  },
+  balanceLinkText: { ...type.itemTitle },
+  expenseEnd: { alignItems: 'flex-end', gap: 2 },
+  myPart: {
+    ...type.caption,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.inkMuted,
+    fontVariant: ['tabular-nums'],
+  },
   recorded: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
   transferEnd: { alignItems: 'flex-end', gap: space[1] },
   recordOther: { gap: space[2] },

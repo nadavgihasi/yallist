@@ -307,6 +307,22 @@ export const he = {
     openPayment: (from: string, to: string, amount: string) =>
       `פרטי התשלום: ${from} ל${to}, ${amount}`,
     transfers: 'מי מעביר למי',
+    /** One section for what's open and what was paid (M8). */
+    settling: 'מסדרים חשבון',
+    paidSoFar: 'שולם',
+    noneOpen: 'אין העברות פתוחות',
+    /** The hero when I'm square. */
+    allSquare: 'את/ה מסודר/ת',
+    allSquareText: 'אין לך מה להעביר ואין מה שמגיע לך.',
+    /** The expense log, by day. */
+    today: (date: string) => `היום · ${date}`,
+    yesterday: (date: string) => `אתמול · ${date}`,
+    wholeTrip: 'כל הטיול',
+    myShare: 'החלק שלך',
+    /** Under an expense's total. */
+    myPart: (amount: string) => `חלקך ${amount}`,
+    /** The expense log's link to settling up, coloured like the balance. */
+    balanceLink: (state: string, amount: string) => `${state} ${amount} · להתחשבנות`,
     settled: 'אין העברות פתוחות',
     settledText: 'כולם מסודרים.',
     expenses: 'הוצאות',
