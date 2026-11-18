@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { invitePayload, inviteToken, inviteUrl, whoIsIn } from './invite';
+import { inviteOrigin, invitePayload, inviteToken, inviteUrl, whoIsIn } from './invite';
 
 describe('inviteUrl', () => {
   it('builds an https link to the join page', () => {
@@ -56,5 +56,20 @@ describe('whoIsIn', () => {
   it('counts members the preview leaves out', () => {
     expect(whoIsIn(['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח'], 12)).toBe('א, ב ועוד 10 כבר בטיול');
     expect(whoIsIn([], 0)).toBe('');
+  });
+});
+
+describe('inviteOrigin', () => {
+  it("is the page's origin and base path on web", () => {
+    expect(inviteOrigin('web', { pageOrigin: 'https://x.example', basePath: '/pr-3' })).toBe(
+      'https://x.example/pr-3',
+    );
+  });
+
+  it('is the stage site on native, never the app scheme', () => {
+    expect(inviteOrigin('android', { webUrl: 'https://x.example', basePath: '/pr-3' })).toBe(
+      'https://x.example',
+    );
+    expect(inviteOrigin('ios', {})).toBe('http://localhost:8081');
   });
 });
