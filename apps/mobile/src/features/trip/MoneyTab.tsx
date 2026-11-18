@@ -334,12 +334,16 @@ function Expenses({
         <View style={styles.totals}>
           <View style={styles.total}>
             <Text style={styles.heroText}>{he.money.wholeTrip}</Text>
-            <Text style={styles.stat}>{formatShekel(view.totalSpent)}</Text>
+            <Text style={styles.stat} numberOfLines={1} adjustsFontSizeToFit>
+              {formatShekel(view.totalSpent)}
+            </Text>
           </View>
           <View style={styles.totalsRule} />
           <View style={styles.total}>
             <Text style={styles.heroText}>{he.money.myShare}</Text>
-            <Text style={styles.stat}>{formatShekel(view.myShare)}</Text>
+            <Text style={styles.stat} numberOfLines={1} adjustsFontSizeToFit>
+              {formatShekel(view.myShare)}
+            </Text>
           </View>
         </View>
         {balance !== 0 && (
@@ -515,7 +519,8 @@ const styles = StyleSheet.create({
   totals: { flexDirection: 'row', alignItems: 'stretch', gap: space[3] },
   total: { flex: 1, gap: 2 },
   totalsRule: { width: 1, backgroundColor: colors.hairline },
-  stat: { ...type.stat, color: colors.ink },
+  // Half a card each: smaller than `stat`, so ₪2,040.00 fits on one line.
+  stat: { ...type.stat, fontSize: 22, lineHeight: 28, color: colors.ink },
   balanceLink: {
     flexDirection: 'row',
     alignItems: 'center',
