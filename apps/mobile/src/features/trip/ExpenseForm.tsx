@@ -3,13 +3,15 @@ import { useRef, useState, type ComponentRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
-import { SuggestionChip } from '@/components/Chips';
+import { FilterChip, SuggestionChip } from '@/components/Chips';
+import { DateField } from '@/components/DateField';
 import { SegmentedControl } from '@/components/Controls';
 import { AmountField, TextField, fieldStyles } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
+import { addDays, spentDay, today } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useMe } from '@/state/store';
 import { useTripAction } from '@/state/trips';
@@ -18,6 +20,7 @@ import { colors, fonts, space, type } from '@/theme';
 
 import { useCloseSheet } from './closeSheet';
 import { deriveTrip } from './derive';
+import { lastSplit } from './lastSplit';
 import { ReceiptField } from './ReceiptField';
 import { requestReveal } from './reveal';
 import { RunParts } from './RunParts';
@@ -50,7 +53,12 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   const [what, setWhat] = useState(expense?.description ?? '');
   const [itemId, setItemId] = useState<string>();
   const [payer, setPayer] = useState(expense?.paidBy ?? me);
-  const [shares, setShares] = useShares(view, expense?.shares);
+  // A new expense starts from how I split the last one.
+  const [last] = useState(() =>
+    expense ? undefined : lastSplit(data.expenses, me, view.activeIds),
+  );
+  const [shares, setShares] = useShares(view, expense?.shares ?? last);
+  const [day, setDay] = useState(() => (expense ? spentDay(expense) : today()));
   const [parts, setParts] = useState<PartDraft[]>(() => expense?.parts?.map(toDraft) ?? []);
   const [weights, setWeights] = useState<Record<string, number>>(expense?.weights ?? {});
   const [mode, setMode] = useState<SplitMode>(
@@ -74,6 +82,7 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   const owed = agorot
     ? owedShares({ amountAgorot: agorot, shares, parts: split.parts, weights: usedWeights })
     : new Map<string, number>();
+  const owedFor = (id: string) => owed.get(id) ?? 0;
   const unbought = expense
     ? []
     : view.items.filter((i) => i.list === 'buy' && !linkedExpense(i.id, data.expenses)).slice(0, 6);
@@ -91,7 +100,14 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
       return;
     }
     close(() => {
-      const fields = { description: what.trim(), amountAgorot: agorot, paidBy: payer, shares };
+      const fields = {
+        description: what.trim(),
+        amountAgorot: agorot,
+        paidBy: payer,
+        shares,
+        // Only a day other than the one it already has: today, for a new one.
+        ...(day !== (expense ? spentDay(expense) : today()) && { spentOn: day }),
+      };
       if (expense) {
         // Both, always: switching to an equal split drops the parts and the weights.
         act({
@@ -114,8 +130,14 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         amountAgorot: agorot,
         before: data.expenses.map((e) => e.id),
       });
-      // The list shows it only once the API answers, so say it went through.
-      showToast(he.addExpense.saved(formatShekel(agorot)), 'success');
+      // The list shows it only once the API answers, so say it went through, and what it costs me.
+      const mine = owedFor(me);
+      showToast(
+        mine
+          ? he.addExpense.savedMine(formatShekel(mine))
+          : he.addExpense.saved(formatShekel(agorot)),
+        'success',
+      );
     });
   };
 
@@ -218,6 +240,21 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
       </View>
 
       <View style={styles.field}>
+        <Text style={fieldStyles.label}>{he.addExpense.when}</Text>
+        <View style={styles.wrap}>
+          {[today(), addDays(today(), -1)].map((d, i) => (
+            <FilterChip
+              key={d}
+              label={i === 0 ? he.addExpense.today : he.addExpense.yesterday}
+              selected={day === d}
+              onPress={() => setDay(d)}
+            />
+          ))}
+        </View>
+        <DateField label={he.addExpense.when} value={day} onChange={setDay} />
+      </View>
+
+      <View style={styles.field}>
         <Text style={fieldStyles.label}>{he.addExpense.splitHow}</Text>
         <SegmentedControl
           options={SPLIT_MODES.map((value) => ({ value, label: he.addExpense.split[value] }))}
@@ -227,6 +264,9 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         />
       </View>
 
+      {last && last.length < view.activeIds.length && (
+        <Text style={styles.meta}>{he.addExpense.lastSplit}</Text>
+      )}
       <SharePicker
         view={view}
         shares={shares}

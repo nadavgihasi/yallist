@@ -52,6 +52,7 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
       itemId?: string;
       parts?: { label: string; amountAgorot: number; shares: string[] }[];
       weights?: Record<string, number>;
+      spentOn?: string;
     },
   ) =>
     client.trips[':tripId'].expenses.$post(
@@ -181,6 +182,7 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
       shares?: string[];
       parts?: { label: string; amountAgorot: number; shares: string[] }[];
       weights?: Record<string, number>;
+      spentOn?: string;
     },
   ) =>
     client.trips[':tripId'].expenses[':expenseId'].$patch(
@@ -287,6 +289,25 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
       200,
     );
     expect((await detail(a, tripId)).balances[b.id]).toBe(-1000);
+  });
+
+  it('keeps the day an expense was spent, when given one', async () => {
+    const { a, b, tripId } = await trip();
+    const today = await (await addExpense(a, tripId, { amountAgorot: 100, shares: [a.id] })).json();
+    expect(today).not.toHaveProperty('spentOn');
+    const res = await addExpense(a, tripId, {
+      amountAgorot: 100,
+      shares: [a.id, b.id],
+      spentOn: '2026-11-17',
+    });
+    expect(res.status).toBe(201);
+    const { id } = await res.json();
+    expect((await detail(b, tripId)).expenses[1]).toMatchObject({ id, spentOn: '2026-11-17' });
+    expect((await edit(a, tripId, id, { spentOn: '2026-11-16' })).status).toBe(200);
+    expect((await detail(b, tripId)).expenses[1]!.spentOn).toBe('2026-11-16');
+    expect(
+      (await addExpense(a, tripId, { amountAgorot: 100, shares: [a.id], spentOn: '17.11' })).status,
+    ).toBe(400);
   });
 
   it('splits a new expense by weight', async () => {

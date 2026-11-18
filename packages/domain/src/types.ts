@@ -99,6 +99,8 @@ export interface Expense {
   hasReceipt?: boolean;
   /** When it was added (ISO). From the API. */
   createdAt?: string;
+  /** The day it was spent (`YYYY-MM-DD`), when not the day it was added. */
+  spentOn?: string;
 }
 
 /** A part of an expense with its own participants; see `owedShares`. */

@@ -37,6 +37,9 @@ function assertWeightsFit(weightsIn: Record<string, number>, shares: string[]) {
   }
 }
 
+/** `YYYY-MM-DD`, as trips' dates. */
+const spentOn = z.iso.date();
+
 const addExpense = z.object({
   description: z.string().trim().min(1).max(80),
   amountAgorot: agorot,
@@ -50,6 +53,8 @@ const addExpense = z.object({
   parts: z.array(part).max(MAX_PARTS).optional(),
   /** How many shares of the rest some of `shares` take; anyone else takes 1. */
   weights: weights.optional(),
+  /** The day it was spent, when not today. */
+  spentOn: spentOn.optional(),
 });
 
 /**
@@ -64,6 +69,7 @@ const editExpense = z.object({
   shares: z.array(z.uuid()).min(1).max(100).optional(),
   parts: z.array(part).max(MAX_PARTS).optional(),
   weights: weights.optional(),
+  spentOn: spentOn.optional(),
 });
 
 const tripParam = z.object({ tripId: z.uuid() });

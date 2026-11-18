@@ -328,6 +328,8 @@ export const expenses = pgTable(
     createdBy: userRef('created_by').notNull(),
     receiptPath: text('receipt_path'),
     createdAt: createdAt(),
+    /** The day it was spent, when entered after the fact; null is the day it was added. */
+    spentOn: date('spent_on', { mode: 'string' }),
   },
   (t) => [
     index('expenses_trip_idx').on(t.tripId),

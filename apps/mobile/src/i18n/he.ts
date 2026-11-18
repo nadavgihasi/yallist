@@ -438,6 +438,13 @@ export const he = {
     paidBy: 'מי שילם?',
     save: 'שמירת ההוצאה',
     saved: (amount: string) => `ההוצאה נשמרה: ${amount}`,
+    /** After saving one I share: what it costs me. */
+    savedMine: (mine: string) => `נשמר · החלק שלך ${mine}`,
+    when: 'מתי?',
+    today: 'היום',
+    yesterday: 'אתמול',
+    /** The split picker starts from the last expense I added. */
+    lastSplit: 'כמו בהוצאה הקודמת שלך',
     /** Tapping save with a field still empty says which. */
     needAmount: 'רושמים כמה זה עלה',
     needWhat: 'רושמים על מה',
@@ -456,6 +463,7 @@ export const he = {
     paidBy: 'מי שילם',
     addedBy: 'מי הוסיף',
     addedAt: 'מתי נוסף',
+    spentOn: 'מתי',
     owed: 'כמה כל אחד',
     mine: 'החלק שלך',
     parts: 'חלקים',

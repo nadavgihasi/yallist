@@ -13,7 +13,7 @@ import { deriveTrip } from '@/features/trip/derive';
 import { coveredItems, owedLines } from '@/features/trip/expenseDetail';
 import { he, joinNames } from '@/i18n/he';
 import { rtl } from '@/lib/bidi';
-import { formatMoment } from '@/lib/dates';
+import { formatMoment, formatRange } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useReceiptLink } from '@/state/receipts';
 import { useMe } from '@/state/store';
@@ -126,6 +126,11 @@ function Detail({
         {expense.createdBy && expense.createdBy !== expense.paidBy && (
           <Fact label={he.expense.addedBy}>
             <Text style={styles.value}>{view.nameOf(expense.createdBy)}</Text>
+          </Fact>
+        )}
+        {expense.spentOn && (
+          <Fact label={he.expense.spentOn}>
+            <Text style={styles.value}>{formatRange(expense.spentOn, expense.spentOn)}</Text>
           </Fact>
         )}
         {expense.createdAt && (

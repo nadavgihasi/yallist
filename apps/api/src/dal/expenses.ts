@@ -74,7 +74,10 @@ async function insertParts(tx: Executor, expenseId: string, parts: ExpensePart[]
 export async function updateExpense(
   tx: Executor,
   expenseId: string,
-  values: Pick<Partial<typeof expenses.$inferInsert>, 'description' | 'amountAgorot' | 'paidBy'>,
+  values: Pick<
+    Partial<typeof expenses.$inferInsert>,
+    'description' | 'amountAgorot' | 'paidBy' | 'spentOn'
+  >,
   { shares, weights, parts }: { shares?: string[]; weights?: Weights; parts?: ExpensePart[] } = {},
 ) {
   // Only shares or parts changing: the row stays as it is.

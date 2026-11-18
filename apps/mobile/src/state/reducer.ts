@@ -34,6 +34,8 @@ export interface NewExpenseInput {
   parts?: ExpensePart[];
   /** How many shares of the rest each takes, when not 1; see `Expense.weights`. */
   weights?: Record<string, number>;
+  /** The day it was spent, when not today. */
+  spentOn?: string;
 }
 
 /**
@@ -41,7 +43,7 @@ export interface NewExpenseInput {
  * its weights.
  */
 export type ExpenseChanges = Partial<
-  Pick<Expense, 'description' | 'amountAgorot' | 'paidBy' | 'shares'> & {
+  Pick<Expense, 'description' | 'amountAgorot' | 'paidBy' | 'shares' | 'spentOn'> & {
     parts: ExpensePart[];
     weights: Record<string, number>;
   }

@@ -86,6 +86,7 @@ export function toExpense(
     ...(Object.keys(weights).length > 0 && { weights }),
     hasReceipt: row.receiptPath !== null,
     createdAt: row.createdAt.toISOString(),
+    ...(row.spentOn && { spentOn: row.spentOn }),
   };
 }
 
