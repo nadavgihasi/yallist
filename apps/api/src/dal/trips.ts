@@ -273,9 +273,7 @@ export async function loadTrips(tx: Executor, tripIds: string[], photos?: Receip
             })),
         );
       }),
-    payments: paymentRows
-      .filter((p) => p.tripId === trip.id)
-      .map(toPayment),
+    payments: paymentRows.filter((p) => p.tripId === trip.id).map(toPayment),
     /** Who is out shopping right now (active runs only). */
     runs: runRows
       .filter((r) => r.tripId === trip.id)
