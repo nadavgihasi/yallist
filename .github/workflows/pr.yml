@@ -2,7 +2,8 @@ name: PR
 
 # Every check a pull request runs, as one workflow, so `all-pass` can need them all. It's the one
 # status to require for main: it fails if any of them failed or was cancelled, and passes when the
-# rest passed or were skipped (Android when its files didn't change, Preview on fork PRs).
+# rest passed or were skipped (Android when its files didn't change, Preview on fork PRs, and CI,
+# UI tests and Preview when only docs changed: `docs` checks their formatting instead).
 #
 # The called workflows keep their own concurrency groups; Preview's also has a `closed` run of
 # its own, which removes the PR's stage.
@@ -18,12 +19,18 @@ concurrency:
 
 jobs:
   ci:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/ci.yml
 
   ui-tests:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/ui-tests.yml
 
   preview:
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     uses: ./.github/workflows/preview.yml
     permissions:
       contents: read
@@ -33,6 +40,7 @@ jobs:
       BETTER_AUTH_SECRET: ${{ secrets.BETTER_AUTH_SECRET }}
 
   # The Android build is slow, so it runs only when the files that shape the native project change.
+  # CI, UI tests and Preview run unless every changed file is docs (under docs/ or a .md file).
   changes:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -40,6 +48,7 @@ jobs:
       pull-requests: read
     outputs:
       android: ${{ steps.files.outputs.android }}
+      code: ${{ steps.files.outputs.code }}
     steps:
       - id: files
         env:
@@ -53,6 +62,30 @@ jobs:
           else
             echo "android=false" >> "$GITHUB_OUTPUT"
           fi
+          # Anything outside docs, or no file list at all, runs everything.
+          if [[ -z $files ]] || grep -qvE '^docs/|\.md$' <<< "$files"; then
+            echo "code=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "code=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # Docs-only PRs skip CI, so check their formatting (CI's format:check) here.
+  docs:
+    needs: changes
+    if: needs.changes.outputs.code == 'false'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm format:check
 
   android:
     needs: changes
@@ -64,7 +97,7 @@ jobs:
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
 
   all-pass:
-    needs: [ci, ui-tests, preview, changes, android]
+    needs: [ci, ui-tests, preview, changes, android, docs]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 5
