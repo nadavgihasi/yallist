@@ -1,6 +1,6 @@
 import { formatShekel } from '@yallist/domain';
 
-import { rtl } from '@/lib/bidi';
+import { ltr, rtl } from '@/lib/bidi';
 
 /** All user-facing strings. Hebrew only for v1; another locale is a sibling file with the same shape. */
 export const he = {
@@ -315,7 +315,8 @@ export const he = {
     rest: (names: string) => `השאר: ${names}`,
     /** An expense split by weight: `לפי משקל: דנה ×2, רון ×3`. */
     byWeight: (who: string) => `לפי משקל: ${who}`,
-    weighted: (name: string, weight: number) => `${name} ×${weight}`,
+    // `×2` stays one left-to-right unit after the name.
+    weighted: (name: string, weight: number) => `${name} ${ltr(`×${weight}`)}`,
     everyone: 'כולם',
   },
   /** Settling one debt (MoneyTab's pay rows): pay it in Bit or PayBox, then mark it. */

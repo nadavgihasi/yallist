@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { he } from '@/i18n/he';
+import { ltr } from '@/lib/bidi';
 
 import { newPart, runSplit, sharedText } from './runSplit';
 
@@ -68,10 +69,10 @@ describe('runSplit', () => {
 describe('sharedText', () => {
   it('names who takes more than one share', () => {
     expect(sharedText({ shares: everyone, weights: { a: 2, c: 3 } }, everyone, nameOf)).toBe(
-      'לפי משקל: דנה ×2, יעל ×3',
+      `לפי משקל: דנה ${ltr('×2')}, יעל ${ltr('×3')}`,
     );
     expect(sharedText({ shares: ['a', 'b'], weights: { a: 2 } }, everyone, nameOf)).toBe(
-      'בין דנה ורון · לפי משקל: דנה ×2',
+      `בין דנה ורון · לפי משקל: דנה ${ltr('×2')}`,
     );
   });
 
