@@ -1,6 +1,7 @@
 import { useIsMutating } from '@tanstack/react-query';
 import { formatShekel, owedShares } from '@yallist/domain';
 import { router } from 'expo-router';
+import { useEffect, useRef } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
@@ -48,6 +49,13 @@ export function MoneyTab({
   const act = useTripAction(data.trip.id);
   // Transfers come from the API: until it answers, a second tap would pay twice.
   const saving = useIsMutating({ mutationKey: tripKey(data.trip.id) }) > 0;
+  // `saving` only takes hold after a render: two taps in one frame (a double tap, or a tap on
+  // the button that moved under the finger) would both get through. This blocks the second at
+  // once, until the first has been answered.
+  const recording = useRef(false);
+  useEffect(() => {
+    if (!saving) recording.current = false;
+  }, [saving]);
   const sum = (xs: { amountAgorot: number }[]) => xs.reduce((n, x) => n + x.amountAgorot, 0);
   const names = (ids: string[]) => joinNames([...new Set(ids)].map(view.displayNameOf));
 
@@ -71,6 +79,8 @@ export function MoneyTab({
 
   // Anyone records any payment, and it counts at once: nobody confirms it.
   const record = (fromUser: string, toUser: string, amountAgorot: number, toast: string) => {
+    if (recording.current) return;
+    recording.current = true;
     act({ type: 'recordPayment', fromUser, toUser, amountAgorot });
     showToast(toast, 'success');
   };
@@ -106,80 +116,87 @@ export function MoneyTab({
   return (
     <View style={styles.wrap}>
       {tabs}
-      <Card gap={space[1]}>
-        {square ? (
-          // Nothing to pay or receive: the done check, as on a packed item, instead of ₪0.
-          <View style={styles.square}>
-            <View style={styles.squareCheck}>
-              <Icon name="check" size={28} color={colors.onPrimary} />
+      {data.expenses.length === 0 && data.payments.length === 0 ? (
+        // Nothing spent yet: nothing to celebrate, and nothing to settle.
+        <EmptyState title={he.money.noExpenses} text={he.money.noExpensesText} />
+      ) : (
+        <Card gap={space[1]}>
+          {square ? (
+            // Nothing to pay or receive: the done check, as on a packed item, instead of ₪0.
+            <View style={styles.square}>
+              <View style={styles.squareCheck}>
+                <Icon name="check" size={28} color={colors.onPrimary} />
+              </View>
+              <Text style={styles.squareTitle}>{he.money.allSquare}</Text>
+              <Text style={styles.heroText}>{he.money.allSquareText}</Text>
             </View>
-            <Text style={styles.squareTitle}>{he.money.allSquare}</Text>
-            <Text style={styles.heroText}>{he.money.allSquareText}</Text>
-          </View>
-        ) : (
-          <>
-            <Text style={styles.heroTitle}>{title}</Text>
-            {/* Owing in orange, owed in teal: the same colours as the balances below. */}
-            <Text
-              style={[
-                styles.heroAmount,
-                { color: myOpen.length > 0 ? colors.brandStrong : colors.owed },
-              ]}
-            >
-              {formatShekel(amount)}
+          ) : (
+            <>
+              <Text style={styles.heroTitle}>{title}</Text>
+              {/* Owing in orange, owed in teal: the same colours as the balances below. */}
+              <Text
+                style={[
+                  styles.heroAmount,
+                  fitText(formatShekel(amount), 9, type.bigNumber.fontSize),
+                  { color: myOpen.length > 0 ? colors.brandStrong : colors.owed },
+                ]}
+                numberOfLines={1}
+              >
+                {formatShekel(amount)}
+              </Text>
+            </>
+          )}
+          {view.myShare > 0 && (
+            <Text style={styles.heroText}>
+              {he.money.share(formatShekel(view.myShare), formatShekel(view.totalSpent))}
             </Text>
-          </>
-        )}
-        {view.totalSpent > 0 && (
-          <Text style={styles.heroText}>
-            {he.money.share(formatShekel(view.myShare), formatShekel(view.totalSpent))}
-          </Text>
-        )}
-        {myOpen.length > 0 ? (
-          <View style={styles.payRows}>
-            <Text style={styles.heroText}>{he.settle.payIn}</Text>
-            {myOpen.map((t) => (
-              <PayRow
-                key={t.to}
-                view={view}
-                transfer={t}
-                tripName={data.trip.name}
-                saving={saving}
-                onMark={(amountAgorot) =>
-                  record(me, t.to, amountAgorot, he.money.markedToast(formatShekel(amountAgorot)))
-                }
-              />
-            ))}
-          </View>
-        ) : (
-          toMe.length > 0 && (
+          )}
+          {myOpen.length > 0 ? (
             <View style={styles.payRows}>
-              {toMe.map((t) => (
-                <PillButton
-                  key={t.from}
-                  label={he.money.receivedFrom(
-                    formatShekel(t.amountAgorot),
-                    view.displayNameOf(t.from),
-                  )}
-                  size="lg"
-                  wide
-                  icon={<Icon name="check" size={20} color={colors.onPrimary} />}
-                  disabled={saving}
-                  onPress={() =>
-                    record(
-                      t.from,
-                      me,
-                      t.amountAgorot,
-                      he.money.receivedToast(formatShekel(t.amountAgorot)),
-                    )
+              <Text style={styles.heroText}>{he.settle.payIn}</Text>
+              {myOpen.map((t) => (
+                <PayRow
+                  key={t.to}
+                  view={view}
+                  transfer={t}
+                  tripName={data.trip.name}
+                  saving={saving}
+                  onMark={(amountAgorot) =>
+                    record(me, t.to, amountAgorot, he.money.markedToast(formatShekel(amountAgorot)))
                   }
-                  {...testId(`received-${t.from}`)}
                 />
               ))}
             </View>
-          )
-        )}
-      </Card>
+          ) : (
+            toMe.length > 0 && (
+              <View style={styles.payRows}>
+                {toMe.map((t) => (
+                  <PillButton
+                    key={t.from}
+                    label={he.money.receivedFrom(
+                      formatShekel(t.amountAgorot),
+                      view.displayNameOf(t.from),
+                    )}
+                    size="lg"
+                    wide
+                    icon={<Icon name="check" size={20} color={colors.onPrimary} />}
+                    disabled={saving}
+                    onPress={() =>
+                      record(
+                        t.from,
+                        me,
+                        t.amountAgorot,
+                        he.money.receivedToast(formatShekel(t.amountAgorot)),
+                      )
+                    }
+                    {...testId(`received-${t.from}`)}
+                  />
+                ))}
+              </View>
+            )
+          )}
+        </Card>
+      )}
 
       {needsPhone && (
         <Callout
@@ -229,7 +246,7 @@ export function MoneyTab({
           {data.payments.length > 0 && (
             <>
               <View style={styles.divider} />
-              <Text style={styles.subhead}>{he.money.paidSoFar}</Text>
+              <Text style={styles.subhead}>{he.money.payments}</Text>
             </>
           )}
           {[...data.payments].reverse().map((p) => (
@@ -268,22 +285,25 @@ export function MoneyTab({
             </Pressable>
           ))}
 
-          <View style={styles.recordOther}>
-            <PillButton
-              label={he.money.recordOther}
-              variant="soft"
-              wide
-              icon={<Icon name="plus" size={18} color={colors.primaryStrong} />}
-              onPress={() =>
-                router.push({
-                  pathname: '/trips/[tripId]/payments/new',
-                  params: { tripId: data.trip.id },
-                })
-              }
-              {...testId('payment-record')}
-            />
-            <Text style={styles.hint}>{he.money.recordHint}</Text>
-          </View>
+          {/* Alone on the trip there's nobody to pay or be paid. */}
+          {(view.activeIds.length > 1 || view.transfers.length > 0) && (
+            <View style={styles.recordOther}>
+              <PillButton
+                label={he.money.recordOther}
+                variant="soft"
+                wide
+                icon={<Icon name="plus" size={18} color={colors.primaryStrong} />}
+                onPress={() =>
+                  router.push({
+                    pathname: '/trips/[tripId]/payments/new',
+                    params: { tripId: data.trip.id },
+                  })
+                }
+                {...testId('payment-record')}
+              />
+              <Text style={styles.hint}>{he.money.recordHint}</Text>
+            </View>
+          )}
         </ListGroup>
       )}
 
@@ -334,14 +354,20 @@ function Expenses({
         <View style={styles.totals}>
           <View style={styles.total}>
             <Text style={styles.heroText}>{he.money.wholeTrip}</Text>
-            <Text style={styles.stat} numberOfLines={1} adjustsFontSizeToFit>
+            <Text
+              style={[styles.stat, fitText(formatShekel(view.totalSpent), 9, 22)]}
+              numberOfLines={1}
+            >
               {formatShekel(view.totalSpent)}
             </Text>
           </View>
           <View style={styles.totalsRule} />
           <View style={styles.total}>
             <Text style={styles.heroText}>{he.money.myShare}</Text>
-            <Text style={styles.stat} numberOfLines={1} adjustsFontSizeToFit>
+            <Text
+              style={[styles.stat, fitText(formatShekel(view.myShare), 9, 22)]}
+              numberOfLines={1}
+            >
               {formatShekel(view.myShare)}
             </Text>
           </View>
@@ -391,7 +417,7 @@ function Expenses({
                       style={styles.expenseWho}
                       numberOfLines={e.parts || e.weights ? undefined : 1}
                     >
-                      {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
+                      {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.nameOf)]
                         .filter(Boolean)
                         .join(' · ')}
                     </Text>
@@ -486,6 +512,16 @@ function ReceiptButton({
       )}
     </Pressable>
   );
+}
+
+/**
+ * A big amount that stays on one line at phone width: past `chars` characters it shrinks in
+ * proportion. `adjustsFontSizeToFit` would do this natively but does nothing on web.
+ */
+function fitText(text: string, chars: number, fontSize: number) {
+  if (text.length <= chars) return undefined;
+  const size = Math.max(14, Math.floor((fontSize * chars) / text.length));
+  return { fontSize: size, lineHeight: Math.round(size * 1.15) };
 }
 
 const styles = StyleSheet.create({

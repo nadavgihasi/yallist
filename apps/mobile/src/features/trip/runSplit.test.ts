@@ -69,10 +69,10 @@ describe('runSplit', () => {
 describe('sharedText', () => {
   it('names who takes more than one share', () => {
     expect(sharedText({ shares: everyone, weights: { a: 2, c: 3 } }, everyone, nameOf)).toBe(
-      `לפי משקל: דנה ${ltr('×2')}, יעל ${ltr('×3')}`,
+      `לפי משקל: דנה\u00a0${ltr('×2')}, יעל\u00a0${ltr('×3')}`,
     );
     expect(sharedText({ shares: ['a', 'b'], weights: { a: 2 } }, everyone, nameOf)).toBe(
-      `בין דנה ורון · לפי משקל: דנה ${ltr('×2')}`,
+      `בין דנה ורון · לפי משקל: דנה\u00a0${ltr('×2')}`,
     );
   });
 

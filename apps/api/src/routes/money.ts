@@ -28,7 +28,10 @@ import { assertPartsFit, MAX_PARTS, part } from './runs';
 const agorot = z.int().min(1).max(100_000_000);
 
 /** By user id, 1 to MAX_WEIGHT; see `Expense.weights`. */
-const weights = z.record(z.uuid(), z.int().min(1).max(MAX_WEIGHT));
+const weights = z
+  .record(z.uuid(), z.int().min(1).max(MAX_WEIGHT))
+  // 1 is everyone's default and isn't stored: answer with what is.
+  .transform((w) => Object.fromEntries(Object.entries(w).filter(([, n]) => n !== 1)));
 
 /** Weights only for people who share the expense. */
 function assertWeightsFit(weightsIn: Record<string, number>, shares: string[]) {
@@ -37,8 +40,10 @@ function assertWeightsFit(weightsIn: Record<string, number>, shares: string[]) {
   }
 }
 
-/** `YYYY-MM-DD`, as trips' dates. */
-const spentOn = z.iso.date();
+/** `YYYY-MM-DD`, as trips' dates, in a plausible range (a typo like 1926 or 2062 is refused). */
+const spentOn = z.iso
+  .date()
+  .refine((d) => d >= '2000-01-01' && d <= '2100-12-31', 'spentOn is out of range');
 
 const addExpense = z.object({
   description: z.string().trim().min(1).max(80),

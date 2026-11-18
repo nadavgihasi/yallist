@@ -327,6 +327,10 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
     expect(
       (await addExpense(a, tripId, { amountAgorot: 100, shares: [a.id], spentOn: '17.11' })).status,
     ).toBe(400);
+    expect(
+      (await addExpense(a, tripId, { amountAgorot: 100, shares: [a.id], spentOn: '1926-11-17' }))
+        .status,
+    ).toBe(400);
   });
 
   it('splits a new expense by weight', async () => {
@@ -349,6 +353,13 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
         (r) => r.status,
       );
     expect(await bad({ [c.id]: 2 })).toBe(400);
+    // A weight of 1 is the default: not stored, and not echoed back either.
+    const one = await addExpense(a, tripId, {
+      amountAgorot: 100,
+      shares: [a.id, b.id],
+      weights: { [a.id]: 1 },
+    });
+    expect(await one.json()).not.toHaveProperty('weights');
     expect(await bad({ [a.id]: 11 })).toBe(400);
     expect(await bad({ [a.id]: 0 })).toBe(400);
   });

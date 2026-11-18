@@ -1,4 +1,4 @@
-import { formatShekel } from '@yallist/domain';
+import { formatShekel, owedShares } from '@yallist/domain';
 import { router, useLocalSearchParams } from 'expo-router';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -84,7 +84,7 @@ export default function BalanceDetail() {
             <Line
               key={expense.id}
               title={expense.description}
-              caption={`${formatShort(spentDay(expense))} · ${he.money.sharedBy(expense.shares.length)}`}
+              caption={`${formatShort(spentDay(expense))} · ${he.money.sharedBy(owedShares(expense).size)}`}
               amount={amountAgorot}
               onPress={() => openExpense(expense.id)}
             />

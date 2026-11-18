@@ -309,10 +309,9 @@ export const he = {
     transfers: 'מי מעביר למי',
     /** One section for what's open and what was paid (M8). */
     settling: 'מסדרים חשבון',
-    paidSoFar: 'שולם',
     noneOpen: 'אין העברות פתוחות',
     /** The hero when I'm square. */
-    allSquare: 'את/ה מסודר/ת',
+    allSquare: 'החשבון שלך סגור',
     allSquareText: 'אין לך מה להעביר ואין מה שמגיע לך.',
     /** The expense log, by day. */
     today: (date: string) => `היום · ${date}`,
@@ -341,7 +340,7 @@ export const he = {
     /** An expense split by weight: `לפי משקל: דנה ×2, רון ×3`. */
     byWeight: (who: string) => `לפי משקל: ${who}`,
     // `×2` stays one left-to-right unit after the name.
-    weighted: (name: string, weight: number) => `${name} ${ltr(`×${weight}`)}`,
+    weighted: (name: string, weight: number) => `${name}\u00a0${ltr(`×${weight}`)}`,
     everyone: 'כולם',
   },
   /** Settling one debt (MoneyTab's pay rows): pay it in Bit or PayBox, then mark it. */
@@ -515,7 +514,8 @@ export const he = {
     owes: 'חייב/ת',
     settled: 'מסודר/ת',
     /** Under a name: `שילם/ה ₪1,200 · חלק ₪630`. */
-    paidAndShare: (paid: string, share: string) => `שילם/ה ${paid} · חלק ${share}`,
+    // No-break spaces keep each label with its amount when the line wraps.
+    paidAndShare: (paid: string, share: string) => `שילם/ה\u00a0${paid} · חלק\u00a0${share}`,
     open: (name: string, amount: string, state: string) => `היתרה של ${name}: ${amount}, ${state}`,
     /** The sheet. */
     mine: 'היתרה שלך',

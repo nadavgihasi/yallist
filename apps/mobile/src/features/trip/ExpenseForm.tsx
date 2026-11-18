@@ -74,10 +74,13 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   const agorot = parseShekel(amount);
   const usedParts = mode === 'parts' ? parts : [];
   // Weights for who shares it only: someone unticked takes none.
-  const usedWeights =
-    mode === 'weights'
-      ? Object.fromEntries(Object.entries(weights).filter(([id]) => shares.includes(id)))
-      : {};
+  // Weights count in weights mode, and in parts mode for an expense saved with both (the API
+  // takes both; the form edits one at a time but mustn't drop the other on save).
+  const keepsWeights =
+    mode === 'weights' || (mode === 'parts' && !!expense?.parts && !!expense.weights);
+  const usedWeights = keepsWeights
+    ? Object.fromEntries(Object.entries(weights).filter(([id]) => shares.includes(id)))
+    : {};
   const split = runSplit(agorot, shares, usedParts);
   const owed = agorot
     ? owedShares({ amountAgorot: agorot, shares, parts: split.parts, weights: usedWeights })
