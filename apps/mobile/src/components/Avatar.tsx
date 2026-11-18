@@ -1,13 +1,16 @@
-import { useState } from 'react';
 import { Image, StyleSheet, Text, View } from 'react-native';
 
+import { useKeptPhoto } from '@/lib/useKeptPhoto';
 import { avatarSize, colors, fonts, type } from '@/theme';
 
 export interface AvatarPerson {
   initial: string;
   /** Their pale avatar color (AVATAR_COLORS); without one, the `primary` badge. */
   color?: string;
-  /** Their profile photo's URL, shown over the initial (which shows while it loads, or if it fails). */
+  /**
+   * Their profile photo's URL, shown over the initial (which shows while it loads, or if it
+   * fails). It's kept on the device, so it shows from there next time (useKeptPhoto).
+   */
   photo?: string;
 }
 
@@ -30,8 +33,7 @@ export function Avatar({
   color?: string;
 }) {
   const fill = color ?? (dimmed ? undefined : person.color);
-  const [failed, setFailed] = useState<string>();
-  const photo = person.photo !== failed ? person.photo : undefined;
+  const { uri: photo, onError } = useKeptPhoto(person.photo);
   return (
     <View
       style={[
@@ -60,7 +62,7 @@ export function Avatar({
           source={{ uri: photo }}
           style={[StyleSheet.absoluteFill, { borderRadius: size / 2 }, dimmed && styles.dimmed]}
           resizeMode="cover"
-          onError={() => setFailed(photo)}
+          onError={onError}
         />
       )}
     </View>
