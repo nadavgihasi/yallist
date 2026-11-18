@@ -8,6 +8,7 @@ import { Loader } from '@/components/Loader';
 import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
 import { setAuth, signOut as endSession, statusOf, type AuthResult } from '@/lib/api';
+import { forgetKeptPhotos } from '@/lib/useKeptPhoto';
 
 import { cacheBuster } from './cacheBuster';
 import type { Me } from './types';
@@ -69,6 +70,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const forget = () => {
     AsyncStorage.removeItem(SESSION_KEY).catch(() => {});
     queryClient.clear();
+    // The profile photos of the user's trip-mates, kept on the device.
+    forgetKeptPhotos();
     activate(null);
   };
 
