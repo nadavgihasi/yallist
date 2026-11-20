@@ -349,7 +349,7 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
                 .filter(([, amount]) => amount > 0)
                 .map(([id, amount]) => (
                   <View key={id} style={styles.owedRow}>
-                    <Text style={styles.owedName}>{view.displayNameOf(id)}</Text>
+                    <Text style={styles.owedName}>{view.nameOf(id)}</Text>
                     <Text style={styles.owedAmount}>{formatShekel(amount)}</Text>
                   </View>
                 ))}

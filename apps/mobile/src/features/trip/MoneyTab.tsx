@@ -261,7 +261,9 @@ export function MoneyTab({
           ))}
 
           {/* Why someone may pay a person who never paid for them. */}
-          {view.transfers.length > 1 && <Text style={styles.why}>{he.money.fewestTransfers}</Text>}
+          {view.transfers.length > 1 && (others.length > 0 || myOpen.length > 0) && (
+            <Text style={styles.why}>{he.money.fewestTransfers}</Text>
+          )}
 
           {data.payments.length > 0 && (
             <>
