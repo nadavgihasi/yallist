@@ -172,61 +172,109 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
     expect(mine.trips.map((t) => t.trip.id)).not.toContain(tripId);
   });
 
-  /** The tables that hang off trips: they reference trips.id, or a table that does, and so on. */
-  async function tripTables() {
-    const fks = await foreignKeys(sql);
-    const found = new Map<string, string>([['trips', 'trips']]);
+  /**
+   * Tables that belong to users, not trips: the walk below never goes through them. A reference
+   * from one of them into a trip must be nulled (NULLED_BY_DELETE_TRIP).
+   */
+  const USER_OWNED = new Set(['users', 'profiles']);
+
+  /**
+   * Optional references into a trip's rows, as 'table.column', that deleteTrip sets to null
+   * instead of deleting the row that holds them, because that row outlives the trip (as a
+   * nullable feedback.trip_id would). Empty today: deleteTrip deletes every row under a trip.
+   */
+  const NULLED_BY_DELETE_TRIP: string[] = [];
+
+  /**
+   * The trip's tables (trips, the tables that reference it, the tables that reference those,
+   * and so on, each with the path that reaches it) and every foreign key column that points at
+   * a row of one of them.
+   */
+  async function tripGraph() {
+    const fks = (await foreignKeys(sql)).map((fk) => ({ ...fk, ref: `${fk.table}.${fk.column}` }));
+    const nulled = (ref: string) => NULLED_BY_DELETE_TRIP.includes(ref);
+    const tables = new Map([['trips', 'trips']]);
     for (let grew = true; grew;) {
       grew = false;
       for (const fk of fks) {
-        if (found.has(fk.refTable) && !found.has(fk.table)) {
-          found.set(fk.table, `${fk.table}.${fk.column} -> ${found.get(fk.refTable)}`);
-          grew = true;
-        }
+        if (!tables.has(fk.refTable) || tables.has(fk.table)) continue;
+        if (USER_OWNED.has(fk.table) || nulled(fk.ref)) continue;
+        tables.set(fk.table, `${fk.ref} -> ${tables.get(fk.refTable)}`);
+        grew = true;
       }
     }
-    return found;
+    const refs = fks
+      .filter((fk) => tables.has(fk.refTable))
+      .map((fk) => ({ ...fk, path: `${fk.ref} -> ${tables.get(fk.refTable)}` }));
+    return { tables, refs, nulled };
   }
 
   const countRows = async (tables: string[]) =>
-    Object.fromEntries(
-      await Promise.all(
-        tables.map(async (t) => {
-          const [row] = await sql<[{ n: number }]>`select count(*)::int as n from ${sql(t)}`;
-          return [t, row.n] as const;
-        }),
-      ),
+    Promise.all(
+      tables.map(async (t) => {
+        const [row] = await sql<[{ n: number }]>`select count(*)::int as n from ${sql(t)}`;
+        return row.n;
+      }),
+    );
+  /** How many rows set each column, so a nullable reference counts only where it's set. */
+  const countSet = async (refs: { table: string; column: string }[]) =>
+    Promise.all(
+      refs.map(async ({ table, column }) => {
+        const [row] = await sql<[{ n: number }]>`
+          select count(${sql(column)})::int as n from ${sql(table)}`;
+        return row.n;
+      }),
     );
 
-  // deleteTrip deletes children first by hand (no cascades on DSQL). The tables come from the
-  // schema's foreign keys, so a new table under a trip fails here until fullTrip writes a row to
-  // it and deleteTrip deletes it.
+  // deleteTrip deletes children first by hand (no cascades on DSQL). The tables and references
+  // come from the schema's foreign keys, so a new table or reference under a trip fails here
+  // until fullTrip sets it and deleteTrip deletes (or nulls) it.
   it('deleteTrip deletes from every table that hangs off a trip', async () => {
-    const tables = await tripTables();
-    // Sanity: the walk follows foreign keys through items, expenses and their parts.
+    const { tables, refs, nulled } = await tripGraph();
+    // Sanity: the walk follows foreign keys through items, expenses and their parts, and not
+    // into user-owned tables.
     expect([...tables.keys()]).toEqual(
       expect.arrayContaining(['trip_members', 'claims', 'expense_part_shares', 'expense_items']),
     );
-    const names = [...tables.keys()];
-    const before = await countRows(names);
-    const { tripId } = await fullTrip();
-    const filled = await countRows(names);
-    const empty = names.filter((t) => filled[t]! <= before[t]!).map((t) => tables.get(t));
+    expect(tables.has('bag_items')).toBe(false);
+
+    const stale = NULLED_BY_DELETE_TRIP.filter((r) => !refs.some((fk) => fk.ref === r));
+    expect(stale, `NULLED_BY_DELETE_TRIP names no reference into a trip: ${stale}`).toEqual([]);
+    const fromUsers = refs.filter((fk) => USER_OWNED.has(fk.table) && !nulled(fk.ref));
     expect(
-      empty,
-      `Tables hang off trips but fullTrip writes no row to them: ${empty.join('; ')}. Make ` +
-        'fullTrip fill them, and deleteTrip (dal/trips.ts) delete their rows before the rows ' +
-        'they reference',
+      fromUsers.map((fk) => fk.path),
+      `User-owned rows reference a trip's rows: ${fromUsers.map((fk) => fk.path).join('; ')}. ` +
+        'They outlive the trip: make deleteTrip (dal/trips.ts) set them to null, and add them ' +
+        'to NULLED_BY_DELETE_TRIP in this test',
+    ).toEqual([]);
+
+    const names = [...tables.keys()];
+    const [rowsBefore, setBefore] = [await countRows(names), await countSet(refs)];
+    const { tripId } = await fullTrip();
+    const setFilled = await countSet(refs);
+    const unset = refs.filter((_, i) => setFilled[i]! <= setBefore[i]!).map((fk) => fk.path);
+    expect(
+      unset,
+      `fullTrip sets none of these references into a trip, so this test can't see whether ` +
+        `deleteTrip handles them: ${unset.join('; ')}. Set them in fullTrip. Then either make ` +
+        'deleteTrip (dal/trips.ts) delete the rows that hold them before the rows they ' +
+        'reference, or, if those rows should outlive the trip, make deleteTrip set the column ' +
+        'to null and add it to NULLED_BY_DELETE_TRIP in this test',
     ).toEqual([]);
 
     // An FK error names the table deleteTrip deletes too early or leaves behind.
     await db.transaction((tx) => deleteTrip(tx, tripId));
 
-    const after = await countRows(names);
-    const left = names
-      .filter((t) => after[t] !== before[t])
-      .map((t) => `${tables.get(t)}: ${after[t]! - before[t]!} left`);
-    expect(left, `deleteTrip (dal/trips.ts) leaves rows of the trip: ${left.join('; ')}`).toEqual(
+    const [rowsAfter, setAfter] = [await countRows(names), await countSet(refs)];
+    const left = [
+      ...names
+        .filter((_, i) => rowsAfter[i] !== rowsBefore[i])
+        .map((t) => `${tables.get(t)}: rows left`),
+      ...refs
+        .filter((fk, i) => nulled(fk.ref) && setAfter[i] !== setBefore[i])
+        .map((fk) => `${fk.path}: not nulled`),
+    ];
+    expect(left, `deleteTrip (dal/trips.ts) leaves the trip's rows: ${left.join('; ')}`).toEqual(
       [],
     );
   });

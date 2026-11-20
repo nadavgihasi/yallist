@@ -32,8 +32,9 @@ export async function createTestDatabase() {
 }
 
 /**
- * Every single-column foreign key in the migrated database, read from the Postgres catalog
- * rather than the Drizzle schema: the migrations in drizzle/ are what production runs.
+ * The foreign keys in the migrated database, one row per column (a key over several columns
+ * gives a row for each), read from the Postgres catalog rather than the Drizzle schema: the
+ * migrations in drizzle/ are what production runs.
  */
 export const foreignKeys = (sql: Sql) => sql<
   { table: string; column: string; refTable: string; refColumn: string }[]
@@ -51,18 +52,20 @@ export const foreignKeys = (sql: Sql) => sql<
   order by 1, 2`;
 
 /**
- * Every primary key, unique constraint and unique index in the migrated database, with its
- * columns sorted by name.
+ * Every primary key, unique constraint and unique index in the migrated database, with its key
+ * columns sorted by name. INCLUDE columns aren't key columns, so they're left out; an expression
+ * in the key shows as '(expression)', so it can't vanish from a comparison.
  */
 export const uniqueKeys = (sql: Sql) => sql<{ table: string; name: string; columns: string[] }[]>`
   select cl.relname as "table", ic.relname as "name",
-    array_agg(a.attname::text order by a.attname) as "columns"
+    array_agg(coalesce(a.attname::text, '(expression)') order by a.attname) as "columns"
   from pg_index i
   join pg_class cl on cl.oid = i.indrelid
   join pg_class ic on ic.oid = i.indexrelid
   join pg_namespace n on n.oid = cl.relnamespace
-  join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey)
-  where i.indisunique and n.nspname = 'public'
+  cross join lateral unnest(i.indkey::int2[]) with ordinality as k(attnum, position)
+  left join pg_attribute a on a.attrelid = i.indrelid and a.attnum = k.attnum and k.attnum <> 0
+  where i.indisunique and n.nspname = 'public' and k.position <= i.indnkeyatts
   group by 1, 2
   order by 1, 2`;
 

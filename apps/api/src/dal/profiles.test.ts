@@ -17,12 +17,14 @@ import { USER_COLUMNS, USER_KEYED } from './profiles';
  * A new reference to users.id must be added here, with the code that handles it.
  */
 const USERS_REFERENCES: Record<string, string> = {
-  // The profile itself: deleteUser deletes it, mergeUser deletes the guest's.
-  'profiles.id': 'deleted with the user',
-  // Better Auth's: they cascade on user delete, and deleteUser also deletes them when it keeps
-  // the user row. A merged guest's are Better Auth's to delete (the anonymous plugin).
-  'sessions.user_id': 'cascades, deleted by deleteUser',
-  'accounts.user_id': 'cascades, deleted by deleteUser',
+  // The profile itself: deleteUser deletes it before the user row (or keeps both, anonymized);
+  // mergeUser deletes the guest's.
+  'profiles.id': 'deleted before the user row',
+  // Better Auth's, with ON DELETE CASCADE: when deleteUser deletes the user row they go with it;
+  // when it keeps the row (the user is still referenced) it deletes them itself. A merged
+  // guest's are Better Auth's to handle (the anonymous plugin).
+  'sessions.user_id': 'cascades when deleteUser deletes the user; deleted by it when kept',
+  'accounts.user_id': 'cascades when deleteUser deletes the user; deleted by it when kept',
 };
 
 /**
