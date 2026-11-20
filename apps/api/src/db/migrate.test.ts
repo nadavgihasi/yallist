@@ -31,31 +31,133 @@ describe('toDsql', () => {
 });
 
 /**
- * Deploys migrate before the new code goes live, so the previous version runs against the new
- * schema until `sst deploy` replaces it (docs/deploy.md, Database: expand, then contract). These
- * statements can break that version. Each one listed here (`<tag>#<statement>`) shipped in a later
- * deploy than the code that stopped depending on what it removes or tightens; add a new one only
- * once that is true.
+ * Why a migration statement could break the previous version, which serves against the new schema
+ * until `sst deploy` replaces it (deploys migrate first: docs/deploy.md, Database), or undefined.
+ * Statements on a table created earlier in the same migration are safe: the old code never uses
+ * it. Case, whitespace, line breaks and comments don't matter.
  */
-const CONTRACTING_MIGRATIONS = [
-  // CHECKs on a column added just before it, which the old code never writes.
-  '0006_trip_cover#1',
-  '0009_feedback_pipeline#8',
-  '0013_drop_place_text#0',
-  // Looser CHECKs: more templates and covers allowed.
-  '0018_more_templates#1',
-  '0019_more_covers#1',
-  '0020_category_color#1', // a new column, as above
+function contracting(statement: string, newTables: ReadonlySet<string> = new Set()) {
+  const s = normalize(statement);
+  const table =
+    /^ALTER TABLE (?:ONLY )?(?:IF EXISTS )?("[^"]+"|\S+)/.exec(s)?.[1] ??
+    /^CREATE (?:UNIQUE )?INDEX .*? ON (?:ONLY )?("[^"]+"|\S+)/.exec(s)?.[1];
+  if (table && newTables.has(unquote(table))) return undefined;
+  return CONTRACTING.find(([pattern]) => pattern.test(s))?.[1];
+}
+
+/** Upper case, comments removed, whitespace collapsed. */
+const normalize = (statement: string) =>
+  statement
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/--[^\n]*/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toUpperCase();
+const unquote = (name: string) => name.replace(/"/g, '').replace(/^PUBLIC\./, '');
+
+const CONTRACTING: [RegExp, string][] = [
+  [/(?:^|;) ?(?:UPDATE|DELETE|TRUNCATE)\b/, 'changes data'],
+  [/\bDROP (?:TABLE|INDEX|VIEW|TYPE|SEQUENCE)\b/, 'drops a table or index'],
+  [/\bDROP COLUMN\b/, 'drops a column'],
+  [/\bDROP CONSTRAINT\b/, 'drops a constraint'],
+  [/\bRENAME\b/, 'renames'],
+  [/\bSET NOT NULL\b/, 'sets NOT NULL'],
+  [/\bDROP DEFAULT\b/, 'drops a default'],
+  [/\bALTER COLUMN \S+ (?:SET DATA )?TYPE\b/, 'changes a type'],
+  [
+    /\bADD COLUMN\b(?![^,;]*\bDEFAULT\b)[^,;]*\bNOT NULL\b/,
+    'adds a NOT NULL column without a default',
+  ],
+  [/\bADD CONSTRAINT \S+ (?:CHECK|UNIQUE|PRIMARY KEY|FOREIGN KEY|EXCLUDE)\b/, 'adds a constraint'],
+  [/\bCREATE UNIQUE INDEX\b/, 'adds a unique index'],
 ];
 
-const CONTRACTING = [
-  /^DROP TABLE /,
-  /^ALTER TABLE .* DROP COLUMN /,
-  / RENAME /,
-  /^ALTER TABLE .* ALTER COLUMN .* (SET NOT NULL|(SET DATA )?TYPE )/,
-  /^ALTER TABLE .* ADD COLUMN (?!.* DEFAULT ).* NOT NULL/,
-  /^ALTER TABLE .* ADD CONSTRAINT .* CHECK /,
-];
+/** The tables a migration creates, unquoted and upper case. */
+const createdTables = (statements: string[]) =>
+  new Set(
+    statements.flatMap((statement) => {
+      const name = /^CREATE TABLE (?:IF NOT EXISTS )?("[^"]+"|\S+)/.exec(normalize(statement))?.[1];
+      return name ? [unquote(name)] : [];
+    }),
+  );
+
+describe('contracting', () => {
+  it.each([
+    'ALTER TABLE "trips" DROP COLUMN "place_text";',
+    'alter table trips\n  drop column place_text',
+    '-- no longer read since #200\nALTER TABLE "trips" DROP COLUMN "place_text"',
+    '/* contract */ ALTER TABLE "a" DROP COLUMN "b"',
+    'DROP TABLE "a";',
+    'drop index "a_idx"',
+    'ALTER TABLE "a" DROP CONSTRAINT "a_b_check";',
+    'ALTER TABLE "a" RENAME COLUMN "b" TO "c";',
+    'ALTER TABLE "a" RENAME TO "b";',
+    'ALTER TABLE "a" ALTER COLUMN "b" SET NOT NULL;',
+    'ALTER TABLE "a" ALTER COLUMN "b" DROP DEFAULT;',
+    'ALTER TABLE "a" ALTER COLUMN "b" SET DATA TYPE bigint;',
+    'ALTER TABLE "a" ALTER COLUMN "b" TYPE bigint;',
+    'ALTER TABLE "a" ADD COLUMN "b" integer NOT NULL;',
+    'ALTER TABLE "a" ADD COLUMN "b" integer DEFAULT 0, ADD COLUMN "c" integer NOT NULL;',
+    'ALTER TABLE "a" ADD CONSTRAINT "a_b_check" CHECK ("a"."b" > 0);',
+    'ALTER TABLE "a" ADD CONSTRAINT "a_b_unique" UNIQUE("b");',
+    'ALTER TABLE "a" ADD CONSTRAINT "a_b_fk" FOREIGN KEY ("b") REFERENCES "b"("id");',
+    'CREATE UNIQUE INDEX "a_b_idx" ON "a" USING btree ("b");',
+    'create unique index a_b_idx\non a (b)',
+    'UPDATE "a" SET "b" = 1;',
+    'delete from a where b is null',
+  ])('flags %s', (statement) => {
+    expect(contracting(statement)).toBeDefined();
+  });
+
+  it.each([
+    'CREATE TABLE "a" ("id" uuid PRIMARY KEY, "b" integer NOT NULL);',
+    'ALTER TABLE "a" ADD COLUMN "b" text;',
+    'ALTER TABLE "a" ADD COLUMN "b" integer DEFAULT 0 NOT NULL;',
+    'ALTER TABLE "a" ADD COLUMN "b" integer NOT NULL DEFAULT(0);',
+    'CREATE INDEX "a_b_idx" ON "a" USING btree ("b");',
+    'INSERT INTO "a" ("b") VALUES (1);',
+    // ON UPDATE / ON DELETE in a foreign key on a new table is not a data change.
+    'CREATE TABLE "c" ("id" uuid, "a_id" uuid REFERENCES "a"("id") ON DELETE NO ACTION ON UPDATE NO ACTION);',
+  ])('passes %s', (statement) => {
+    expect(contracting(statement)).toBeUndefined();
+  });
+
+  it('passes constraints and unique indexes on a table created in the same migration', () => {
+    const newTables = new Set(['A']);
+    expect(
+      contracting(
+        'ALTER TABLE "a" ADD CONSTRAINT "fk" FOREIGN KEY ("b") REFERENCES "b"("id");',
+        newTables,
+      ),
+    ).toBeUndefined();
+    expect(contracting('CREATE UNIQUE INDEX "a_b_idx" ON "a" ("b");', newTables)).toBeUndefined();
+    expect(contracting('CREATE UNIQUE INDEX "b_idx" ON "b" ("x");', newTables)).toBeDefined();
+  });
+});
+
+/**
+ * The contracting statements already shipped (`<tag>#<statement>`), each with why it was safe.
+ * Before adding one, make sure the deployed code no longer needs what it removes or tightens, or
+ * that it can't touch it (docs/deploy.md, Database: expand, then contract).
+ */
+const NEW_COLUMN =
+  'on a column added earlier in the same migration, which the old code never writes';
+const LOOSER_CHECK = 'replaces a CHECK with a looser one (more values allowed)';
+const BEFORE_MIGRATE_FIRST = 'shipped when deploys migrated after the new code went live';
+const ACKNOWLEDGED: Record<string, string> = {
+  '0001_auth#9': `profiles.id references users: ${BEFORE_MIGRATE_FIRST}`,
+  '0002_categories#4': NEW_COLUMN,
+  '0006_trip_cover#1': NEW_COLUMN,
+  '0008_shopping_runs#9': NEW_COLUMN,
+  '0009_feedback_pipeline#8': NEW_COLUMN,
+  '0013_drop_place_text#0': `drops trips.place_text: ${BEFORE_MIGRATE_FIRST}`,
+  '0016_claims_assigned_by#1': NEW_COLUMN,
+  '0018_more_templates#0': LOOSER_CHECK,
+  '0018_more_templates#1': LOOSER_CHECK,
+  '0019_more_covers#0': LOOSER_CHECK,
+  '0019_more_covers#1': LOOSER_CHECK,
+  '0020_category_color#1': NEW_COLUMN,
+};
 
 describe('migrations', () => {
   it('every migration is safe while the previous version serves', () => {
@@ -63,16 +165,22 @@ describe('migrations', () => {
     const journal: { entries: { tag: string }[] } = JSON.parse(
       readFileSync(new URL('meta/_journal.json', dir), 'utf8'),
     );
-    const contracting = journal.entries.flatMap(({ tag }) =>
-      readFileSync(new URL(`${tag}.sql`, dir), 'utf8')
+    const found = journal.entries.flatMap(({ tag }) => {
+      const statements = readFileSync(new URL(`${tag}.sql`, dir), 'utf8')
         .split('--> statement-breakpoint')
         .map((s) => s.trim())
-        .filter(Boolean)
-        .flatMap((statement, i) =>
-          CONTRACTING.some((pattern) => pattern.test(statement)) ? [`${tag}#${i}`] : [],
-        ),
-    );
-    expect(contracting).toEqual(CONTRACTING_MIGRATIONS);
+        .filter(Boolean);
+      const newTables = createdTables(statements);
+      return statements.flatMap((statement, i) => {
+        const why = contracting(statement, newTables);
+        return why ? [`${tag}#${i} ${why}`] : [];
+      });
+    });
+    // On a mismatch, `found` says what each new statement does.
+    expect(
+      found.map((f) => f.split(' ')[0]),
+      found.join('\n'),
+    ).toEqual(Object.keys(ACKNOWLEDGED));
   });
 });
 

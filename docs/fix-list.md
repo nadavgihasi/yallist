@@ -14,7 +14,7 @@ What's left from the overnight review (security, backend, frontend, infra, code 
 - [x] **Deploy polish:** per-step names, and tag the release after production deploys (#87) — `.github/workflows/deploy.yml`, `scripts/release.sh`
 - [x] **arm64 Lambdas:** ~20% cheaper (#86) — `infra/app/core.ts`
 - [x] **Alarms and observability:** production CloudWatch alarms to Telegram (#99), Sentry (#101; account setup in #106) — `infra/app/monitoring.ts`
-- [x] **Migrations run before new code:** migrate before and after each deploy; expand/contract rule and a test that flags contracting migrations — `.github/workflows/deploy.yml`, `preview.yml`, `docs/deploy.md`
+- [x] **Migrations run before new code:** migrate before each deploy (fails closed for dev and production) and again after; the expand/contract rule, and a test that flags contracting migration statements (#232) — `scripts/migrate-before-deploy.sh`, `apps/api/src/db/migrate.test.ts`, `.github/workflows/deploy.yml`, `preview.yml`, `docs/deploy.md`
 
 ## Later
 

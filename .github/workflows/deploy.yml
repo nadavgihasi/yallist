@@ -60,8 +60,8 @@ jobs:
           aws-region: eu-central-1
       # Migrate before the new code goes live: Drizzle selects columns by name, so code deployed
       # ahead of its columns fails until they exist. The old code serves meanwhile, so a migration
-      # must not break it (docs/deploy.md, Migrations). Skipped on a stage's first deploy. The
-      # global stack has no database.
+      # must not break it (docs/deploy.md, Database). dev and production always exist, so any failure
+      # here stops the job before anything deploys. The global stack has no database.
       - name: Migrate ${{ github.job }} database before the deploy
         if: github.job != 'global'
         run: scripts/migrate-before-deploy.sh ${{ github.job }}
@@ -75,8 +75,8 @@ jobs:
         run: |
           echo "### ${{ github.job }}" >> "$GITHUB_STEP_SUMMARY"
           jq -r 'to_entries[] | "- \(.key): \(.value)"' infra/${{ github.job == 'global' && 'global' || 'app' }}/.sst/outputs.json >> "$GITHUB_STEP_SUMMARY"
-      # Again after the deploy: a stage's first deploy migrates only here, and the backfills move
-      # rows the old code wrote during the deploy. Already-applied migrations are skipped.
+      # Again after the deploy, for a data step that must also see rows the old code wrote while the
+      # deploy ran (none today). Already-applied migrations are skipped, so it takes seconds.
       - name: Migrate ${{ github.job }} database after the deploy
         if: github.job != 'global'
         run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api db:migrate
