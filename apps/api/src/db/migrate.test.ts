@@ -1,4 +1,3 @@
-import { TEMPLATES } from '@yallist/domain';
 import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -155,6 +154,22 @@ describe('apply on DSQL', () => {
     await apply(sql, 'ALTER TABLE "a" DROP CONSTRAINT "a_check";', true);
   });
 
+  const noTable = () => {
+    throw Object.assign(new Error('table "a" does not exist'), { code: '42P01' });
+  };
+
+  it('accepts a table an earlier run dropped', async () => {
+    const { sql } = fakeDsql(noTable, {});
+    await apply(sql, 'DROP TABLE "a" CASCADE;', true);
+  });
+
+  it('rethrows a missing table for anything but a DROP TABLE', async () => {
+    const { sql } = fakeDsql(noTable, {});
+    await expect(apply(sql, 'ALTER TABLE "a" ADD COLUMN "x" text;', true)).rejects.toThrow(
+      'does not exist',
+    );
+  });
+
   it('rethrows a missing column for anything but a DROP COLUMN', async () => {
     const { sql } = fakeDsql(noColumn, {});
     await expect(apply(sql, 'CREATE INDEX "a_idx" ON "a" ("x");', true)).rejects.toThrow(
@@ -173,7 +188,7 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
 
   afterAll(() => drop());
 
-  it('creates the schema and seeds templates, and can run again', async () => {
+  it('creates the schema, and can run again', async () => {
     await migrate(sql, { dsql: false });
     await migrate(sql, { dsql: false });
 
@@ -203,10 +218,6 @@ describe.skipIf(!DATABASE_URL)('migrate', () => {
       'users',
       'verifications',
     ]);
-
-    const [seeded] = await sql<{ count: number }[]>`
-      select count(*)::int as count from template_items`;
-    expect(seeded!.count).toBe(Object.values(TEMPLATES).flat().length);
   });
 
   it('treats statements that committed but were not recorded as applied', async () => {

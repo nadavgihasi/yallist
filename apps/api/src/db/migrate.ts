@@ -1,21 +1,19 @@
 import { readFileSync } from 'node:fs';
 
-import { coverFor, TEMPLATES, type TemplateId } from '@yallist/domain';
-import { drizzle } from 'drizzle-orm/postgres-js';
+import { coverFor, type TemplateId } from '@yallist/domain';
 import type { Sql } from 'postgres';
 
-import { templateItems } from './schema';
 import { withRetry } from './tx';
 
 const DIR = new URL('../../drizzle/', import.meta.url);
 
 /**
- * Applies drizzle-kit's migrations in drizzle/, reloads the template seed, then moves free-text
- * item categories into trip_categories and gives trips without a cover their template's.
+ * Applies drizzle-kit's migrations in drizzle/, then moves free-text item categories into
+ * trip_categories and gives trips without a cover their template's.
  * DSQL allows one DDL statement per transaction, so each statement runs and is recorded on its
  * own; a failed deploy resumes from the statement that failed. A statement can commit without
  * being recorded (a crash in between), so on the next run its "already exists" error (or, for a
- * DROP COLUMN or DROP CONSTRAINT, "does not exist") means it was applied.
+ * DROP TABLE, DROP COLUMN or DROP CONSTRAINT, "does not exist") means it was applied.
  */
 export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
   await sql`create table if not exists __migrations (
@@ -45,7 +43,6 @@ export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
     }
   }
 
-  await seedTemplates(sql);
   await backfillCategories(sql);
   await backfillCovers(sql);
   await backfillExpenseItems(sql);
@@ -57,7 +54,8 @@ const ALREADY_EXISTS = new Set([
   '42701', // duplicate_column
   '42710', // duplicate_object: constraints
 ]);
-/** The SQLSTATEs of re-running a DROP COLUMN or DROP CONSTRAINT that committed. */
+/** The SQLSTATEs of re-running a DROP TABLE, DROP COLUMN or DROP CONSTRAINT that committed. */
+const TABLE_DROPPED = '42P01'; // undefined_table
 const COLUMN_DROPPED = '42703'; // undefined_column
 const CONSTRAINT_DROPPED = '42704'; // undefined_object
 
@@ -66,6 +64,7 @@ function alreadyApplied(statement: string, error: unknown) {
   const code = (error as { code?: string }).code ?? '';
   return (
     ALREADY_EXISTS.has(code) ||
+    (code === TABLE_DROPPED && /^DROP TABLE "[^"]+"/.test(statement)) ||
     (code === COLUMN_DROPPED && isDrop('COLUMN', statement)) ||
     (code === CONSTRAINT_DROPPED && isDrop('CONSTRAINT', statement))
   );
@@ -141,21 +140,6 @@ export function toDsql(statement: string): string {
   }
   if (/^ALTER TABLE .* ADD CONSTRAINT /.test(s)) return `${s} NOT VALID`;
   return s;
-}
-
-/** Replaces template_items with the current TEMPLATES, so it never drifts from the code. */
-async function seedTemplates(sql: Sql) {
-  const rows = Object.entries(TEMPLATES).flatMap(([template, items]) =>
-    (['bring', 'buy'] as const).flatMap((list) =>
-      items
-        .filter((item) => item.list === list)
-        .map((item, position) => ({ ...item, template: template as TemplateId, position })),
-    ),
-  );
-  await drizzle(sql).transaction(async (tx) => {
-    await tx.delete(templateItems);
-    await tx.insert(templateItems).values(rows);
-  });
 }
 
 /**
