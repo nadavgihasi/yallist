@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { TEMPLATES } from '@yallist/domain';
 import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -32,6 +34,52 @@ describe('toDsql', () => {
     expect(toDsql('CREATE TABLE "a" ("id" uuid PRIMARY KEY)')).toBe(
       'CREATE TABLE "a" ("id" uuid PRIMARY KEY)',
     );
+  });
+});
+
+/**
+ * Deploys migrate before the new code goes live, so the previous version runs against the new
+ * schema until `sst deploy` replaces it (docs/deploy.md, Database: expand, then contract). These
+ * statements can break that version. Each one listed here (`<tag>#<statement>`) shipped in a later
+ * deploy than the code that stopped depending on what it removes or tightens; add a new one only
+ * once that is true.
+ */
+const CONTRACTING_MIGRATIONS = [
+  // CHECKs on a column added just before it, which the old code never writes.
+  '0006_trip_cover#1',
+  '0009_feedback_pipeline#8',
+  '0013_drop_place_text#0',
+  // Looser CHECKs: more templates and covers allowed.
+  '0018_more_templates#1',
+  '0019_more_covers#1',
+  '0020_category_color#1', // a new column, as above
+];
+
+const CONTRACTING = [
+  /^DROP TABLE /,
+  /^ALTER TABLE .* DROP COLUMN /,
+  / RENAME /,
+  /^ALTER TABLE .* ALTER COLUMN .* (SET NOT NULL|(SET DATA )?TYPE )/,
+  /^ALTER TABLE .* ADD COLUMN (?!.* DEFAULT ).* NOT NULL/,
+  /^ALTER TABLE .* ADD CONSTRAINT .* CHECK /,
+];
+
+describe('migrations', () => {
+  it('every migration is safe while the previous version serves', () => {
+    const dir = new URL('../../drizzle/', import.meta.url);
+    const journal: { entries: { tag: string }[] } = JSON.parse(
+      readFileSync(new URL('meta/_journal.json', dir), 'utf8'),
+    );
+    const contracting = journal.entries.flatMap(({ tag }) =>
+      readFileSync(new URL(`${tag}.sql`, dir), 'utf8')
+        .split('--> statement-breakpoint')
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .flatMap((statement, i) =>
+          CONTRACTING.some((pattern) => pattern.test(statement)) ? [`${tag}#${i}`] : [],
+        ),
+    );
+    expect(contracting).toEqual(CONTRACTING_MIGRATIONS);
   });
 });
 

@@ -58,6 +58,13 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
           aws-region: eu-central-1
+      # Migrate before the new code goes live: Drizzle selects columns by name, so code deployed
+      # ahead of its columns fails until they exist. The old code serves meanwhile, so a migration
+      # must not break it (docs/deploy.md, Migrations). Skipped on a stage's first deploy. The
+      # global stack has no database.
+      - name: Migrate ${{ github.job }} database before the deploy
+        if: github.job != 'global'
+        run: scripts/migrate-before-deploy.sh ${{ github.job }}
       # deploy:global, deploy:dev or deploy:prod
       - name: Deploy ${{ github.job }}
         run: pnpm deploy:${{ github.job == 'production' && 'prod' || github.job }}
@@ -68,8 +75,9 @@ jobs:
         run: |
           echo "### ${{ github.job }}" >> "$GITHUB_STEP_SUMMARY"
           jq -r 'to_entries[] | "- \(.key): \(.value)"' infra/${{ github.job == 'global' && 'global' || 'app' }}/.sst/outputs.json >> "$GITHUB_STEP_SUMMARY"
-      # Apply database migrations with the stage's linked resources. The global stack has no database.
-      - name: Migrate ${{ github.job }} database
+      # Again after the deploy: a stage's first deploy migrates only here, and the backfills move
+      # rows the old code wrote during the deploy. Already-applied migrations are skipped.
+      - name: Migrate ${{ github.job }} database after the deploy
         if: github.job != 'global'
         run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api db:migrate
       # Open the GitHub issues that saved feedback is missing (docs/deploy.md, Feedback).

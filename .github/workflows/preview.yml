@@ -76,6 +76,10 @@ jobs:
         with:
           role-to-assume: ${{ vars.AWS_PREVIEW_ROLE_ARN }}
           aws-region: us-west-2
+      # As deploy.yml: migrate before the new code goes live. The PR's first push (or one after
+      # its stage was removed) has no stage yet and skips this; the migrate below creates it.
+      - name: Migrate the database before the deploy
+        run: scripts/migrate-before-deploy.sh "$STAGE"
       - name: Deploy the PR's stage
         id: deploy
         # Only this PR's runs touch its stage, one at a time, so a lock is a cancelled run's.
@@ -84,8 +88,9 @@ jobs:
           pnpm sst deploy --stage "$STAGE"
           jq -r '"url=\(.url)/", "api=\(.api)", "realtime=\(.realtime)"' \
             infra/app/.sst/outputs.json >> "$GITHUB_OUTPUT"
-      # The cluster starts empty; later pushes apply only new migrations.
-      - name: Migrate the database
+      # The first push's cluster starts empty and is migrated here; later pushes were migrated
+      # before the deploy, so this only reruns the backfills for rows written meanwhile.
+      - name: Migrate the database after the deploy
         run: pnpm sst shell --stage "$STAGE" -- pnpm --filter @yallist/api db:migrate
       - name: Smoke check
         env:
