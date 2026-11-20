@@ -1,7 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "ignoreExportsUsedInFile": true,
-  "ignore": ["docs/**"],
+  // Skill scripts are run by hand from a session, not imported.
+  "ignore": ["docs/**", ".claude/skills/**/scripts/**"],
   // `pnpm lint:ci` runs the pinned Python-packaged linters through uv.
   "ignoreBinaries": ["uvx"],
   "workspaces": {
