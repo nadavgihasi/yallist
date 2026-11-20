@@ -37,6 +37,7 @@ Production is Aurora DSQL; tests and local dev are plain Postgres. Only a PR's p
 - Change `schema.ts`, then run `pnpm --filter @yallist/api db:generate` and commit the SQL and `drizzle/meta`. Never edit a migration that has been deployed.
 - Old and new code both run against the database during a deploy, in either order. So add first: a new column or table ships with, or before, the code that uses it.
 - Dropping or renaming a column or table, or tightening a constraint, ships in a later pull request than the code that stops using it. Say so in the first one.
+- Deploys migrate before the new code goes live (`scripts/migrate-before-deploy.sh`), so every migration runs while the old code still serves. `apps/api/src/db/migrations.test.ts` fails on a contracting statement: a drop, a rename, `SET NOT NULL`, `DROP DEFAULT`, a type change, `UPDATE`/`DELETE`, or a constraint or unique index that covers an existing column. Acknowledge one in `ACKNOWLEDGED` only with a true reason: the code that needed the old shape is already deployed, or the old code can't be affected.
 - Two open pull requests that each add a migration take the same number. Say in yours that it may need regenerating after the other merges.
 - PR previews share one HTTP API and CloudFront router, deployed **only from `main`** (`.github/workflows/preview-stage.yml`). A change to `API_CORS` in `infra/app/core.ts` (say, a new request header) or to `infra/app/stacks/preview-shared.ts` doesn't reach your own preview. Merge that part first, in a pull request of its own.
 

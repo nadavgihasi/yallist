@@ -14,6 +14,7 @@ What's left from the overnight review (security, backend, frontend, infra, code 
 - [x] **Deploy polish:** per-step names, and tag the release after production deploys (#87) — `.github/workflows/deploy.yml`, `scripts/release.sh`
 - [x] **arm64 Lambdas:** ~20% cheaper (#86) — `infra/app/core.ts`
 - [x] **Alarms and observability:** production CloudWatch alarms to Telegram (#99), Sentry (#101; account setup in #106) — `infra/app/monitoring.ts`
+- [x] **Migrations run before new code:** migrate before each deploy (fails closed for dev and production) and again after; the expand/contract rule, and a test that flags contracting migration statements (#232) — `scripts/migrate-before-deploy.sh`, `apps/api/src/db/migrations.test.ts`, `.github/workflows/deploy.yml`, `preview.yml`, `docs/deploy.md`
 
 ## Later
 
@@ -27,7 +28,6 @@ What's left from the overnight review (security, backend, frontend, infra, code 
 - **Route param dedupe:** move the repeated param schemas to `access.ts` — `apps/api/src/routes/`
 - **Large file splits:** `trips.test.ts`, `profile.tsx`, `items/[itemId].tsx`, `trips/new.tsx`
 - **`release.sh` tests:** port to a small TS script with vitest — `scripts/release.sh`
-- **Migrations run after new code:** document expand/contract migrations — `docs/deploy.md`
 - **Missing profile:** create it lazily on getSession — `apps/api/src/auth.ts`
 - **Web code splitting:** one 1.5 MB chunk — `apps/mobile`
 
