@@ -1,6 +1,6 @@
 import { and, desc, eq, inArray, or, sql } from 'drizzle-orm';
 
-import { activity } from '../db/schema';
+import { activity, type RemovedReason } from '../db/schema';
 import type { Executor } from '../db/tx';
 
 /** Records a change in the trip's activity feed, in the transaction that makes it. */
@@ -14,11 +14,26 @@ export async function logActivity(
   await tx.insert(activity).values({ tripId, actor, type, payload });
 }
 
+const REASON_OF = {
+  member_left: 'left',
+  member_removed: 'removed',
+  member_declined: 'declined',
+} as const satisfies Record<string, RemovedReason>;
+
 /**
- * Whether the user's last way out of the trip was leaving it themselves, rather than an organizer
- * removing them or declining their request to join. Both leave the membership `removed`.
+ * Legacy fallback, only for a `removed` membership whose `removed_reason` is null (removed before
+ * that column existed): how the user last got out of the trip, read from the activity log. Absent
+ * a matching entry, `removed`, so an unknown reason never lets anyone back in.
+ *
+ * Not reliable once the user has linked an account: mergeUser moves `activity.actor` (who left)
+ * but not the user id inside payloads (who was removed or declined). mergeUser therefore calls
+ * this before it moves anything and stores the answer, so the merged membership has its reason.
  */
-export async function leftOnTheirOwn(tx: Executor, tripId: string, userId: string) {
+export async function legacyRemovedReason(
+  tx: Executor,
+  tripId: string,
+  userId: string,
+): Promise<RemovedReason> {
   const [last] = await tx
     .select({ type: activity.type })
     .from(activity)
@@ -36,5 +51,5 @@ export async function leftOnTheirOwn(tx: Executor, tripId: string, userId: strin
     )
     .orderBy(desc(activity.createdAt))
     .limit(1);
-  return last?.type === 'member_left';
+  return REASON_OF[last?.type as keyof typeof REASON_OF] ?? 'removed';
 }

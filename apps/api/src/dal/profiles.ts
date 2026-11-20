@@ -1,4 +1,4 @@
-import { and, count, eq, inArray, sql } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import type { Db } from '../db/client';
 import {
@@ -12,6 +12,8 @@ import {
   users,
 } from '../db/schema';
 import { transact, type Executor } from '../db/tx';
+import { legacyRemovedReason } from './activity';
+import { setMember } from './members';
 
 export async function findProfile(tx: Executor, userId: string) {
   const [profile] = await tx.select().from(profiles).where(eq(profiles.id, userId));
@@ -158,9 +160,29 @@ export async function deleteUser(tx: Executor, userId: string) {
 export async function mergeUser(db: Db, from: string, to: string) {
   const id = sql.identifier;
   return transact(db, async (tx) => {
+    // Removed before removed_reason existed: settle why from the log now, while it still names
+    // each of them as they were (the move below breaks that; see legacyRemovedReason).
+    const legacy = await tx
+      .select()
+      .from(tripMembers)
+      .where(
+        and(
+          inArray(tripMembers.userId, [from, to]),
+          eq(tripMembers.status, 'removed'),
+          isNull(tripMembers.removedReason),
+        ),
+      );
+    for (const member of legacy) {
+      await setMember(tx, member, {
+        status: 'removed',
+        removedReason: await legacyRemovedReason(tx, member.tripId, member.userId),
+      });
+    }
     // Where both are in a trip, the account keeps the stronger membership, so a trip never
     // loses its organizer: an active organizer beats member, and active beats pending beats
-    // removed. A removed organizer's role doesn't carry over.
+    // removed. A removed organizer's role doesn't carry over. The reason goes with the status:
+    // none unless removed; where both are removed, the stricter one, so the merge can't let
+    // back in someone an organizer removed or declined.
     await tx.execute(sql`
       update trip_members b set
         role = case
@@ -169,7 +191,11 @@ export async function mergeUser(db: Db, from: string, to: string) {
           else 'member' end,
         status = case
           when a.status = 'active' or (a.status = 'pending' and b.status = 'removed') then a.status
-          else b.status end
+          else b.status end,
+        removed_reason = case
+          when a.status <> 'removed' or b.status <> 'removed' then null
+          when b.removed_reason <> 'left' then b.removed_reason
+          else a.removed_reason end
       from trip_members a
       where a.trip_id = b.trip_id and a.user_id = ${from} and b.user_id = ${to}`);
     // Where both took part of a qty item, the account takes both parts, so nothing goes missing.

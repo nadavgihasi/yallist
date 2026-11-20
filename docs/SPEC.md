@@ -58,7 +58,7 @@ Write these as migrations. Column names are suggestions; keep the semantics.
 
 **trips** — `id`, `name`, `starts_on`, `ends_on`, `meetup_text`, `meetup_lat`, `meetup_lng` (nullable: where the group meets, a name or map link and a point on the map), `album_url` (nullable, a Google Photos link), `template` (`camp|grill|zimmer|beach|hike|trek|flight|ski|blank`, also selects the cover scene), `currency` default `'ILS'`, `require_approval` bool default false, `invite_token` (unique, ≥128 bits of randomness, URL-safe), `status` (`planning|ended|archived`), `created_by`, timestamps.
 
-**trip_members** — PK (`trip_id`, `user_id`), `role` (`organizer|member`), `status` (`pending|active|removed`), `display_name` (snapshot at join, editable), `joined_at`. The creator is an active organizer.
+**trip_members** — PK (`trip_id`, `user_id`), `role` (`organizer|member`), `status` (`pending|active|removed`), `removed_reason` (`left|removed|declined` while `removed`, else null; only one who left may join again), `display_name` (snapshot at join, editable), `joined_at`. The creator is an active organizer.
 
 **trip_categories** — `id`, `trip_id`, `list` (`bring|buy`), `name` (unique per trip and list, ignoring case), `position`, `color` (nullable accent index 0–5; null: the accent of its place on the list), `created_at`. Any active member adds, renames, recolors, reorders or deletes them; deleting one makes its items uncategorized. A trip made from a template starts with the template's categories.
 

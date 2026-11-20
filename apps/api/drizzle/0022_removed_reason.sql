@@ -1,0 +1,2 @@
+ALTER TABLE "trip_members" ADD COLUMN "removed_reason" text;--> statement-breakpoint
+ALTER TABLE "trip_members" ADD CONSTRAINT "trip_members_removed_reason_check" CHECK ("trip_members"."removed_reason" in ('left', 'removed', 'declined'));
