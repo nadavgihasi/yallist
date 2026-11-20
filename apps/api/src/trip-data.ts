@@ -25,7 +25,7 @@ export function toTrip(row: typeof trips.$inferSelect) {
     startsOn: row.startsOn,
     endsOn: row.endsOn,
     template: row.template,
-    // Absent only on a trip the previous API version wrote mid-deploy, until the backfill.
+    // Every trip has a cover; the column is only nullable (see trips.cover).
     cover: row.cover ?? coverFor(row.template),
     status: row.status,
     requireApproval: row.requireApproval,

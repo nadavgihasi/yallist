@@ -21,8 +21,9 @@ export const API_TIMEOUT_SECONDS = 20;
 export const API_CORS: sst.aws.ApiGatewayV2Args['cors'] = {
   allowOrigins: ['*'],
   allowMethods: ['*'],
-  // `sentry-trace` and `baggage` carry the app's trace into the API (apps/api/src/sentry.ts).
-  allowHeaders: ['content-type', 'authorization', 'sentry-trace', 'baggage'],
+  // `sentry-trace` and `baggage` carry the app's trace into the API (apps/api/src/sentry.ts);
+  // `x-yallist-client` names the app session, so it can skip its own realtime events (#229).
+  allowHeaders: ['content-type', 'authorization', 'sentry-trace', 'baggage', 'x-yallist-client'],
   maxAge: '1 day',
 };
 
@@ -177,7 +178,7 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
         EXPO_PUBLIC_GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage],
       }),
       ...(preview && { BASE_PATH: preview.prefix }),
-      // Keys the app's persisted query cache, so a deploy discards caches from older builds.
+      // The build's commit, for the app's version line and Sentry's `dist`.
       ...(process.env.GITHUB_SHA && { EXPO_PUBLIC_GIT_SHA: process.env.GITHUB_SHA }),
     },
     transform: {
