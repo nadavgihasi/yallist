@@ -488,7 +488,11 @@ export const activity = pgTable(
   (t) => [index('activity_trip_idx').on(t.tripId, t.createdAt)],
 );
 
-/** Seed data for new trips, loaded from `@yallist/domain` TEMPLATES by the migration runner. */
+/**
+ * Dead: new trips are seeded from `@yallist/domain` TEMPLATES, and nothing reads or reloads this
+ * table any more. It stays only so the API version still serving during a deploy can read it;
+ * a follow-up migration drops it.
+ */
 export const templateItems = pgTable(
   'template_items',
   {
