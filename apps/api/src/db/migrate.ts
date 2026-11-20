@@ -159,9 +159,9 @@ async function seedTemplates(sql: Sql) {
 /**
  * Data step for expense_items (0008): each single-item purchase (expenses.item_id) gets its
  * expense_items row, which is what "bought" reads now. The API no longer writes
- * expenses.item_id, but the previous version may during this deploy, so this still runs once
- * more; the next deploy removes it. 1,000 per transaction keeps each under DSQL's 3,000-row
- * limit.
+ * expenses.item_id, and since #126 every version that did wrote the expense_items row in the
+ * same transaction, so this finds nothing left to link. It can be removed once a deploy with
+ * this change has run. 1,000 per transaction keeps each under DSQL's 3,000-row limit.
  */
 export async function backfillExpenseItems(sql: Sql) {
   for (;;) {

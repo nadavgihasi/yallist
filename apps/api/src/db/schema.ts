@@ -257,11 +257,11 @@ export const items = pgTable(
     /** Null: uncategorized. A category of the item's own list. */
     categoryId: uuid('category_id').references(() => tripCategories.id),
     /**
-     * The free-text category from before trip_categories; every row has been moved into
-     * `categoryId` and new rows store ''. Nothing reads it. DSQL can drop columns (see
-     * 0013_drop_place_text), but this one is NOT NULL without a default: code that still writes
-     * it fails once it is dropped, and code that no longer writes it fails while it exists, so it
-     * stays for now.
+     * The free-text category from before trip_categories; every live row has been moved into
+     * `categoryId` (soft-deleted ones may still carry text, which nothing reads) and new rows
+     * store ''. DSQL can drop columns (see 0013_drop_place_text), but this one is NOT NULL
+     * without a default: code that still writes it fails once it is dropped, and code that no
+     * longer writes it fails while it exists, so it stays for now.
      */
     legacyCategory: text('category').notNull(),
     position: integer('position').notNull(),
@@ -320,9 +320,8 @@ export const expenses = pgTable(
       .references(() => trips.id),
     /**
      * The buy-list item a single-item purchase covers, from before expense_items, which is what
-     * "bought" reads. No longer written; the migration runner links rows the previous API version
-     * wrote (backfillExpenseItems). The next deploy removes that backfill, the one after drops
-     * this column.
+     * "bought" reads. No longer written. Once a deploy with that change has run,
+     * backfillExpenseItems can go, and after that this column can be dropped.
      */
     itemId: uuid('item_id').references(() => items.id),
     description: text('description').notNull(),
