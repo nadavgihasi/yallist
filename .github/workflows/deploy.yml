@@ -5,6 +5,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      bootstrap:
+        description: First deploy of a new dev or production stage (docs/deploy.md#database)
+        type: boolean
+        default: false
 
 permissions:
   # GitHub OIDC token, exchanged for the deploy role. Every job but `version` deploys.
@@ -61,10 +66,18 @@ jobs:
       # Migrate before the new code goes live: Drizzle selects columns by name, so code deployed
       # ahead of its columns fails until they exist. The old code serves meanwhile, so a migration
       # must not break it (docs/deploy.md, Database). dev and production always exist, so any failure
-      # here stops the job before anything deploys. The global stack has no database.
+      # here stops the job before anything deploys; only a manual `bootstrap` run lets a stage that
+      # was never deployed through. The global stack has no database.
       - name: Migrate ${{ github.job }} database before the deploy
         if: github.job != 'global'
-        run: scripts/migrate-before-deploy.sh ${{ github.job }}
+        env:
+          BOOTSTRAP: ${{ inputs.bootstrap }}
+        run: |
+          if [[ $BOOTSTRAP == true ]]; then
+            scripts/migrate-before-deploy.sh "$GITHUB_JOB" --stage-may-not-exist
+          else
+            scripts/migrate-before-deploy.sh "$GITHUB_JOB"
+          fi
       # deploy:global, deploy:dev or deploy:prod
       - name: Deploy ${{ github.job }}
         run: pnpm deploy:${{ github.job == 'production' && 'prod' || github.job }}
@@ -75,8 +88,8 @@ jobs:
         run: |
           echo "### ${{ github.job }}" >> "$GITHUB_STEP_SUMMARY"
           jq -r 'to_entries[] | "- \(.key): \(.value)"' infra/${{ github.job == 'global' && 'global' || 'app' }}/.sst/outputs.json >> "$GITHUB_STEP_SUMMARY"
-      # Again after the deploy, for a data step that must also see rows the old code wrote while the
-      # deploy ran (none today). Already-applied migrations are skipped, so it takes seconds.
+      # Again after the deploy: it creates a new stage's schema (a `bootstrap` run), and runs the data
+      # steps again for rows the old code wrote while the deploy ran. Applied migrations are skipped.
       - name: Migrate ${{ github.job }} database after the deploy
         if: github.job != 'global'
         run: pnpm sst shell --stage ${{ github.job }} -- pnpm --filter @yallist/api db:migrate
