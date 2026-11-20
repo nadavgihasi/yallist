@@ -1,6 +1,7 @@
 import { useIsMutating } from '@tanstack/react-query';
 import { formatShekel } from '@yallist/domain';
 import { router } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
@@ -12,13 +13,17 @@ import { Card, ListGroup } from '@/components/ListGroup';
 import { PillButton } from '@/components/PillButton';
 import { showToast } from '@/components/Toast';
 import { he, joinNames } from '@/i18n/he';
+import { formatMoment, today } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useReceiptUpload } from '@/state/receipts';
-import { tripKey, useTripAction } from '@/state/trips';
+import type { Action } from '@/state/reducer';
+import { awaitAnswer, tripKey, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
-import { colors, space, type } from '@/theme';
+import { colors, radius, space, type } from '@/theme';
 
+import { balanceState, BalanceList } from './BalanceList';
 import type { TripView } from './derive';
+import { dayLabel, expenseDays, expenseEffect, type ExpenseEffect } from './expenseDays';
 import { MONEY_PARTS, type MoneyPart } from './parts';
 import { PayRow } from './PayRow';
 import { expenseKey } from './reveal';
@@ -45,37 +50,72 @@ export function MoneyTab({
   const act = useTripAction(data.trip.id);
   // Transfers come from the API: until it answers, a second tap would pay twice.
   const saving = useIsMutating({ mutationKey: tripKey(data.trip.id) }) > 0;
+  // `saving` only takes hold after a render: two taps in one frame (a double tap, or a tap on
+  // the button that moved under the finger) would both get through. This blocks the second at
+  // once, until the first has been answered.
+  const recording = useRef(false);
+  useEffect(() => {
+    if (!saving) recording.current = false;
+  }, [saving]);
   const sum = (xs: { amountAgorot: number }[]) => xs.reduce((n, x) => n + x.amountAgorot, 0);
   const names = (ids: string[]) => joinNames([...new Set(ids)].map(view.displayNameOf));
 
-  // The greedy matcher can split my debt across several people, so show all of it.
+  // The greedy matcher can split my debt across several people, so show all of it. My own
+  // transfers live in the card at the top; the list below has only everyone else's.
   const myOpen = view.transfers.filter((t) => t.from === me);
-  const myPaid = data.payments.filter((p) => p.fromUser === me);
   const toMe = view.transfers.filter((t) => t.to === me);
-  const myUnconfirmed = myPaid.filter((p) => p.status === 'marked');
+  const others = view.transfers.filter((t) => t.from !== me && t.to !== me);
+  const title =
+    myOpen.length > 0 ? he.money.payTo(names(myOpen.map((t) => t.to))) : he.balances.getsMine;
+  const amount = sum(myOpen.length > 0 ? myOpen : toMe);
 
-  let title: string = he.money.nothingToPay;
-  let amount = 0;
-  if (myOpen.length > 0) {
-    title = he.money.payTo(names(myOpen.map((t) => t.to)));
-    amount = sum(myOpen);
-  } else if (myPaid.length > 0) {
-    title = he.money.paidTo(names(myPaid.map((p) => p.toUser)));
-    amount = sum(myPaid);
-  } else if (toMe.length > 0) {
-    title = he.money.getFrom(names(toMe.map((t) => t.from)));
-    amount = sum(toMe);
-  }
+  // Recorded payments fold into one line; one just recorded opens it and stands out a moment.
+  const [showPayments, setShowPayments] = useState(false);
+  const [fresh, setFresh] = useState<string>();
+  useEffect(() => {
+    if (!fresh) return;
+    const timer = setTimeout(() => setFresh(undefined), 4000);
+    return () => clearTimeout(timer);
+  }, [fresh]);
 
-  const markPaid = (toUser: string, amountAgorot: number) => {
-    act({ type: 'markPayment', toUser, amountAgorot });
-    showToast(he.money.markedToast(formatShekel(amountAgorot)), 'success');
+  // Anyone records any payment, and it counts at once: nobody confirms it. Once the API has it,
+  // the toast names it and offers to take it back.
+  const record = (fromUser: string, toUser: string, amountAgorot: number) => {
+    if (recording.current) return;
+    recording.current = true;
+    const action: Action = { type: 'recordPayment', fromUser, toUser, amountAgorot };
+    awaitAnswer(action, {
+      onSaved: (payment) => {
+        const id = (payment as { id?: string } | undefined)?.id;
+        if (id) {
+          setFresh(id);
+          setShowPayments(true);
+        }
+        const text = he.money.recordedPair(
+          view.nameOf(fromUser),
+          view.nameOf(toUser),
+          formatShekel(amountAgorot),
+        );
+        const undo = id
+          ? {
+              label: he.money.undo,
+              onPress: () => {
+                act({ type: 'deletePayment', paymentId: id });
+                showToast(he.money.undone);
+              },
+            }
+          : undefined;
+        showToast(text, 'success', undo);
+      },
+      // useTripAction says it failed.
+      onError: () => undefined,
+    });
+    act(action);
   };
+  // Square: nothing open either way (what I paid is already in the transfers).
+  const square = myOpen.length === 0 && toMe.length === 0;
   // Owed money with nowhere to receive it: ask for a number once there's something to receive.
   const needsPhone = toMe.length > 0 && !view.memberById.get(me)?.paymentPhone;
-  // A payment the receiver already confirmed stays.
-  const unmarkPaid = () =>
-    myUnconfirmed.forEach((p) => act({ type: 'deletePayment', paymentId: p.id }));
 
   const tabs = (
     <SubTabs
@@ -96,7 +136,7 @@ export function MoneyTab({
     return (
       <View style={styles.wrap}>
         {tabs}
-        <Expenses data={data} view={view} />
+        <Expenses data={data} view={view} me={me} onSettle={() => onPart('settle')} />
       </View>
     );
   }
@@ -104,51 +144,80 @@ export function MoneyTab({
   return (
     <View style={styles.wrap}>
       {tabs}
-      <Card gap={space[1]}>
-        <Text style={styles.heroTitle}>{title}</Text>
-        <Text style={styles.heroAmount}>{formatShekel(amount)}</Text>
-        {view.totalSpent > 0 && (
-          <Text style={styles.heroText}>
-            {he.money.share(formatShekel(view.myShare), formatShekel(view.totalSpent))}
-          </Text>
-        )}
-        {myOpen.length > 0 ? (
-          <View style={styles.payRows}>
-            <Text style={styles.heroText}>{he.settle.payIn}</Text>
-            {myOpen.map((t) => (
-              <PayRow
-                key={t.to}
-                view={view}
-                transfer={t}
-                tripName={data.trip.name}
-                saving={saving}
-                onMark={(amountAgorot) => markPaid(t.to, amountAgorot)}
-              />
-            ))}
-          </View>
-        ) : (
-          myPaid.length > 0 && (
-            <>
-              <View style={styles.heroStatus}>
-                <Icon name="check" size={18} color={colors.primaryStrong} />
-                <Text style={styles.heroText}>
-                  {myUnconfirmed.length > 0 ? he.money.waiting : he.money.received}
-                </Text>
+      {data.expenses.length === 0 && data.payments.length === 0 ? (
+        // Nothing spent yet: nothing to celebrate, and nothing to settle.
+        <EmptyState title={he.money.noExpenses} text={he.money.noExpensesText} />
+      ) : (
+        <Card gap={space[1]}>
+          {square ? (
+            // Nothing to pay or receive: the done check, as on a packed item, instead of ₪0.
+            <View style={styles.square}>
+              <View style={styles.squareCheck}>
+                <Icon name="check" size={28} color={colors.onPrimary} />
               </View>
-              {myUnconfirmed.length > 0 && (
-                <PillButton
-                  label={he.money.unmark}
-                  variant="quiet"
-                  size="md"
-                  wide
-                  disabled={saving}
-                  onPress={unmarkPaid}
-                />
-              )}
+              <Text style={styles.squareTitle}>{he.money.allSquare}</Text>
+              <Text style={styles.heroText}>{he.money.allSquareText}</Text>
+            </View>
+          ) : (
+            <>
+              <Text style={styles.heroTitle}>{title}</Text>
+              {/* Owing in orange, owed in teal: the same colours as the balances below. */}
+              <Text
+                style={[
+                  styles.heroAmount,
+                  fitText(formatShekel(amount), 9, type.bigNumber.fontSize),
+                  { color: myOpen.length > 0 ? colors.brandStrong : colors.owed },
+                ]}
+                numberOfLines={1}
+              >
+                {formatShekel(amount)}
+              </Text>
             </>
-          )
-        )}
-      </Card>
+          )}
+          {myOpen.length > 0 ? (
+            <View style={styles.payRows}>
+              <Text style={styles.heroText}>{he.settle.payIn}</Text>
+              {myOpen.map((t) => (
+                <PayRow
+                  key={t.to}
+                  view={view}
+                  transfer={t}
+                  tripName={data.trip.name}
+                  saving={saving}
+                  onMark={(amountAgorot) => record(me, t.to, amountAgorot)}
+                />
+              ))}
+            </View>
+          ) : (
+            toMe.length > 0 && (
+              <View style={styles.owedRows}>
+                {toMe.map((t, i) => (
+                  <View key={t.from} style={[styles.owedRow, i > 0 && styles.rowRule]}>
+                    <Avatar person={view.avatarOf(t.from)} size={36} ring={false} />
+                    <Text style={styles.owedName} numberOfLines={1}>
+                      {he.balances.paymentFrom(view.displayNameOf(t.from))}
+                    </Text>
+                    <Text style={styles.amount}>{formatShekel(t.amountAgorot)}</Text>
+                    <PillButton
+                      label={he.money.received}
+                      accessibilityLabel={he.money.receivedFrom(
+                        formatShekel(t.amountAgorot),
+                        view.displayNameOf(t.from),
+                      )}
+                      variant="soft"
+                      size="sm"
+                      icon={<Icon name="check" size={16} color={colors.primaryStrong} />}
+                      disabled={saving}
+                      onPress={() => record(t.from, me, t.amountAgorot)}
+                      {...testId(`received-${t.from}`)}
+                    />
+                  </View>
+                ))}
+              </View>
+            )
+          )}
+        </Card>
+      )}
 
       {needsPhone && (
         <Callout
@@ -158,78 +227,130 @@ export function MoneyTab({
         />
       )}
 
-      {view.transfers.length === 0 ? (
-        // With no expenses yet, there's nothing to settle and nothing more to say.
-        data.expenses.length > 0 && (
-          <EmptyState title={he.money.settled} text={he.money.settledText} />
-        )
-      ) : (
-        <ListGroup title={he.money.transfers}>
-          {view.transfers.map((t) => (
-            <View key={`${t.from}-${t.to}`} style={styles.transfer}>
+      {/* Everyone else's open transfers, then the payments recorded so far, folded. */}
+      {data.expenses.length + data.payments.length > 0 && (
+        <ListGroup title={he.money.settling}>
+          {others.length === 0 && (
+            <Text style={styles.expenseWho}>
+              {view.transfers.length === 0 ? he.money.noneOpen : he.money.othersSquare}
+            </Text>
+          )}
+          {others.length > 0 && view.transfers.length > others.length && (
+            <Text style={styles.subhead}>{he.money.betweenOthers}</Text>
+          )}
+          {others.map((t) => (
+            <View key={`${t.from}-${t.to}`} style={styles.transfer} {...testId('transfer')}>
               <FromTo view={view} from={t.from} to={t.to} />
-              <Text style={[styles.amount, t.from === me && { color: colors.brandStrong }]}>
-                {formatShekel(t.amountAgorot)}
-              </Text>
-              {/* Someone who left can't mark their payment, so the receiver records it. */}
-              {t.to === me && view.memberById.get(t.from)?.status === 'removed' && (
+              <View style={styles.transferEnd}>
+                <Text style={styles.amount}>{formatShekel(t.amountAgorot)}</Text>
                 <PillButton
-                  label={he.money.confirmReceived}
+                  label={he.money.transferPaid}
+                  accessibilityLabel={he.money.transferPaidLabel(
+                    view.displayNameOf(t.from),
+                    view.displayNameOf(t.to),
+                    formatShekel(t.amountAgorot),
+                  )}
+                  variant="soft"
                   size="sm"
                   disabled={saving}
-                  onPress={() =>
-                    act({
-                      type: 'markPayment',
-                      fromUser: t.from,
-                      toUser: me,
-                      amountAgorot: t.amountAgorot,
-                    })
-                  }
+                  onPress={() => record(t.from, t.to, t.amountAgorot)}
+                  {...testId('transfer-paid')}
                 />
-              )}
+              </View>
             </View>
           ))}
+
+          {/* Why someone may pay a person who never paid for them. */}
+          {view.transfers.length > 1 && (others.length > 0 || myOpen.length > 0) && (
+            <Text style={styles.why}>{he.money.fewestTransfers}</Text>
+          )}
+
+          {data.payments.length > 0 && (
+            <>
+              <View style={styles.divider} />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showPayments }}
+                onPress={() => setShowPayments(!showPayments)}
+                style={({ pressed }) => [styles.toggle, pressed && { opacity: 0.75 }]}
+                {...testId('payments-toggle')}
+              >
+                <Text style={styles.toggleText}>
+                  {he.money.paymentsCount(data.payments.length)}
+                </Text>
+                <View style={{ transform: [{ rotate: showPayments ? '90deg' : '-90deg' }] }}>
+                  <Icon name="chevronEnd" size={18} color={colors.inkMuted} />
+                </View>
+              </Pressable>
+            </>
+          )}
+          {showPayments &&
+            [...data.payments].reverse().map((p) => (
+              <Pressable
+                key={p.id}
+                accessibilityRole="button"
+                accessibilityLabel={he.money.openPayment(
+                  view.displayNameOf(p.fromUser),
+                  view.displayNameOf(p.toUser),
+                  formatShekel(p.amountAgorot),
+                )}
+                onPress={() =>
+                  router.push({
+                    pathname: '/trips/[tripId]/payments/[paymentId]',
+                    params: { tripId: data.trip.id, paymentId: p.id },
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.payment,
+                  p.id === fresh && styles.fresh,
+                  pressed && { opacity: 0.75 },
+                ]}
+                {...testId('payment-row')}
+              >
+                <View style={styles.transfer}>
+                  <FromTo view={view} from={p.fromUser} to={p.toUser} />
+                  <Text style={[styles.amount, p.id !== fresh && styles.paid]}>
+                    {formatShekel(p.amountAgorot)}
+                  </Text>
+                </View>
+                <View style={styles.recorded}>
+                  <Icon name="check" size={16} color={colors.brand} />
+                  <Text style={styles.expenseWho}>
+                    {p.createdBy === me
+                      ? he.money.recordedByMe(formatMoment(p.createdAt))
+                      : he.money.recordedBy(
+                          view.displayNameOf(p.createdBy),
+                          formatMoment(p.createdAt),
+                        )}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
         </ListGroup>
       )}
 
-      {data.payments.length > 0 && (
-        <ListGroup title={he.money.payments}>
-          {data.payments.map((p) => {
-            const waiting = p.status === 'marked';
-            // The receiver's button goes under the row: beside it, it left the names no room
-            // and the amount ran over the avatars.
-            return (
-              <View key={p.id} style={styles.payment}>
-                <View style={styles.transfer}>
-                  <FromTo view={view} from={p.fromUser} to={p.toUser} />
-                  <View style={styles.paymentEnd}>
-                    <Text style={styles.amount}>{formatShekel(p.amountAgorot)}</Text>
-                    <Text style={styles.expenseWho}>
-                      {waiting ? he.money.paymentWaiting : he.money.paymentConfirmed}
-                    </Text>
-                  </View>
-                </View>
-                {waiting && p.toUser === me && (
-                  <View style={styles.paymentEnd}>
-                    <PillButton
-                      label={he.money.confirmReceived}
-                      size="sm"
-                      disabled={saving}
-                      onPress={() => act({ type: 'confirmPayment', paymentId: p.id })}
-                    />
-                  </View>
-                )}
-              </View>
-            );
-          })}
-        </ListGroup>
-      )}
+      {data.expenses.length > 0 && <BalanceList data={data} view={view} me={me} />}
     </View>
   );
 }
 
-/** Every expense with the trip's total, or a way to add the first one. */
-function Expenses({ data, view }: { data: TripData; view: TripView }) {
+/**
+ * The expense log: the trip's total and my share (with where I stand, opening settling up), then
+ * each day's expenses, newest first, each with my part of it. Or a way to add the first one.
+ */
+function Expenses({
+  data,
+  view,
+  me,
+  onSettle,
+}: {
+  data: TripData;
+  view: TripView;
+  me: string;
+  onSettle: () => void;
+}) {
+  const balance = data.balances[me] ?? 0;
+  const state = balanceState(balance);
   return data.expenses.length === 0 ? (
     <>
       <EmptyState
@@ -250,43 +371,133 @@ function Expenses({ data, view }: { data: TripData; view: TripView }) {
       <Callout title={he.states.tip} text={he.money.tip} />
     </>
   ) : (
-    <ListGroup title={he.money.expenses} aside={he.money.total(formatShekel(view.totalSpent))}>
-      {data.expenses.map((e) => (
-        // The row opens the expense; its receipt has its own button beside it.
-        <RevealTarget key={e.id} id={expenseKey(e.id)}>
-          <View style={styles.expense}>
+    <>
+      <Card gap={space[3]}>
+        <View style={styles.totals}>
+          <View style={styles.total}>
+            <Text style={styles.heroText}>{he.money.wholeTrip}</Text>
+            <Text
+              style={[styles.stat, fitText(formatShekel(view.totalSpent), 9, 22)]}
+              numberOfLines={1}
+            >
+              {formatShekel(view.totalSpent)}
+            </Text>
+          </View>
+          <View style={styles.totalsRule} />
+          <View style={styles.total}>
+            <Text style={styles.heroText}>{he.money.myShare}</Text>
+            <Text
+              style={[styles.stat, fitText(formatShekel(view.myShare), 9, 22)]}
+              numberOfLines={1}
+            >
+              {formatShekel(view.myShare)}
+            </Text>
+          </View>
+        </View>
+        {balance !== 0 && (
+          <Pressable
+            accessibilityRole="button"
+            onPress={onSettle}
+            style={({ pressed }) => [styles.balanceLink, pressed && { opacity: 0.75 }]}
+            {...testId('money-balance-link')}
+          >
+            <Text style={[styles.balanceLinkText, { color: state.color }]}>
+              {he.money.balanceLink(
+                balance > 0 ? he.balances.getsMine : he.balances.owesMine,
+                formatShekel(Math.abs(balance)),
+              )}
+            </Text>
+            <Icon name="chevronEnd" size={16} color={state.color} />
+          </Pressable>
+        )}
+      </Card>
+      {expenseDays(data.expenses, data.payments).map(({ day, expenses, payments, totalAgorot }) => (
+        <ListGroup key={day} title={dayLabel(day, today())} aside={formatShekel(totalAgorot)}>
+          {expenses.map((e) => (
+            // The row opens the expense; its receipt has its own button beside it.
+            <RevealTarget key={e.id} id={expenseKey(e.id)}>
+              <View style={styles.expense}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={he.expense.open(e.description)}
+                  {...testId('expense-row')}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/trips/[tripId]/expenses/[expenseId]',
+                      params: { tripId: data.trip.id, expenseId: e.id },
+                    })
+                  }
+                  style={({ pressed }) => [styles.expenseOpen, pressed && { opacity: 0.75 }]}
+                >
+                  <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
+                  <View style={styles.expenseBody}>
+                    <Text style={styles.expenseWhat} numberOfLines={1}>
+                      {e.description}
+                    </Text>
+                    {/* An uneven split wraps: who shares each part, or takes more, is the point of it. */}
+                    <Text
+                      style={styles.expenseWho}
+                      numberOfLines={e.parts || e.weights ? undefined : 1}
+                    >
+                      {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.nameOf)]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </Text>
+                  </View>
+                  <View style={styles.expenseEnd}>
+                    <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+                    <EffectLine effect={expenseEffect(e, me)} />
+                  </View>
+                </Pressable>
+                <ReceiptButton tripId={data.trip.id} expense={e} />
+              </View>
+            </RevealTarget>
+          ))}
+          {/* Payments that day, quietly: they explain why balances moved. */}
+          {payments.map((p) => (
             <Pressable
+              key={p.id}
               accessibilityRole="button"
-              accessibilityLabel={he.expense.open(e.description)}
-              {...testId('expense-row')}
+              accessibilityLabel={he.money.openPayment(
+                view.displayNameOf(p.fromUser),
+                view.displayNameOf(p.toUser),
+                formatShekel(p.amountAgorot),
+              )}
               onPress={() =>
                 router.push({
-                  pathname: '/trips/[tripId]/expenses/[expenseId]',
-                  params: { tripId: data.trip.id, expenseId: e.id },
+                  pathname: '/trips/[tripId]/payments/[paymentId]',
+                  params: { tripId: data.trip.id, paymentId: p.id },
                 })
               }
-              style={({ pressed }) => [styles.expenseOpen, pressed && { opacity: 0.75 }]}
+              style={({ pressed }) => [styles.logPayment, pressed && { opacity: 0.75 }]}
+              {...testId('log-payment')}
             >
-              <Avatar person={view.avatarOf(e.paidBy)} size={40} ring={false} />
-              <View style={styles.expenseBody}>
-                <Text style={styles.expenseWhat} numberOfLines={1}>
-                  {e.description}
-                </Text>
-                {/* A split in parts wraps: who shares each part is the point of it. */}
-                <Text style={styles.expenseWho} numberOfLines={e.parts ? undefined : 1}>
-                  {[view.nameOf(e.paidBy), sharedText(e, view.activeIds, view.displayNameOf)]
-                    .filter(Boolean)
-                    .join(' · ')}
-                </Text>
+              <View style={styles.logPaymentIcon}>
+                <Icon name="check" size={16} color={colors.brand} />
               </View>
-              <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
+              <Text style={styles.expenseWho} numberOfLines={1}>
+                {he.money.paidPair(view.nameOf(p.fromUser), view.nameOf(p.toUser))}
+              </Text>
+              <Text style={[styles.amount, styles.paid]}>{formatShekel(p.amountAgorot)}</Text>
             </Pressable>
-            <ReceiptButton tripId={data.trip.id} expense={e} />
-          </View>
-        </RevealTarget>
+          ))}
+        </ListGroup>
       ))}
-    </ListGroup>
+    </>
   );
+}
+
+/** Under an expense's total: what it does to me, in the balance colours. */
+function EffectLine({ effect }: { effect: ExpenseEffect }) {
+  const [text, color] =
+    effect.kind === 'lent'
+      ? [he.money.lent(formatShekel(effect.amountAgorot)), colors.owed]
+      : effect.kind === 'share'
+        ? [he.money.myPart(formatShekel(effect.amountAgorot)), colors.brandStrong]
+        : effect.kind === 'own'
+          ? [he.money.ownExpense, colors.inkMuted]
+          : [he.money.notInIt, colors.inkMuted];
+  return <Text style={[styles.myPart, { color }]}>{text}</Text>;
 }
 
 /**
@@ -362,6 +573,16 @@ function ReceiptButton({
   );
 }
 
+/**
+ * A big amount that stays on one line at phone width: past `chars` characters it shrinks in
+ * proportion. `adjustsFontSizeToFit` would do this natively but does nothing on web.
+ */
+function fitText(text: string, chars: number, fontSize: number) {
+  if (text.length <= chars) return undefined;
+  const size = Math.max(14, Math.floor((fontSize * chars) / text.length));
+  return { fontSize: size, lineHeight: Math.round(size * 1.15) };
+}
+
 const styles = StyleSheet.create({
   wrap: { gap: space[4] },
   receipt: {
@@ -376,9 +597,68 @@ const styles = StyleSheet.create({
   heroAmount: { ...type.bigNumber, color: colors.primaryStrong },
   heroText: { ...type.caption, color: colors.inkMuted },
   payRows: { gap: space[3], marginTop: space[3] },
-  heroStatus: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginTop: space[3] },
-  paymentEnd: { alignItems: 'flex-end' },
   payment: { gap: space[1] },
+  fresh: {
+    backgroundColor: colors.primaryTint,
+    borderRadius: radius.input,
+    marginHorizontal: -space[2],
+    paddingHorizontal: space[2],
+    paddingVertical: space[1],
+  },
+  toggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: space.touch,
+  },
+  toggleText: { ...type.itemTitle, color: colors.ink },
+  owedRows: { marginTop: space[3] },
+  owedRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56 },
+  rowRule: { borderTopWidth: 1, borderTopColor: colors.hairline },
+  why: { ...type.caption, fontSize: 13, lineHeight: 18, color: colors.inkMuted },
+  logPayment: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
+  logPaymentIcon: {
+    width: 40,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  owedName: { ...type.itemTitle, color: colors.ink, flex: 1 },
+  paid: { color: colors.inkMuted },
+  divider: { height: 1, backgroundColor: colors.hairline, marginVertical: space[1] },
+  subhead: { ...type.label, color: colors.inkMuted },
+  square: { alignItems: 'center', gap: space[2], paddingVertical: space[2] },
+  squareCheck: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.brand,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  squareTitle: { ...type.sectionTitle, color: colors.ink },
+  totals: { flexDirection: 'row', alignItems: 'stretch', gap: space[3] },
+  total: { flex: 1, gap: 2 },
+  totalsRule: { width: 1, backgroundColor: colors.hairline },
+  // Half a card each: smaller than `stat`, so ₪2,040.00 fits on one line.
+  stat: { ...type.stat, fontSize: 22, lineHeight: 28, color: colors.ink },
+  balanceLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space[1],
+    minHeight: space.touch,
+  },
+  balanceLinkText: { ...type.itemTitle },
+  expenseEnd: { alignItems: 'flex-end', gap: 2 },
+  myPart: {
+    ...type.caption,
+    fontSize: 13,
+    lineHeight: 18,
+    color: colors.inkMuted,
+    fontVariant: ['tabular-nums'],
+  },
+  recorded: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
+  transferEnd: { alignItems: 'flex-end', gap: space[1] },
   transfer: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: space.touch },
   transferWho: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
   transferPerson: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },

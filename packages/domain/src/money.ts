@@ -14,22 +14,57 @@ export function splitEqually(amount: number, participants: readonly string[]): M
   return result;
 }
 
+/** The most shares of an expense one person can take: an expense's weights run 1 to this. */
+export const MAX_WEIGHT = 10;
+
+/**
+ * Split `amount` agorot by `weights` (1 for anyone not in it): each person's share rounded down,
+ * then what that leaves one agora at a time in `splitEqually`'s order (sorted user id). With
+ * every weight 1 this is `splitEqually`.
+ */
+export function splitByWeight(
+  amount: number,
+  participants: readonly string[],
+  weights: Readonly<Record<string, number>> = {},
+): Map<string, number> {
+  const ids = [...new Set(participants)].sort();
+  const weightOf = (id: string) => weights[id] ?? 1;
+  const total = ids.reduce((sum, id) => sum + weightOf(id), 0);
+  const result = new Map<string, number>();
+  if (total === 0) return result;
+  let left = amount;
+  for (const id of ids) {
+    const share = Math.floor((amount * weightOf(id)) / total);
+    result.set(id, share);
+    left -= share;
+  }
+  for (const id of ids) {
+    if (left === 0) break;
+    result.set(id, result.get(id)! + 1);
+    left -= 1;
+  }
+  return result;
+}
+
 /**
  * What each participant owes for an expense. Each part is split equally between its own shares,
- * and what the parts leave between the expense's shares, each with `splitEqually`'s rule, so the
- * amounts add up to the expense exactly. Empty when they can't (parts over the total, or an
+ * and what the parts leave between the expense's shares by their weights, each with
+ * `splitEqually`'s rule for the agorot left over, so the amounts add up to the expense exactly. Empty when they can't (parts over the total, or an
  * amount that nobody shares): such an expense isn't split at all.
  */
 export function owedShares(
-  expense: Pick<Expense, 'amountAgorot' | 'shares' | 'parts'>,
+  expense: Pick<Expense, 'amountAgorot' | 'shares' | 'parts' | 'weights'>,
 ): Map<string, number> {
   const parts = expense.parts ?? [];
   const rest = expense.amountAgorot - parts.reduce((sum, p) => sum + p.amountAgorot, 0);
-  const groups = [...parts, { amountAgorot: rest, shares: expense.shares }];
+  const groups = [
+    ...parts.map((p) => ({ ...p, weights: undefined })),
+    { amountAgorot: rest, shares: expense.shares, weights: expense.weights },
+  ];
   const result = new Map<string, number>();
-  for (const { amountAgorot, shares } of groups) {
+  for (const { amountAgorot, shares, weights } of groups) {
     if (amountAgorot < 0 || (amountAgorot > 0 && shares.length === 0)) return new Map();
-    for (const [id, owed] of splitEqually(amountAgorot, shares)) {
+    for (const [id, owed] of splitByWeight(amountAgorot, shares, weights)) {
       result.set(id, (result.get(id) ?? 0) + owed);
     }
   }
@@ -89,22 +124,37 @@ export function suggestTransfers(balance: ReadonlyMap<string, number>): Transfer
 }
 
 /**
- * `₪90.00`, `₪12.35`, `₪412.90`: sign before the number, always two decimals. The one money
- * format in the app; a fraction of an agora rounds to the nearest agora.
+ * `₪90`, `₪12.35`, `₪2,040`, `₪41,152.26`: the sign first, thousands grouped with a comma, and
+ * agorot only when there are any. The one money format in the app; a fraction of an agora rounds
+ * to the nearest agora.
  */
 export function formatShekel(agorot: number): string {
-  return `₪${(Math.round(agorot) / 100).toFixed(2)}`;
+  const rounded = Math.round(agorot);
+  const abs = Math.abs(rounded);
+  const shekels = String(Math.floor(abs / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const cents = abs % 100;
+  return `${rounded < 0 ? '-' : ''}₪${shekels}${cents ? `.${String(cents).padStart(2, '0')}` : ''}`;
 }
 
-/** An amount as an input's text, `412.90`: what `formatShekel` shows, without the sign. */
+/** An amount as an input's text, `412.90`: no sign, no grouping, always two decimals. */
 export function shekelInput(agorot: number): string {
-  return formatShekel(agorot).slice(1);
+  return (Math.round(agorot) / 100).toFixed(2);
 }
 
-/** Parse user input like "450" or "12.5" into agorot; undefined if not a positive amount. */
+/**
+ * Parse user input like "450", "12.5" or a sum typed at the till, "120+45.5", into agorot;
+ * undefined if not a positive amount. A trailing "+" (the next number not typed yet) is ignored.
+ */
 export function parseShekel(input: string): number | undefined {
-  const trimmed = input.trim().replace(/^₪/, '').replace(',', '.');
-  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return undefined;
-  const agorot = Math.round(Number(trimmed) * 100);
-  return agorot > 0 ? agorot : undefined;
+  const terms = input
+    .trim()
+    .replace(/\+\s*$/, '')
+    .split('+');
+  let total = 0;
+  for (const term of terms) {
+    const trimmed = term.trim().replace(/^₪/, '').replace(',', '.');
+    if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return undefined;
+    total += Math.round(Number(trimmed) * 100);
+  }
+  return total > 0 ? total : undefined;
 }

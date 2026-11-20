@@ -241,7 +241,7 @@ async function send(tripId: string, action: Action): Promise<unknown> {
           param: { ...param, expenseId: action.expenseId },
         }),
       );
-    case 'markPayment': {
+    case 'recordPayment': {
       const { toUser, amountAgorot, fromUser } = action;
       return parseResponse(
         trip.payments.$post({ param, json: { toUser, amountAgorot, fromUser } }),
@@ -250,12 +250,6 @@ async function send(tripId: string, action: Action): Promise<unknown> {
     case 'deletePayment':
       return parseResponse(
         trip.payments[':paymentId'].$delete({ param: { ...param, paymentId: action.paymentId } }),
-      );
-    case 'confirmPayment':
-      return parseResponse(
-        trip.payments[':paymentId'].confirm.$post({
-          param: { ...param, paymentId: action.paymentId },
-        }),
       );
     case 'approveMember':
     case 'declineMember':
@@ -321,7 +315,8 @@ export type StartedRun = InferResponseType<(typeof api.trips)[':tripId']['runs']
 
 /** Told when the API took a change or refused it: before the trip refetches, so not held up by it. */
 export interface Answer {
-  onSaved: () => void;
+  /** `data`: what the API answered, such as the payment it recorded. */
+  onSaved: (data?: unknown) => void;
   onError: (error: unknown) => void;
 }
 
@@ -351,7 +346,7 @@ export function useTripAction(tripId: string) {
       if (before) queryClient.setQueryData(key, applyAction(before, action, me));
       return { before };
     },
-    onSuccess: (_data, action) => answers.get(action)?.onSaved(),
+    onSuccess: (data, action) => answers.get(action)?.onSaved(data),
     onError: (error, action, context) => {
       if (context?.before) queryClient.setQueryData(key, context.before);
       answers.get(action)?.onError(error);
