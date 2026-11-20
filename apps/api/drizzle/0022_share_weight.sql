@@ -1,0 +1,2 @@
+ALTER TABLE "expense_shares" ADD COLUMN "weight" integer;--> statement-breakpoint
+ALTER TABLE "expense_shares" ADD CONSTRAINT "expense_shares_weight_check" CHECK ("expense_shares"."weight" between 1 and 10);

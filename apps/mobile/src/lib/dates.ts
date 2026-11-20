@@ -68,6 +68,11 @@ export function formatMoment(iso: string): string {
   return `${formatRange(day, day)} · ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** The day an expense was spent: the one entered, else the local day it was added. */
+export function spentDay(expense: { spentOn?: string; createdAt?: string }): string {
+  return expense.spentOn ?? (expense.createdAt ? toISODate(new Date(expense.createdAt)) : today());
+}
+
 /** `אוגוסט` / `אוגוסט 2025` */
 export function monthName(iso: string): string {
   const d = parseDate(iso);
