@@ -84,9 +84,14 @@ export function createAuth(db: Db, config: AuthConfig) {
 export type Auth = ReturnType<typeof createAuth>;
 export type User = Auth['$Infer']['Session']['user'];
 
-/** Rejects requests without a valid session with 401; otherwise sets `c.var.user`. */
+/**
+ * Rejects requests without a valid session with 401; otherwise sets `c.var.user`. Every router
+ * mounted on `/trips` uses it, and Hono runs each one's for every `/trips/*` request, so the
+ * session is looked up only by the first.
+ */
 export const requireUser = (auth: Auth) =>
   createMiddleware<{ Variables: { user: User } }>(async (c, next) => {
+    if (c.get('user')) return next();
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
     if (!session) return c.json({ error: 'Unauthorized' }, 401);
     c.set('user', session.user);
