@@ -204,7 +204,6 @@ export const runRoutes = (auth: Auth, db: Db) =>
               amountAgorot,
               paidBy: me,
               createdBy: me,
-              itemId: bought.length === 1 ? bought[0] : null,
             },
             shares,
             bought,

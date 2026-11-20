@@ -130,6 +130,24 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
     expect(home.trips[0]!.doneCount).toBe(1);
   });
 
+  it('records a single-item purchase in expense_items, not expenses.item_id', async () => {
+    const { a, tripId, items } = await trip();
+    const buy = items.find((i) => i.list === 'buy')!;
+
+    const res = await addExpense(a, tripId, { amountAgorot: 100, shares: [a.id], itemId: buy.id });
+    const expense = await res.json();
+    expect(expense).toMatchObject({ itemIds: [buy.id] });
+    expect(await sql`select item_id from expenses where id = ${expense.id}`).toEqual([
+      { item_id: null },
+    ]);
+    expect(await sql`select item_id from expense_items where expense_id = ${expense.id}`).toEqual([
+      { item_id: buy.id },
+    ]);
+    // Bought, as everyone loading the trip sees it.
+    const seen = await detail(a, tripId);
+    expect(seen.expenses.find((e) => e.id === expense.id)?.itemIds).toEqual([buy.id]);
+  });
+
   it('deletes an expense for whoever added or paid it, or an organizer', async () => {
     const { a, b, c, tripId } = await trip();
     const expense = await (
