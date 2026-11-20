@@ -6,7 +6,7 @@ import { useCallback, useEffect } from 'react';
 import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
 import { api, sessionToken, statusOf } from '@/lib/api';
-import { REALTIME_HOST, subscribe } from '@/lib/realtime';
+import { isOwnEvent, REALTIME_HOST, watch } from '@/lib/realtime';
 
 import { uploadReceipt } from './receipts';
 import { applyAction, type Action, type NewItemInput } from './reducer';
@@ -15,13 +15,18 @@ import type { TripData } from './types';
 
 /**
  * Query keys. Everything about one trip is one query, so a "trip changed" event (realtime)
- * only needs to invalidate `tripKey(id)`, plus `tripsKey` for the home screen.
+ * only needs to refetch `tripKey(id)`, and mark `tripsKey` (the home screen's) stale.
  */
 export const tripsKey = ['trips'] as const;
 export const tripKey = (tripId: string) => ['trip', tripId] as const;
 
-export const useTrips = () =>
-  useQuery({ queryKey: tripsKey, queryFn: () => parseResponse(api.trips.$get()) });
+/**
+ * Every trip of mine, in full: a heavy request. `subscribed: false` while its screen is out of
+ * sight (home under an open trip): then invalidating it only marks it stale, and it refetches
+ * when the screen is back, if stale by then.
+ */
+export const useTrips = ({ subscribed = true } = {}) =>
+  useQuery({ queryKey: tripsKey, queryFn: () => parseResponse(api.trips.$get()), subscribed });
 
 export const useTripQuery = (tripId: string) =>
   useQuery({
@@ -31,8 +36,10 @@ export const useTripQuery = (tripId: string) =>
 
 /**
  * Keeps the trip fresh while its screen is open: other members' changes arrive as events on its
- * realtime channel, and each one refetches the trip (and the home screen's list). Only while the
- * trip loads fine: not for a trip we can't open, and offline the refetch on reconnect re-enables it.
+ * realtime channel, and each one refetches the trip. The home list only goes stale: it refetches
+ * when home is shown again (`useTrips`). Only while the trip loads fine: not for a trip we can't
+ * open, and offline the refetch on reconnect re-enables it. Screens open on the same trip (the
+ * shop run over the trip) share one subscription (`watch`).
  */
 export function useTripUpdates(tripId: string, enabled: boolean) {
   const queryClient = useQueryClient();
@@ -40,17 +47,19 @@ export function useTripUpdates(tripId: string, enabled: boolean) {
     if (!REALTIME_HOST || !enabled) return;
     const key = tripKey(tripId);
     const refresh = () => {
-      // Our own changes publish events too. While one is pending, its onSettled refetches after
-      // the last; refetching now would briefly show the server without the queued changes.
+      // While a change of ours is pending, its onSettled refetches after the last; refetching
+      // now would briefly show the server without the queued changes.
       if (queryClient.isMutating({ mutationKey: key })) return;
       void queryClient.invalidateQueries({ queryKey: key });
-      void queryClient.invalidateQueries({ queryKey: tripsKey });
+      void queryClient.invalidateQueries({ queryKey: tripsKey, refetchType: 'none' });
     };
-    return subscribe({
+    return watch({
       host: REALTIME_HOST,
       channel: `/trips/${tripId}`,
       token: sessionToken,
-      onEvent: refresh,
+      // Our own changes publish events too, marked with our client id: their onSettled already
+      // refetched. Other sessions of the same user have other ids, so they still refresh.
+      onEvent: (event) => isOwnEvent(event) || refresh(),
       onSubscribed: refresh,
     });
   }, [queryClient, tripId, enabled]);
@@ -359,6 +368,8 @@ export function useTripAction(tripId: string) {
     },
     // Refetch after the last queued change only; an earlier refetch would undo later ones.
     // Returning the refetch keeps the change pending until the screen shows the server's state.
+    // The home list refetches only if home is in sight (gone back before this settled); under
+    // the trip it is just marked stale (`useTrips`).
     onSettled: () =>
       queryClient.isMutating({ mutationKey: key }) > 1
         ? undefined

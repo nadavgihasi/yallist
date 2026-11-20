@@ -4,8 +4,34 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 
 import { createDb, type Db } from './db/client';
 import { migrate } from './db/migrate';
-import { authorize, type Publish } from './realtime';
+import { authorize, clientOf, CLIENT_HEADER, tripEvent, type Publish } from './realtime';
 import { createTestDatabase, DATABASE_URL, signInAsGuest, testApp, testAuth } from './test-db';
+
+describe('trip events', () => {
+  it('say the trip changed, and which app session changed it if known', () => {
+    expect(JSON.parse(tripEvent('t1'))).toEqual({ type: 'changed', tripId: 't1' });
+    expect(JSON.parse(tripEvent('t1', 'k3j9x0a8b7c6d5e4f3g2'))).toEqual({
+      type: 'changed',
+      tripId: 't1',
+      client: 'k3j9x0a8b7c6d5e4f3g2',
+    });
+  });
+
+  it('take only a client id from the header, nothing else', () => {
+    expect(clientOf('k3j9x0a8b7c6d5e4f3g2')).toBe('k3j9x0a8b7c6d5e4f3g2');
+    expect(clientOf(crypto.randomUUID())).toMatch(/-/);
+    for (const header of [
+      undefined,
+      '',
+      'short',
+      'dana@example.com',
+      'a b c d e f g h',
+      'x'.repeat(65),
+    ]) {
+      expect(clientOf(header)).toBeUndefined();
+    }
+  });
+});
 
 describe.skipIf(!DATABASE_URL)('realtime', () => {
   let sql: Sql;
@@ -14,23 +40,23 @@ describe.skipIf(!DATABASE_URL)('realtime', () => {
   let app: ReturnType<typeof testApp>;
   let client: ReturnType<typeof testClient<ReturnType<typeof testApp>>>;
   /** Each publish, with the trip's newest activity as seen from outside the request. */
-  let published: { tripId: string; lastActivity: string | undefined }[];
+  let published: { tripId: string; lastActivity: string | undefined; client?: string }[];
   let publish: Publish;
 
   beforeAll(async () => {
     ({ sql, drop } = await createTestDatabase());
     await migrate(sql, { dsql: false });
     db = createDb(sql);
-    app = testApp(db, (tripId) => publish(tripId));
+    app = testApp(db, (tripId, client) => publish(tripId, client));
     client = testClient(app);
   });
 
   beforeEach(() => {
     published = [];
-    publish = async (tripId) => {
+    publish = async (tripId, client) => {
       const [last] = await sql<{ type: string }[]>`
         select type from activity where trip_id = ${tripId} order by created_at desc limit 1`;
-      published.push({ tripId, lastActivity: last?.type });
+      published.push({ tripId, lastActivity: last?.type, ...(client && { client }) });
     };
   });
 
@@ -73,6 +99,26 @@ describe.skipIf(!DATABASE_URL)('realtime', () => {
         as(dana),
       );
       expect(published).toHaveLength(2);
+    });
+
+    it('names the app session that wrote, when it says which', async () => {
+      const dana = await signInAsGuest(app, 'דנה');
+      const { trip } = await tripOf(dana);
+      const rename = (headers: Record<string, string>) =>
+        client.trips[':tripId'].$patch(
+          { param: { tripId: trip.id }, json: { name: 'גליל' } },
+          { headers: { ...dana.headers, ...headers } },
+        );
+      published = [];
+
+      await rename({ [CLIENT_HEADER]: 'k3j9x0a8b7c6d5e4f3g2' });
+      await rename({});
+      await rename({ [CLIENT_HEADER]: 'Dana <dana@example.com>' });
+      expect(published.map((p) => p.client)).toEqual([
+        'k3j9x0a8b7c6d5e4f3g2',
+        undefined,
+        undefined,
+      ]);
     });
 
     it('publishes when someone packs', async () => {

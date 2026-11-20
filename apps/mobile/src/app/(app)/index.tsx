@@ -1,5 +1,5 @@
 import type { TemplateId } from '@yallist/domain';
-import { router } from 'expo-router';
+import { router, useIsFocused } from 'expo-router';
 import { useState } from 'react';
 import {
   ScrollView,
@@ -33,7 +33,9 @@ const STARTS: TemplateId[] = ['camp', 'grill', 'zimmer', 'beach'];
 const SIDE_COLUMN = 340;
 
 export default function Home() {
-  const trips = useTrips();
+  // Only while in sight: under an open trip, its changes mark the list stale, and it refetches
+  // once home is back.
+  const trips = useTrips({ subscribed: useIsFocused() });
   const now = useToday();
   const insets = useSafeAreaInsets();
   const bp = useBreakpoint();
