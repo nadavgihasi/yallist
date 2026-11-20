@@ -41,7 +41,7 @@ export const isPersisted = (queryKey: QueryKey) => Object.hasOwn(PERSISTED, Stri
  * A fingerprint of `CachedData`'s structure. cacheBuster.test.ts computes it from the types and
  * fails until this matches, so changing the shape of cached data can't ship without a new buster.
  */
-export const CACHE_SHAPE = '280e580ba926';
+export const CACHE_SHAPE = 'dae931aa1599';
 
 /** Bump by hand only when cached data keeps its shape but changes its meaning. */
 const CACHE_EPOCH = 1;
