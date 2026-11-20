@@ -141,10 +141,20 @@ export function shekelInput(agorot: number): string {
   return (Math.round(agorot) / 100).toFixed(2);
 }
 
-/** Parse user input like "450" or "12.5" into agorot; undefined if not a positive amount. */
+/**
+ * Parse user input like "450", "12.5" or a sum typed at the till, "120+45.5", into agorot;
+ * undefined if not a positive amount. A trailing "+" (the next number not typed yet) is ignored.
+ */
 export function parseShekel(input: string): number | undefined {
-  const trimmed = input.trim().replace(/^₪/, '').replace(',', '.');
-  if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return undefined;
-  const agorot = Math.round(Number(trimmed) * 100);
-  return agorot > 0 ? agorot : undefined;
+  const terms = input
+    .trim()
+    .replace(/\+\s*$/, '')
+    .split('+');
+  let total = 0;
+  for (const term of terms) {
+    const trimmed = term.trim().replace(/^₪/, '').replace(',', '.');
+    if (!/^\d+(\.\d{1,2})?$/.test(trimmed)) return undefined;
+    total += Math.round(Number(trimmed) * 100);
+  }
+  return total > 0 ? total : undefined;
 }

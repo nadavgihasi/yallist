@@ -1,5 +1,5 @@
 import { useIsMutating } from '@tanstack/react-query';
-import { formatShekel, owedShares } from '@yallist/domain';
+import { formatShekel } from '@yallist/domain';
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
@@ -23,7 +23,7 @@ import { colors, radius, space, type } from '@/theme';
 
 import { balanceState, BalanceList } from './BalanceList';
 import type { TripView } from './derive';
-import { dayLabel, expenseDays } from './expenseDays';
+import { dayLabel, expenseDays, expenseEffect, type ExpenseEffect } from './expenseDays';
 import { MONEY_PARTS, type MoneyPart } from './parts';
 import { PayRow } from './PayRow';
 import { expenseKey } from './reveal';
@@ -260,6 +260,9 @@ export function MoneyTab({
             </View>
           ))}
 
+          {/* Why someone may pay a person who never paid for them. */}
+          {view.transfers.length > 1 && <Text style={styles.why}>{he.money.fewestTransfers}</Text>}
+
           {data.payments.length > 0 && (
             <>
               <View style={styles.divider} />
@@ -406,7 +409,7 @@ function Expenses({
           </Pressable>
         )}
       </Card>
-      {expenseDays(data.expenses).map(({ day, expenses, totalAgorot }) => (
+      {expenseDays(data.expenses, data.payments).map(({ day, expenses, payments, totalAgorot }) => (
         <ListGroup key={day} title={dayLabel(day, today())} aside={formatShekel(totalAgorot)}>
           {expenses.map((e) => (
             // The row opens the expense; its receipt has its own button beside it.
@@ -441,21 +444,58 @@ function Expenses({
                   </View>
                   <View style={styles.expenseEnd}>
                     <Text style={styles.amount}>{formatShekel(e.amountAgorot)}</Text>
-                    {(owedShares(e).get(me) ?? 0) > 0 && (
-                      <Text style={styles.myPart}>
-                        {he.money.myPart(formatShekel(owedShares(e).get(me)!))}
-                      </Text>
-                    )}
+                    <EffectLine effect={expenseEffect(e, me)} />
                   </View>
                 </Pressable>
                 <ReceiptButton tripId={data.trip.id} expense={e} />
               </View>
             </RevealTarget>
           ))}
+          {/* Payments that day, quietly: they explain why balances moved. */}
+          {payments.map((p) => (
+            <Pressable
+              key={p.id}
+              accessibilityRole="button"
+              accessibilityLabel={he.money.openPayment(
+                view.displayNameOf(p.fromUser),
+                view.displayNameOf(p.toUser),
+                formatShekel(p.amountAgorot),
+              )}
+              onPress={() =>
+                router.push({
+                  pathname: '/trips/[tripId]/payments/[paymentId]',
+                  params: { tripId: data.trip.id, paymentId: p.id },
+                })
+              }
+              style={({ pressed }) => [styles.logPayment, pressed && { opacity: 0.75 }]}
+              {...testId('log-payment')}
+            >
+              <View style={styles.logPaymentIcon}>
+                <Icon name="check" size={16} color={colors.brand} />
+              </View>
+              <Text style={styles.expenseWho} numberOfLines={1}>
+                {he.money.paidPair(view.nameOf(p.fromUser), view.nameOf(p.toUser))}
+              </Text>
+              <Text style={[styles.amount, styles.paid]}>{formatShekel(p.amountAgorot)}</Text>
+            </Pressable>
+          ))}
         </ListGroup>
       ))}
     </>
   );
+}
+
+/** Under an expense's total: what it does to me, in the balance colours. */
+function EffectLine({ effect }: { effect: ExpenseEffect }) {
+  const [text, color] =
+    effect.kind === 'lent'
+      ? [he.money.lent(formatShekel(effect.amountAgorot)), colors.owed]
+      : effect.kind === 'share'
+        ? [he.money.myPart(formatShekel(effect.amountAgorot)), colors.brandStrong]
+        : effect.kind === 'own'
+          ? [he.money.ownExpense, colors.inkMuted]
+          : [he.money.notInIt, colors.inkMuted];
+  return <Text style={[styles.myPart, { color }]}>{text}</Text>;
 }
 
 /**
@@ -573,6 +613,14 @@ const styles = StyleSheet.create({
   owedRows: { marginTop: space[3] },
   owedRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56 },
   rowRule: { borderTopWidth: 1, borderTopColor: colors.hairline },
+  why: { ...type.caption, fontSize: 13, lineHeight: 18, color: colors.inkMuted },
+  logPayment: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: space.touch },
+  logPaymentIcon: {
+    width: 40,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   owedName: { ...type.itemTitle, color: colors.ink, flex: 1 },
   paid: { color: colors.inkMuted },
   divider: { height: 1, backgroundColor: colors.hairline, marginVertical: space[1] },

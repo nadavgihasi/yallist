@@ -345,6 +345,12 @@ describe('formatShekel / parseShekel', () => {
     expect(parseShekel('12,35')).toBe(1235);
     expect(parseShekel('0')).toBeUndefined();
     expect(parseShekel('abc')).toBeUndefined();
+    // A sum, as typed at the till.
+    expect(parseShekel('120+45')).toBe(16500);
+    expect(parseShekel('12.5 + 7.25 + ₪3')).toBe(2275);
+    expect(parseShekel('120+')).toBe(12000);
+    expect(parseShekel('120++5')).toBeUndefined();
+    expect(parseShekel('+')).toBeUndefined();
     expect(parseShekel('1.234')).toBeUndefined();
   });
 });

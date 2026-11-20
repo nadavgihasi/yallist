@@ -102,6 +102,15 @@ function Form({ data }: { data: TripData }) {
         label={he.payment.to}
         testID="payment-to"
       />
+      {/* Once both are picked, say it in one line before the amount. */}
+      {to && (
+        <Text style={styles.sentence} {...testId('payment-sentence')}>
+          {he.payment.sentence(
+            from === me ? he.payment.fromMe : he.payment.fromName(view.displayNameOf(from)),
+            to === me ? he.payment.toMe : he.payment.toName(view.displayNameOf(to)),
+          )}
+        </Text>
+      )}
       <AmountField
         label={he.payment.amount}
         value={amount}
@@ -128,5 +137,6 @@ function Form({ data }: { data: TripData }) {
 }
 
 const styles = StyleSheet.create({
+  sentence: { ...type.sectionTitle, fontSize: 20, lineHeight: 26, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },
 });

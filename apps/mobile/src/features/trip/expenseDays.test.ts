@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { dayLabel, expenseDays } from './expenseDays';
+import { dayLabel, expenseDays, expenseEffect } from './expenseDays';
 
 const at = (id: string, createdAt: string, amountAgorot: number, spentOn?: string) => ({
   id,
@@ -25,6 +25,41 @@ describe('expenseDays', () => {
       ['2026-11-13', ['coffee', 'super', 'fuel'], 95000],
       ['2026-11-11', ['zimmer'], 120000],
     ]);
+  });
+
+  it('puts payments under the day they were recorded, without counting them in the total', () => {
+    const days = expenseDays(
+      [at('ice', '2026-11-14T12:00:00', 8000)],
+      [
+        { id: 'p1', createdAt: '2026-11-14T13:00:00' },
+        { id: 'p2', createdAt: '2026-11-12T09:00:00' },
+      ],
+    );
+    expect(
+      days.map((d) => [d.day, d.expenses.length, d.payments.map((p) => p.id), d.totalAgorot]),
+    ).toEqual([
+      ['2026-11-14', 1, ['p1'], 8000],
+      ['2026-11-12', 0, ['p2'], 0],
+    ]);
+  });
+});
+
+describe('expenseEffect', () => {
+  const dinner = { amountAgorot: 30000, paidBy: 'me', shares: ['me', 'dana', 'ron'] };
+  it('is what comes back to me when I paid', () => {
+    expect(expenseEffect(dinner, 'me')).toEqual({ kind: 'lent', amountAgorot: 20000 });
+  });
+  it('is my share when someone else paid, and nothing when I am not in it', () => {
+    expect(expenseEffect({ ...dinner, paidBy: 'dana' }, 'me')).toEqual({
+      kind: 'share',
+      amountAgorot: 10000,
+    });
+    expect(expenseEffect({ ...dinner, paidBy: 'dana', shares: ['dana', 'ron'] }, 'me')).toEqual({
+      kind: 'none',
+    });
+  });
+  it('is my own when I paid only for myself', () => {
+    expect(expenseEffect({ ...dinner, shares: ['me'] }, 'me')).toEqual({ kind: 'own' });
   });
 });
 

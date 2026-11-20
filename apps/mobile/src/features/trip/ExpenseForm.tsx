@@ -3,8 +3,9 @@ import { useRef, useState, type ComponentRef } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { FilterChip, SuggestionChip } from '@/components/Chips';
-import { SegmentedControl } from '@/components/Controls';
+import { SegmentedControl, Switch } from '@/components/Controls';
 import { DateField } from '@/components/DateField';
+import { Icon } from '@/components/Icon';
 import { AmountField, TextField, fieldStyles } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
@@ -62,6 +63,9 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   const [otherDay, setOtherDay] = useState(() => day !== today() && day !== addDays(today(), -1));
   const [parts, setParts] = useState<PartDraft[]>(() => expense?.parts?.map(toDraft) ?? []);
   const [weights, setWeights] = useState<Record<string, number>>(expense?.weights ?? {});
+  const [partsByWeight, setPartsByWeight] = useState(
+    () => !!expense?.parts?.length && !!expense.weights,
+  );
   const [mode, setMode] = useState<SplitMode>(
     expense?.parts?.length ? 'parts' : expense?.weights ? 'weights' : 'equal',
   );
@@ -77,8 +81,9 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   // Weights for who shares it only: someone unticked takes none.
   // Weights count in weights mode, and in parts mode for an expense saved with both (the API
   // takes both; the form edits one at a time but mustn't drop the other on save).
-  const keepsWeights =
-    mode === 'weights' || (mode === 'parts' && !!expense?.parts && !!expense.weights);
+  // In parts mode, what the parts leave can be split by weight too (a dinner with a child, and
+  // wine for two).
+  const keepsWeights = mode === 'weights' || (mode === 'parts' && partsByWeight);
   const usedWeights = keepsWeights
     ? Object.fromEntries(Object.entries(weights).filter(([id]) => shares.includes(id)))
     : {};
@@ -175,6 +180,26 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
               : undefined
         }
       />
+      {/* A calculator at the till: add another amount, see the total. The amount keyboard has
+          no "+", so it's a button. */}
+      <View style={styles.sumRow}>
+        <PillButton
+          label={he.addExpense.addToSum}
+          variant="soft"
+          size="sm"
+          icon={<Icon name="plus" size={16} color={colors.primaryStrong} />}
+          onPress={() => {
+            setAmount((a) => (a.trim() && !a.trim().endsWith('+') ? `${a.trim()}+` : a));
+            amountRef.current?.focus();
+          }}
+          {...testId('expense-amount-plus')}
+        />
+        {amount.includes('+') && agorot !== undefined && (
+          <Text style={styles.sumTotal} accessibilityLiveRegion="polite">
+            {he.addExpense.sumTotal(formatShekel(agorot))}
+          </Text>
+        )}
+      </View>
 
       <View style={styles.field}>
         <TextField
@@ -293,6 +318,23 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
       {mode === 'parts' && (
         <>
           <RunParts view={view} parts={parts} onChange={setParts} />
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>{he.addExpense.restByWeight}</Text>
+            <Switch
+              value={partsByWeight}
+              onChange={setPartsByWeight}
+              label={he.addExpense.restByWeight}
+            />
+          </View>
+          {partsByWeight && (
+            <WeightList
+              view={view}
+              shares={shares}
+              weights={weights}
+              owed={owed}
+              onChange={setWeights}
+            />
+          )}
           {parts.length > 0 && (
             <View style={styles.owed} {...testId('expense-owed')}>
               <Text style={styles.owedTitle} accessibilityRole="header">
@@ -303,7 +345,7 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
                   {split.error}
                 </Text>
               )}
-              {[...split.owed]
+              {[...(split.error ? new Map<string, number>() : owed)]
                 .filter(([, amount]) => amount > 0)
                 .map(([id, amount]) => (
                   <View key={id} style={styles.owedRow}>
@@ -322,6 +364,16 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
 }
 
 const styles = StyleSheet.create({
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[3],
+    minHeight: space.touch,
+  },
+  switchLabel: { ...type.itemTitle, color: colors.ink, flex: 1 },
+  sumRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], marginTop: -space[2] },
+  sumTotal: { ...type.itemTitle, color: colors.primaryStrong },
   whatInput: { minHeight: 56, borderRadius: 20, paddingHorizontal: 18 },
   field: { gap: 10 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },

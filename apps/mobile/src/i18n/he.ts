@@ -91,6 +91,9 @@ export const he = {
   },
   home: {
     title: 'הטיולים שלי',
+    /** On a trip's card: where I stand with money. */
+    owedToMe: (amount: string) => `מגיע לך ${amount}`,
+    iOwe: (amount: string) => `עליך להעביר ${amount}`,
     newTrip: 'טיול חדש',
     past: 'טיולים שהיו',
     mine: 'אצלך: ',
@@ -315,6 +318,8 @@ export const he = {
     /** One section for what's open and what was paid (M8). */
     settling: 'מסדרים חשבון',
     noneOpen: 'אין העברות פתוחות',
+    /** Under the transfers: why someone may pay a person who never paid for them. */
+    fewestTransfers: 'חישבנו כמה שפחות העברות, אז אפשר שתעבירו למי שלא שילם עליכם ישירות.',
     /** The hero when I'm square. */
     allSquare: 'החשבון שלך סגור',
     allSquareText: 'אין לך מה להעביר ואין מה שמגיע לך.',
@@ -325,6 +330,12 @@ export const he = {
     myShare: 'החלק שלך',
     /** Under an expense's total. */
     myPart: (amount: string) => `חלקך ${amount}`,
+    /** I paid it: what the others owe me for it. */
+    lent: (amount: string) => `מגיע לך ${amount}`,
+    ownExpense: 'רק שלך',
+    notInIt: 'לא בהוצאה הזאת',
+    /** A payment in the log: `נועה ← רון`. */
+    paidPair: (from: string, to: string) => `${from} ← ${to}`,
     /** The expense log's link to settling up, coloured like the balance. */
     balanceLink: (state: string, amount: string) => `${state} ${amount} · להתחשבנות`,
     settled: 'אין העברות פתוחות',
@@ -472,6 +483,11 @@ export const he = {
     when: 'מתי?',
     date: 'תאריך',
     otherDay: 'תאריך אחר',
+    /** The calculator at the till: add another amount to the sum. */
+    addToSum: 'עוד סכום',
+    /** In parts mode: split what the parts leave by weight, too. */
+    restByWeight: 'השאר לפי משקל',
+    sumTotal: (total: string) => `ביחד ${total}`,
     today: 'היום',
     yesterday: 'אתמול',
     /** The split picker starts from the last expense I added. */
@@ -495,6 +511,8 @@ export const he = {
     paidBy: 'מי שילם',
     addedBy: 'מי הוסיף',
     addedAt: 'מתי נוסף',
+    /** Under the amount: `נוסף ע״י רון · שישי, 20 בנובמבר · 10:06`. */
+    addedByAt: (name: string, when: string) => `נוסף ע״י ${name} · ${when}`,
     spentOn: 'מתי',
     owed: 'כמה כל אחד',
     mine: 'החלק שלך',
@@ -551,6 +569,12 @@ export const he = {
   /** Recording a payment (anyone, for any two people) and opening one to delete it. */
   payment: {
     title: 'רישום תשלום',
+    /** Above the amount: `תשלום מנועה לרון`, `תשלום ממני לרון`, `תשלום מנועה אליי`. */
+    sentence: (from: string, to: string) => `תשלום ${from} ${to}`,
+    fromMe: 'ממני',
+    fromName: (name: string) => `מ${name}`,
+    toMe: 'אליי',
+    toName: (name: string) => `ל${name}`,
     from: 'מי שילם',
     to: 'למי',
     amount: 'כמה',

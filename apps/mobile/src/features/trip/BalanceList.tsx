@@ -71,7 +71,12 @@ export function BalanceList({ data, view, me }: { data: TripData; view: TripView
             <View style={styles.end}>
               {/* What's left to do, then how much: ״להעביר ₪551.03״ reads in order. */}
               <Text style={[styles.state, { color: state.color }]}>{state.label}</Text>
-              <Text style={[styles.amount, { color: state.color }]}>{amount}</Text>
+              {balance === 0 ? (
+                // Square: the done check, as on a packed item, instead of ₪0.
+                <Icon name="check" size={20} color={colors.brand} strokeWidth={3} />
+              ) : (
+                <Text style={[styles.amount, { color: state.color }]}>{amount}</Text>
+              )}
             </View>
             <Icon
               name="chevronEnd"
