@@ -74,7 +74,7 @@ Write these as migrations. Column names are suggestions; keep the semantics.
 
 **activity** — `id`, `trip_id`, `actor` (nullable for system events), `type`, `payload` jsonb, `created_at`. Written by the API in the same transaction as the change (`logActivity`), never by clients directly.
 
-**template_items** — seed data for templates (Appendix A): `template`, `list`, `category`, `position`, `name`, `kind`, `quantity_needed`, `unit`, `display_qty`.
+**template_items** — no longer used: new trips are seeded from `@yallist/domain` TEMPLATES (Appendix A). The table is dead and will be dropped.
 
 **push_tokens** — `user_id`, `token`, `platform`, `updated_at`.
 
@@ -128,7 +128,7 @@ Treat the invite link as a bearer capability and the database as the enforcement
 
 - **RLS on every table.** Use stable `SECURITY DEFINER` helpers `is_active_member(trip_id)` and `is_organizer(trip_id)`; policies call them. Pending and removed members see nothing of the trip through normal table access.
 - **All multi-step or privileged writes go through RPCs** (security definer, explicit checks, `search_path` pinned):
-  - `create_trip(name, starts_on, ends_on, template)` → creates trip, organizer membership, items from `template_items`, random invite token.
+  - `create_trip(name, starts_on, ends_on, template)` → creates trip, organizer membership, items from the template (`@yallist/domain` TEMPLATES), random invite token.
   - `trip_preview(token)` → only name, dates, member count, missing count, and up to ~6 missing item names. Callable by anon. Used by the join page and link previews.
   - `join_trip(token, display_name)` → creates membership `active` or `pending` depending on `require_approval`. Idempotent for the same user.
   - `rotate_invite(trip_id)` → organizer only.

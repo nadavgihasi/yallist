@@ -59,7 +59,8 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
   });
 
   // Aurora DSQL, one cluster per stage. Linked functions connect with IAM auth tokens
-  // (apps/api/src/db/client.ts). Migrations run after deploy (.github/workflows/deploy.yml).
+  // (apps/api/src/db/client.ts). Migrations run before and after each deploy
+  // (.github/workflows/deploy.yml, docs/deploy.md#database).
   const database = new sst.aws.Dsql('Database', {
     // AWS Backup: a vault, plan and selection beside the cluster (daily at 05:00 UTC, kept 7 days).
     backup: $app.stage === 'production',

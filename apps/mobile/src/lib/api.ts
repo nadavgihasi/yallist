@@ -2,6 +2,8 @@ import type { AppType } from '@yallist/api/app';
 import { DetailedError, hc } from 'hono/client';
 import { Platform } from 'react-native';
 
+import { CLIENT_HEADER, CLIENT_ID } from './realtime';
+
 /** Set at build time by SST (`infra/app/core.ts`); locally, the dev API (`pnpm --filter @yallist/api dev`). */
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -17,9 +19,14 @@ export function setAuth(next: string | undefined, handleUnauthorized: () => void
 /** The session's bearer token, which the realtime connection authorizes with too. */
 export const sessionToken = () => token;
 
-/** Typed client for the API; unwrap responses with `parseResponse` from `hono/client`. */
+/**
+ * Typed client for the API; unwrap responses with `parseResponse` from `hono/client`. Signed-in
+ * requests name this app session too, so the realtime events of its own changes come back marked
+ * (lib/realtime.ts `isOwnEvent`). Only with the token: those already need a CORS preflight.
+ */
 export const api = hc<AppType>(API_URL, {
-  headers: (): Record<string, string> => (token ? { authorization: `Bearer ${token}` } : {}),
+  headers: (): Record<string, string> =>
+    token ? { authorization: `Bearer ${token}`, [CLIENT_HEADER]: CLIENT_ID } : {},
   fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
     const res = await fetch(input, init);
     if (res.status === 401 && token) onUnauthorized();

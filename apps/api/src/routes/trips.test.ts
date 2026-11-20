@@ -104,6 +104,38 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       expect(await activityTypes(data.trip.id)).toEqual(['trip_created']);
     });
 
+    // `blank` seeds nothing.
+    it.each(Object.keys(TEMPLATES) as TemplateId[])(
+      "seeds the %s template's items, list by list in template order, with their fields",
+      async (template) => {
+        const { trip } = await createTrip(await guest('seed'), { template });
+
+        const rows = await sql`
+          select i.list, i.position, c.name as category, i.name, i.kind,
+            i.quantity_needed as "quantityNeeded", i.unit, i.display_qty as "displayQty",
+            i.note, i.category as "legacyCategory"
+          from items i left join trip_categories c on c.id = i.category_id
+          where i.trip_id = ${trip.id} order by i.list, i.position`;
+        const expected = (['bring', 'buy'] as const).flatMap((list) =>
+          TEMPLATES[template]
+            .filter((t) => t.list === list)
+            .map((t, position) => ({
+              list,
+              position,
+              category: t.category,
+              name: t.name,
+              kind: t.kind,
+              quantityNeeded: t.quantityNeeded,
+              unit: t.unit ?? null,
+              displayQty: t.displayQty ?? null,
+              note: null,
+              legacyCategory: '',
+            })),
+        );
+        expect(rows).toEqual(expected);
+      },
+    );
+
     it('lists my trips with item counts and what I took', async () => {
       const { organizer, member, data } = await tripWithMember();
       const single = data.items.find((i) => i.kind === 'single')!;

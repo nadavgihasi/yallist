@@ -1,7 +1,8 @@
-import { and, asc, eq, isNull, max } from 'drizzle-orm';
+import { TEMPLATES, type TemplateId } from '@yallist/domain';
+import { and, eq, isNull, max } from 'drizzle-orm';
 
 import { fail } from '../access';
-import { items, templateItems, type TEMPLATE_IDS } from '../db/schema';
+import { items } from '../db/schema';
 import type { Executor, Tx } from '../db/tx';
 import { insertCategories } from './categories';
 
@@ -51,18 +52,21 @@ export async function appendItem(tx: Executor, tripId: string, createdBy: string
   return created!;
 }
 
-/** Copies the template's categories and items into the trip. */
+/**
+ * Copies the template's categories and items into the trip: the bring list, then the buy list,
+ * each in TEMPLATES order, with its position in its list.
+ */
 export async function seedItems(
   tx: Executor,
   tripId: string,
   createdBy: string,
-  template: (typeof TEMPLATE_IDS)[number],
+  template: TemplateId,
 ) {
-  const seed = await tx
-    .select()
-    .from(templateItems)
-    .where(eq(templateItems.template, template))
-    .orderBy(asc(templateItems.list), asc(templateItems.position));
+  const seed = (['bring', 'buy'] as const).flatMap((list) =>
+    TEMPLATES[template]
+      .filter((item) => item.list === list)
+      .map((item, position) => ({ ...item, position })),
+  );
   if (seed.length === 0) return;
   // In order of first appearance, one per list and name.
   const categories = new Map(
@@ -70,7 +74,7 @@ export async function seedItems(
   );
   const categoryIds = await insertCategories(tx, tripId, [...categories.values()]);
   await tx.insert(items).values(
-    seed.map(({ template: _, category, ...item }) => ({
+    seed.map(({ category, ...item }) => ({
       ...item,
       tripId,
       createdBy,

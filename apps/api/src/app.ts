@@ -4,7 +4,7 @@ import { HTTPException } from 'hono/http-exception';
 
 import type { Auth } from './auth';
 import type { Db } from './db/client';
-import type { Publish } from './realtime';
+import { clientOf, CLIENT_HEADER, type Publish } from './realtime';
 import type { ReceiptStore } from './receipts';
 import { bagRoutes } from './routes/bag';
 import { bulkItemRoutes } from './routes/bulk-items';
@@ -31,8 +31,10 @@ export function createApp(
   sentryWebhook: SentryWebhookConfig = { secret: null, telegram: null },
 ) {
   // Realtime is best effort: a failed publish is logged, the write has already succeeded.
-  const notify = (tripId: string) =>
-    publish(tripId).catch((err: unknown) => console.error('Realtime publish failed', err));
+  const notify = (tripId: string, client?: string) =>
+    publish(tripId, client).catch((err: unknown) => console.error('Realtime publish failed', err));
+  // Bag changes and joins don't name the client: the trips they touch aren't the sender's echo.
+  const notifyTrip = (tripId: string) => notify(tripId);
 
   // Answers CORS preflights with a 2xx: API Gateway's `$default` route forwards them to this
   // Lambda. Deployed, API Gateway replaces these headers with its own (infra/app/core.ts);
@@ -52,13 +54,16 @@ export function createApp(
     .route('/webhooks/sentry', sentryWebhookRoutes(sentryWebhook))
     .route('/webhooks/telegram', telegramWebhookRoutes(db, feedback.pipeline ?? null))
     .route('/webhooks/github', githubWebhookRoutes(db, feedback.pipeline ?? null))
-    .route('/me/bag', bagRoutes(auth, db, notify))
+    .route('/me/bag', bagRoutes(auth, db, notifyTrip))
     .route('/me', meRoutes(auth, db, receipts))
     .route('/feedback', feedbackRoutes(auth, db, feedback))
     .use('/trips/:tripId/*', async (c, next) => {
       await next();
-      // After every successful write to a trip, so after its transaction committed.
-      if (c.req.method !== 'GET' && c.res.ok) await notify(c.req.param('tripId'));
+      // After every successful write to a trip, so after its transaction committed. Names the
+      // app session that wrote, so it can skip its own event.
+      if (c.req.method !== 'GET' && c.res.ok) {
+        await notify(c.req.param('tripId'), clientOf(c.req.header(CLIENT_HEADER)));
+      }
     })
     .route('/trips', tripRoutes(auth, db, receipts))
     .route('/trips', categoryRoutes(auth, db))
@@ -67,7 +72,7 @@ export function createApp(
     .route('/trips', moneyRoutes(auth, db, receipts))
     .route('/trips', receiptRoutes(auth, db, receipts))
     .route('/trips', runRoutes(auth, db))
-    .route('/invites', inviteRoutes(auth, db, notify));
+    .route('/invites', inviteRoutes(auth, db, notifyTrip));
 }
 
 /**
