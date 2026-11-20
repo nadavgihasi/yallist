@@ -194,6 +194,9 @@ const ACKNOWLEDGED: Record<string, Record<number, string>> = {
   '0013_drop_place_text': { 0: `drops trips.place_text: ${SHIPPED_BEFORE_MIGRATE_FIRST}` },
   '0018_more_templates': { 0: LOOSER_CHECK, 1: LOOSER_CHECK },
   '0019_more_covers': { 0: LOOSER_CHECK, 1: LOOSER_CHECK },
+  '0025_removed_reason': {
+    2: 'a reason only on removed members: the code before it never writes removed_reason, so its rows pass; after a rollback, its rejoin of a member who left fails, on purpose',
+  },
 };
 
 describe('migrations', () => {
