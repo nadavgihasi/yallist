@@ -1,6 +1,6 @@
 import { randomBytes } from 'node:crypto';
 
-import postgres from 'postgres';
+import postgres, { type Sql } from 'postgres';
 
 import { createApp } from './app';
 import { createAuth } from './auth';
@@ -30,6 +30,41 @@ export async function createTestDatabase() {
     },
   };
 }
+
+/**
+ * Every single-column foreign key in the migrated database, read from the Postgres catalog
+ * rather than the Drizzle schema: the migrations in drizzle/ are what production runs.
+ */
+export const foreignKeys = (sql: Sql) => sql<
+  { table: string; column: string; refTable: string; refColumn: string }[]
+>`
+  select cl.relname as "table", a.attname as "column",
+    rcl.relname as "refTable", ra.attname as "refColumn"
+  from pg_constraint c
+  join pg_class cl on cl.oid = c.conrelid
+  join pg_namespace n on n.oid = cl.relnamespace
+  join pg_class rcl on rcl.oid = c.confrelid
+  cross join lateral unnest(c.conkey, c.confkey) as k(col, refcol)
+  join pg_attribute a on a.attrelid = c.conrelid and a.attnum = k.col
+  join pg_attribute ra on ra.attrelid = c.confrelid and ra.attnum = k.refcol
+  where c.contype = 'f' and n.nspname = 'public'
+  order by 1, 2`;
+
+/**
+ * Every primary key, unique constraint and unique index in the migrated database, with its
+ * columns sorted by name.
+ */
+export const uniqueKeys = (sql: Sql) => sql<{ table: string; name: string; columns: string[] }[]>`
+  select cl.relname as "table", ic.relname as "name",
+    array_agg(a.attname::text order by a.attname) as "columns"
+  from pg_index i
+  join pg_class cl on cl.oid = i.indrelid
+  join pg_class ic on ic.oid = i.indexrelid
+  join pg_namespace n on n.oid = cl.relnamespace
+  join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey)
+  where i.indisunique and n.nspname = 'public'
+  group by 1, 2
+  order by 1, 2`;
 
 /** Better Auth with test config. */
 export const testAuth = (db: Db, photos?: ReceiptStore) =>

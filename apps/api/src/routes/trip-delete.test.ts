@@ -2,12 +2,21 @@ import { testClient } from 'hono/testing';
 import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createDb } from '../db/client';
+import { deleteTrip } from '../dal/trips';
+import { createDb, type Db } from '../db/client';
 import { migrate } from '../db/migrate';
-import { createTestDatabase, DATABASE_URL, signInAsGuest, testApp, testReceipts } from '../test-db';
+import {
+  createTestDatabase,
+  DATABASE_URL,
+  foreignKeys,
+  signInAsGuest,
+  testApp,
+  testReceipts,
+} from '../test-db';
 
 describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
   let sql: Sql;
+  let db: Db;
   let drop: () => Promise<void>;
   let app: ReturnType<typeof testApp>;
   let client: ReturnType<typeof testClient<ReturnType<typeof testApp>>>;
@@ -17,12 +26,8 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
   beforeAll(async () => {
     ({ sql, drop } = await createTestDatabase());
     await migrate(sql, { dsql: false });
-    app = testApp(
-      createDb(sql),
-      async (tripId) => void published.push(tripId),
-      undefined,
-      bucket.store,
-    );
+    db = createDb(sql);
+    app = testApp(db, async (tripId) => void published.push(tripId), undefined, bucket.store);
     client = testClient(app);
   });
 
@@ -165,6 +170,65 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
     }
     const mine = await (await client.trips.$get({}, as(b))).json();
     expect(mine.trips.map((t) => t.trip.id)).not.toContain(tripId);
+  });
+
+  /** The tables that hang off trips: they reference trips.id, or a table that does, and so on. */
+  async function tripTables() {
+    const fks = await foreignKeys(sql);
+    const found = new Map<string, string>([['trips', 'trips']]);
+    for (let grew = true; grew;) {
+      grew = false;
+      for (const fk of fks) {
+        if (found.has(fk.refTable) && !found.has(fk.table)) {
+          found.set(fk.table, `${fk.table}.${fk.column} -> ${found.get(fk.refTable)}`);
+          grew = true;
+        }
+      }
+    }
+    return found;
+  }
+
+  const countRows = async (tables: string[]) =>
+    Object.fromEntries(
+      await Promise.all(
+        tables.map(async (t) => {
+          const [row] = await sql<[{ n: number }]>`select count(*)::int as n from ${sql(t)}`;
+          return [t, row.n] as const;
+        }),
+      ),
+    );
+
+  // deleteTrip deletes children first by hand (no cascades on DSQL). The tables come from the
+  // schema's foreign keys, so a new table under a trip fails here until fullTrip writes a row to
+  // it and deleteTrip deletes it.
+  it('deleteTrip deletes from every table that hangs off a trip', async () => {
+    const tables = await tripTables();
+    // Sanity: the walk follows foreign keys through items, expenses and their parts.
+    expect([...tables.keys()]).toEqual(
+      expect.arrayContaining(['trip_members', 'claims', 'expense_part_shares', 'expense_items']),
+    );
+    const names = [...tables.keys()];
+    const before = await countRows(names);
+    const { tripId } = await fullTrip();
+    const filled = await countRows(names);
+    const empty = names.filter((t) => filled[t]! <= before[t]!).map((t) => tables.get(t));
+    expect(
+      empty,
+      `Tables hang off trips but fullTrip writes no row to them: ${empty.join('; ')}. Make ` +
+        'fullTrip fill them, and deleteTrip (dal/trips.ts) delete their rows before the rows ' +
+        'they reference',
+    ).toEqual([]);
+
+    // An FK error names the table deleteTrip deletes too early or leaves behind.
+    await db.transaction((tx) => deleteTrip(tx, tripId));
+
+    const after = await countRows(names);
+    const left = names
+      .filter((t) => after[t] !== before[t])
+      .map((t) => `${tables.get(t)}: ${after[t]! - before[t]!} left`);
+    expect(left, `deleteTrip (dal/trips.ts) leaves rows of the trip: ${left.join('; ')}`).toEqual(
+      [],
+    );
   });
 
   it('deletes an activity log longer than one transaction may change', async () => {
