@@ -105,6 +105,9 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
         as(b!),
       )
     ).json();
+    // The API no longer writes expenses.item_id, but expenses from before that still have it,
+    // and deleteTrip must delete them before their items for as long as the column exists.
+    await sql`update expenses set item_id = ${first!.id} where id = ${expense.id}`;
     const expenseParam = { tripId, expenseId: expense.id };
     const receipt = trip(tripId).expenses[':expenseId'].receipt;
     const form = await (
