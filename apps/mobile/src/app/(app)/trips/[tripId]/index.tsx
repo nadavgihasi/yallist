@@ -302,11 +302,16 @@ export default function TripScreen() {
     />
   );
 
+  // Settling up with someone to settle with: the floating button records a payment.
+  const payNext =
+    tab === 'money' &&
+    moneyView === 'settle' &&
+    (view.activeIds.length > 1 || view.transfers.length > 0);
   const add =
     tab === 'people'
       ? null
       : tab === 'money'
-        ? moneyView === 'settle'
+        ? payNext
           ? // Settling up, the next step is recording a payment, not another expense.
             () => router.push({ pathname: '/trips/[tripId]/payments/new', params: { tripId } })
           : () => router.push({ pathname: '/trips/[tripId]/expenses/new', params: { tripId } })
@@ -581,14 +586,10 @@ export default function TripScreen() {
       {add && (
         <FloatingAction
           label={
-            tab === 'money' && moneyView === 'settle'
-              ? he.trip.fabShort.payment
-              : he.trip.fabShort[tab as 'bring' | 'buy' | 'money']
+            payNext ? he.trip.fabShort.payment : he.trip.fabShort[tab as 'bring' | 'buy' | 'money']
           }
           accessibilityLabel={
-            tab === 'money' && moneyView === 'settle'
-              ? he.trip.fab.payment
-              : he.trip.fab[tab as 'bring' | 'buy' | 'money']
+            payNext ? he.trip.fab.payment : he.trip.fab[tab as 'bring' | 'buy' | 'money']
           }
           testID="trip-add"
           onPress={add}

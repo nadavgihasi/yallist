@@ -321,26 +321,6 @@ export function MoneyTab({
                 </View>
               </Pressable>
             ))}
-
-          {/* Alone on the trip there's nobody to pay or be paid. */}
-          {(view.activeIds.length > 1 || view.transfers.length > 0) && (
-            <View style={styles.recordOther}>
-              <PillButton
-                label={he.money.recordOther}
-                variant="soft"
-                wide
-                icon={<Icon name="plus" size={18} color={colors.primaryStrong} />}
-                onPress={() =>
-                  router.push({
-                    pathname: '/trips/[tripId]/payments/new',
-                    params: { tripId: data.trip.id },
-                  })
-                }
-                {...testId('payment-record')}
-              />
-              <Text style={styles.hint}>{he.money.recordHint}</Text>
-            </View>
-          )}
         </ListGroup>
       )}
 
@@ -629,8 +609,6 @@ const styles = StyleSheet.create({
   },
   recorded: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
   transferEnd: { alignItems: 'flex-end', gap: space[1] },
-  recordOther: { gap: space[2] },
-  hint: { ...type.caption, color: colors.inkMuted, textAlign: 'center' },
   transfer: { flexDirection: 'row', alignItems: 'center', gap: space[2], minHeight: space.touch },
   transferWho: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
   transferPerson: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space[2] },
