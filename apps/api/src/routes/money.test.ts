@@ -411,6 +411,22 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
     ).toBe(400);
   });
 
+  it('takes a part for each of a big trip, as a split by amount sends', async () => {
+    const { a, b, tripId } = await trip();
+    // The app sends a part for each person but one; the API checks members, not distinct ones.
+    const parts = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        label: `חלק ${i}`,
+        amountAgorot: 100,
+        shares: [a.id],
+      }));
+    const add = (n: number) =>
+      addExpense(a, tripId, { amountAgorot: 100 * n + 100, shares: [b.id], parts: parts(n) });
+    expect((await add(15)).status).toBe(201);
+    expect((await detail(a, tripId)).expenses[0]!.parts).toHaveLength(15);
+    expect((await add(101)).status).toBe(400);
+  });
+
   it('edits weights, and keeps them through other edits', async () => {
     const { a, b, c, tripId } = await trip();
     const { id } = await (

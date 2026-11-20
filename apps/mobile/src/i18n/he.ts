@@ -353,6 +353,8 @@ export const he = {
     between: (names: string) => `בין ${names}`,
     part: (label: string, amount: string, names: string) => `${label} ${amount}: ${names}`,
     rest: (names: string) => `השאר: ${names}`,
+    /** Split by each person's amount: `דנה ₪120`. */
+    amount: (name: string, amount: string) => `${name} ${amount}`,
     /** An expense split by weight: `לפי משקל: דנה ×2, רון ×3`. */
     byWeight: (who: string) => `לפי משקל: ${who}`,
     // `×2` stays one left-to-right unit after the name.
@@ -485,8 +487,12 @@ export const he = {
     otherDay: 'תאריך אחר',
     /** The calculator at the till: add another amount to the sum. */
     addToSum: 'עוד סכום',
-    /** In parts mode: split what the parts leave by weight, too. */
-    restByWeight: 'השאר לפי משקל',
+    /** In parts mode, Splitwise's exact amounts: each person's part, typed. */
+    amountsHint: 'רושמים כמה החלק של כל אחד. מי שלא משלם נשאר ריק.',
+    amountOf: (name: string) => `החלק של ${name}`,
+    amountsLeft: (left: string) => `נשארו ${left} לחלק`,
+    amountsOver: (over: string) => `${over} יותר מהסכום`,
+    amountsDone: 'מסתדר בדיוק עם הסכום',
     sumTotal: (total: string) => `ביחד ${total}`,
     today: 'היום',
     yesterday: 'אתמול',
@@ -496,7 +502,7 @@ export const he = {
     needAmount: 'רושמים כמה זה עלה',
     needWhat: 'רושמים על מה',
     needShares: 'בוחרים לפחות משתתף אחד',
-    /** How the rest is split: equally, by weight, or with parts for some people only. */
+    /** How it's split: equally, by weight, or each person's part typed. */
     splitHow: 'איך מחלקים?',
     split: { equal: 'שווה', weights: 'לפי משקל', parts: 'חלקים' },
     weightsHint: 'מי שהמשקל שלו 2 משלם פי שניים. למשל מבוגר 2 וילד 1, או זוג כ־2.',

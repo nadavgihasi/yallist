@@ -86,6 +86,16 @@ describe('sharedText', () => {
     expect(sharedText({ shares: ['a'] }, ['a', 'b'], nameOf)).toBe('בין דנה');
   });
 
+  it("lists each person's amount for a split by amount", () => {
+    const parts = [
+      { label: 'דנה', amountAgorot: 12000, shares: ['a'] },
+      { label: 'שם ישן', amountAgorot: 10000, shares: ['b'] },
+    ];
+    expect(sharedText({ amountAgorot: 30000, shares: ['d'], parts }, everyone, nameOf)).toBe(
+      'דנה ₪120 · רון ₪100 · עומר ₪80',
+    );
+  });
+
   it('lists the parts and who shares each', () => {
     const parts = [{ label: 'אלכוהול', amountAgorot: 12000, shares: ['a', 'b'] }];
     expect(sharedText({ shares: everyone, parts }, everyone, nameOf)).toBe(
