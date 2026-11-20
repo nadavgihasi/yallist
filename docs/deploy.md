@@ -244,7 +244,7 @@ Cost: about $0.50 a month (5 standard alarms at $0.10); SNS and the notifier sta
 Two Sentry projects, both on the free plan: `yallist-app` (web and Android, [src/lib/sentry.ts](../apps/mobile/src/lib/sentry.ts)) and `yallist-api` ([src/sentry.ts](../apps/api/src/sentry.ts)).
 
 - **Releases:** release `yallist@<version>` (the release tag), dist the git SHA, environment the stage (`dev`, `production`).
-- **Sampling:** every error; 5% of app traces; no API traces (the duration alarm covers latency).
+- **Sampling:** every error and every trace, in the app and the API. The app sends `sentry-trace` and `baggage` to the API, which continues the trace with one span per request, named by its route pattern (`tracing` in [src/sentry.ts](../apps/api/src/sentry.ts)). On web, a replay of each session that hits an error, with text and images masked ([sentry.web.ts](../apps/mobile/src/lib/sentry.web.ts)).
 - **Personal data:** none is sent. `sendDefaultPii` is off, and every event and breadcrumb goes through [scrubEvent](../packages/domain/src/scrub.ts), which drops the user, cookies and headers and replaces tokens, emails, Israeli phone numbers and all Hebrew text (names, trip and item titles) in every string except stack traces.
 - **Inert without a DSN:** local dev, unit tests and the UI tests build without one, so Sentry never loads.
 - **Web:** loads Sentry's prebuilt browser bundle (`browser.sentry-cdn.com`, pinned by version and SHA-384) after the app starts, so the app's own bundle grows by about 1 KB gzipped. Errors in the first moments, before it loads, are missed.
