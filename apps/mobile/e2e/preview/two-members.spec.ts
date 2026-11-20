@@ -156,9 +156,10 @@ test('a claim reaches the other member over AppSync Events', async ({ page: dana
 
   await noa.locator('#item-claim').click();
   await expect(noa.locator('#item-release')).toBeVisible();
+  // Marked with Noa's app session (her client skips its own echo), and nothing about her.
   await expect
-    .poll(async () => (await events()).slice(before))
-    .toContainEqual(JSON.stringify({ type: 'changed', tripId }));
+    .poll(async () => (await events()).slice(before).map((e) => JSON.parse(e) as object))
+    .toContainEqual({ type: 'changed', tripId, client: expect.stringMatching(/^[0-9a-z]{20}$/) });
 
   // The app subscribes too (src/lib/realtime.ts), so Dana's list shows the claim without a reload.
   await expect(dana.locator('#item-claim')).toBeHidden({ timeout: 10_000 });

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { backoff, subscribe } from './realtime';
+import { backoff, CLIENT_ID, isOwnEvent, subscribe, watch } from './realtime';
 
 /** A WebSocket the test drives: `receive` plays the server, `sent` is what the client sent. */
 class FakeSocket {
@@ -81,17 +81,27 @@ describe('subscribe', () => {
     expect(onSubscribed).toHaveBeenCalledOnce();
   });
 
-  it('catches up 2, 5 and 10 s after subscribing, while connected', () => {
+  it('catches up once, 4 s after subscribing, while connected', () => {
     const { onSubscribed } = start();
     latest().accept();
     expect(onSubscribed).toHaveBeenCalledTimes(1);
-    vi.advanceTimersByTime(2000);
+    vi.advanceTimersByTime(3999);
+    expect(onSubscribed).toHaveBeenCalledTimes(1);
+    vi.advanceTimersByTime(1);
     expect(onSubscribed).toHaveBeenCalledTimes(2);
-    vi.advanceTimersByTime(3000);
-    expect(onSubscribed).toHaveBeenCalledTimes(3);
-    vi.advanceTimersByTime(5000);
-    expect(onSubscribed).toHaveBeenCalledTimes(4);
     vi.advanceTimersByTime(60_000);
+    expect(onSubscribed).toHaveBeenCalledTimes(2);
+  });
+
+  it('catches up again after a reconnect', () => {
+    const { onSubscribed } = start();
+    latest().accept();
+    vi.advanceTimersByTime(4000);
+    latest().close();
+    vi.advanceTimersByTime(1000);
+    latest().accept();
+    expect(onSubscribed).toHaveBeenCalledTimes(3);
+    vi.advanceTimersByTime(4000);
     expect(onSubscribed).toHaveBeenCalledTimes(4);
   });
 
@@ -116,13 +126,18 @@ describe('subscribe', () => {
     expect(onSubscribed).toHaveBeenCalledOnce();
   });
 
-  it('reports each event', () => {
+  it('reports each event, with its payload', () => {
     const { onEvent } = start();
     latest().accept();
     latest().receive({ type: 'ka' });
     latest().receive({ type: 'data', id: '1', event: '{"type":"changed"}' });
-    latest().receive({ type: 'data', id: '1', event: '{"type":"changed"}' });
-    expect(onEvent).toHaveBeenCalledTimes(2);
+    latest().receive({ type: 'data', id: '1', event: '{"type":"changed","client":"c1"}' });
+    latest().receive({ type: 'data', id: '1', event: 'not json' });
+    expect(onEvent.mock.calls).toEqual([
+      [{ type: 'changed' }],
+      [{ type: 'changed', client: 'c1' }],
+      [undefined],
+    ]);
   });
 
   it('reports a refused subscription, then tries again', () => {
@@ -130,7 +145,7 @@ describe('subscribe', () => {
     latest().onopen?.();
     latest().receive({ type: 'connection_ack', connectionTimeoutMs: 60_000 });
     latest().receive({ type: 'subscribe_error', id: '1', errors: [] });
-    expect(onEvent).toHaveBeenCalledOnce();
+    expect(onEvent).toHaveBeenCalledExactlyOnceWith();
     expect(latest().closed).toBe(true);
     vi.advanceTimersByTime(1000);
     expect(FakeSocket.all).toHaveLength(2);
@@ -175,6 +190,57 @@ describe('subscribe', () => {
     expect(latest().closed).toBe(true);
     vi.advanceTimersByTime(600_000);
     expect(FakeSocket.all).toHaveLength(1);
+  });
+});
+
+describe('watch', () => {
+  const options = (channel: string) => ({
+    host,
+    channel,
+    token: () => 'tok',
+    onEvent: vi.fn(),
+    onSubscribed: vi.fn(),
+  });
+
+  it('shares one subscription between watchers of a channel, until the last stops', () => {
+    const trip = options('/trips/t1');
+    const shop = options('/trips/t1');
+    const stopTrip = watch(trip);
+    const stopShop = watch(shop);
+    expect(FakeSocket.all).toHaveLength(1);
+    latest().accept();
+    latest().receive({ type: 'data', id: '1', event: '{"type":"changed"}' });
+    // The first watcher's callbacks, once per event.
+    expect(trip.onEvent).toHaveBeenCalledOnce();
+    expect(shop.onEvent).not.toHaveBeenCalled();
+
+    stopShop();
+    stopShop(); // twice is still one watcher fewer
+    expect(latest().closed).toBe(false);
+    stopTrip();
+    expect(latest().closed).toBe(true);
+
+    watch(options('/trips/t1'))();
+    expect(FakeSocket.all).toHaveLength(2);
+  });
+
+  it('subscribes to each channel on its own', () => {
+    const stops = [watch(options('/trips/t1')), watch(options('/trips/t2'))];
+    expect(FakeSocket.all.map((ws) => ws.closed)).toEqual([false, false]);
+    stops[0]!();
+    expect(FakeSocket.all.map((ws) => ws.closed)).toEqual([true, false]);
+    stops[1]!();
+  });
+});
+
+describe('isOwnEvent', () => {
+  it("is only this session's events", () => {
+    expect(CLIENT_ID).toMatch(/^[0-9a-z]{20}$/);
+    expect(isOwnEvent({ type: 'changed', tripId: 't1', client: CLIENT_ID })).toBe(true);
+    // Another device or tab of the same user, an older API, a payload that isn't ours.
+    expect(isOwnEvent({ type: 'changed', tripId: 't1', client: 'another' })).toBe(false);
+    expect(isOwnEvent({ type: 'changed', tripId: 't1' })).toBe(false);
+    for (const event of [undefined, null, 'changed', 1]) expect(isOwnEvent(event)).toBe(false);
   });
 });
 

@@ -12,8 +12,30 @@ import type { Db } from './db/client';
 const tripChannel = (tripId: string) => `/trips/${tripId}`;
 const TRIP_CHANNEL = /^\/trips\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/;
 
-/** Tells the trip's subscribers that it changed. Throws when the publish fails. */
-export type Publish = (tripId: string) => Promise<void>;
+/**
+ * The header with the app session's client id: random per app launch (apps/mobile/src/lib/
+ * realtime.ts), not the user, so not personal data. Allowed by API Gateway's CORS
+ * (infra/app/core.ts `API_CORS`).
+ */
+export const CLIENT_HEADER = 'x-yallist-client';
+const CLIENT_ID = /^[\w-]{8,64}$/;
+
+/** The client id a request named, if it is one: anything else is dropped, not published. */
+export const clientOf = (header: string | undefined) =>
+  header && CLIENT_ID.test(header) ? header : undefined;
+
+/**
+ * A trip's event: that it changed, and which app session changed it (when it said), so that
+ * session can skip its own echo; it already refetched. Clients ignore fields they don't know.
+ */
+export const tripEvent = (tripId: string, client?: string) =>
+  JSON.stringify({ type: 'changed', tripId, ...(client && { client }) });
+
+/**
+ * Tells the trip's subscribers that it changed, made by `client` if known. Throws when the
+ * publish fails.
+ */
+export type Publish = (tripId: string, client?: string) => Promise<void>;
 
 /** Publishes over the Events API's HTTP endpoint, signed with the Lambda's IAM role. */
 export function appSyncPublisher(httpHost: string, region: string): Publish {
@@ -24,13 +46,13 @@ export function appSyncPublisher(httpHost: string, region: string): Publish {
     service: 'appsync',
     region,
   });
-  return async (tripId) => {
+  return async (tripId, client) => {
     const res = await aws.fetch(`https://${httpHost}/event`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         channel: tripChannel(tripId),
-        events: [JSON.stringify({ type: 'changed', tripId })],
+        events: [tripEvent(tripId, client)],
       }),
       signal: AbortSignal.timeout(3000),
     });
