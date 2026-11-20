@@ -84,7 +84,7 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 
 ## Decided 2026-10-24 (Phase 1)
 
-- **Realtime transport:** AppSync Events. The API publishes a "trip changed" event to a per-trip channel after each write; clients invalidate the matching queries.
+- **Realtime transport:** AppSync Events. The API publishes a "trip changed" event to a per-trip channel after each write. Clients refetch that trip, mark the home list stale, and skip events their own writes caused (#229; details in [deploy.md](deploy.md#realtime)).
 - **Auth library:** Better Auth, with the anonymous plugin and Google. Users live in our own database. It uses bearer tokens, because the API and the web app are on different domains.
 - **API entry point:** API Gateway HTTP API in front of the Hono Lambda.
 

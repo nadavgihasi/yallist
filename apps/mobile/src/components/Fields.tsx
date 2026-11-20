@@ -18,7 +18,7 @@ export function Input(props: TextInputProps & { ref?: InputRef }) {
 
 const webRtl = Platform.OS === 'web' ? ({ dir: 'rtl' } as object) : {};
 
-/** Labelled text input on a soft gray field. */
+/** Labelled text input on a paper field. */
 export function TextField({
   label,
   hint,

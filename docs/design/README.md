@@ -1,11 +1,11 @@
 # Design
 
-The current design is **design system v3**: warm paper, night ink, sunset violet for what you tap and orange for what's done, set in Rubik. It keeps v2's logo, components and layout, and changes what they are drawn with. The source of truth for values is `apps/mobile/src/theme`; [DESIGN.md](DESIGN.md) explains the rules.
+The current design is **design system v3**: warm paper, night ink, sunset violet for what you tap and orange for what's done, set in Rubik. It keeps v2's logo, components and layout, and changes what they are drawn with. The source of truth for values is `apps/mobile/src/theme`; [DESIGN.md](DESIGN.md) explains the rules and specifies every component. To see the components in their states, open the app's `/dev/components` route.
 
 | Path                                           | What it is                                                                                        |
 | ---------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| [DESIGN.md](DESIGN.md)                         | The brand book: voice, logo, color roles, type, layout, icons, component specs (v3)               |
-| [HANDOFF.md](HANDOFF.md)                       | The v2 handoff's task list, including the bring-list item states                                  |
+| [DESIGN.md](DESIGN.md)                         | The brand book: voice, logo, color roles, type, layout, icons, and a spec for every component     |
+| [HANDOFF.md](HANDOFF.md)                       | The v2 handoff's task list (done), including the bring-list item states, which still hold         |
 | [tokens/](tokens/)                             | Tokens as JSON, TypeScript and CSS, at their v3 values. The app's copy is `apps/mobile/src/theme` |
 | [brand/](brand/)                               | Logo lockups, icon tile, mark, and ready-made app icons (wired in `apps/mobile/app.json`)         |
 | [icons/](icons/)                               | UI icons on a 24px grid (also in `apps/mobile/src/components/Icon.tsx`)                           |
@@ -31,7 +31,19 @@ The app follows the token names, except:
 
 - The page background is `colors.ground` (`surface`), so `surface` can't silently change from “card” to “page” in code written against v1. In the app, `surface` is the card's style object (fill, radius and hairline), spread into any view that is a card.
 - `size-*` → `size`, `space-*` → `space`, `radius-*` → `radius`, `shadow-float` → `shadow.float`, text styles → `type`.
-- App additions: `inkFaint` (placeholders), `scrim`, `type.bigNumber`, `space[2]`, `radius.input`, `accents` (`accentAt(i)`).
+- `accent-*` → `accents`; a category's accent is `categoryAccent(category.color, index)`. `avatar-*` → `AVATAR_COLORS` in `@yallist/domain`, because the API checks a picked color against it.
+- `space-screen` and `space-touch` → `space.screen` and `space.touch`.
+
+## Since v3
+
+The values above haven't changed since v3 shipped (#192). What the work since then added to the system:
+
+- **Picked category colors** (#200). Editing a category offers the six accents; a picked one sticks to the category wherever it moves, and one never picked keeps the accent of its position.
+- **Money colors** (#221). `owed` (teal, the hue of `accent-2`) for money someone gets back, beside `brand-strong` for money someone owes, on the trip card, the money tab and the balances.
+- **Avatar colors and photos** (#103, #199, #212). Everyone gets one of seven pale avatar colors at sign-up and can change it; a profile photo covers the color, so the picker hides when there is one. Photos are kept on the device.
+- **Covers are back on trips.** Upcoming trip cards and the trip screen's banner show the trip's cover, which organizers pick from 20 scenes (#105, #201). Past trips and templates keep the icon tile.
+- **Views inside a tab** (#198). The equipment and money tabs each split into two views with `SubTabs`, which are lighter than the tabs above them.
+- **The token files now list everything the app uses**: `owed`, `ink-faint`, `scrim`, `space-2`, `space-screen`, `space-touch`, `radius-input`, `big-number` and the avatar colors.
 
 ## What changed from v2
 
@@ -52,5 +64,5 @@ Before and after: [screenshots/v3/](screenshots/v3/). The other screenshots unde
 - **Type.** Rubik 400/700/800 only; Fredoka is gone.
 - **Avatars** are one color (`primary`) unless the person picked one.
 - **No glass.** The floating glass tab bar and FAB are replaced by top segmented tabs and one bottom-centered floating button; sheets are plain white cards.
-- **Trip screen** loses the illustrated cover; trips are marked by an icon tile in an illustration color instead. Cover scenes remain for the first-run card and the new-trip preview.
+- **Trip screen** loses the illustrated cover; trips are marked by an icon tile in an illustration color instead. Cover scenes remain for the first-run card and the new-trip preview. (The cover has since come back as a banner; see [Since v3](#since-v3).)
 - **Lists** are cards per category with a status ring per item, instead of white groups with dividers.

@@ -6,7 +6,7 @@ import { Icon } from './Icon';
 
 import { colors, type } from '@/theme';
 
-/** Filter / choice chip with an optional count (`הכול 20`): solid night when selected, an outlined card otherwise. */
+/** Filter / choice chip with an optional count (`הכול 20`): solid violet when selected, an outlined card otherwise. */
 export function FilterChip({
   label,
   count,
