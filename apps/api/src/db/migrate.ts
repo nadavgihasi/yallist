@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 
-import { coverFor, TEMPLATES, type TemplateId } from '@yallist/domain';
+import { TEMPLATES, type TemplateId } from '@yallist/domain';
 import { drizzle } from 'drizzle-orm/postgres-js';
 import type { Sql } from 'postgres';
 
@@ -10,8 +10,8 @@ import { withRetry } from './tx';
 const DIR = new URL('../../drizzle/', import.meta.url);
 
 /**
- * Applies drizzle-kit's migrations in drizzle/, reloads the template seed, then moves free-text
- * item categories into trip_categories and gives trips without a cover their template's.
+ * Applies drizzle-kit's migrations in drizzle/, reloads the template seed, then links single-item
+ * purchases to expense_items.
  * DSQL allows one DDL statement per transaction, so each statement runs and is recorded on its
  * own; a failed deploy resumes from the statement that failed. A statement can commit without
  * being recorded (a crash in between), so on the next run its "already exists" error (or, for a
@@ -46,8 +46,6 @@ export async function migrate(sql: Sql, { dsql }: { dsql: boolean }) {
   }
 
   await seedTemplates(sql);
-  await backfillCategories(sql);
-  await backfillCovers(sql);
   await backfillExpenseItems(sql);
 }
 
@@ -159,69 +157,11 @@ async function seedTemplates(sql: Sql) {
 }
 
 /**
- * Data step for trip_categories (0002): items still carrying a free-text category get a
- * category of that name in their trip and list (an existing one, ignoring case, or a new one
- * after the list's others, in order of the items' first appearance), and their text is cleared.
- * Runs on every deploy, so items written by the previous API version mid-deploy are moved too;
- * once everything is moved it finds nothing. One transaction per trip, which keeps each under
- * DSQL's 3,000-row limit and apart from the DDL.
- */
-export async function backfillCategories(sql: Sql) {
-  const groups = await sql<{ tripId: string; list: string; name: string }[]>`
-    select trip_id as "tripId", list, category as name from items
-    where category_id is null and category <> '' and deleted_at is null
-    group by trip_id, list, category
-    order by trip_id, list, min(position)`;
-  for (const tripId of new Set(groups.map((g) => g.tripId))) {
-    await withRetry(() =>
-      sql.begin(async (tx) => {
-        for (const { list, name } of groups.filter((g) => g.tripId === tripId)) {
-          const [existing] = await tx<{ id: string }[]>`
-            select id from trip_categories
-            where trip_id = ${tripId} and list = ${list} and lower(name) = lower(${name})`;
-          const [category] = existing
-            ? [existing]
-            : await tx<{ id: string }[]>`
-                insert into trip_categories (trip_id, list, name, position)
-                select ${tripId}, ${list}, ${name}, coalesce(max(position) + 1, 0)
-                from trip_categories where trip_id = ${tripId} and list = ${list}
-                returning id`;
-          await tx`
-            update items set category_id = ${category.id}, category = ''
-            where trip_id = ${tripId} and list = ${list} and category = ${name}
-              and category_id is null and deleted_at is null`;
-        }
-      }),
-    );
-  }
-}
-
-/**
- * Data step for trips.cover (0006): trips created before it, or by the previous API version
- * mid-deploy, get their template's cover. Runs on every deploy; 1,000 trips per transaction
- * keeps each under DSQL's 3,000-row limit.
- */
-export async function backfillCovers(sql: Sql) {
-  for (;;) {
-    const trips = await sql<{ id: string; template: TemplateId }[]>`
-      select id, template from trips where cover is null limit 1000`;
-    if (trips.length === 0) return;
-    await withRetry(() =>
-      sql.begin(async (tx) => {
-        for (const template of new Set(trips.map((t) => t.template))) {
-          const ids = trips.filter((t) => t.template === template).map((t) => t.id);
-          await tx`update trips set cover = ${coverFor(template)} where id in ${tx(ids)}`;
-        }
-      }),
-    );
-  }
-}
-
-/**
  * Data step for expense_items (0008): each single-item purchase (expenses.item_id) gets its
- * expense_items row, which is what "bought" reads now. Runs on every deploy, so purchases the
- * previous API version made mid-deploy are linked too. 1,000 per transaction keeps each under
- * DSQL's 3,000-row limit.
+ * expense_items row, which is what "bought" reads now. The API no longer writes
+ * expenses.item_id, but the previous version may during this deploy, so this still runs once
+ * more; the next deploy removes it. 1,000 per transaction keeps each under DSQL's 3,000-row
+ * limit.
  */
 export async function backfillExpenseItems(sql: Sql) {
   for (;;) {

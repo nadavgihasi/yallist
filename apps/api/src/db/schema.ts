@@ -170,8 +170,8 @@ export const trips = pgTable(
     endsOn: date('ends_on').notNull(),
     template: text('template', { enum: TEMPLATE_IDS }).notNull(),
     /**
-     * Nullable only because DSQL can't add a column with a default: the API always sets it,
-     * and `migrate` backfills older trips from their template.
+     * Nullable only because DSQL can't add a column with a default: the API always sets it, and
+     * older trips were backfilled from their template.
      */
     cover: text('cover', { enum: COVER_IDS }),
     currency: text('currency').notNull().default('ILS'),
@@ -257,9 +257,11 @@ export const items = pgTable(
     /** Null: uncategorized. A category of the item's own list. */
     categoryId: uuid('category_id').references(() => tripCategories.id),
     /**
-     * The free-text category from before trip_categories. Read only by the migration runner,
-     * which moves it into `categoryId` (src/db/migrate.ts); new rows store ''. DSQL can't drop
-     * the column or its NOT NULL.
+     * The free-text category from before trip_categories; every row has been moved into
+     * `categoryId` and new rows store ''. Nothing reads it. DSQL can drop columns (see
+     * 0013_drop_place_text), but this one is NOT NULL without a default: code that still writes
+     * it fails once it is dropped, and code that no longer writes it fails while it exists, so it
+     * stays for now.
      */
     legacyCategory: text('category').notNull(),
     position: integer('position').notNull(),
@@ -317,8 +319,10 @@ export const expenses = pgTable(
       .notNull()
       .references(() => trips.id),
     /**
-     * The buy-list item a single-item purchase covers. Superseded by expense_items, which is what
-     * "bought" reads; still written for single-item purchases until a follow-up drops it.
+     * The buy-list item a single-item purchase covers, from before expense_items, which is what
+     * "bought" reads. No longer written; the migration runner links rows the previous API version
+     * wrote (backfillExpenseItems). The next deploy removes that backfill, the one after drops
+     * this column.
      */
     itemId: uuid('item_id').references(() => items.id),
     description: text('description').notNull(),

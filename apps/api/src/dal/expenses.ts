@@ -19,7 +19,8 @@ import type { Executor } from '../db/tx';
  */
 export async function insertExpense(
   tx: Executor,
-  values: typeof expenses.$inferInsert,
+  /** Not `itemId`: expense_items says what it covers (expenses.item_id is being dropped). */
+  values: Omit<typeof expenses.$inferInsert, 'itemId'>,
   shares: string[],
   itemIds: string[] = [],
   parts: ExpensePart[] = [],
