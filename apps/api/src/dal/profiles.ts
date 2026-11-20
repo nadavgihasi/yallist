@@ -45,15 +45,15 @@ export const displayNameOf = async (tx: Executor, user: { id: string; name: stri
   (await findProfile(tx, user.id))?.displayName ?? user.name;
 
 /** Tables keyed by (something, user_id): where both users have a row, the account's wins. */
-const USER_KEYED = [
+export const USER_KEYED = [
   ['trip_members', 'trip_id'],
   ['claims', 'item_id'],
   ['expense_shares', 'expense_id'],
   ['expense_part_shares', 'part_id'],
 ] as const;
 
-/** Every column that references a profile. */
-const USER_COLUMNS = [
+/** Every column that references a profile (dal/profiles.test.ts checks it against the schema). */
+export const USER_COLUMNS = [
   ['trips', 'created_by'],
   ['trip_members', 'user_id'],
   ['items', 'created_by'],
@@ -65,6 +65,7 @@ const USER_COLUMNS = [
   ['expense_part_shares', 'user_id'],
   ['payments', 'from_user'],
   ['payments', 'to_user'],
+  ['payments', 'created_by'],
   ['activity', 'actor'],
   ['feedback', 'user_id'],
   ['shopping_runs', 'shopper_id'],

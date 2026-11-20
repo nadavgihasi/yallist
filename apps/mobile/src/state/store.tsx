@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createAsyncStoragePersister } from '@tanstack/query-async-storage-persister';
-import { QueryClient } from '@tanstack/react-query';
+import { defaultShouldDehydrateQuery, QueryClient, type Query } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
@@ -10,7 +10,7 @@ import { he } from '@/i18n/he';
 import { setAuth, signOut as endSession, statusOf, type AuthResult } from '@/lib/api';
 import { forgetKeptPhotos } from '@/lib/useKeptPhoto';
 
-import { cacheBuster } from './cacheBuster';
+import { CACHE_BUSTER, isPersisted } from './cacheBuster';
 import type { Me } from './types';
 
 /**
@@ -40,11 +40,17 @@ export const queryClient = new QueryClient({
 const persistOptions = {
   persister: createAsyncStoragePersister({ storage: AsyncStorage, key: 'yallist/cache' }),
   maxAge: WEEK,
-  // A new build drops the old cache rather than restoring data in a stale shape.
-  buster: cacheBuster(process.env.EXPO_PUBLIC_GIT_SHA),
-  // Queries only. A change still queued offline would be restored without its mutationFn, so it
-  // could never be sent, and it would hold up every later change to its trip (same `scope`).
-  dehydrateOptions: { shouldDehydrateMutation: () => false },
+  // Keyed on the shape of the cached data, not the build: an update keeps the saved trips unless
+  // that shape changed (then the old cache is dropped rather than restored in a stale shape).
+  buster: CACHE_BUSTER,
+  dehydrateOptions: {
+    // Only the queries whose shape the buster covers.
+    shouldDehydrateQuery: (query: Query) =>
+      defaultShouldDehydrateQuery(query) && isPersisted(query.queryKey),
+    // Queries only. A change still queued offline would be restored without its mutationFn, so it
+    // could never be sent, and it would hold up every later change to its trip (same `scope`).
+    shouldDehydrateMutation: () => false,
+  },
 };
 
 /**

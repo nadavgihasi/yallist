@@ -179,7 +179,7 @@ export function appCore({ api, apiUrl, preview }: AppCoreArgs) {
         EXPO_PUBLIC_GOOGLE_CLIENT_ID: GOOGLE_CLIENT_IDS[$app.stage],
       }),
       ...(preview && { BASE_PATH: preview.prefix }),
-      // Keys the app's persisted query cache, so a deploy discards caches from older builds.
+      // The build's commit, for the app's version line and Sentry's `dist`.
       ...(process.env.GITHUB_SHA && { EXPO_PUBLIC_GIT_SHA: process.env.GITHUB_SHA }),
     },
     transform: {

@@ -6,6 +6,7 @@ import {
   owedShares,
   parseShekel,
   shekelInput,
+  splitByWeight,
   splitEqually,
   suggestTransfers,
 } from './money';
@@ -68,7 +69,14 @@ describe('balances', () => {
 
   it('includes recorded payments', () => {
     const payments: Payment[] = [
-      { id: 'p', fromUser: 'c', toUser: 'a', amountAgorot: 300, status: 'marked' },
+      {
+        id: 'p',
+        fromUser: 'c',
+        toUser: 'a',
+        amountAgorot: 300,
+        createdBy: 'b',
+        createdAt: '2026-11-18T10:00:00.000Z',
+      },
     ];
     const b = balances(['a', 'b', 'c'], [expense('a', 900, ['a', 'b', 'c'])], payments);
     expect(Object.fromEntries(b)).toEqual({ a: 300, b: -300, c: 0 });
@@ -306,18 +314,23 @@ describe('suggestTransfers', () => {
 });
 
 describe('formatShekel / parseShekel', () => {
-  it('formats with two decimals, always', () => {
-    expect(formatShekel(9000)).toBe('₪90.00');
+  it('groups thousands, and shows agorot only when there are any', () => {
+    expect(formatShekel(9000)).toBe('₪90');
     expect(formatShekel(1235)).toBe('₪12.35');
     expect(formatShekel(41290)).toBe('₪412.90');
     expect(formatShekel(7980)).toBe('₪79.80');
     expect(formatShekel(5)).toBe('₪0.05');
-    expect(formatShekel(0)).toBe('₪0.00');
+    expect(formatShekel(0)).toBe('₪0');
+    expect(formatShekel(204000)).toBe('₪2,040');
+    expect(formatShekel(4115226)).toBe('₪41,152.26');
+    expect(formatShekel(123456789)).toBe('₪1,234,567.89');
+    expect(formatShekel(-1050)).toBe('-₪10.50');
   });
 
   it('rounds a fraction of an agora to the nearest agora', () => {
     expect(formatShekel(13763.33)).toBe('₪137.63');
     expect(formatShekel(13763.5)).toBe('₪137.64');
+    expect(formatShekel(9999.6)).toBe('₪100');
   });
 
   it('fills an amount input with two decimals, which parses back', () => {
@@ -332,6 +345,62 @@ describe('formatShekel / parseShekel', () => {
     expect(parseShekel('12,35')).toBe(1235);
     expect(parseShekel('0')).toBeUndefined();
     expect(parseShekel('abc')).toBeUndefined();
+    // A sum, as typed at the till.
+    expect(parseShekel('120+45')).toBe(16500);
+    expect(parseShekel('12.5 + 7.25 + ₪3')).toBe(2275);
+    expect(parseShekel('120+')).toBe(12000);
+    expect(parseShekel('120++5')).toBeUndefined();
+    expect(parseShekel('+')).toBeUndefined();
     expect(parseShekel('1.234')).toBeUndefined();
+  });
+});
+
+describe('splitByWeight', () => {
+  it('splits ₪300 by 2, 2, 1 as ₪120, ₪120, ₪60', () => {
+    expect(splitByWeight(30000, ['a', 'b', 'c'], { a: 2, b: 2 })).toEqual(
+      new Map([
+        ['a', 12000],
+        ['b', 12000],
+        ['c', 6000],
+      ]),
+    );
+  });
+
+  it('is splitEqually when everyone weighs 1', () => {
+    for (const amount of [1, 100, 1001, 99999]) {
+      expect(splitByWeight(amount, ['c', 'a', 'b'])).toEqual(splitEqually(amount, ['c', 'a', 'b']));
+    }
+  });
+
+  it('adds up exactly, the leftover agorot going by user id', () => {
+    const split = splitByWeight(1000, ['b', 'a', 'c'], { a: 3, b: 2, c: 2 });
+    // 1000 × 3/7 = 428.57, × 2/7 = 285.71: 428 + 285 + 285 = 998, two agorot to a and b.
+    expect(split).toEqual(
+      new Map([
+        ['a', 429],
+        ['b', 286],
+        ['c', 285],
+      ]),
+    );
+    expect([...split.values()].reduce((x, y) => x + y)).toBe(1000);
+  });
+});
+
+describe('owedShares with weights', () => {
+  it('weighs the rest, not the parts', () => {
+    const owed = owedShares({
+      amountAgorot: 30000,
+      shares: ['a', 'b', 'c'],
+      weights: { a: 2 },
+      parts: [{ label: 'יין', amountAgorot: 8000, shares: ['a', 'b'] }],
+    });
+    // Wine ₪80 between a and b; the ₪220 left by 2, 1, 1.
+    expect(owed).toEqual(
+      new Map([
+        ['a', 4000 + 11000],
+        ['b', 4000 + 5500],
+        ['c', 5500],
+      ]),
+    );
   });
 });
