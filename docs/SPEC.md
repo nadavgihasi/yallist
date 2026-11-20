@@ -151,7 +151,7 @@ Treat the invite link as a bearer capability and the database as the enforcement
 
 **Offline (required for trip-day mode, nice everywhere).**
 
-- Persist the query cache (AsyncStorage on native, localStorage on web).
+- Persist the query cache (AsyncStorage on native, localStorage on web). It survives app updates and web deploys: its buster is a fingerprint of the cached data's types (`apps/mobile/src/state/cacheBuster.ts`), so only a change to that shape discards it, and a test fails until the fingerprint is updated. A change in a field's meaning that keeps its type (an amount's units, what a status counts) is not caught: bump `CACHE_EPOCH` there by hand.
 - Mutations pause when offline and resume in order on reconnect. Show a "ממתין" chip on rows with queued changes and a dark "אין קליטה" banner with the queued count (see `OfflineV2`).
 - On resume, a rejected claim (cap exceeded) rolls back and shows a short Hebrew message.
 
