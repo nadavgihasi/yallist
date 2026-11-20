@@ -30,14 +30,7 @@ export function SharePicker({
     onChange(shares.includes(id) ? shares.filter((s) => s !== id) : [...shares, id]);
   return (
     <View style={styles.wrap}>
-      <View style={styles.head}>
-        <Text style={fieldStyles.label}>{label}</Text>
-        {perPerson !== undefined && (
-          <Text style={styles.per} accessibilityLiveRegion="polite">
-            {he.item.perPerson(perPerson)}
-          </Text>
-        )}
-      </View>
+      <Text style={fieldStyles.label}>{label}</Text>
       <View style={styles.chips} accessibilityLabel={label}>
         {view.activeIds.map((id) => (
           <PersonChip
@@ -49,6 +42,12 @@ export function SharePicker({
           />
         ))}
       </View>
+      {/* Under the chips, on a line of its own: beside the label it squeezed it. */}
+      {perPerson !== undefined && (
+        <Text style={styles.per} accessibilityLiveRegion="polite">
+          {he.item.perPerson(perPerson)}
+        </Text>
+      )}
       {(showHint || shares.length === 0) && (
         <Text style={styles.hint}>
           {shares.length === 0
@@ -69,8 +68,7 @@ export function useShares(view: TripView, initial?: string[]) {
 
 const styles = StyleSheet.create({
   wrap: { gap: 12 },
-  head: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
-  per: { fontFamily: fonts.extraBold, fontSize: 22, color: colors.primary },
+  per: { fontFamily: fonts.bold, fontSize: 16, lineHeight: 22, color: colors.primaryStrong },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   hint: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
 });

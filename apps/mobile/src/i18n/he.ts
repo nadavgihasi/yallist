@@ -1,6 +1,6 @@
 import { formatShekel } from '@yallist/domain';
 
-import { rtl } from '@/lib/bidi';
+import { ltr, rtl } from '@/lib/bidi';
 
 /** All user-facing strings. Hebrew only for v1; another locale is a sibling file with the same shape. */
 export const he = {
@@ -91,6 +91,9 @@ export const he = {
   },
   home: {
     title: 'הטיולים שלי',
+    /** On a trip's card: where I stand with money. */
+    owedToMe: (amount: string) => `מגיע לך ${amount}`,
+    iOwe: (amount: string) => `עליך להעביר ${amount}`,
     newTrip: 'טיול חדש',
     past: 'טיולים שהיו',
     mine: 'אצלך: ',
@@ -197,9 +200,10 @@ export const he = {
       bring: 'הוספת פריט להבאה',
       buy: 'הוספת פריט לקנייה',
       money: 'הוספת הוצאה',
+      payment: 'רישום תשלום',
     },
     /** Visible floating-button labels; `fab` stays the accessible name. */
-    fabShort: { bring: 'פריט חדש', buy: 'פריט חדש', money: 'הוצאה חדשה' },
+    fabShort: { bring: 'פריט חדש', buy: 'פריט חדש', money: 'הוצאה חדשה', payment: 'רישום תשלום' },
     invite: 'הזמנת חברים',
     tabCount: (label: string, n: number) => `${label} · ${n}`,
   },
@@ -285,19 +289,55 @@ export const he = {
     /** The money tab's two views: the expenses, then who pays whom. */
     parts: { expenses: 'הוצאות', settle: 'התחשבנות' },
     payTo: (names: string) => `להעביר ל${names}`,
-    paidTo: (names: string) => `שולם ל${names}`,
-    nothingToPay: 'אין לך מה להעביר',
-    getFrom: (names: string) => `מגיע לך מ${names}`,
     share: (mine: string, total: string) => `החלק שלך ${mine} מתוך ${total}`,
-    markedToast: (amount: string) => `סומן ששילמת ${amount}`,
-    waiting: 'מחכה לאישור שהכסף הגיע',
-    received: 'הכסף התקבל',
-    unmark: 'ביטול הסימון',
-    payments: 'תשלומים',
-    paymentWaiting: 'מחכה לאישור',
-    paymentConfirmed: 'התקבל',
-    confirmReceived: 'קיבלתי את הכסף',
+    /** The hero's one step when I'm owed: the money arrived, so record it. */
+    receivedFrom: (amount: string, name: string) => `קיבלתי ${amount} מ${name}`,
+    /** A transfer row's button: anyone records it, for its whole amount. */
+    transferPaid: 'שולם',
+    /** In the top card, beside each person who owes me. */
+    received: 'קיבלתי',
+    betweenOthers: 'בין האחרים',
+    othersSquare: 'אין העברות פתוחות בין האחרים',
+    paymentsCount: (n: number) => `תשלומים שנרשמו · ${n}`,
+    transferPaidLabel: (from: string, to: string, amount: string) =>
+      `רישום תשלום של ${amount} מ${from} ל${to}`,
+    recordedToast: (amount: string) => `נרשם תשלום של ${amount}`,
+    /** After recording one: the toast names it, with a way to take it back. */
+    recordedPair: (from: string, to: string, amount: string) => `נרשם: ${from} ← ${to} ${amount}`,
+    undo: 'ביטול',
+    undone: 'התשלום בוטל',
+    recordOther: 'רישום תשלום אחר',
+    recordHint: 'כל אחד בטיול יכול לרשום תשלום, והוא נכנס מיד.',
+    payments: 'תשלומים שנרשמו',
+    /** Under a recorded payment: `נרשם ע״י דנה · 14 בנוב׳, 10:20`. */
+    recordedBy: (name: string, when: string) => `נרשם ע״י ${name} · ${when}`,
+    recordedByMe: (when: string) => `נרשם על ידך · ${when}`,
+    openPayment: (from: string, to: string, amount: string) =>
+      `פרטי התשלום: ${from} ל${to}, ${amount}`,
     transfers: 'מי מעביר למי',
+    /** One section for what's open and what was paid (M8). */
+    settling: 'מסדרים חשבון',
+    noneOpen: 'אין העברות פתוחות',
+    /** Under the transfers: why someone may pay a person who never paid for them. */
+    fewestTransfers: 'חישבנו כמה שפחות העברות, אז אפשר שתעבירו למי שלא שילם עליכם ישירות.',
+    /** The hero when I'm square. */
+    allSquare: 'החשבון שלך סגור',
+    allSquareText: 'אין לך מה להעביר ואין מה שמגיע לך.',
+    /** The expense log, by day. */
+    today: (date: string) => `היום · ${date}`,
+    yesterday: (date: string) => `אתמול · ${date}`,
+    wholeTrip: 'כל הטיול',
+    myShare: 'החלק שלך',
+    /** Under an expense's total. */
+    myPart: (amount: string) => `חלקך ${amount}`,
+    /** I paid it: what the others owe me for it. */
+    lent: (amount: string) => `מגיע לך ${amount}`,
+    ownExpense: 'רק שלך',
+    notInIt: 'לא בהוצאה הזאת',
+    /** A payment in the log: `נועה ← רון`. */
+    paidPair: (from: string, to: string) => `${from} ← ${to}`,
+    /** The expense log's link to settling up, coloured like the balance. */
+    balanceLink: (state: string, amount: string) => `${state} ${amount} · להתחשבנות`,
     settled: 'אין העברות פתוחות',
     settledText: 'כולם מסודרים.',
     expenses: 'הוצאות',
@@ -313,6 +353,10 @@ export const he = {
     between: (names: string) => `בין ${names}`,
     part: (label: string, amount: string, names: string) => `${label} ${amount}: ${names}`,
     rest: (names: string) => `השאר: ${names}`,
+    /** An expense split by weight: `לפי משקל: דנה ×2, רון ×3`. */
+    byWeight: (who: string) => `לפי משקל: ${who}`,
+    // `×2` stays one left-to-right unit after the name.
+    weighted: (name: string, weight: number) => `${name}\u00a0${ltr(`×${weight}`)}`,
     everyone: 'כולם',
   },
   /** Settling one debt (MoneyTab's pay rows): pay it in Bit or PayBox, then mark it. */
@@ -434,16 +478,42 @@ export const he = {
     paidBy: 'מי שילם?',
     save: 'שמירת ההוצאה',
     saved: (amount: string) => `ההוצאה נשמרה: ${amount}`,
+    /** After saving one I share: what it costs me. */
+    savedMine: (mine: string) => `נשמר · החלק שלך ${mine}`,
+    when: 'מתי?',
+    date: 'תאריך',
+    otherDay: 'תאריך אחר',
+    /** The calculator at the till: add another amount to the sum. */
+    addToSum: 'עוד סכום',
+    /** In parts mode: split what the parts leave by weight, too. */
+    restByWeight: 'השאר לפי משקל',
+    sumTotal: (total: string) => `ביחד ${total}`,
+    today: 'היום',
+    yesterday: 'אתמול',
+    /** The split picker starts from the last expense I added. */
+    lastSplit: 'כמו בהוצאה הקודמת שלך',
     /** Tapping save with a field still empty says which. */
     needAmount: 'רושמים כמה זה עלה',
     needWhat: 'רושמים על מה',
     needShares: 'בוחרים לפחות משתתף אחד',
+    /** How the rest is split: equally, by weight, or with parts for some people only. */
+    splitHow: 'איך מחלקים?',
+    split: { equal: 'שווה', weights: 'לפי משקל', parts: 'חלקים' },
+    weightsHint: 'מי שהמשקל שלו 2 משלם פי שניים. למשל מבוגר 2 וילד 1, או זוג כ־2.',
+    weightLess: (name: string) => `פחות משקל ל${name}`,
+    weightMore: (name: string) => `יותר משקל ל${name}`,
+    /** `5 חלקים · ₪60 לחלק` */
+    // Not "חלקים": that's the name of another way to split.
+    weightsTotal: (n: number, per: string) => `סה״כ משקל ${n} · ${per} ליחידה`,
   },
   /** An expense's own screen: what it was, what each person's part is. */
   expense: {
     paidBy: 'מי שילם',
     addedBy: 'מי הוסיף',
     addedAt: 'מתי נוסף',
+    /** Under the amount: `נוסף ע״י רון · שישי, 20 בנובמבר · 10:06`. */
+    addedByAt: (name: string, when: string) => `נוסף ע״י ${name} · ${when}`,
+    spentOn: 'מתי',
     owed: 'כמה כל אחד',
     mine: 'החלק שלך',
     parts: 'חלקים',
@@ -460,6 +530,69 @@ export const he = {
     deleted: 'ההוצאה נמחקה',
     openReceipt: 'פתיחת הקבלה',
     open: (description: string) => `פרטי ההוצאה: ${description}`,
+  },
+  /** Each person's balance (התחשבנות) and what it's made of. */
+  balances: {
+    title: 'היתרה של כל אחד',
+    hint: 'כולל התשלומים שנרשמו. לוחצים על מישהו כדי לראות ממה זה מורכב.',
+    /** Above the amount, without gendered forms: what's left to do with it. */
+    gets: 'לקבל',
+    owes: 'להעביר',
+    settled: 'סגור',
+    /** Under a name: `הוצאות ₪1,200 · חלק ₪630`. */
+    // No-break spaces keep each label with its amount when the line wraps.
+    paidAndShare: (paid: string, share: string) => `הוצאות\u00a0${paid} · חלק\u00a0${share}`,
+    open: (name: string, amount: string, state: string) => `היתרה של ${name}: ${amount}, ${state}`,
+    /** The sheet. */
+    mine: 'היתרה שלך',
+    of: (name: string) => `היתרה של ${name}`,
+    getsMine: 'מגיע לך',
+    owesMine: 'עליך להעביר',
+    paid: 'הוצאות ששילם/ה',
+    share: 'פחות החלק בהוצאות',
+    sent: 'ועוד תשלומים ששלח/ה',
+    received: 'פחות תשלומים שקיבל/ה',
+    paidList: 'מה ששילם/ה',
+    /** The same lines on my own sheet. */
+    paidMine: 'הוצאות ששילמת',
+    sentMine: 'ועוד תשלומים ששלחת',
+    receivedMine: 'פחות תשלומים שקיבלת',
+    paidListMine: 'מה ששילמת',
+    shareList: 'החלק בכל הוצאה',
+    payments: 'תשלומים',
+    /** An expense line: `שישי, 13.11 · 4 מתחלקים` / `דנה שילמה ₪1,200`. */
+    paidBy: (name: string, amount: string) => `${name} · ${amount}`,
+    paymentTo: (name: string) => `ל${name}`,
+    paymentFrom: (name: string) => `מ${name}`,
+    nothing: 'עוד אין הוצאות או תשלומים',
+  },
+  /** Recording a payment (anyone, for any two people) and opening one to delete it. */
+  payment: {
+    title: 'רישום תשלום',
+    /** Above the amount: `תשלום מנועה לרון`, `תשלום ממני לרון`, `תשלום מנועה אליי`. */
+    sentence: (from: string, to: string) => `תשלום ${from} ${to}`,
+    fromMe: 'ממני',
+    fromName: (name: string) => `מ${name}`,
+    toMe: 'אליי',
+    toName: (name: string) => `ל${name}`,
+    from: 'מי שילם',
+    to: 'למי',
+    amount: 'כמה',
+    open: (amount: string) => `נשאר להעביר ${amount}`,
+    noneOpen: 'אין ביניהם העברה פתוחה',
+    needAmount: 'כמה שולם?',
+    save: (amount: string) => `רישום ${amount}`,
+    saveEmpty: 'רישום',
+    hint: 'נכנס מיד, בלי אישור. כולם רואים מי רשם, ואפשר למחוק תשלום שנרשם בטעות.',
+    detail: 'תשלום',
+    recordedBy: 'מי רשם',
+    recordedAt: 'מתי נרשם',
+    delete: 'מחיקת התשלום',
+    confirmTitle: 'למחוק את התשלום?',
+    confirmText: 'הוא יימחק לכולם, והיתרות יחזרו להיות כמו לפניו.',
+    confirmDelete: 'כן, למחוק',
+    cancel: 'ביטול',
+    deleted: 'התשלום נמחק',
   },
   editExpense: {
     title: 'עריכת הוצאה',

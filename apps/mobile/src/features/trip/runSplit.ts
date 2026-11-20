@@ -66,7 +66,7 @@ export function runSplit(
  * their names, and per part when it has parts (`אלכוהול ₪120: דנה ורון · השאר: כולם`).
  */
 export function sharedText(
-  expense: Pick<Expense, 'shares' | 'parts'>,
+  expense: Pick<Expense, 'shares' | 'parts' | 'weights'>,
   activeIds: readonly string[],
   nameOf: (id: string) => string,
 ): string | undefined {
@@ -74,13 +74,25 @@ export function sharedText(
     activeIds.length > 0 && activeIds.every((id) => ids.includes(id))
       ? he.money.everyone
       : joinNames(ids.map(nameOf));
+  // `לפי משקל: דנה ×2`: who takes more than one share of the rest.
+  const heavier = Object.entries(expense.weights ?? {})
+    .filter(([, w]) => w > 1)
+    .map(([id, w]) => he.money.weighted(nameOf(id), w));
+  const byWeight = heavier.length > 0 ? he.money.byWeight(heavier.join(', ')) : undefined;
   const parts = expense.parts ?? [];
   if (parts.length === 0) {
     const all = names(expense.shares) === he.money.everyone;
-    return all ? undefined : he.money.between(names(expense.shares));
+    return (
+      [all ? undefined : he.money.between(names(expense.shares)), byWeight]
+        .filter(Boolean)
+        .join(' · ') || undefined
+    );
   }
   return [
     ...parts.map((p) => he.money.part(p.label, formatShekel(p.amountAgorot), names(p.shares))),
     he.money.rest(names(expense.shares)),
-  ].join(' · ');
+    byWeight,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 }

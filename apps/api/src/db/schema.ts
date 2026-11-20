@@ -1,6 +1,7 @@
 import {
   CATEGORY_COLORS,
   COVER_IDS,
+  MAX_WEIGHT,
   type ItemKind,
   type ListKind,
   type MemberRole,
@@ -173,8 +174,8 @@ export const trips = pgTable(
     endsOn: date('ends_on').notNull(),
     template: text('template', { enum: TEMPLATE_IDS }).notNull(),
     /**
-     * Nullable only because DSQL can't add a column with a default: the API always sets it,
-     * and `migrate` backfills older trips from their template.
+     * Nullable only because DSQL can't add a column with a default: the API always sets it, and
+     * older trips were backfilled from their template.
      */
     cover: text('cover', { enum: COVER_IDS }),
     currency: text('currency').notNull().default('ILS'),
@@ -209,8 +210,9 @@ export const tripMembers = pgTable(
     role: text('role', { enum: ROLES }).notNull(),
     status: text('status', { enum: MEMBER_STATUSES }).notNull(),
     /**
-     * Set when status becomes `removed`, null otherwise (a CHECK enforces the latter). Null on a `removed` row means it was
-     * removed before this column existed: the activity log decides (legacyRemovedReason).
+     * Set when status becomes `removed`, null otherwise (a CHECK enforces the latter). Null on a
+     * `removed` row means it was removed before this column existed: the activity log decides
+     * (legacyRemovedReason).
      */
     removedReason: text('removed_reason', { enum: REMOVED_REASONS }),
     /** Snapshot at join, editable. */
@@ -273,9 +275,11 @@ export const items = pgTable(
     /** Null: uncategorized. A category of the item's own list. */
     categoryId: uuid('category_id').references(() => tripCategories.id),
     /**
-     * The free-text category from before trip_categories. Read only by the migration runner,
-     * which moves it into `categoryId` (src/db/migrate.ts); new rows store ''. DSQL can't drop
-     * the column or its NOT NULL.
+     * The free-text category from before trip_categories; every live row has been moved into
+     * `categoryId` (soft-deleted ones may still carry text, which nothing reads) and new rows
+     * store ''. DSQL can drop columns (see 0013_drop_place_text), but this one is NOT NULL
+     * without a default: code that still writes it fails once it is dropped, and code that no
+     * longer writes it fails while it exists, so it stays for now.
      */
     legacyCategory: text('category').notNull(),
     position: integer('position').notNull(),
@@ -333,8 +337,9 @@ export const expenses = pgTable(
       .notNull()
       .references(() => trips.id),
     /**
-     * The buy-list item a single-item purchase covers. Superseded by expense_items, which is what
-     * "bought" reads; still written for single-item purchases until a follow-up drops it.
+     * The buy-list item a single-item purchase covers, from before expense_items, which is what
+     * "bought" reads. No longer written. Once a deploy with that change has run,
+     * backfillExpenseItems can go, and after that this column can be dropped.
      */
     itemId: uuid('item_id').references(() => items.id),
     description: text('description').notNull(),
@@ -343,6 +348,8 @@ export const expenses = pgTable(
     createdBy: userRef('created_by').notNull(),
     receiptPath: text('receipt_path'),
     createdAt: createdAt(),
+    /** The day it was spent, when entered after the fact; null is the day it was added. */
+    spentOn: date('spent_on', { mode: 'string' }),
   },
   (t) => [
     index('expenses_trip_idx').on(t.tripId),
@@ -358,8 +365,16 @@ export const expenseShares = pgTable(
       .notNull()
       .references(() => expenses.id),
     userId: userRef('user_id').notNull(),
+    /** How many shares of the rest they take (an adult 2, a child 1); null is 1. */
+    weight: integer('weight'),
   },
-  (t) => [primaryKey({ columns: [t.expenseId, t.userId] })],
+  (t) => [
+    primaryKey({ columns: [t.expenseId, t.userId] }),
+    check(
+      'expense_shares_weight_check',
+      sql`${t.weight} between 1 and ${sql.raw(String(MAX_WEIGHT))}`,
+    ),
+  ],
 );
 
 /**
@@ -445,7 +460,10 @@ export const shoppingRuns = pgTable(
   ],
 );
 
-/** A recorded settle-up transfer. */
+/**
+ * A recorded settle-up transfer. Any member records one, for any two people, and it counts at
+ * once: `status` is always `confirmed` for new rows (`marked` is from before, and counts the same).
+ */
 export const payments = pgTable(
   'payments',
   {
@@ -460,6 +478,8 @@ export const payments = pgTable(
     markedAt: timestamp('marked_at', { withTimezone: true }).notNull().defaultNow(),
     confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
     remindedAt: timestamp('reminded_at', { withTimezone: true }),
+    /** Who recorded it; null before anyone could record a payment but its payer. */
+    createdBy: userRef('created_by'),
   },
   (t) => [
     index('payments_trip_idx').on(t.tripId),

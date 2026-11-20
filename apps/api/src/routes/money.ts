@@ -1,3 +1,4 @@
+import { MAX_WEIGHT } from '@yallist/domain';
 import { Hono } from 'hono';
 import { z } from 'zod';
 
@@ -14,32 +15,57 @@ import {
 } from '../dal/expenses';
 import { findItem } from '../dal/items';
 import { activeUserIds, findMember, requireMember } from '../dal/members';
-import { confirmPayment, deletePayment, insertPayment, lockPayment } from '../dal/payments';
+import { deletePayment, insertPayment, lockPayment } from '../dal/payments';
 import type { Db } from '../db/client';
 import type { expenses, tripMembers } from '../db/schema';
 import { transact } from '../db/tx';
 import { deleteReceipt, type ReceiptStore } from '../receipts';
-import { toExpense } from '../trip-data';
+import { toExpense, toPayment } from '../trip-data';
 
 import { assertPartsFit, MAX_PARTS, part } from './runs';
 
 /** Agorot, positive; ₪1M is far beyond any trip and well inside a Postgres integer. */
 const agorot = z.int().min(1).max(100_000_000);
 
+/** By user id, 1 to MAX_WEIGHT; see `Expense.weights`. */
+const weights = z
+  .record(z.uuid(), z.int().min(1).max(MAX_WEIGHT))
+  // 1 is everyone's default and isn't stored: answer with what is.
+  .transform((w) => Object.fromEntries(Object.entries(w).filter(([, n]) => n !== 1)));
+
+/** Weights only for people who share the expense. */
+function assertWeightsFit(weightsIn: Record<string, number>, shares: string[]) {
+  if (!Object.keys(weightsIn).every((id) => shares.includes(id))) {
+    throw fail(400, 'Weights are for people who share the expense');
+  }
+}
+
+/** `YYYY-MM-DD`, as trips' dates, in a plausible range (a typo like 1926 or 2062 is refused). */
+const spentOn = z.iso
+  .date()
+  .refine((d) => d >= '2000-01-01' && d <= '2100-12-31', 'spentOn is out of range');
+
 const addExpense = z.object({
   description: z.string().trim().min(1).max(80),
   amountAgorot: agorot,
   /** Defaults to the caller. */
   paidBy: z.uuid().optional(),
-  /** The active members it is split between, equally (SPEC §4). */
+  /** The active members it is split between: what any parts leave, by their weights. */
   shares: z.array(z.uuid()).min(1).max(100),
   /** A buy-list item this purchase covers; it then counts as bought. */
   itemId: z.uuid().optional(),
+  /** Amounts split between some of the trip only, as at a shopping run's checkout. */
+  parts: z.array(part).max(MAX_PARTS).optional(),
+  /** How many shares of the rest some of `shares` take; anyone else takes 1. */
+  weights: weights.optional(),
+  /** The day it was spent, when not today. */
+  spentOn: spentOn.optional(),
 });
 
 /**
- * A change to an expense: only the fields given change. `shares` and `parts` replace what it
- * had; `parts: []` drops its parts.
+ * A change to an expense: only the fields given change. `shares`, `weights` and `parts` replace
+ * what it had; `parts: []` drops its parts, `weights: {}` its weights. New `shares` without
+ * `weights` keep the weights of those still in.
  */
 const editExpense = z.object({
   description: z.string().trim().min(1).max(80).optional(),
@@ -47,6 +73,8 @@ const editExpense = z.object({
   paidBy: z.uuid().optional(),
   shares: z.array(z.uuid()).min(1).max(100).optional(),
   parts: z.array(part).max(MAX_PARTS).optional(),
+  weights: weights.optional(),
+  spentOn: spentOn.optional(),
 });
 
 const tripParam = z.object({ tripId: z.uuid() });
@@ -75,27 +103,39 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
       validate('json', addExpense),
       async (c) => {
         const { tripId } = c.req.valid('param');
-        const { shares: shareIds, paidBy = c.var.user.id, ...input } = c.req.valid('json');
+        const {
+          shares: shareIds,
+          paidBy = c.var.user.id,
+          itemId,
+          parts: partsIn = [],
+          weights: weightsIn = {},
+          ...input
+        } = c.req.valid('json');
         const me = c.var.user.id;
         const shares = [...new Set(shareIds)];
+        const parts = partsIn.map((p) => ({ ...p, shares: [...new Set(p.shares)] }));
+        assertWeightsFit(weightsIn, shares);
+        assertPartsFit(parts, input.amountAgorot);
         const expense = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
           const active = await activeUserIds(tx, tripId);
           if (!active.has(paidBy)) throw fail(400, 'paidBy is not an active member');
-          if (!shares.every((id) => active.has(id))) {
+          if (![...shares, ...parts.flatMap((p) => p.shares)].every((id) => active.has(id))) {
             throw fail(400, 'Every share must be an active member');
           }
-          if (input.itemId) {
+          if (itemId) {
             // Locked, so two purchases of one item can't both go through.
-            const item = await findItem(tx, tripId, input.itemId, { lock: true });
+            const item = await findItem(tx, tripId, itemId, { lock: true });
             if (item?.list !== 'buy') throw fail(400, 'itemId is not on the buy list');
-            if (await findPurchase(tx, input.itemId)) throw fail(409, 'Already bought');
+            if (await findPurchase(tx, itemId)) throw fail(409, 'Already bought');
           }
           const created = await insertExpense(
             tx,
             { ...input, tripId, paidBy, createdBy: me },
             shares,
-            input.itemId ? [input.itemId] : [],
+            itemId ? [itemId] : [],
+            parts,
+            weightsIn,
           );
           await logActivity(tx, tripId, me, 'expense_added', {
             expenseId: created.id,
@@ -103,7 +143,10 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           });
           return created;
         });
-        return c.json(toExpense(expense, shares, expense.itemId ? [expense.itemId] : []), 201);
+        return c.json(
+          toExpense(expense, shares, itemId ? [itemId] : [], undefined, parts, weightsIn),
+          201,
+        );
       },
     )
 
@@ -115,7 +158,12 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
       validate('json', editExpense),
       async (c) => {
         const { tripId, expenseId } = c.req.valid('param');
-        const { shares: shareIds, parts: partsIn, ...values } = c.req.valid('json');
+        const {
+          shares: shareIds,
+          parts: partsIn,
+          weights: weightsIn,
+          ...values
+        } = c.req.valid('json');
         const me = c.var.user.id;
         const shares = shareIds && [...new Set(shareIds)];
         const parts = partsIn?.map((p) => ({ ...p, shares: [...new Set(p.shares)] }));
@@ -135,8 +183,21 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           }
           const amountAgorot = values.amountAgorot ?? expense.amountAgorot;
           assertPartsFit(parts ?? before.parts, amountAgorot);
+          const nextShares = shares ?? before.shares;
+          const nextWeights =
+            weightsIn ??
+            Object.fromEntries(
+              Object.entries(before.weights).filter(([id]) => nextShares.includes(id)),
+            );
+          assertWeightsFit(nextWeights, nextShares);
+          // Weights live on the share rows: a change to either rewrites them.
+          const rewrite = shares !== undefined || weightsIn !== undefined;
 
-          const updated = await updateExpense(tx, expenseId, values, { shares, parts });
+          const updated = await updateExpense(tx, expenseId, values, {
+            shares: rewrite ? nextShares : undefined,
+            weights: nextWeights,
+            parts,
+          });
           await logActivity(tx, tripId, me, 'expense_edited', {
             expenseId,
             fromAgorot: expense.amountAgorot,
@@ -144,10 +205,11 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           });
           return toExpense(
             updated,
-            shares ?? before.shares,
+            nextShares,
             before.itemIds,
             before.itemCount,
             parts ?? before.parts,
+            nextWeights,
           );
         });
         return c.json(result);
@@ -174,9 +236,9 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
       return c.body(null, 204);
     })
 
-    // I paid someone back, or (only for someone no longer in the trip) they paid me.
-    // The counterparty can be a former member: removal leaves their balance to settle. A former
-    // member can't use the trip, so the receiver records their payment, already confirmed.
+    // Someone paid someone back. Anyone in the trip records it, for any two people in it, and it
+    // counts at once: nobody confirms it. The counterparties can be former members: removal
+    // leaves their balance to settle, and they can't record it themselves.
     .post(
       '/:tripId/payments',
       validate('param', tripParam),
@@ -189,23 +251,22 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
         const me = c.var.user.id;
         const { toUser, amountAgorot, fromUser = me } = c.req.valid('json');
         if (toUser === fromUser) throw fail(400, 'Cannot pay yourself');
-        if (fromUser !== me && toUser !== me) throw fail(400, 'Only your own payments');
-        const received = fromUser !== me;
         const payment = await transact(db, async (tx) => {
           await requireMember(tx, tripId, me, { lock: true });
-          const other = await findMember(tx, tripId, received ? fromUser : toUser);
-          if (other?.status !== 'active' && other?.status !== 'removed') {
-            throw fail(400, 'Not a member of the trip');
-          }
-          if (received && other.status !== 'removed') {
-            throw fail(400, 'Members mark their own payments');
+          for (const userId of [fromUser, toUser]) {
+            const member = await findMember(tx, tripId, userId);
+            if (member?.status !== 'active' && member?.status !== 'removed') {
+              throw fail(400, 'Not a member of the trip');
+            }
           }
           const created = await insertPayment(tx, {
             tripId,
             fromUser,
             toUser,
             amountAgorot,
-            ...(received && { status: 'confirmed', confirmedAt: new Date() }),
+            status: 'confirmed',
+            confirmedAt: new Date(),
+            createdBy: me,
           });
           await logActivity(tx, tripId, me, 'payment_marked', {
             paymentId: created.id,
@@ -215,39 +276,39 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           });
           return created;
         });
-        return c.json(
-          { id: payment.id, fromUser, toUser, amountAgorot, status: payment.status },
-          201,
-        );
+        return c.json(toPayment(payment), 201);
       },
     )
 
-    // The receiver confirms the money arrived.
+    // Payments no longer wait for the receiver, but Android builds from before still offer
+    // "קיבלתי את הכסף" on payments made back then. Answer as if confirmed, so the tap works.
     .post('/:tripId/payments/:paymentId/confirm', validate('param', paymentParam), async (c) => {
       const { tripId, paymentId } = c.req.valid('param');
-      const me = c.var.user.id;
       await transact(db, async (tx) => {
-        await requireMember(tx, tripId, me, { lock: true });
-        const payment = await lockPayment(tx, tripId, paymentId);
-        if (payment.toUser !== me) throw fail(403, 'Only the receiver confirms');
-        if (payment.status === 'confirmed') return;
-        await confirmPayment(tx, paymentId);
-        await logActivity(tx, tripId, me, 'payment_confirmed', { paymentId });
+        await requireMember(tx, tripId, c.var.user.id);
+        await lockPayment(tx, tripId, paymentId);
       });
       return c.json({ id: paymentId, status: 'confirmed' as const });
     })
 
-    // The sender takes back a payment the receiver hasn't confirmed yet.
+    // A payment recorded by mistake: by whoever recorded it, either side of it, or an organizer.
     .delete('/:tripId/payments/:paymentId', validate('param', paymentParam), async (c) => {
       const { tripId, paymentId } = c.req.valid('param');
       const me = c.var.user.id;
       await transact(db, async (tx) => {
-        await requireMember(tx, tripId, me, { lock: true });
-        const payment = await lockPayment(tx, tripId, paymentId);
-        if (payment.fromUser !== me) throw fail(403, 'Only the sender deletes');
-        if (payment.status === 'confirmed') throw fail(409, 'Already confirmed');
+        const member = await requireMember(tx, tripId, me, { lock: true });
+        const payment = toPayment(await lockPayment(tx, tripId, paymentId));
+        const involved = [payment.createdBy, payment.fromUser, payment.toUser].includes(me);
+        if (!involved && member.role !== 'organizer') {
+          throw fail(403, 'Only who recorded it, its payer or receiver, or an organizer');
+        }
         await deletePayment(tx, paymentId);
-        await logActivity(tx, tripId, me, 'payment_deleted', { paymentId });
+        await logActivity(tx, tripId, me, 'payment_deleted', {
+          paymentId,
+          fromUser: payment.fromUser,
+          toUser: payment.toUser,
+          amountAgorot: payment.amountAgorot,
+        });
       });
       return c.body(null, 204);
     });

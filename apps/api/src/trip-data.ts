@@ -11,7 +11,7 @@ import {
   type Payment,
 } from '@yallist/domain';
 
-import type { expenses, items, tripCategories, trips } from './db/schema';
+import type { expenses, items, payments, tripCategories, trips } from './db/schema';
 
 // The shapes the app already works with (apps/mobile/src/state/types.ts, @yallist/domain).
 // Nullable columns become absent fields rather than nulls.
@@ -25,7 +25,7 @@ export function toTrip(row: typeof trips.$inferSelect) {
     startsOn: row.startsOn,
     endsOn: row.endsOn,
     template: row.template,
-    // Absent only on a trip the previous API version wrote mid-deploy, until the backfill.
+    // Every trip has a cover; the column is only nullable (see trips.cover).
     cover: row.cover ?? coverFor(row.template),
     status: row.status,
     requireApproval: row.requireApproval,
@@ -69,6 +69,8 @@ export function toExpense(
   /** Deleted items included: a run whose items were deleted is still a run. */
   itemCount = itemIds.length,
   parts: ExpensePart[] = [],
+  /** Weights other than 1, by user id. */
+  weights: Record<string, number> = {},
 ): Expense {
   return {
     id: row.id,
@@ -81,10 +83,22 @@ export function toExpense(
     shares,
     // Absent unless split in parts, as before parts existed.
     ...(parts.length > 0 && { parts }),
+    ...(Object.keys(weights).length > 0 && { weights }),
     hasReceipt: row.receiptPath !== null,
     createdAt: row.createdAt.toISOString(),
+    ...(row.spentOn && { spentOn: row.spentOn }),
   };
 }
+
+export const toPayment = (row: typeof payments.$inferSelect): Payment => ({
+  id: row.id,
+  fromUser: row.fromUser,
+  toUser: row.toUser,
+  amountAgorot: row.amountAgorot,
+  // Before anyone could record a payment for others, the payer did.
+  createdBy: row.createdBy ?? row.fromUser,
+  createdAt: row.markedAt.toISOString(),
+});
 
 /** Who owes whom: balances (positive: the group owes them) and the transfers that settle them. */
 export function settleUp({

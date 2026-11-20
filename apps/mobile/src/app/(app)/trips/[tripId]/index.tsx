@@ -98,6 +98,8 @@ export default function TripScreen() {
   const tabsY = useRef(0);
   const [pinned, setPinned] = useState(false);
   const showPinned = !desktop && pinned;
+  // On a phone the money tab drops the cover and the hero for a bar (see `compact` below).
+  const compact = !desktop && tab === 'money';
   const pickTab = (next: Tab) => {
     setTab(next);
     setFilter('all');
@@ -300,11 +302,19 @@ export default function TripScreen() {
     />
   );
 
+  // Settling up with someone to settle with: the floating button records a payment.
+  const payNext =
+    tab === 'money' &&
+    moneyView === 'settle' &&
+    (view.activeIds.length > 1 || view.transfers.length > 0);
   const add =
     tab === 'people'
       ? null
       : tab === 'money'
-        ? () => router.push({ pathname: '/trips/[tripId]/expenses/new', params: { tripId } })
+        ? payNext
+          ? // Settling up, the next step is recording a payment, not another expense.
+            () => router.push({ pathname: '/trips/[tripId]/payments/new', params: { tripId } })
+          : () => router.push({ pathname: '/trips/[tripId]/expenses/new', params: { tripId } })
         : () =>
             router.push({
               pathname: '/trips/[tripId]/items/new',
@@ -401,63 +411,84 @@ export default function TripScreen() {
           { paddingTop: space[6] + insets.top },
         ]}
       >
-        {desktop && (
-          <View style={styles.topBar}>
+        {compact ? (
+          // The money tab on a phone: a bar instead of the cover, the title and the hero, so the
+          // balance and the next step are on the first screen.
+          <View style={styles.compactBar}>
             {back}
-            {inviteButton}
-          </View>
-        )}
-        <Cover
-          scene={trip.cover}
-          style={[styles.cover, desktop && styles.coverDesktop]}
-          testID={`trip-hero-cover-${trip.cover}`}
-          horizon
-        >
-          {desktop ? (
-            coverEdit
-          ) : (
-            // Phone and tablet: back and invite on the cover, not a row of their own above it.
-            <View style={styles.coverBar}>
-              {back}
-              <View style={styles.coverActions}>
-                {coverEdit}
-                {inviteButton}
-              </View>
-            </View>
-          )}
-        </Cover>
-        <View style={styles.titles}>
-          <View style={styles.titleRow}>
             <Text
-              style={[styles.title, styles.titleText]}
+              style={styles.pinnedTitle}
+              numberOfLines={1}
               accessibilityRole="header"
               {...testId('trip-title')}
             >
               {trip.name}
             </Text>
-            {/* Who's in, beside the name: not a row of its own in the hero. */}
-            {view.active.length > 1 && (
-              <View
-                accessible
-                accessibilityLabel={peopleNames(view.active.map((m) => m.displayName))}
-              >
-                <AvatarStack people={view.active.map(toAvatar)} max={4} />
+            <Text style={styles.caption} numberOfLines={1}>
+              {countdown(trip.startsOn, trip.endsOn, now).label}
+            </Text>
+          </View>
+        ) : (
+          <>
+            {desktop && (
+              <View style={styles.topBar}>
+                {back}
+                {inviteButton}
               </View>
             )}
-          </View>
-          <Text style={styles.caption}>
-            {[formatRange(trip.startsOn, trip.endsOn), participants(view.activeIds.length)]
-              .filter(Boolean)
-              .join(' · ')}
-          </Text>
-          <TripLinksBar
-            trip={trip}
-            onMeetup={() => {
-              pickTab('people');
-              focusList();
-            }}
-          />
-        </View>
+            <Cover
+              scene={trip.cover}
+              style={[styles.cover, desktop && styles.coverDesktop]}
+              testID={`trip-hero-cover-${trip.cover}`}
+              horizon
+            >
+              {desktop ? (
+                coverEdit
+              ) : (
+                // Phone and tablet: back and invite on the cover, not a row of their own above it.
+                <View style={styles.coverBar}>
+                  {back}
+                  <View style={styles.coverActions}>
+                    {coverEdit}
+                    {inviteButton}
+                  </View>
+                </View>
+              )}
+            </Cover>
+            <View style={styles.titles}>
+              <View style={styles.titleRow}>
+                <Text
+                  style={[styles.title, styles.titleText]}
+                  accessibilityRole="header"
+                  {...testId('trip-title')}
+                >
+                  {trip.name}
+                </Text>
+                {/* Who's in, beside the name: not a row of its own in the hero. */}
+                {view.active.length > 1 && (
+                  <View
+                    accessible
+                    accessibilityLabel={peopleNames(view.active.map((m) => m.displayName))}
+                  >
+                    <AvatarStack people={view.active.map(toAvatar)} max={4} />
+                  </View>
+                )}
+              </View>
+              <Text style={styles.caption}>
+                {[formatRange(trip.startsOn, trip.endsOn), participants(view.activeIds.length)]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Text>
+              <TripLinksBar
+                trip={trip}
+                onMeetup={() => {
+                  pickTab('people');
+                  focusList();
+                }}
+              />
+            </View>
+          </>
+        )}
 
         {params.joined && (
           <JoinedPrompt
@@ -471,7 +502,7 @@ export default function TripScreen() {
             onDone={() => router.setParams({ joined: undefined })}
           />
         )}
-        {!desktop && hero}
+        {!desktop && !compact && hero}
         <View
           style={desktop ? styles.columns : { minHeight }}
           onLayout={(e) => (tabsY.current = e.nativeEvent.layout.y)}
@@ -554,8 +585,12 @@ export default function TripScreen() {
       )}
       {add && (
         <FloatingAction
-          label={he.trip.fabShort[tab as 'bring' | 'buy' | 'money']}
-          accessibilityLabel={he.trip.fab[tab as 'bring' | 'buy' | 'money']}
+          label={
+            payNext ? he.trip.fabShort.payment : he.trip.fabShort[tab as 'bring' | 'buy' | 'money']
+          }
+          accessibilityLabel={
+            payNext ? he.trip.fab.payment : he.trip.fab[tab as 'bring' | 'buy' | 'money']
+          }
           testID="trip-add"
           onPress={add}
         />
@@ -667,5 +702,6 @@ const styles = StyleSheet.create({
     gap: space[3],
   },
   pinnedBar: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  compactBar: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
   pinnedTitle: { ...type.itemTitle, color: colors.ink, flex: 1 },
 });

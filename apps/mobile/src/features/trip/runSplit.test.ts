@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { he } from '@/i18n/he';
+import { ltr } from '@/lib/bidi';
 
 import { newPart, runSplit, sharedText } from './runSplit';
 
@@ -66,6 +67,15 @@ describe('runSplit', () => {
 });
 
 describe('sharedText', () => {
+  it('names who takes more than one share', () => {
+    expect(sharedText({ shares: everyone, weights: { a: 2, c: 3 } }, everyone, nameOf)).toBe(
+      `לפי משקל: דנה\u00a0${ltr('×2')}, יעל\u00a0${ltr('×3')}`,
+    );
+    expect(sharedText({ shares: ['a', 'b'], weights: { a: 2 } }, everyone, nameOf)).toBe(
+      `בין דנה ורון · לפי משקל: דנה\u00a0${ltr('×2')}`,
+    );
+  });
+
   it('says nothing when everyone shares it', () => {
     expect(sharedText({ shares: everyone }, everyone, nameOf)).toBeUndefined();
   });
@@ -79,10 +89,10 @@ describe('sharedText', () => {
   it('lists the parts and who shares each', () => {
     const parts = [{ label: 'אלכוהול', amountAgorot: 12000, shares: ['a', 'b'] }];
     expect(sharedText({ shares: everyone, parts }, everyone, nameOf)).toBe(
-      'אלכוהול ₪120.00: דנה ורון · השאר: כולם',
+      'אלכוהול ₪120: דנה ורון · השאר: כולם',
     );
     expect(sharedText({ shares: ['c'], parts }, everyone, nameOf)).toBe(
-      'אלכוהול ₪120.00: דנה ורון · השאר: יעל',
+      'אלכוהול ₪120: דנה ורון · השאר: יעל',
     );
   });
 });

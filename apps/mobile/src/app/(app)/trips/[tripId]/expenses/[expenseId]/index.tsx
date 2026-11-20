@@ -12,8 +12,8 @@ import { useCloseSheet } from '@/features/trip/closeSheet';
 import { deriveTrip } from '@/features/trip/derive';
 import { coveredItems, owedLines } from '@/features/trip/expenseDetail';
 import { he, joinNames } from '@/i18n/he';
-import { rtl } from '@/lib/bidi';
-import { formatMoment } from '@/lib/dates';
+import { ltr, rtl } from '@/lib/bidi';
+import { formatMoment, formatRange } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useReceiptLink } from '@/state/receipts';
 import { useMe } from '@/state/store';
@@ -66,7 +66,6 @@ function Detail({
   return (
     <Sheet
       title={expense.description}
-      subtitle={formatShekel(expense.amountAgorot)}
       onClose={close}
       gap={space[5]}
       footer={
@@ -116,6 +115,20 @@ function Detail({
         ))
       }
     >
+      {/* The amount first and big: it's what the sheet is about. */}
+      <View style={styles.top}>
+        <Text style={styles.big} {...testId('expense-amount-big')}>
+          {formatShekel(expense.amountAgorot)}
+        </Text>
+        {expense.createdAt && (
+          <Text style={styles.caption}>
+            {he.expense.addedByAt(
+              view.nameOf(expense.createdBy ?? expense.paidBy),
+              formatMoment(expense.createdAt),
+            )}
+          </Text>
+        )}
+      </View>
       <View style={styles.facts}>
         <Fact label={he.expense.paidBy}>
           <View style={styles.person}>
@@ -123,14 +136,9 @@ function Detail({
             <Text style={styles.value}>{view.nameOf(expense.paidBy)}</Text>
           </View>
         </Fact>
-        {expense.createdBy && expense.createdBy !== expense.paidBy && (
-          <Fact label={he.expense.addedBy}>
-            <Text style={styles.value}>{view.nameOf(expense.createdBy)}</Text>
-          </Fact>
-        )}
-        {expense.createdAt && (
-          <Fact label={he.expense.addedAt}>
-            <Text style={styles.value}>{formatMoment(expense.createdAt)}</Text>
+        {expense.spentOn && (
+          <Fact label={he.expense.spentOn}>
+            <Text style={styles.value}>{formatRange(expense.spentOn, expense.spentOn)}</Text>
           </Fact>
         )}
       </View>
@@ -146,6 +154,10 @@ function Detail({
               <Avatar person={view.avatarOf(userId)} size={28} ring={false} />
               <Text style={[styles.name, mine && styles.mineText]} numberOfLines={1}>
                 {mine ? he.expense.mine : view.displayNameOf(userId)}
+                {/* By weight: how many shares they took. */}
+                {(expense.weights?.[userId] ?? 1) > 1 && (
+                  <Text style={styles.weight}> {ltr(`×${expense.weights![userId]}`)}</Text>
+                )}
               </Text>
               <Text style={[styles.amount, mine && styles.mineText]}>{formatShekel(owed)}</Text>
             </View>
@@ -250,6 +262,9 @@ function Receipt({ tripId, expense }: { tripId: string; expense: Expense }) {
 }
 
 const styles = StyleSheet.create({
+  top: { gap: space[1] },
+  big: { ...type.stat, color: colors.ink },
+  weight: { ...type.caption, color: colors.inkMuted },
   facts: { gap: space[3] },
   fact: {
     flexDirection: 'row',

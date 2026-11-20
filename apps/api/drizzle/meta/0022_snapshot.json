@@ -1,5 +1,5 @@
 {
-  "id": "682535b8-7698-4a7d-812f-ed42b340e174",
+  "id": "5686f68b-b913-4db6-aa54-8e68e73b14da",
   "prevId": "dc727c1b-f21a-4960-8721-4c9ca7da7308",
   "version": "7",
   "dialect": "postgresql",
@@ -671,6 +671,12 @@
           "type": "uuid",
           "primaryKey": false,
           "notNull": true
+        },
+        "weight": {
+          "name": "weight",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -713,7 +719,12 @@
       },
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "expense_shares_weight_check": {
+          "name": "expense_shares_weight_check",
+          "value": "\"expense_shares\".\"weight\" between 1 and 10"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.expenses": {
@@ -1906,12 +1917,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "removed_reason": {
-          "name": "removed_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "display_name": {
           "name": "display_name",
           "type": "text",
@@ -1990,14 +1995,6 @@
         "trip_members_status_check": {
           "name": "trip_members_status_check",
           "value": "\"trip_members\".\"status\" in ('pending', 'active', 'removed')"
-        },
-        "trip_members_removed_reason_check": {
-          "name": "trip_members_removed_reason_check",
-          "value": "\"trip_members\".\"removed_reason\" in ('left', 'removed', 'declined')"
-        },
-        "trip_members_removed_reason_status_check": {
-          "name": "trip_members_removed_reason_status_check",
-          "value": "\"trip_members\".\"status\" = 'removed' or \"trip_members\".\"removed_reason\" is null"
         }
       },
       "isRLSEnabled": false
