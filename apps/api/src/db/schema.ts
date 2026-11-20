@@ -49,6 +49,9 @@ export const LISTS = ['bring', 'buy'] as const satisfies ListKind[];
 export const KINDS = ['single', 'qty', 'each'] as const satisfies ItemKind[];
 export const ROLES = ['organizer', 'member'] as const satisfies MemberRole[];
 const MEMBER_STATUSES = ['pending', 'active', 'removed'] as const satisfies MemberStatus[];
+/** How a `removed` member got out: only one who left may join again from the link. */
+export const REMOVED_REASONS = ['left', 'removed', 'declined'] as const;
+export type RemovedReason = (typeof REMOVED_REASONS)[number];
 export const TRIP_STATUSES = ['planning', 'ended', 'archived'] as const;
 const PAYMENT_STATUSES = ['marked', 'confirmed'] as const;
 export const RUN_STATUSES = ['active', 'done', 'cancelled'] as const;
@@ -206,6 +209,12 @@ export const tripMembers = pgTable(
     userId: userRef('user_id').notNull(),
     role: text('role', { enum: ROLES }).notNull(),
     status: text('status', { enum: MEMBER_STATUSES }).notNull(),
+    /**
+     * Set when status becomes `removed`, null otherwise (a CHECK enforces the latter). Null on a
+     * `removed` row means it was removed before this column existed: the activity log decides
+     * (legacyRemovedReason).
+     */
+    removedReason: text('removed_reason', { enum: REMOVED_REASONS }),
     /** Snapshot at join, editable. */
     displayName: text('display_name').notNull(),
     joinedAt: timestamp('joined_at', { withTimezone: true }).notNull().defaultNow(),
@@ -215,6 +224,14 @@ export const tripMembers = pgTable(
     index('trip_members_user_idx').on(t.userId),
     oneOf('trip_members_role_check', t.role, ROLES),
     oneOf('trip_members_status_check', t.status, MEMBER_STATUSES),
+    oneOf('trip_members_removed_reason_check', t.removedReason, REMOVED_REASONS),
+    // A reason only on a removed row: code that brings a member back without clearing it (the
+    // API before this column, during a rollback or deploy overlap) fails instead of leaving a
+    // stale reason that would decide a later removal.
+    check(
+      'trip_members_removed_reason_status_check',
+      sql`${t.status} = 'removed' or ${t.removedReason} is null`,
+    ),
   ],
 );
 

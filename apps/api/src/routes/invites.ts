@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { fail, validate } from '../access';
 import { requireUser, type Auth } from '../auth';
-import { leftOnTheirOwn, logActivity } from '../dal/activity';
+import { legacyRemovedReason, logActivity } from '../dal/activity';
 import { findMember, insertMember, setMember } from '../dal/members';
 import { displayNameOf } from '../dal/profiles';
 import { loadTrips, tripByToken } from '../dal/trips';
@@ -74,7 +74,10 @@ export const inviteRoutes = (auth: Auth, db: Db, notify: Publish) =>
         const result = await transact(db, async (tx) => {
           const trip = await tripByToken(tx, token);
           const existing = await findMember(tx, trip.id, user.id, { lock: true });
-          if (existing?.status === 'removed' && !(await leftOnTheirOwn(tx, trip.id, user.id)))
+          if (
+            existing?.status === 'removed' &&
+            (existing.removedReason ?? (await legacyRemovedReason(tx, trip.id, user.id))) !== 'left'
+          )
             throw fail(403, 'Removed from this trip');
           if (existing && existing.status !== 'removed')
             return { tripId: trip.id, status: existing.status };

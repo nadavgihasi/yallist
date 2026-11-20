@@ -258,7 +258,7 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
       await transact(db, async (tx) => {
         const target = await organizerAction(tx, tripId, c.var.user.id, userId);
         if (target.status !== 'pending') throw fail(409, 'Not waiting for approval');
-        await setMember(tx, target, { status: 'removed' });
+        await setMember(tx, target, { status: 'removed', removedReason: 'declined' });
         await logActivity(tx, tripId, c.var.user.id, 'member_declined', { userId });
       });
       return c.json({ userId, status: 'removed' as const });
@@ -272,7 +272,7 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
         const target = await organizerAction(tx, tripId, c.var.user.id, userId);
         if (target.status !== 'active') throw fail(409, 'Not an active member');
         await assertNotLastOrganizer(tx, target);
-        await setMember(tx, target, { status: 'removed' });
+        await setMember(tx, target, { status: 'removed', removedReason: 'removed' });
         await cancelMemberRuns(tx, tripId, userId);
         await deleteMemberClaims(tx, tripId, userId);
         await logActivity(tx, tripId, c.var.user.id, 'member_removed', { userId });
@@ -290,7 +290,7 @@ export const tripRoutes = (auth: Auth, db: Db, photos: ReceiptStore) =>
         await lockTrip(tx, tripId);
         const member = await requireMember(tx, tripId, me, { lock: true });
         await assertNotLastOrganizer(tx, member);
-        await setMember(tx, member, { status: 'removed' });
+        await setMember(tx, member, { status: 'removed', removedReason: 'left' });
         await cancelMemberRuns(tx, tripId, me);
         await deleteMemberClaims(tx, tripId, me);
         await logActivity(tx, tripId, me, 'member_left');

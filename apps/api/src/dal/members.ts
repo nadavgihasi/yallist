@@ -1,7 +1,7 @@
 import { and, count, eq, inArray } from 'drizzle-orm';
 
 import { fail } from '../access';
-import { tripMembers } from '../db/schema';
+import { tripMembers, type RemovedReason } from '../db/schema';
 import type { Executor, Tx } from '../db/tx';
 
 type Member = typeof tripMembers.$inferSelect;
@@ -60,14 +60,28 @@ export async function lockMember(tx: Tx, tripId: string, userId: string) {
 export const insertMember = (tx: Executor, values: typeof tripMembers.$inferInsert) =>
   tx.insert(tripMembers).values(values);
 
+/**
+ * Changes the member's role or status. Making them `removed` takes how they got out
+ * (`removedReason`); any other status clears it, whatever `values` holds.
+ */
 export const setMember = (
   tx: Executor,
   member: Member,
-  values: Pick<Partial<Member>, 'role' | 'status'>,
+  values:
+    | { role: Member['role']; status?: never }
+    | { role?: Member['role']; status: 'active' | 'pending' }
+    | { role?: Member['role']; status: 'removed'; removedReason: RemovedReason },
 ) =>
   tx
     .update(tripMembers)
-    .set(values)
+    .set(
+      values.status === undefined
+        ? values
+        : {
+            ...values,
+            removedReason: values.status === 'removed' ? values.removedReason : null,
+          },
+    )
     .where(and(eq(tripMembers.tripId, member.tripId), eq(tripMembers.userId, member.userId)));
 
 export async function countActiveOrganizers(tx: Executor, tripId: string) {

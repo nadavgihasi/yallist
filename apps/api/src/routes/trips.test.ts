@@ -3,20 +3,23 @@ import { testClient } from 'hono/testing';
 import type { Sql } from 'postgres';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
-import { createDb } from '../db/client';
+import { mergeUser } from '../dal/profiles';
+import { createDb, type Db } from '../db/client';
 import { migrate } from '../db/migrate';
 import { createTestDatabase, DATABASE_URL, signInAsGuest, testApp } from '../test-db';
 
 describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
   let sql: Sql;
   let drop: () => Promise<void>;
+  let db: Db;
   let app: ReturnType<typeof testApp>;
   let client: ReturnType<typeof testClient<ReturnType<typeof testApp>>>;
 
   beforeAll(async () => {
     ({ sql, drop } = await createTestDatabase());
     await migrate(sql, { dsql: false });
-    app = testApp(createDb(sql));
+    db = createDb(sql);
+    app = testApp(db);
     client = testClient(app);
   });
 
@@ -532,6 +535,190 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
         as(organizer),
       );
       expect((await join(member, data.inviteToken)).status).toBe(403);
+    });
+
+    // A guest who links an account becomes the account's user (mergeUser): the log still names
+    // the guest in who was removed, so the reason they're out must not be read from it.
+    it('keeps a removed member out after they link an account', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(member));
+      expect((await join(member, data.inviteToken)).status).toBe(200);
+      await client.trips[':tripId'].members[':userId'].$delete(
+        memberPath(tripId, member.id),
+        as(organizer),
+      );
+      const account = await guest('account');
+
+      await mergeUser(db, member.id, account.id);
+
+      expect((await join(account, data.inviteToken)).status).toBe(403);
+      expect((await detail(account, tripId)).status).toBe(404);
+    });
+
+    const reasonOf = async (tripId: string, userId: string) =>
+      (
+        await sql<{ status: string; reason: string | null }[]>`
+          select status, removed_reason as reason from trip_members
+          where trip_id = ${tripId} and user_id = ${userId}`
+      )[0];
+
+    it('records how a member got out, and clears it when they are back', async () => {
+      const organizer = await guest('organizer');
+      const data = await createTrip(organizer, { requireApproval: true });
+      const tripId = data.trip.id;
+      const [left, removed, declined] = [
+        await guest('left'),
+        await guest('removed'),
+        await guest('declined'),
+      ];
+      for (const user of [left, removed, declined]) await join(user, data.inviteToken);
+      const members = client.trips[':tripId'].members[':userId'];
+      for (const user of [left, removed])
+        await members.approve.$post(memberPath(tripId, user.id), as(organizer));
+      await members.decline.$post(memberPath(tripId, declined.id), as(organizer));
+      await members.$delete(memberPath(tripId, removed.id), as(organizer));
+      await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(left));
+
+      expect(await reasonOf(tripId, left.id)).toEqual({ status: 'removed', reason: 'left' });
+      expect(await reasonOf(tripId, removed.id)).toEqual({ status: 'removed', reason: 'removed' });
+      expect(await reasonOf(tripId, declined.id)).toEqual({
+        status: 'removed',
+        reason: 'declined',
+      });
+      expect((await join(removed, data.inviteToken)).status).toBe(403);
+      expect((await join(declined, data.inviteToken)).status).toBe(403);
+      // Asks again, then is let in: no reason on a pending or active member.
+      expect(await (await join(left, data.inviteToken)).json()).toEqual({
+        tripId,
+        status: 'pending',
+      });
+      expect(await reasonOf(tripId, left.id)).toEqual({ status: 'pending', reason: null });
+      await members.approve.$post(memberPath(tripId, left.id), as(organizer));
+      expect(await reasonOf(tripId, left.id)).toEqual({ status: 'active', reason: null });
+    });
+
+    it('reads the log for members removed before the reason was recorded', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      const removed = await guest('removed');
+      await join(removed, data.inviteToken);
+      await client.trips[':tripId'].members[':userId'].$delete(
+        memberPath(tripId, removed.id),
+        as(organizer),
+      );
+      await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(member));
+      await sql`update trip_members set removed_reason = null where trip_id = ${tripId}`;
+
+      expect((await join(removed, data.inviteToken)).status).toBe(403);
+      expect((await join(member, data.inviteToken)).status).toBe(200);
+    });
+
+    it('settles a legacy reason when the member links an account', async () => {
+      const { organizer, member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(member));
+      await join(member, data.inviteToken);
+      await client.trips[':tripId'].members[':userId'].$delete(
+        memberPath(tripId, member.id),
+        as(organizer),
+      );
+      await sql`update trip_members set removed_reason = null where trip_id = ${tripId}`;
+      const account = await guest('account');
+
+      await mergeUser(db, member.id, account.id);
+
+      expect(await reasonOf(tripId, account.id)).toEqual({ status: 'removed', reason: 'removed' });
+      expect((await join(account, data.inviteToken)).status).toBe(403);
+    });
+
+    it('settles a legacy leaver when they link an account, so they can still come back', async () => {
+      const { member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(member));
+      await sql`update trip_members set removed_reason = null where trip_id = ${tripId}`;
+      const account = await guest('account');
+
+      await mergeUser(db, member.id, account.id);
+
+      expect(await reasonOf(tripId, account.id)).toEqual({ status: 'removed', reason: 'left' });
+      expect((await join(account, data.inviteToken)).status).toBe(200);
+    });
+
+    it('refuses a reason on a member who is not removed', async () => {
+      const { member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      for (const status of ['active', 'pending']) {
+        await expect(
+          sql`update trip_members set status = ${status}, removed_reason = 'left'
+              where trip_id = ${tripId} and user_id = ${member.id}`,
+        ).rejects.toThrow(/trip_members_removed_reason_status_check/);
+      }
+      // What the API before this column did on a rejoin: status only, the reason left behind.
+      await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(member));
+      await expect(
+        sql`update trip_members set status = 'active'
+            where trip_id = ${tripId} and user_id = ${member.id}`,
+      ).rejects.toThrow(/trip_members_removed_reason_status_check/);
+    });
+
+    describe('linking an account that is in the trip too', () => {
+      type Out = 'left' | 'removed' | 'declined' | null;
+
+      /**
+       * The guest and the account each in the trip (which needs approval), each out the given way
+       * or still in; `legacy`: their reasons wiped, as if out before the column existed.
+       */
+      async function both(guestOut: Out, accountOut: Out, { legacy = false } = {}) {
+        const organizer = await guest('organizer');
+        const data = await createTrip(organizer, { requireApproval: true });
+        const tripId = data.trip.id;
+        const members = client.trips[':tripId'].members[':userId'];
+        const [guestUser, account] = [await guest('guest'), await guest('account')];
+        for (const [user, out] of [
+          [guestUser, guestOut],
+          [account, accountOut],
+        ] as const) {
+          await join(user, data.inviteToken);
+          const path = memberPath(tripId, user.id);
+          if (out === 'declined') {
+            await members.decline.$post(path, as(organizer));
+            continue;
+          }
+          await members.approve.$post(path, as(organizer));
+          if (out === 'left')
+            await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(user));
+          if (out === 'removed') await members.$delete(path, as(organizer));
+        }
+        if (legacy)
+          await sql`update trip_members set removed_reason = null where trip_id = ${tripId}`;
+        await mergeUser(db, guestUser.id, account.id);
+        return { tripId, account, token: data.inviteToken };
+      }
+
+      it('keeps them out if either was removed or declined', async () => {
+        for (const [guestOut, accountOut, legacy, reason] of [
+          ['removed', 'left', false, 'removed'],
+          ['left', 'removed', false, 'removed'],
+          ['removed', 'left', true, 'removed'],
+          ['declined', 'left', false, 'declined'],
+        ] as const) {
+          const { tripId, account, token } = await both(guestOut, accountOut, { legacy });
+          expect(await reasonOf(tripId, account.id)).toEqual({ status: 'removed', reason });
+          expect((await join(account, token)).status).toBe(403);
+        }
+      });
+
+      it('lets them back in if both left', async () => {
+        const { tripId, account, token } = await both('left', 'left');
+        expect(await reasonOf(tripId, account.id)).toEqual({ status: 'removed', reason: 'left' });
+        expect((await join(account, token)).status).toBe(200);
+      });
+
+      it('drops the reason when the guest is still in', async () => {
+        const { tripId, account } = await both(null, 'removed');
+        expect(await reasonOf(tripId, account.id)).toEqual({ status: 'active', reason: null });
+      });
     });
 
     it('lets an organizer leave once another member is organizer', async () => {
