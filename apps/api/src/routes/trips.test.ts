@@ -600,39 +600,79 @@ describe.skipIf(!DATABASE_URL)('trips, invites, items and claims', () => {
       expect((await join(account, data.inviteToken)).status).toBe(403);
     });
 
+    it('settles a legacy leaver when they link an account, so they can still come back', async () => {
+      const { member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(member));
+      await sql`update trip_members set removed_reason = null where trip_id = ${tripId}`;
+      const account = await guest('account');
+
+      await mergeUser(db, member.id, account.id);
+
+      expect(await reasonOf(tripId, account.id)).toEqual({ status: 'removed', reason: 'left' });
+      expect((await join(account, data.inviteToken)).status).toBe(200);
+    });
+
+    it('refuses a reason on a member who is not removed', async () => {
+      const { member, data } = await tripWithMember();
+      const tripId = data.trip.id;
+      for (const status of ['active', 'pending']) {
+        await expect(
+          sql`update trip_members set status = ${status}, removed_reason = 'left'
+              where trip_id = ${tripId} and user_id = ${member.id}`,
+        ).rejects.toThrow(/trip_members_removed_reason_status_check/);
+      }
+      // What the API before this column did on a rejoin: status only, the reason left behind.
+      await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(member));
+      await expect(
+        sql`update trip_members set status = 'active'
+            where trip_id = ${tripId} and user_id = ${member.id}`,
+      ).rejects.toThrow(/trip_members_removed_reason_status_check/);
+    });
+
     describe('linking an account that is in the trip too', () => {
-      /** The guest and the account each in the trip, each out the given way (or still in). */
-      async function both(guestOut: 'left' | 'removed' | null, accountOut: 'left' | 'removed') {
-        const { organizer, data } = await tripWithMember();
+      type Out = 'left' | 'removed' | 'declined' | null;
+
+      /**
+       * The guest and the account each in the trip (which needs approval), each out the given way
+       * or still in; `legacy`: their reasons wiped, as if out before the column existed.
+       */
+      async function both(guestOut: Out, accountOut: Out, { legacy = false } = {}) {
+        const organizer = await guest('organizer');
+        const data = await createTrip(organizer, { requireApproval: true });
         const tripId = data.trip.id;
+        const members = client.trips[':tripId'].members[':userId'];
         const [guestUser, account] = [await guest('guest'), await guest('account')];
         for (const [user, out] of [
           [guestUser, guestOut],
           [account, accountOut],
         ] as const) {
           await join(user, data.inviteToken);
+          const path = memberPath(tripId, user.id);
+          if (out === 'declined') {
+            await members.decline.$post(path, as(organizer));
+            continue;
+          }
+          await members.approve.$post(path, as(organizer));
           if (out === 'left')
             await client.trips[':tripId'].leave.$post({ param: { tripId } }, as(user));
-          if (out === 'removed')
-            await client.trips[':tripId'].members[':userId'].$delete(
-              memberPath(tripId, user.id),
-              as(organizer),
-            );
+          if (out === 'removed') await members.$delete(path, as(organizer));
         }
+        if (legacy)
+          await sql`update trip_members set removed_reason = null where trip_id = ${tripId}`;
         await mergeUser(db, guestUser.id, account.id);
         return { tripId, account, token: data.inviteToken };
       }
 
-      it('keeps them out if either was removed', async () => {
-        for (const [guestOut, accountOut] of [
-          ['removed', 'left'],
-          ['left', 'removed'],
+      it('keeps them out if either was removed or declined', async () => {
+        for (const [guestOut, accountOut, legacy, reason] of [
+          ['removed', 'left', false, 'removed'],
+          ['left', 'removed', false, 'removed'],
+          ['removed', 'left', true, 'removed'],
+          ['declined', 'left', false, 'declined'],
         ] as const) {
-          const { tripId, account, token } = await both(guestOut, accountOut);
-          expect(await reasonOf(tripId, account.id)).toEqual({
-            status: 'removed',
-            reason: 'removed',
-          });
+          const { tripId, account, token } = await both(guestOut, accountOut, { legacy });
+          expect(await reasonOf(tripId, account.id)).toEqual({ status: 'removed', reason });
           expect((await join(account, token)).status).toBe(403);
         }
       });

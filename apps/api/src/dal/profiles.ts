@@ -13,7 +13,6 @@ import {
 } from '../db/schema';
 import { transact, type Executor } from '../db/tx';
 import { legacyRemovedReason } from './activity';
-import { setMember } from './members';
 
 export async function findProfile(tx: Executor, userId: string) {
   const [profile] = await tx.select().from(profiles).where(eq(profiles.id, userId));
@@ -161,9 +160,11 @@ export async function mergeUser(db: Db, from: string, to: string) {
   const id = sql.identifier;
   return transact(db, async (tx) => {
     // Removed before removed_reason existed: settle why from the log now, while it still names
-    // each of them as they were (the move below breaks that; see legacyRemovedReason).
+    // each of them as they were (the move below breaks that; see legacyRemovedReason). Only the
+    // reason is written, and only while the row is still removed with none: the select doesn't
+    // lock, so a member who joined again meanwhile is left as they are.
     const legacy = await tx
-      .select()
+      .select({ tripId: tripMembers.tripId, userId: tripMembers.userId })
       .from(tripMembers)
       .where(
         and(
@@ -172,11 +173,18 @@ export async function mergeUser(db: Db, from: string, to: string) {
           isNull(tripMembers.removedReason),
         ),
       );
-    for (const member of legacy) {
-      await setMember(tx, member, {
-        status: 'removed',
-        removedReason: await legacyRemovedReason(tx, member.tripId, member.userId),
-      });
+    for (const { tripId, userId } of legacy) {
+      await tx
+        .update(tripMembers)
+        .set({ removedReason: await legacyRemovedReason(tx, tripId, userId) })
+        .where(
+          and(
+            eq(tripMembers.tripId, tripId),
+            eq(tripMembers.userId, userId),
+            eq(tripMembers.status, 'removed'),
+            isNull(tripMembers.removedReason),
+          ),
+        );
     }
     // Where both are in a trip, the account keeps the stronger membership, so a trip never
     // loses its organizer: an active organizer beats member, and active beats pending beats

@@ -62,7 +62,7 @@ export const insertMember = (tx: Executor, values: typeof tripMembers.$inferInse
 
 /**
  * Changes the member's role or status. Making them `removed` takes how they got out
- * (`removedReason`); any other status clears it.
+ * (`removedReason`); any other status clears it, whatever `values` holds.
  */
 export const setMember = (
   tx: Executor,
@@ -74,7 +74,14 @@ export const setMember = (
 ) =>
   tx
     .update(tripMembers)
-    .set(values.status ? { removedReason: null, ...values } : values)
+    .set(
+      values.status === undefined
+        ? values
+        : {
+            ...values,
+            removedReason: values.status === 'removed' ? values.removedReason : null,
+          },
+    )
     .where(and(eq(tripMembers.tripId, member.tripId), eq(tripMembers.userId, member.userId)));
 
 export async function countActiveOrganizers(tx: Executor, tripId: string) {

@@ -1,5 +1,5 @@
 {
-  "id": "ef9607eb-3f9e-4013-ad98-4adf22731ff4",
+  "id": "682535b8-7698-4a7d-812f-ed42b340e174",
   "prevId": "dc727c1b-f21a-4960-8721-4c9ca7da7308",
   "version": "7",
   "dialect": "postgresql",
@@ -1994,6 +1994,10 @@
         "trip_members_removed_reason_check": {
           "name": "trip_members_removed_reason_check",
           "value": "\"trip_members\".\"removed_reason\" in ('left', 'removed', 'declined')"
+        },
+        "trip_members_removed_reason_status_check": {
+          "name": "trip_members_removed_reason_status_check",
+          "value": "\"trip_members\".\"status\" = 'removed' or \"trip_members\".\"removed_reason\" is null"
         }
       },
       "isRLSEnabled": false

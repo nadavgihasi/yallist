@@ -209,7 +209,7 @@ export const tripMembers = pgTable(
     role: text('role', { enum: ROLES }).notNull(),
     status: text('status', { enum: MEMBER_STATUSES }).notNull(),
     /**
-     * Set when status becomes `removed`, null otherwise. Null on a `removed` row means it was
+     * Set when status becomes `removed`, null otherwise (a CHECK enforces the latter). Null on a `removed` row means it was
      * removed before this column existed: the activity log decides (legacyRemovedReason).
      */
     removedReason: text('removed_reason', { enum: REMOVED_REASONS }),
@@ -223,6 +223,13 @@ export const tripMembers = pgTable(
     oneOf('trip_members_role_check', t.role, ROLES),
     oneOf('trip_members_status_check', t.status, MEMBER_STATUSES),
     oneOf('trip_members_removed_reason_check', t.removedReason, REMOVED_REASONS),
+    // A reason only on a removed row: code that brings a member back without clearing it (the
+    // API before this column, during a rollback or deploy overlap) fails instead of leaving a
+    // stale reason that would decide a later removal.
+    check(
+      'trip_members_removed_reason_status_check',
+      sql`${t.status} = 'removed' or ${t.removedReason} is null`,
+    ),
   ],
 );
 
