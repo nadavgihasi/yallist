@@ -1,10 +1,17 @@
 import postgres, { type Sql } from 'postgres';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
-import { mergeUser } from './auth';
+import { createApp } from './app';
+import { mergeUser, type Auth } from './auth';
 import { createDb, type Db } from './db/client';
 import { migrate } from './db/migrate';
-import { createTestDatabase, DATABASE_URL, signInAsGuest as signIn, testApp } from './test-db';
+import {
+  createTestDatabase,
+  DATABASE_URL,
+  signInAsGuest as signIn,
+  testApp,
+  testReceipts,
+} from './test-db';
 
 describe('GET /health', () => {
   it('returns ok', async () => {
@@ -32,6 +39,43 @@ describe('CORS', () => {
     expect(res.headers.get('access-control-allow-origin')).toBe('*');
     expect(res.headers.get('access-control-allow-methods')).toContain('POST');
     expect(res.headers.get('access-control-allow-headers')).toBe('authorization,content-type');
+  });
+});
+
+describe('requireUser on /trips', () => {
+  // Each router mounted on /trips has its own requireUser, and Hono runs all of them up to the
+  // one with the route. A fake session keeps this off the database: the bad ids fail with 400.
+  const appWith = (session: unknown) => {
+    const getSession = vi.fn(async () => session);
+    const auth = { api: { getSession } } as unknown as Auth;
+    const db = createDb(postgres('postgres://localhost/unused'));
+    const receipts = testReceipts().store;
+    return { getSession, app: createApp(auth, db, async () => {}, { stage: 'test' }, receipts) };
+  };
+
+  // One route of each router, in the order app.ts mounts them.
+  const routes = [
+    ['GET', '/trips/x'],
+    ['GET', '/trips/x/categories'],
+    ['DELETE', '/trips/x/items/x'],
+    ['POST', '/trips/x/items/bulk'],
+    ['DELETE', '/trips/x/payments/x'],
+    ['GET', '/trips/x/expenses/x/receipt'],
+    ['POST', '/trips/x/runs/x/cancel'],
+  ] as const;
+
+  it('looks up the session once, even for a route of the last router', async () => {
+    const { app, getSession } = appWith({ user: { id: 'user' }, session: {} });
+    const res = await app.request('/trips/x/runs/x/cancel', { method: 'POST' });
+    expect(res.status).toBe(400);
+    expect(getSession).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects requests without a session in every router', async () => {
+    const { app } = appWith(null);
+    for (const [method, path] of routes) {
+      expect((await app.request(path, { method })).status, `${method} ${path}`).toBe(401);
+    }
   });
 });
 

@@ -106,6 +106,7 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
         const {
           shares: shareIds,
           paidBy = c.var.user.id,
+          itemId,
           parts: partsIn = [],
           weights: weightsIn = {},
           ...input
@@ -122,17 +123,17 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           if (![...shares, ...parts.flatMap((p) => p.shares)].every((id) => active.has(id))) {
             throw fail(400, 'Every share must be an active member');
           }
-          if (input.itemId) {
+          if (itemId) {
             // Locked, so two purchases of one item can't both go through.
-            const item = await findItem(tx, tripId, input.itemId, { lock: true });
+            const item = await findItem(tx, tripId, itemId, { lock: true });
             if (item?.list !== 'buy') throw fail(400, 'itemId is not on the buy list');
-            if (await findPurchase(tx, input.itemId)) throw fail(409, 'Already bought');
+            if (await findPurchase(tx, itemId)) throw fail(409, 'Already bought');
           }
           const created = await insertExpense(
             tx,
             { ...input, tripId, paidBy, createdBy: me },
             shares,
-            input.itemId ? [input.itemId] : [],
+            itemId ? [itemId] : [],
             parts,
             weightsIn,
           );
@@ -143,14 +144,7 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           return created;
         });
         return c.json(
-          toExpense(
-            expense,
-            shares,
-            input.itemId ? [input.itemId] : [],
-            undefined,
-            parts,
-            weightsIn,
-          ),
+          toExpense(expense, shares, itemId ? [itemId] : [], undefined, parts, weightsIn),
           201,
         );
       },
@@ -285,6 +279,17 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
         return c.json(toPayment(payment), 201);
       },
     )
+
+    // Payments no longer wait for the receiver, but Android builds from before still offer
+    // "קיבלתי את הכסף" on payments made back then. Answer as if confirmed, so the tap works.
+    .post('/:tripId/payments/:paymentId/confirm', validate('param', paymentParam), async (c) => {
+      const { tripId, paymentId } = c.req.valid('param');
+      await transact(db, async (tx) => {
+        await requireMember(tx, tripId, c.var.user.id);
+        await lockPayment(tx, tripId, paymentId);
+      });
+      return c.json({ id: paymentId, status: 'confirmed' as const });
+    })
 
     // A payment recorded by mistake: by whoever recorded it, either side of it, or an organizer.
     .delete('/:tripId/payments/:paymentId', validate('param', paymentParam), async (c) => {

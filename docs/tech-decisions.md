@@ -12,13 +12,13 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 
 ## Resolved conflicts with SPEC (2026-10-24)
 
-| Topic      | SPEC.md said                                                | Decision                                                                                                                                                                                                                                                             |
-| ---------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Backend    | Supabase (RLS, triggers, pg_cron, Realtime, Edge Functions) | **Hono on Lambda + Aurora DSQL + SST.** RLS and `SECURITY DEFINER` RPCs become authorization checks and transactional handlers in the API. Activity rows are written in the same transaction as the change. Scheduled jobs (day-before reminder) run on EventBridge. |
-| Cost split | Equal among each expense's participants, with exclusions    | **Same as SPEC.** The earlier "organizer picks equal or by shares" idea is dropped.                                                                                                                                                                                  |
-| Sign-in    | Anonymous join by link + Google + Apple                     | **Anonymous + Google now; Apple added when iOS ships** (App Store rules require it then).                                                                                                                                                                            |
-| Realtime   | Realtime sync on the trip screen                            | **Same as SPEC: realtime in v1.** Transport: AppSync Events, see below.                                                                                                                                                                                              |
-| Platforms  | iOS, Android and web from Phase 0                           | **Android + web first, iOS later.** iPhone users use the web version until then.                                                                                                                                                                                     |
+| Topic      | SPEC.md said                                                | Decision                                                                                                                                                                                                                                                                                                                                                 |
+| ---------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Backend    | Supabase (RLS, triggers, pg_cron, Realtime, Edge Functions) | **Hono on Lambda + Aurora DSQL + SST.** RLS and `SECURITY DEFINER` RPCs become authorization checks and transactional handlers in the API. Activity rows are written in the same transaction as the change. Scheduled jobs (day-before reminder) will run on EventBridge Scheduler; none are built yet ([notifications](specs/notifications/README.md)). |
+| Cost split | Equal among each expense's participants, with exclusions    | **Same as SPEC.** The earlier "organizer picks equal or by shares" idea is dropped.                                                                                                                                                                                                                                                                      |
+| Sign-in    | Anonymous join by link + Google + Apple                     | **Anonymous + Google now; Apple added when iOS ships** (App Store rules require it then).                                                                                                                                                                                                                                                                |
+| Realtime   | Realtime sync on the trip screen                            | **Same as SPEC: realtime in v1.** Transport: AppSync Events, see below.                                                                                                                                                                                                                                                                                  |
+| Platforms  | iOS, Android and web from Phase 0                           | **Android + web first, iOS later.** iPhone users use the web version until then.                                                                                                                                                                                                                                                                         |
 
 ## Language
 
@@ -56,7 +56,8 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 ## Database
 
 - Aurora DSQL: Postgres-compatible, billed per request, $0 when idle. Free tier is 100K DPUs + 1 GB per month, permanently.
-- ORM: Drizzle, using the DSQL adapter (IAM auth, connection pooling, optional retries on write conflicts).
+- ORM: Drizzle over `postgres` (postgres.js), through `drizzle-orm/postgres-js` ([client.ts](../apps/api/src/db/client.ts)). On DSQL the password is a short-lived IAM auth token from `@aws-sdk/dsql-signer`; with `DATABASE_URL` set it is plain Postgres.
+- Write conflicts are retried by our own code: `transact` runs a handler's transaction and `withRetry` runs it again with backoff on a conflict, a few times at most ([tx.ts](../apps/api/src/db/tx.ts)).
 - Lambda runs outside a VPC, so no NAT gateway is needed.
 - Constraints:
   - DSQL rejects conflicting concurrent writes, so writes need retries.
@@ -71,10 +72,9 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 
 ## Observability
 
-- One platform only, with a free tier that has no time limit.
-- Leaning New Relic: 100 GB/month, mobile + browser + Lambda + logs + unlimited ping monitors, about 8 days retention.
-- Alternative: Sentry (better Expo crash debugging, 30-day retention, tighter free limits).
-- Check that New Relic's React Native agent works with Expo SDK 58 before committing.
+- **Sentry**: errors and traces from the app (web and Android) and the API, on the free plan. Built in #101 (2026-10-26), full tracing in #160. Chosen for its Expo crash debugging (source maps for Hermes, no EAS needed). New Relic was the alternative; its React Native agent on Expo SDK 58 was never verified.
+- CloudWatch alarms cover the AWS side. Both reach one Telegram chat ([deploy.md](deploy.md#monitoring)).
+- Code: [apps/api/src/sentry.ts](../apps/api/src/sentry.ts), [apps/mobile/src/lib/sentry.ts](../apps/mobile/src/lib/sentry.ts) and `sentry.web.ts`.
 
 ## Cost targets
 
@@ -94,7 +94,6 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 
 ## Open decisions
 
-- **Observability platform:** New Relic vs Sentry.
 - **License:** which source-available license.
 - **App name and domain**, and when to add iOS.
 - Plus the open questions in [SPEC §12](SPEC.md#12-open-questions).

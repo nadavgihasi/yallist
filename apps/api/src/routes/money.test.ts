@@ -157,6 +157,24 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
     expect(home.trips[0]!.doneCount).toBe(1);
   });
 
+  it('records a single-item purchase in expense_items, not expenses.item_id', async () => {
+    const { a, tripId, items } = await trip();
+    const buy = items.find((i) => i.list === 'buy')!;
+
+    const res = await addExpense(a, tripId, { amountAgorot: 100, shares: [a.id], itemId: buy.id });
+    const expense = await res.json();
+    expect(expense).toMatchObject({ itemIds: [buy.id] });
+    expect(await sql`select item_id from expenses where id = ${expense.id}`).toEqual([
+      { item_id: null },
+    ]);
+    expect(await sql`select item_id from expense_items where expense_id = ${expense.id}`).toEqual([
+      { item_id: buy.id },
+    ]);
+    // Bought, as everyone loading the trip sees it.
+    const seen = await detail(a, tripId);
+    expect(seen.expenses.find((e) => e.id === expense.id)?.itemIds).toEqual([buy.id]);
+  });
+
   it('deletes an expense for whoever added or paid it, or an organizer', async () => {
     const { a, b, c, tripId } = await trip();
     const expense = await (
@@ -469,6 +487,20 @@ describe.skipIf(!DATABASE_URL)('expenses and payments', () => {
     const third = await (await record(b, tripId, c.id, a.id, 300)).json();
     expect(third).toMatchObject({ fromUser: c.id, toUser: a.id, createdBy: b.id });
     expect((await detail(a, tripId)).transfers).toEqual([]);
+  });
+
+  it('still answers older apps that confirm a payment', async () => {
+    const { a, b, tripId } = await trip();
+    await addExpense(a, tripId, { amountAgorot: 900, shares: [a.id, b.id] });
+    const payment = await (await pay(b, tripId, a.id, 300)).json();
+    const confirm = client.trips[':tripId'].payments[':paymentId'].confirm.$post;
+    const res = await confirm({ param: { tripId, paymentId: payment.id } }, as(a));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ id: payment.id, status: 'confirmed' });
+    const stranger = await signInAsGuest(app, 'stranger');
+    expect((await confirm({ param: { tripId, paymentId: payment.id } }, as(stranger))).status).toBe(
+      404,
+    );
   });
 
   it('deletes a payment for whoever recorded it, its payer or receiver, or an organizer', async () => {
