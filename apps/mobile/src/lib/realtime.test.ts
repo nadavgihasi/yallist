@@ -81,7 +81,7 @@ describe('subscribe', () => {
     expect(onSubscribed).toHaveBeenCalledOnce();
   });
 
-  it('catches up once, 4 s after subscribing, while connected', () => {
+  it('catches up 4 and 10 s after subscribing, while connected', () => {
     const { onSubscribed } = start();
     latest().accept();
     expect(onSubscribed).toHaveBeenCalledTimes(1);
@@ -89,11 +89,13 @@ describe('subscribe', () => {
     expect(onSubscribed).toHaveBeenCalledTimes(1);
     vi.advanceTimersByTime(1);
     expect(onSubscribed).toHaveBeenCalledTimes(2);
+    vi.advanceTimersByTime(6000);
+    expect(onSubscribed).toHaveBeenCalledTimes(3);
     vi.advanceTimersByTime(60_000);
-    expect(onSubscribed).toHaveBeenCalledTimes(2);
+    expect(onSubscribed).toHaveBeenCalledTimes(3);
   });
 
-  it('catches up again after a reconnect', () => {
+  it("catches up again after a reconnect, without the lost connection's", () => {
     const { onSubscribed } = start();
     latest().accept();
     vi.advanceTimersByTime(4000);
@@ -103,6 +105,10 @@ describe('subscribe', () => {
     expect(onSubscribed).toHaveBeenCalledTimes(3);
     vi.advanceTimersByTime(4000);
     expect(onSubscribed).toHaveBeenCalledTimes(4);
+    vi.advanceTimersByTime(6000);
+    expect(onSubscribed).toHaveBeenCalledTimes(5);
+    vi.advanceTimersByTime(60_000);
+    expect(onSubscribed).toHaveBeenCalledTimes(5);
   });
 
   it('drops the catch-ups of a lost connection', () => {

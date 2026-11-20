@@ -31,7 +31,8 @@ const bagParam = z.object({ id: z.uuid() });
 export const bagRoutes = (auth: Auth, db: Db, notify: (tripId: string) => Promise<unknown>) => {
   const refreshTrips = async (userId: string) => {
     const tripIds = await activeTripIds(db, userId);
-    await Promise.all(tripIds.map(notify));
+    // Explicit: `map` would pass the index as a second argument.
+    await Promise.all(tripIds.map((tripId) => notify(tripId)));
   };
   const bagOf = async (userId: string) => ({ items: (await listBag(db, userId)).map(toBagItem) });
 
