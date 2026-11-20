@@ -74,7 +74,6 @@ describe.skipIf(!DATABASE_URL)('loadTrips', () => {
       db,
       {
         tripId,
-        itemId: item.id,
         description: 'קרח',
         amountAgorot: 1000,
         paidBy: me,

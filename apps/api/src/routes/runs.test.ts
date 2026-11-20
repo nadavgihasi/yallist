@@ -194,7 +194,15 @@ describe.skipIf(!DATABASE_URL)('shopping runs', () => {
 
     const res = await finish(a, tripId, run!.id, { amountAgorot: 500, shares });
     expect(res.status).toBe(201);
-    expect(await res.json()).toMatchObject({ itemIds: [x], description: 'קניות · פריט אחד' });
+    const expense = await res.json();
+    expect(expense).toMatchObject({ itemIds: [x], description: 'קניות · פריט אחד' });
+    // A one-item run is linked through expense_items only, not expenses.item_id.
+    expect(await sql`select item_id from expenses where id = ${expense.id}`).toEqual([
+      { item_id: null },
+    ]);
+    expect(await sql`select item_id from expense_items where expense_id = ${expense.id}`).toEqual([
+      { item_id: x },
+    ]);
   });
 
   it('validates the amount and the shares', async () => {
