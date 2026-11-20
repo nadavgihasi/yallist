@@ -59,6 +59,7 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   );
   const [shares, setShares] = useShares(view, expense?.shares ?? last);
   const [day, setDay] = useState(() => (expense ? spentDay(expense) : today()));
+  const [otherDay, setOtherDay] = useState(() => day !== today() && day !== addDays(today(), -1));
   const [parts, setParts] = useState<PartDraft[]>(() => expense?.parts?.map(toDraft) ?? []);
   const [weights, setWeights] = useState<Record<string, number>>(expense?.weights ?? {});
   const [mode, setMode] = useState<SplitMode>(
@@ -225,12 +226,21 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
             <FilterChip
               key={d}
               label={i === 0 ? he.addExpense.today : he.addExpense.yesterday}
-              selected={day === d}
-              onPress={() => setDay(d)}
+              selected={!otherDay && day === d}
+              onPress={() => {
+                setOtherDay(false);
+                setDay(d);
+              }}
             />
           ))}
+          <FilterChip
+            label={he.addExpense.otherDay}
+            selected={otherDay}
+            onPress={() => setOtherDay(true)}
+          />
         </View>
-        <DateField label={he.addExpense.date} value={day} onChange={setDay} />
+        {/* The calendar only for another day: today and yesterday are one tap each. */}
+        {otherDay && <DateField label={he.addExpense.date} value={day} onChange={setDay} />}
       </View>
 
       <View style={styles.field}>

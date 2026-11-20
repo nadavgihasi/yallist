@@ -124,16 +124,21 @@ export function suggestTransfers(balance: ReadonlyMap<string, number>): Transfer
 }
 
 /**
- * `₪90.00`, `₪12.35`, `₪412.90`: sign before the number, always two decimals. The one money
- * format in the app; a fraction of an agora rounds to the nearest agora.
+ * `₪90`, `₪12.35`, `₪2,040`, `₪41,152.26`: the sign first, thousands grouped with a comma, and
+ * agorot only when there are any. The one money format in the app; a fraction of an agora rounds
+ * to the nearest agora.
  */
 export function formatShekel(agorot: number): string {
-  return `₪${(Math.round(agorot) / 100).toFixed(2)}`;
+  const rounded = Math.round(agorot);
+  const abs = Math.abs(rounded);
+  const shekels = String(Math.floor(abs / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  const cents = abs % 100;
+  return `${rounded < 0 ? '-' : ''}₪${shekels}${cents ? `.${String(cents).padStart(2, '0')}` : ''}`;
 }
 
-/** An amount as an input's text, `412.90`: what `formatShekel` shows, without the sign. */
+/** An amount as an input's text, `412.90`: no sign, no grouping, always two decimals. */
 export function shekelInput(agorot: number): string {
-  return formatShekel(agorot).slice(1);
+  return (Math.round(agorot) / 100).toFixed(2);
 }
 
 /** Parse user input like "450" or "12.5" into agorot; undefined if not a positive amount. */

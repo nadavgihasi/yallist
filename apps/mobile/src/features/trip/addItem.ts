@@ -27,7 +27,7 @@ type Act = (action: Action, answer: Answer) => void;
  */
 export const saved = (act: Act, action: Action, online: boolean): Promise<void> =>
   new Promise((resolve, reject) => {
-    act(action, { onSaved: resolve, onError: reject });
+    act(action, { onSaved: () => resolve(), onError: reject });
     if (!online) resolve();
   });
 

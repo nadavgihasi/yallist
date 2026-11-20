@@ -1,7 +1,7 @@
 import { useIsMutating } from '@tanstack/react-query';
 import { formatShekel, owedShares } from '@yallist/domain';
 import { router } from 'expo-router';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar } from '@/components/Avatar';
@@ -16,9 +16,10 @@ import { he, joinNames } from '@/i18n/he';
 import { formatMoment, today } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useReceiptUpload } from '@/state/receipts';
-import { tripKey, useTripAction } from '@/state/trips';
+import type { Action } from '@/state/reducer';
+import { awaitAnswer, tripKey, useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
-import { colors, space, type } from '@/theme';
+import { colors, radius, space, type } from '@/theme';
 
 import { balanceState, BalanceList } from './BalanceList';
 import type { TripView } from './derive';
@@ -59,30 +60,57 @@ export function MoneyTab({
   const sum = (xs: { amountAgorot: number }[]) => xs.reduce((n, x) => n + x.amountAgorot, 0);
   const names = (ids: string[]) => joinNames([...new Set(ids)].map(view.displayNameOf));
 
-  // The greedy matcher can split my debt across several people, so show all of it.
+  // The greedy matcher can split my debt across several people, so show all of it. My own
+  // transfers live in the card at the top; the list below has only everyone else's.
   const myOpen = view.transfers.filter((t) => t.from === me);
   const toMe = view.transfers.filter((t) => t.to === me);
-  const myPaid = data.payments.filter((p) => p.fromUser === me);
+  const others = view.transfers.filter((t) => t.from !== me && t.to !== me);
+  const title =
+    myOpen.length > 0 ? he.money.payTo(names(myOpen.map((t) => t.to))) : he.balances.getsMine;
+  const amount = sum(myOpen.length > 0 ? myOpen : toMe);
 
-  let title: string = he.money.nothingToPay;
-  let amount = 0;
-  if (myOpen.length > 0) {
-    title = he.money.payTo(names(myOpen.map((t) => t.to)));
-    amount = sum(myOpen);
-  } else if (toMe.length > 0) {
-    title = he.money.getFrom(names(toMe.map((t) => t.from)));
-    amount = sum(toMe);
-  } else if (myPaid.length > 0) {
-    title = he.money.paidTo(names(myPaid.map((p) => p.toUser)));
-    amount = sum(myPaid);
-  }
+  // Recorded payments fold into one line; one just recorded opens it and stands out a moment.
+  const [showPayments, setShowPayments] = useState(false);
+  const [fresh, setFresh] = useState<string>();
+  useEffect(() => {
+    if (!fresh) return;
+    const timer = setTimeout(() => setFresh(undefined), 4000);
+    return () => clearTimeout(timer);
+  }, [fresh]);
 
-  // Anyone records any payment, and it counts at once: nobody confirms it.
-  const record = (fromUser: string, toUser: string, amountAgorot: number, toast: string) => {
+  // Anyone records any payment, and it counts at once: nobody confirms it. Once the API has it,
+  // the toast names it and offers to take it back.
+  const record = (fromUser: string, toUser: string, amountAgorot: number) => {
     if (recording.current) return;
     recording.current = true;
-    act({ type: 'recordPayment', fromUser, toUser, amountAgorot });
-    showToast(toast, 'success');
+    const action: Action = { type: 'recordPayment', fromUser, toUser, amountAgorot };
+    awaitAnswer(action, {
+      onSaved: (payment) => {
+        const id = (payment as { id?: string } | undefined)?.id;
+        if (id) {
+          setFresh(id);
+          setShowPayments(true);
+        }
+        const text = he.money.recordedPair(
+          view.nameOf(fromUser),
+          view.nameOf(toUser),
+          formatShekel(amountAgorot),
+        );
+        const undo = id
+          ? {
+              label: he.money.undo,
+              onPress: () => {
+                act({ type: 'deletePayment', paymentId: id });
+                showToast(he.money.undone);
+              },
+            }
+          : undefined;
+        showToast(text, 'success', undo);
+      },
+      // useTripAction says it failed.
+      onError: () => undefined,
+    });
+    act(action);
   };
   // Square: nothing open either way (what I paid is already in the transfers).
   const square = myOpen.length === 0 && toMe.length === 0;
@@ -146,11 +174,6 @@ export function MoneyTab({
               </Text>
             </>
           )}
-          {view.myShare > 0 && (
-            <Text style={styles.heroText}>
-              {he.money.share(formatShekel(view.myShare), formatShekel(view.totalSpent))}
-            </Text>
-          )}
           {myOpen.length > 0 ? (
             <View style={styles.payRows}>
               <Text style={styles.heroText}>{he.settle.payIn}</Text>
@@ -161,36 +184,34 @@ export function MoneyTab({
                   transfer={t}
                   tripName={data.trip.name}
                   saving={saving}
-                  onMark={(amountAgorot) =>
-                    record(me, t.to, amountAgorot, he.money.markedToast(formatShekel(amountAgorot)))
-                  }
+                  onMark={(amountAgorot) => record(me, t.to, amountAgorot)}
                 />
               ))}
             </View>
           ) : (
             toMe.length > 0 && (
-              <View style={styles.payRows}>
-                {toMe.map((t) => (
-                  <PillButton
-                    key={t.from}
-                    label={he.money.receivedFrom(
-                      formatShekel(t.amountAgorot),
-                      view.displayNameOf(t.from),
-                    )}
-                    size="lg"
-                    wide
-                    icon={<Icon name="check" size={20} color={colors.onPrimary} />}
-                    disabled={saving}
-                    onPress={() =>
-                      record(
-                        t.from,
-                        me,
-                        t.amountAgorot,
-                        he.money.receivedToast(formatShekel(t.amountAgorot)),
-                      )
-                    }
-                    {...testId(`received-${t.from}`)}
-                  />
+              <View style={styles.owedRows}>
+                {toMe.map((t, i) => (
+                  <View key={t.from} style={[styles.owedRow, i > 0 && styles.rowRule]}>
+                    <Avatar person={view.avatarOf(t.from)} size={36} ring={false} />
+                    <Text style={styles.owedName} numberOfLines={1}>
+                      {he.balances.paymentFrom(view.displayNameOf(t.from))}
+                    </Text>
+                    <Text style={styles.amount}>{formatShekel(t.amountAgorot)}</Text>
+                    <PillButton
+                      label={he.money.received}
+                      accessibilityLabel={he.money.receivedFrom(
+                        formatShekel(t.amountAgorot),
+                        view.displayNameOf(t.from),
+                      )}
+                      variant="soft"
+                      size="sm"
+                      icon={<Icon name="check" size={16} color={colors.primaryStrong} />}
+                      disabled={saving}
+                      onPress={() => record(t.from, me, t.amountAgorot)}
+                      {...testId(`received-${t.from}`)}
+                    />
+                  </View>
                 ))}
               </View>
             )
@@ -206,19 +227,22 @@ export function MoneyTab({
         />
       )}
 
-      {/* What's open and what was paid, in one place: open first, then recorded payments. */}
+      {/* Everyone else's open transfers, then the payments recorded so far, folded. */}
       {data.expenses.length + data.payments.length > 0 && (
         <ListGroup title={he.money.settling}>
-          {view.transfers.length === 0 && (
-            <Text style={styles.expenseWho}>{he.money.noneOpen}</Text>
+          {others.length === 0 && (
+            <Text style={styles.expenseWho}>
+              {view.transfers.length === 0 ? he.money.noneOpen : he.money.othersSquare}
+            </Text>
           )}
-          {view.transfers.map((t) => (
+          {others.length > 0 && view.transfers.length > others.length && (
+            <Text style={styles.subhead}>{he.money.betweenOthers}</Text>
+          )}
+          {others.map((t) => (
             <View key={`${t.from}-${t.to}`} style={styles.transfer} {...testId('transfer')}>
               <FromTo view={view} from={t.from} to={t.to} />
               <View style={styles.transferEnd}>
-                <Text style={[styles.amount, t.from === me && { color: colors.brandStrong }]}>
-                  {formatShekel(t.amountAgorot)}
-                </Text>
+                <Text style={styles.amount}>{formatShekel(t.amountAgorot)}</Text>
                 <PillButton
                   label={he.money.transferPaid}
                   accessibilityLabel={he.money.transferPaidLabel(
@@ -229,14 +253,7 @@ export function MoneyTab({
                   variant="soft"
                   size="sm"
                   disabled={saving}
-                  onPress={() =>
-                    record(
-                      t.from,
-                      t.to,
-                      t.amountAgorot,
-                      he.money.recordedToast(formatShekel(t.amountAgorot)),
-                    )
-                  }
+                  onPress={() => record(t.from, t.to, t.amountAgorot)}
                   {...testId('transfer-paid')}
                 />
               </View>
@@ -246,44 +263,64 @@ export function MoneyTab({
           {data.payments.length > 0 && (
             <>
               <View style={styles.divider} />
-              <Text style={styles.subhead}>{he.money.payments}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showPayments }}
+                onPress={() => setShowPayments(!showPayments)}
+                style={({ pressed }) => [styles.toggle, pressed && { opacity: 0.75 }]}
+                {...testId('payments-toggle')}
+              >
+                <Text style={styles.toggleText}>
+                  {he.money.paymentsCount(data.payments.length)}
+                </Text>
+                <View style={{ transform: [{ rotate: showPayments ? '90deg' : '-90deg' }] }}>
+                  <Icon name="chevronEnd" size={18} color={colors.inkMuted} />
+                </View>
+              </Pressable>
             </>
           )}
-          {[...data.payments].reverse().map((p) => (
-            <Pressable
-              key={p.id}
-              accessibilityRole="button"
-              accessibilityLabel={he.money.openPayment(
-                view.displayNameOf(p.fromUser),
-                view.displayNameOf(p.toUser),
-                formatShekel(p.amountAgorot),
-              )}
-              onPress={() =>
-                router.push({
-                  pathname: '/trips/[tripId]/payments/[paymentId]',
-                  params: { tripId: data.trip.id, paymentId: p.id },
-                })
-              }
-              style={({ pressed }) => [styles.payment, pressed && { opacity: 0.75 }]}
-              {...testId('payment-row')}
-            >
-              <View style={styles.transfer}>
-                <FromTo view={view} from={p.fromUser} to={p.toUser} />
-                <Text style={[styles.amount, styles.paid]}>{formatShekel(p.amountAgorot)}</Text>
-              </View>
-              <View style={styles.recorded}>
-                <Icon name="check" size={16} color={colors.brand} />
-                <Text style={styles.expenseWho}>
-                  {p.createdBy === me
-                    ? he.money.recordedByMe(formatMoment(p.createdAt))
-                    : he.money.recordedBy(
-                        view.displayNameOf(p.createdBy),
-                        formatMoment(p.createdAt),
-                      )}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
+          {showPayments &&
+            [...data.payments].reverse().map((p) => (
+              <Pressable
+                key={p.id}
+                accessibilityRole="button"
+                accessibilityLabel={he.money.openPayment(
+                  view.displayNameOf(p.fromUser),
+                  view.displayNameOf(p.toUser),
+                  formatShekel(p.amountAgorot),
+                )}
+                onPress={() =>
+                  router.push({
+                    pathname: '/trips/[tripId]/payments/[paymentId]',
+                    params: { tripId: data.trip.id, paymentId: p.id },
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.payment,
+                  p.id === fresh && styles.fresh,
+                  pressed && { opacity: 0.75 },
+                ]}
+                {...testId('payment-row')}
+              >
+                <View style={styles.transfer}>
+                  <FromTo view={view} from={p.fromUser} to={p.toUser} />
+                  <Text style={[styles.amount, p.id !== fresh && styles.paid]}>
+                    {formatShekel(p.amountAgorot)}
+                  </Text>
+                </View>
+                <View style={styles.recorded}>
+                  <Icon name="check" size={16} color={colors.brand} />
+                  <Text style={styles.expenseWho}>
+                    {p.createdBy === me
+                      ? he.money.recordedByMe(formatMoment(p.createdAt))
+                      : he.money.recordedBy(
+                          view.displayNameOf(p.createdBy),
+                          formatMoment(p.createdAt),
+                        )}
+                  </Text>
+                </View>
+              </Pressable>
+            ))}
 
           {/* Alone on the trip there's nobody to pay or be paid. */}
           {(view.activeIds.length > 1 || view.transfers.length > 0) && (
@@ -539,6 +576,24 @@ const styles = StyleSheet.create({
   heroText: { ...type.caption, color: colors.inkMuted },
   payRows: { gap: space[3], marginTop: space[3] },
   payment: { gap: space[1] },
+  fresh: {
+    backgroundColor: colors.primaryTint,
+    borderRadius: radius.input,
+    marginHorizontal: -space[2],
+    paddingHorizontal: space[2],
+    paddingVertical: space[1],
+  },
+  toggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: space.touch,
+  },
+  toggleText: { ...type.itemTitle, color: colors.ink },
+  owedRows: { marginTop: space[3] },
+  owedRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], minHeight: 56 },
+  rowRule: { borderTopWidth: 1, borderTopColor: colors.hairline },
+  owedName: { ...type.itemTitle, color: colors.ink, flex: 1 },
   paid: { color: colors.inkMuted },
   divider: { height: 1, backgroundColor: colors.hairline, marginVertical: space[1] },
   subhead: { ...type.label, color: colors.inkMuted },

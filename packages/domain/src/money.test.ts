@@ -314,18 +314,23 @@ describe('suggestTransfers', () => {
 });
 
 describe('formatShekel / parseShekel', () => {
-  it('formats with two decimals, always', () => {
-    expect(formatShekel(9000)).toBe('₪90.00');
+  it('groups thousands, and shows agorot only when there are any', () => {
+    expect(formatShekel(9000)).toBe('₪90');
     expect(formatShekel(1235)).toBe('₪12.35');
     expect(formatShekel(41290)).toBe('₪412.90');
     expect(formatShekel(7980)).toBe('₪79.80');
     expect(formatShekel(5)).toBe('₪0.05');
-    expect(formatShekel(0)).toBe('₪0.00');
+    expect(formatShekel(0)).toBe('₪0');
+    expect(formatShekel(204000)).toBe('₪2,040');
+    expect(formatShekel(4115226)).toBe('₪41,152.26');
+    expect(formatShekel(123456789)).toBe('₪1,234,567.89');
+    expect(formatShekel(-1050)).toBe('-₪10.50');
   });
 
   it('rounds a fraction of an agora to the nearest agora', () => {
     expect(formatShekel(13763.33)).toBe('₪137.63');
     expect(formatShekel(13763.5)).toBe('₪137.64');
+    expect(formatShekel(9999.6)).toBe('₪100');
   });
 
   it('fills an amount input with two decimals, which parses back', () => {

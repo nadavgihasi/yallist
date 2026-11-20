@@ -63,11 +63,19 @@ export default function BalanceDetail() {
       </View>
 
       <View style={styles.sum}>
-        <SumLine label={he.balances.paid} amount={parts.paidTotal} />
+        <SumLine label={mine ? he.balances.paidMine : he.balances.paid} amount={parts.paidTotal} />
         <SumLine label={he.balances.share} amount={-parts.owedTotal} />
-        {parts.sentTotal > 0 && <SumLine label={he.balances.sent} amount={parts.sentTotal} />}
+        {parts.sentTotal > 0 && (
+          <SumLine
+            label={mine ? he.balances.sentMine : he.balances.sent}
+            amount={parts.sentTotal}
+          />
+        )}
         {parts.receivedTotal > 0 && (
-          <SumLine label={he.balances.received} amount={-parts.receivedTotal} />
+          <SumLine
+            label={mine ? he.balances.receivedMine : he.balances.received}
+            amount={-parts.receivedTotal}
+          />
         )}
         <View style={styles.rule} />
         <View style={styles.sumLine}>
@@ -79,7 +87,7 @@ export default function BalanceDetail() {
       </View>
 
       {parts.paid.length > 0 && (
-        <Section title={he.balances.paidList} total={parts.paidTotal}>
+        <Section title={mine ? he.balances.paidListMine : he.balances.paidList}>
           {parts.paid.map(({ expense, amountAgorot }) => (
             <Line
               key={expense.id}
@@ -93,7 +101,7 @@ export default function BalanceDetail() {
       )}
 
       {parts.owed.length > 0 && (
-        <Section title={he.balances.shareList} total={parts.owedTotal}>
+        <Section title={he.balances.shareList}>
           {parts.owed.map(({ expense, amountAgorot }) => (
             <Line
               key={expense.id}

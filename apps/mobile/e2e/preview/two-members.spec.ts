@@ -206,19 +206,27 @@ test('anyone records a payment, it counts at once, and the payer can delete it',
   await dana.locator('#expense-save').click();
   await expect(dana.getByText('Gas')).toBeVisible();
   await dana.locator('#money-part-settle').click();
-  await expect(dana.locator('#transfer')).toHaveCount(1);
+  // Mine: in the card at the top, not in the list of everyone else's.
+  const received = dana.locator('[id^="received-"]');
+  await expect(received).toHaveCount(1);
+  await expect(dana.locator('#transfer')).toHaveCount(0);
 
-  // Dana, the receiver, records it: nobody confirms it, and nothing is left to settle.
-  await dana.locator('#transfer-paid').click();
+  // Dana, the receiver, records it: nobody confirms it, and nothing is left to settle. The toast
+  // offers to take it back.
+  await received.click();
+  await expect(dana.getByText('ביטול', { exact: true })).toBeVisible();
   await expect(dana.getByText('אין העברות פתוחות')).toBeVisible();
   await expect(dana.locator('#payment-row')).toContainText('נרשם על ידך');
 
   // Noa sees it as recorded by Dana, and as the payer may delete it.
   await noa.goto(dana.url());
-  await expect(noa.locator('#payment-row')).toContainText('נרשם ע״י Dana', { timeout: 15_000 });
+  await expect(noa.locator('#payments-toggle')).toBeVisible({ timeout: 15_000 });
+  await noa.locator('#payments-toggle').click();
+  await expect(noa.locator('#payment-row')).toContainText('נרשם ע״י Dana');
   await noa.locator('#payment-row').click();
   await noa.locator('#payment-delete').click();
   await noa.locator('#payment-delete-confirm').click();
   await expect(noa.locator('#payment-row')).toHaveCount(0);
-  await expect(noa.locator('#transfer')).toHaveCount(1);
+  // She owes Dana again: her pay row is back in the top card.
+  await expect(noa.getByText('להעביר לDana')).toBeVisible();
 });

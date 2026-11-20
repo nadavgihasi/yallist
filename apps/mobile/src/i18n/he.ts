@@ -197,9 +197,10 @@ export const he = {
       bring: 'הוספת פריט להבאה',
       buy: 'הוספת פריט לקנייה',
       money: 'הוספת הוצאה',
+      payment: 'רישום תשלום',
     },
     /** Visible floating-button labels; `fab` stays the accessible name. */
-    fabShort: { bring: 'פריט חדש', buy: 'פריט חדש', money: 'הוצאה חדשה' },
+    fabShort: { bring: 'פריט חדש', buy: 'פריט חדש', money: 'הוצאה חדשה', payment: 'רישום תשלום' },
     invite: 'הזמנת חברים',
     tabCount: (label: string, n: number) => `${label} · ${n}`,
   },
@@ -285,19 +286,23 @@ export const he = {
     /** The money tab's two views: the expenses, then who pays whom. */
     parts: { expenses: 'הוצאות', settle: 'התחשבנות' },
     payTo: (names: string) => `להעביר ל${names}`,
-    paidTo: (names: string) => `שולם ל${names}`,
-    nothingToPay: 'אין לך מה להעביר',
-    getFrom: (names: string) => `מגיע לך מ${names}`,
     share: (mine: string, total: string) => `החלק שלך ${mine} מתוך ${total}`,
-    markedToast: (amount: string) => `נרשם ששילמת ${amount}`,
     /** The hero's one step when I'm owed: the money arrived, so record it. */
     receivedFrom: (amount: string, name: string) => `קיבלתי ${amount} מ${name}`,
-    receivedToast: (amount: string) => `נרשם שקיבלת ${amount}`,
     /** A transfer row's button: anyone records it, for its whole amount. */
     transferPaid: 'שולם',
+    /** In the top card, beside each person who owes me. */
+    received: 'קיבלתי',
+    betweenOthers: 'בין האחרים',
+    othersSquare: 'אין העברות פתוחות בין האחרים',
+    paymentsCount: (n: number) => `תשלומים שנרשמו · ${n}`,
     transferPaidLabel: (from: string, to: string, amount: string) =>
       `רישום תשלום של ${amount} מ${from} ל${to}`,
     recordedToast: (amount: string) => `נרשם תשלום של ${amount}`,
+    /** After recording one: the toast names it, with a way to take it back. */
+    recordedPair: (from: string, to: string, amount: string) => `נרשם: ${from} ← ${to} ${amount}`,
+    undo: 'ביטול',
+    undone: 'התשלום בוטל',
     recordOther: 'רישום תשלום אחר',
     recordHint: 'כל אחד בטיול יכול לרשום תשלום, והוא נכנס מיד.',
     payments: 'תשלומים שנרשמו',
@@ -466,6 +471,7 @@ export const he = {
     savedMine: (mine: string) => `נשמר · החלק שלך ${mine}`,
     when: 'מתי?',
     date: 'תאריך',
+    otherDay: 'תאריך אחר',
     today: 'היום',
     yesterday: 'אתמול',
     /** The split picker starts from the last expense I added. */
@@ -481,7 +487,8 @@ export const he = {
     weightLess: (name: string) => `פחות משקל ל${name}`,
     weightMore: (name: string) => `יותר משקל ל${name}`,
     /** `5 חלקים · ₪60 לחלק` */
-    weightsTotal: (n: number, per: string) => `${n} חלקים · ${per} לחלק`,
+    // Not "חלקים": that's the name of another way to split.
+    weightsTotal: (n: number, per: string) => `סה״כ משקל ${n} · ${per} ליחידה`,
   },
   /** An expense's own screen: what it was, what each person's part is. */
   expense: {
@@ -510,12 +517,13 @@ export const he = {
   balances: {
     title: 'היתרה של כל אחד',
     hint: 'כולל התשלומים שנרשמו. לוחצים על מישהו כדי לראות ממה זה מורכב.',
-    gets: 'מקבל/ת',
-    owes: 'חייב/ת',
-    settled: 'מסודר/ת',
-    /** Under a name: `שילם/ה ₪1,200 · חלק ₪630`. */
+    /** Above the amount, without gendered forms: what's left to do with it. */
+    gets: 'לקבל',
+    owes: 'להעביר',
+    settled: 'סגור',
+    /** Under a name: `הוצאות ₪1,200 · חלק ₪630`. */
     // No-break spaces keep each label with its amount when the line wraps.
-    paidAndShare: (paid: string, share: string) => `שילם/ה\u00a0${paid} · חלק\u00a0${share}`,
+    paidAndShare: (paid: string, share: string) => `הוצאות\u00a0${paid} · חלק\u00a0${share}`,
     open: (name: string, amount: string, state: string) => `היתרה של ${name}: ${amount}, ${state}`,
     /** The sheet. */
     mine: 'היתרה שלך',
@@ -527,6 +535,11 @@ export const he = {
     sent: 'ועוד תשלומים ששלח/ה',
     received: 'פחות תשלומים שקיבל/ה',
     paidList: 'מה ששילם/ה',
+    /** The same lines on my own sheet. */
+    paidMine: 'הוצאות ששילמת',
+    sentMine: 'ועוד תשלומים ששלחת',
+    receivedMine: 'פחות תשלומים שקיבלת',
+    paidListMine: 'מה ששילמת',
     shareList: 'החלק בכל הוצאה',
     payments: 'תשלומים',
     /** An expense line: `שישי, 13.11 · 4 מתחלקים` / `דנה שילמה ₪1,200`. */

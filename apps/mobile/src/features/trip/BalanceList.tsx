@@ -69,8 +69,9 @@ export function BalanceList({ data, view, me }: { data: TripData; view: TripView
               </Text>
             </View>
             <View style={styles.end}>
-              <Text style={[styles.amount, { color: state.color }]}>{amount}</Text>
+              {/* What's left to do, then how much: ״להעביר ₪551.03״ reads in order. */}
               <Text style={[styles.state, { color: state.color }]}>{state.label}</Text>
+              <Text style={[styles.amount, { color: state.color }]}>{amount}</Text>
             </View>
             <Icon
               name="chevronEnd"

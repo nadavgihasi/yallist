@@ -89,10 +89,10 @@ describe('sharedText', () => {
   it('lists the parts and who shares each', () => {
     const parts = [{ label: 'אלכוהול', amountAgorot: 12000, shares: ['a', 'b'] }];
     expect(sharedText({ shares: everyone, parts }, everyone, nameOf)).toBe(
-      'אלכוהול ₪120.00: דנה ורון · השאר: כולם',
+      'אלכוהול ₪120: דנה ורון · השאר: כולם',
     );
     expect(sharedText({ shares: ['c'], parts }, everyone, nameOf)).toBe(
-      'אלכוהול ₪120.00: דנה ורון · השאר: יעל',
+      'אלכוהול ₪120: דנה ורון · השאר: יעל',
     );
   });
 });

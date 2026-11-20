@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Avatar, type AvatarPerson } from './Avatar';
+import { Icon } from './Icon';
 
 import { colors, type } from '@/theme';
 
@@ -49,23 +50,21 @@ export function PersonChip({
   selected: boolean;
   onPress: () => void;
 }) {
-  const color = selected ? colors.primaryStrong : colors.inkMuted;
+  // Selected is a solid violet chip with a check, as selected chips are; left out, an outline.
+  const color = selected ? colors.onPrimary : colors.inkMuted;
   return (
     <Pressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked: selected }}
       onPress={onPress}
-      style={[
-        styles.chip,
-        styles.person,
-        { backgroundColor: selected ? colors.primaryTint : colors.ground },
-      ]}
+      style={[styles.chip, styles.person, selected ? styles.personOn : styles.personOff]}
     >
       <Avatar person={person} ring={false} dimmed={!selected} />
       <Text style={[type.buttonSm, styles.personName, { color }]} numberOfLines={1}>
         {name}
       </Text>
       {count !== undefined && <Text style={[type.buttonSm, { color }]}>({count})</Text>}
+      {selected && <Icon name="check" size={16} color={colors.onPrimary} strokeWidth={3} />}
     </Pressable>
   );
 }
@@ -119,7 +118,9 @@ const styles = StyleSheet.create({
   filter: { borderWidth: 1, borderColor: colors.hairline, backgroundColor: colors.card },
   filterOn: { borderColor: colors.primary, backgroundColor: colors.primary },
   count: { ...type.caption, fontVariant: ['tabular-nums'] },
-  person: { paddingStart: 6, maxWidth: '100%' },
+  person: { paddingStart: 6, maxWidth: '100%', borderWidth: 1.5 },
+  personOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  personOff: { backgroundColor: colors.card, borderColor: colors.line },
   personName: { flexShrink: 1 },
   suggestion: { maxWidth: 220, backgroundColor: colors.ground },
   plus: { color: colors.inkMuted },
