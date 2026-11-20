@@ -5,7 +5,7 @@ import { owedShares, type Expense, type Item } from '@yallist/domain';
  * members in their order, then anyone else on it (someone who left).
  */
 export function owedLines(
-  expense: Pick<Expense, 'amountAgorot' | 'shares' | 'parts'>,
+  expense: Pick<Expense, 'amountAgorot' | 'shares' | 'parts' | 'weights'>,
   memberIds: readonly string[],
   me: string,
 ): { userId: string; owed: number }[] {

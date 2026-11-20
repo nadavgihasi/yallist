@@ -19,11 +19,5 @@ export async function lockPayment(tx: Tx, tripId: string, paymentId: string) {
   return payment;
 }
 
-export const confirmPayment = (tx: Executor, paymentId: string) =>
-  tx
-    .update(payments)
-    .set({ status: 'confirmed', confirmedAt: new Date() })
-    .where(eq(payments.id, paymentId));
-
 export const deletePayment = (tx: Executor, paymentId: string) =>
   tx.delete(payments).where(eq(payments.id, paymentId));

@@ -90,10 +90,17 @@ export interface Expense {
   shares: string[];
   /** Amounts split between other people than the rest, such as a run's alcohol. */
   parts?: ExpensePart[];
+  /**
+   * How many shares of the rest each person takes (an adult 2, a child 1), by user id; anyone
+   * not in it takes 1. Absent when everyone takes 1, as before weights existed.
+   */
+  weights?: Record<string, number>;
   /** A receipt photo is attached (fetched separately, as a short-lived link). */
   hasReceipt?: boolean;
   /** When it was added (ISO). From the API. */
   createdAt?: string;
+  /** The day it was spent (`YYYY-MM-DD`), when not the day it was added. */
+  spentOn?: string;
 }
 
 /** A part of an expense with its own participants; see `owedShares`. */
@@ -103,10 +110,14 @@ export interface ExpensePart {
   shares: string[];
 }
 
+/** A settle-up transfer. Anyone in the trip records one, and it counts as soon as it's recorded. */
 export interface Payment {
   id: string;
   fromUser: string;
   toUser: string;
   amountAgorot: number;
-  status: 'marked' | 'confirmed';
+  /** Who recorded it: the payer, the receiver or someone else in the trip. */
+  createdBy: string;
+  /** When it was recorded, ISO 8601. */
+  createdAt: string;
 }

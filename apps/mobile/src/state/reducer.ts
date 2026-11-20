@@ -30,11 +30,23 @@ export interface NewExpenseInput {
   paidBy: string;
   shares: string[];
   itemId?: string;
+  /** Amounts split between some people only; see `Expense.parts`. */
+  parts?: ExpensePart[];
+  /** How many shares of the rest each takes, when not 1; see `Expense.weights`. */
+  weights?: Record<string, number>;
+  /** The day it was spent, when not today. */
+  spentOn?: string;
 }
 
-/** A change to an expense: only the fields given change; `parts: []` drops its parts. */
+/**
+ * A change to an expense: only the fields given change; `parts: []` drops its parts, `weights: {}`
+ * its weights.
+ */
 export type ExpenseChanges = Partial<
-  Pick<Expense, 'description' | 'amountAgorot' | 'paidBy' | 'shares'> & { parts: ExpensePart[] }
+  Pick<Expense, 'description' | 'amountAgorot' | 'paidBy' | 'shares' | 'spentOn'> & {
+    parts: ExpensePart[];
+    weights: Record<string, number>;
+  }
 >;
 
 /** A change to a trip, sent to the API by `useTripAction`. */
@@ -62,10 +74,9 @@ export type Action =
   | { type: 'editExpense'; expenseId: string; changes: ExpenseChanges }
   | { type: 'deleteExpense'; expenseId: string }
   | { type: 'deleteReceipt'; expenseId: string }
-  /** `fromUser` (default: me) is for a former member's payment, which the receiver records. */
-  | { type: 'markPayment'; toUser: string; amountAgorot: number; fromUser?: string }
+  /** Anyone records that `fromUser` (default: me) paid `toUser`; it counts at once. */
+  | { type: 'recordPayment'; toUser: string; amountAgorot: number; fromUser?: string }
   | { type: 'deletePayment'; paymentId: string }
-  | { type: 'confirmPayment'; paymentId: string }
   | { type: 'approveMember' | 'declineMember' | 'removeMember'; userId: string }
   | { type: 'setCover'; cover: CoverId }
   | { type: 'editTrip'; name: string; startsOn: string; endsOn: string }
@@ -192,16 +203,22 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
         ),
       };
     case 'editExpense': {
-      const { parts, ...fields } = action.changes;
+      const { parts, weights, ...fields } = action.changes;
       return {
         ...data,
         expenses: data.expenses.map((e) => {
           if (e.id !== action.expenseId) return e;
-          const edited = { ...e, ...fields };
-          if (parts === undefined) return edited;
-          // Absent unless split in parts, as the API sends it.
-          const { parts: _old, ...rest } = edited;
-          return parts.length > 0 ? { ...rest, parts } : rest;
+          let edited: Expense = { ...e, ...fields };
+          // Absent unless split in parts or by weight, as the API sends it.
+          if (parts !== undefined) {
+            const { parts: _old, ...rest } = edited;
+            edited = parts.length > 0 ? { ...rest, parts } : rest;
+          }
+          if (weights !== undefined) {
+            const { weights: _old, ...rest } = edited;
+            edited = Object.keys(weights).length > 0 ? { ...rest, weights } : rest;
+          }
+          return edited;
         }),
       };
     }
@@ -216,13 +233,6 @@ export function applyAction(data: TripData, action: Action, me: string): TripDat
       };
     case 'deletePayment':
       return { ...data, payments: data.payments.filter((p) => p.id !== action.paymentId) };
-    case 'confirmPayment':
-      return {
-        ...data,
-        payments: data.payments.map((p) =>
-          p.id === action.paymentId ? { ...p, status: 'confirmed' } : p,
-        ),
-      };
     case 'approveMember':
     case 'declineMember':
     case 'removeMember': {

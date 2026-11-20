@@ -20,7 +20,7 @@ describe('perPersonText', () => {
   });
 
   it('shows one amount when everyone pays the same', () => {
-    expect(perPersonText(9000, 3)).toBe('₪30.00');
+    expect(perPersonText(9000, 3)).toBe('₪30');
     expect(perPersonText(41290, 1)).toBe('₪412.90');
   });
 
