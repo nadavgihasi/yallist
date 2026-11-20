@@ -13,7 +13,7 @@ import { colors, shadow, size as sizes, type } from '@/theme';
 
 type Variant = 'solid' | 'soft' | 'quiet' | 'card' | 'danger';
 
-/** solid = night, soft = tonal sand, quiet = paper (on a card), card = white on the page, danger = text only. */
+/** solid = violet, soft = tonal violet, quiet = paper (on a card), card = white on the page, danger = text only. */
 const VARIANTS: Record<Variant, { bg: string; fg: string }> = {
   solid: { bg: colors.primary, fg: colors.onPrimary },
   soft: { bg: colors.primaryTint, fg: colors.primaryStrong },

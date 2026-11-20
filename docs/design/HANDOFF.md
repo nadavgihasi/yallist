@@ -2,6 +2,8 @@
 
 Apply the Yallist design system and the new Check-Y logo to the app. `DESIGN.md` explains every decision; this file is the plan.
 
+> **Done** (design system v2, #36 and #37), and kept for its item-states table, updated below to what the app does now. Since then v3 changed the colors: `primary` is sunset violet, not blue, and the page and splash are warm paper (`#F6F2EA`), not `#F4F5F8`. The values are in `apps/mobile/src/theme` and the rules in [DESIGN.md](DESIGN.md).
+
 ## What's in here
 
 | Path | What it is |
@@ -44,17 +46,19 @@ Apply the Yallist design system and the new Check-Y logo to the app. `DESIGN.md`
 4. **Login screen.** Match `reference/screens/login.html`: the lockup at 64px tall, the line “מי מביא מה?”, a sample list card, and the sign-in action at the bottom. Use Google’s official sign-in button. The blue button in the reference only marks where it goes.
 5. **Trips and Trip screens.** Restyle them to match `trips.html` and `trip.html`. The color rule is strict:
    - **Orange (`brand`)** only for the logo, packed checks and progress bars.
-   - **Blue (`primary`)** for everything you can tap.
+   - **`primary`** (blue in v2, violet in v3) for everything you can tap.
    - **`primaryStrong`** for small labels on `primaryTint`.
 6. **Right-to-left.** Hebrew is the default. Use start/end, never left/right. The back control is `chevron-right.svg` in RTL; mirror it for LTR.
 
 ## Item states in the bring list
 
+As built (`features/trip/ItemRow.tsx` and `labels.ts`), for a one-off item. Quantity and per-person items add a stepper and counts.
+
 | State | Check | Caption | End of row |
 |---|---|---|---|
-| Nobody bringing it | 28px dashed `inkMuted` circle | “עוד אין מי שמביא” in `inkMuted` | Tonal “עליי” button that claims it |
-| Someone else bringing it | 28px solid `inkMuted` ring | “<name> מביא/ה” | That person’s avatar |
-| You’re bringing it | Ring as a 44px button | “עליך” in `brandStrong`, bold | — |
-| Packed | Filled `brand` circle with a white check | “… · ארוז” | Unchanged |
+| Nobody bringing it | 28px dashed `inkMuted` ring | “חסר” in `inkMuted` | Tonal “אני אביא” (“אני אקנה” on the buy list), which claims it |
+| Someone else bringing it | 28px solid `inkMuted` ring | “מכוסה · אצל <name>” in `inkMuted` | Their avatars |
+| You're bringing it | The ring as a 44px button that packs it | “אצלך” in `brandStrong`, bold | Quiet “ביטול”, which releases it |
+| Packed | Filled `brand` circle with a white check | “… · ארוז” (“ארזו 1 מתוך 2” while only some holders have) | Unchanged |
 
 Progress on a trip counts items that someone is bringing out of the total.

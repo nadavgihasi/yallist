@@ -9,6 +9,9 @@
   --primary-strong: #4528c4;
   --brand: #ff5a1f;
   --brand-strong: #b8370b;
+  --owed: #0a7c76;
+  --ink-faint: #8e8b9c;
+  --scrim: rgba(26, 24, 51, 0.45);
   --illo-sky: #f4ba7e;
   --illo-sun: #fae4a4;
   --illo-hill: #a87ec1;
@@ -17,12 +20,16 @@
   --illo-tent: #f7d15c;
   --font-sans: Rubik, system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
   --space-1: 4px;
+  --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
   --space-5: 20px;
   --space-6: 24px;
+  --space-screen: 16px;
+  --space-touch: 44px;
   --content-max: 448px;
   --radius-card: 20px;
+  --radius-input: 14px;
   --radius-pill: 999px;
   --radius-icon: 22.5%;
   --size-step: 40px;
@@ -48,6 +55,13 @@
   --accent-4: #c2387a;
   --accent-5: #a86a0a;
   --accent-6: #2f6fd0;
+  --avatar-color-1: #ffd9c2;
+  --avatar-color-2: #d8f0e0;
+  --avatar-color-3: #f1ddf7;
+  --avatar-color-4: #fff0b3;
+  --avatar-color-5: #d3f1f4;
+  --avatar-color-6: #ffdde4;
+  --avatar-color-7: #e3e0ff;
   --progress-fill: var(--brand);
   --progress-track: var(--line);
   --motion-fast: 150ms;
@@ -67,4 +81,5 @@
 .step-number { font-family: var(--font-sans); font-size: 19px; line-height: 24px; font-weight: 800; }
 .button-lg { font-family: var(--font-sans); font-size: 17px; line-height: 24px; font-weight: 700; }
 .button-sm { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 700; }
+.big-number { font-family: var(--font-sans); font-size: 56px; line-height: 60px; font-weight: 800; }
 .stat { font-family: var(--font-sans); font-size: 28px; line-height: 32px; font-weight: 800; font-variant-numeric: tabular-nums; }

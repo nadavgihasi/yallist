@@ -9,6 +9,7 @@ export const colors = {
   primaryStrong: '#4528C4',
   brand: '#FF5A1F',
   brandStrong: '#B8370B',
+  owed: '#0A7C76',
   illustration: {
     sky: '#F4BA7E',
     sun: '#FAE4A4',
@@ -17,18 +18,25 @@ export const colors = {
     water: '#364ED0',
     tent: '#F7D15C',
   },
+  inkFaint: '#8E8B9C',
   line: '#DDD5C7',
   hairline: '#E7E0D3',
+  scrim: 'rgba(26,24,51,0.45)',
 } as const;
 
 export const accents = ['#5B3DE0', '#0A7C76', '#D9480F', '#C2387A', '#A86A0A', '#2F6FD0'] as const;
 
+export const avatarColors = ['#FFD9C2', '#D8F0E0', '#F1DDF7', '#FFF0B3', '#D3F1F4', '#FFDDE4', '#E3E0FF'] as const;
+
 export const space = {
   1: 4,
+  2: 8,
   3: 12,
   4: 16,
   5: 20,
   6: 24,
+  screen: 16,
+  touch: 44,
 } as const;
 
 export const layout = {
@@ -37,6 +45,7 @@ export const layout = {
 
 export const radius = {
   card: 20,
+  input: 14,
   pill: 999,
   iconRatio: 0.225,
 } as const;
@@ -80,6 +89,7 @@ export const typography = {
   stepNumber: { fontFamily: fontFamily.extraBold, fontWeight: '800', fontSize: 19, lineHeight: 24 },
   buttonLg: { fontFamily: fontFamily.bold, fontWeight: '700', fontSize: 17, lineHeight: 24 },
   buttonSm: { fontFamily: fontFamily.bold, fontWeight: '700', fontSize: 15, lineHeight: 20 },
+  bigNumber: { fontFamily: fontFamily.extraBold, fontWeight: '800', fontSize: 56, lineHeight: 60 },
   stat: { fontFamily: fontFamily.extraBold, fontWeight: '800', fontSize: 28, lineHeight: 32, fontVariant: ['tabular-nums'] },
 } as const;
 
@@ -97,6 +107,7 @@ export const shadow = {
 export const theme = {
   colors,
   accents,
+  avatarColors,
   space,
   layout,
   radius,
