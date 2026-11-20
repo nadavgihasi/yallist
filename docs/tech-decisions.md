@@ -72,7 +72,7 @@ Decisions made so far for the group-trip app. Where this file and [SPEC.md](SPEC
 
 ## Observability
 
-- **Sentry**, decided and built in #101 (2026-10-26): errors and traces from the app (web and Android) and the API, on the free plan. New Relic was the alternative; its React Native agent on Expo SDK 58 was never verified.
+- **Sentry**: errors and traces from the app (web and Android) and the API, on the free plan. Built in #101 (2026-10-26), full tracing in #160. Chosen for its Expo crash debugging (source maps for Hermes, no EAS needed). New Relic was the alternative; its React Native agent on Expo SDK 58 was never verified.
 - CloudWatch alarms cover the AWS side. Both reach one Telegram chat ([deploy.md](deploy.md#monitoring)).
 - Code: [apps/api/src/sentry.ts](../apps/api/src/sentry.ts), [apps/mobile/src/lib/sentry.ts](../apps/mobile/src/lib/sentry.ts) and `sentry.web.ts`.
 

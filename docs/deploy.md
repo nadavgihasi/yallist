@@ -203,7 +203,7 @@ A group that becomes a supergroup (Telegram does this for some settings changes)
 
 5. **Merge from Telegram (optional).** When the `PR` workflow (every check, ending in `all-pass`) passes on an agent PR's commit, the bot replies under the request with **Merge** and **Not now** for that commit. Merge squash-merges exactly that commit (GitHub refuses if the PR moved on, a rule isn't met or it conflicts, and the bot shows why), marks a draft ready first, and deletes the branch. A newer commit that passes replaces the offer. Only mergers can press it: `TELEGRAM_MERGER_IDS` (comma-separated user ids), or without it the `TELEGRAM_CHAT_ID` user (you). `main`'s ruleset still applies: nothing red can be merged.
    - Create a fine-grained token at [github.com/settings/personal-access-tokens/new](https://github.com/settings/personal-access-tokens/new): only `nadavgihasi/yallist`, repository permissions **Contents: Read and write** and **Pull requests: Read and write**, nothing else. It can push to branches other than `main` (the ruleset protects `main`), so keep it out of everything but this secret.
-   - Add **Workflow runs** to the repo webhook's events (step 4), store the token and deploy:
+   - Make sure **Workflow runs** is among the repo webhook's events (step 4), store the token and deploy:
 
    ```sh
    gh secret set FEEDBACK_MERGE_TOKEN --env production          # paste the token
