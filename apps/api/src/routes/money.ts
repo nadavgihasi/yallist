@@ -75,7 +75,7 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
       validate('json', addExpense),
       async (c) => {
         const { tripId } = c.req.valid('param');
-        const { shares: shareIds, paidBy = c.var.user.id, ...input } = c.req.valid('json');
+        const { shares: shareIds, paidBy = c.var.user.id, itemId, ...input } = c.req.valid('json');
         const me = c.var.user.id;
         const shares = [...new Set(shareIds)];
         const expense = await transact(db, async (tx) => {
@@ -85,17 +85,17 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           if (!shares.every((id) => active.has(id))) {
             throw fail(400, 'Every share must be an active member');
           }
-          if (input.itemId) {
+          if (itemId) {
             // Locked, so two purchases of one item can't both go through.
-            const item = await findItem(tx, tripId, input.itemId, { lock: true });
+            const item = await findItem(tx, tripId, itemId, { lock: true });
             if (item?.list !== 'buy') throw fail(400, 'itemId is not on the buy list');
-            if (await findPurchase(tx, input.itemId)) throw fail(409, 'Already bought');
+            if (await findPurchase(tx, itemId)) throw fail(409, 'Already bought');
           }
           const created = await insertExpense(
             tx,
             { ...input, tripId, paidBy, createdBy: me },
             shares,
-            input.itemId ? [input.itemId] : [],
+            itemId ? [itemId] : [],
           );
           await logActivity(tx, tripId, me, 'expense_added', {
             expenseId: created.id,
@@ -103,7 +103,7 @@ export const moneyRoutes = (auth: Auth, db: Db, receipts: ReceiptStore) =>
           });
           return created;
         });
-        return c.json(toExpense(expense, shares, expense.itemId ? [expense.itemId] : []), 201);
+        return c.json(toExpense(expense, shares, itemId ? [itemId] : []), 201);
       },
     )
 

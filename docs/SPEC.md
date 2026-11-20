@@ -54,7 +54,7 @@ Language: the UI is Hebrew-only for v1 but keep every string in a single `he` lo
 
 Write these as migrations. Column names are suggestions; keep the semantics.
 
-**profiles** — `id` (= `auth.users.id`), `display_name`, `avatar_color`, `payment_phone` (nullable; shown to friends so they can pay via Bit/PayBox), notification prefs (`notify_updates`, `notify_day_before`, `notify_settle`, all default true), timestamps.
+**profiles** — `id` (= `users.id`, the Better Auth user), `display_name`, `avatar_color`, `payment_phone` (nullable; shown to friends so they can pay via Bit/PayBox), notification prefs (`notify_updates`, `notify_day_before`, `notify_settle`, all default true), timestamps.
 
 **trips** — `id`, `name`, `starts_on`, `ends_on`, `meetup_text`, `meetup_lat`, `meetup_lng` (nullable: where the group meets, a name or map link and a point on the map), `album_url` (nullable, a Google Photos link), `template` (`camp|grill|zimmer|beach|hike|trek|flight|ski|blank`, also selects the cover scene), `currency` default `'ILS'`, `require_approval` bool default false, `invite_token` (unique, ≥128 bits of randomness, URL-safe), `status` (`planning|ended|archived`), `created_by`, timestamps.
 
@@ -72,7 +72,7 @@ Write these as migrations. Column names are suggestions; keep the semantics.
 
 **payments** — `id`, `trip_id`, `from_user`, `to_user`, `amount_agorot`, `status` (`marked|confirmed`), `marked_at`, `confirmed_at`, `reminded_at` (nullable). A recorded settle-up transfer.
 
-**activity** — `id`, `trip_id`, `actor` (nullable for system events), `type`, `payload` jsonb, `created_at`. Written by triggers, never by clients directly.
+**activity** — `id`, `trip_id`, `actor` (nullable for system events), `type`, `payload` jsonb, `created_at`. Written by the API in the same transaction as the change (`logActivity`), never by clients directly.
 
 **template_items** — seed data for templates (Appendix A): `template`, `list`, `category`, `position`, `name`, `kind`, `quantity_needed`, `unit`, `display_qty`.
 
@@ -84,7 +84,7 @@ Write these as migrations. Column names are suggestions; keep the semantics.
 
 ## 4. Domain rules
 
-Implement these as pure TypeScript functions in `src/domain` with thorough unit tests. Where the database must enforce a rule, also enforce it there.
+Implement these as pure TypeScript functions in `@yallist/domain` (`packages/domain`) with thorough unit tests. Where the database must enforce a rule, also enforce it there.
 
 **Coverage**
 
@@ -106,7 +106,7 @@ Implement these as pure TypeScript functions in `src/domain` with thorough unit 
 
 **Claiming**
 
-- Over-claiming is rejected server-side: claim changes go through an RPC that locks the item row and checks the cap in one transaction.
+- Over-claiming is rejected server-side: claim changes go through one API transaction that locks the item row and its claims and checks the cap.
 - Claim actions: single → "אני אביא" / "אני אקנה" (claims the full quantity) and "ביטול"; qty → +/− stepper for my share; each → "יש לי" toggle.
 
 **Money**
