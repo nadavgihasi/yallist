@@ -8,6 +8,7 @@ import { Icon } from '@/components/Icon';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { showToast } from '@/components/Toast';
+import { byAmounts } from '@/features/trip/amountSplit';
 import { useCloseSheet } from '@/features/trip/closeSheet';
 import { deriveTrip } from '@/features/trip/derive';
 import { coveredItems, owedLines } from '@/features/trip/expenseDetail';
@@ -55,6 +56,8 @@ function Detail({
   const lines = owedLines(expense, view.activeIds, me);
   const covered = coveredItems(expense, data.items);
   const names = (ids: string[]) => joinNames(ids.map(view.displayNameOf));
+  // Split by each person's amount, its parts are just those amounts: the lines above say it.
+  const showParts = !!expense.parts?.length && !byAmounts(expense);
   const params = { tripId, expenseId: expense.id };
 
   const remove = () =>
@@ -165,7 +168,7 @@ function Detail({
         })}
       </View>
 
-      {!!expense.parts?.length && (
+      {showParts && expense.parts && (
         <View style={styles.section}>
           <Text style={styles.heading} accessibilityRole="header">
             {he.expense.parts}

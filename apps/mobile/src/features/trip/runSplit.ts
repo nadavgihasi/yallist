@@ -8,6 +8,8 @@ import {
 
 import { he, joinNames } from '@/i18n/he';
 
+import { byAmounts } from './amountSplit';
+
 /** A part of a run's total as the checkout form holds it: the amount as typed. */
 export interface PartDraft {
   label: string;
@@ -66,7 +68,7 @@ export function runSplit(
  * their names, and per part when it has parts (`אלכוהול ₪120: דנה ורון · השאר: כולם`).
  */
 export function sharedText(
-  expense: Pick<Expense, 'shares' | 'parts' | 'weights'>,
+  expense: Pick<Expense, 'shares' | 'parts' | 'weights'> & { amountAgorot?: number },
   activeIds: readonly string[],
   nameOf: (id: string) => string,
 ): string | undefined {
@@ -79,6 +81,15 @@ export function sharedText(
     .filter(([, w]) => w > 1)
     .map(([id, w]) => he.money.weighted(nameOf(id), w));
   const byWeight = heavier.length > 0 ? he.money.byWeight(heavier.join(', ')) : undefined;
+  // Each person's own amount: `דנה ₪120 · רון ₪80`, under their names as they are now.
+  const { amountAgorot } = expense;
+  const amounts = amountAgorot === undefined ? undefined : byAmounts({ ...expense, amountAgorot });
+  if (amounts) {
+    return [...amounts]
+      .filter(([, owed]) => owed > 0)
+      .map(([id, owed]) => he.money.amount(nameOf(id), formatShekel(owed)))
+      .join(' · ');
+  }
   const parts = expense.parts ?? [];
   if (parts.length === 0) {
     const all = names(expense.shares) === he.money.everyone;

@@ -23,7 +23,7 @@ These were decided during design. Do not re-open them without asking.
 - **Optional organizer approval:** per-trip switch. When on, link-joiners land in a pending state until an organizer approves.
 - **Invite link can be rotated;** the old link stops working immediately.
 - **Sign-in for app users:** Google and Apple (Apple's App Store rules require an equivalent privacy-focused option when offering Google sign-in). Anonymous users can later link Google/Apple without losing data.
-- **Costs split equally** among an expense's participants. By default every active member participates; each expense can exclude people (e.g. beer only for those who drink). No per-household or weighted splits.
+- **Costs split equally** among an expense's participants by default. By default every active member participates; each expense can exclude people (e.g. beer only for those who drink). An expense can also be split by weight (an adult 2, a child 1), or by each person's amount, typed, adding up to the total (Splitwise's "exact amounts"; stored as a part for each of them but one, the last taking the rest).
 - **Settling up:** the app computes the minimal set of transfers. Payment happens outside the app (Bit / PayBox). The payer marks "סומן כשולם"; the receiver can confirm "קיבלתי את הכסף". The receiver can send a reminder.
 - **Trip-day mode:** during the trip dates, a "מה הגיע?" checklist lets people mark what physically arrived. Must work offline (campsites often have no reception) and sync later.
 - **After the trip:** summary with settle-up progress, stats, and "שכפול לטיול הבא" (duplicate people + lists with new dates).

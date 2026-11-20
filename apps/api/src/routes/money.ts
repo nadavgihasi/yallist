@@ -22,10 +22,16 @@ import { transact } from '../db/tx';
 import { deleteReceipt, type ReceiptStore } from '../receipts';
 import { toExpense, toPayment } from '../trip-data';
 
-import { assertPartsFit, MAX_PARTS, part } from './runs';
+import { assertPartsFit, part } from './runs';
 
 /** Agorot, positive; ₪1M is far beyond any trip and well inside a Postgres integer. */
 const agorot = z.int().min(1).max(100_000_000);
+
+/**
+ * More than a run's checkout takes: an expense split by each person's amount has a part for each
+ * of them but one, and as many people as may share it.
+ */
+const MAX_EXPENSE_PARTS = 100;
 
 /** By user id, 1 to MAX_WEIGHT; see `Expense.weights`. */
 const weights = z
@@ -55,7 +61,7 @@ const addExpense = z.object({
   /** A buy-list item this purchase covers; it then counts as bought. */
   itemId: z.uuid().optional(),
   /** Amounts split between some of the trip only, as at a shopping run's checkout. */
-  parts: z.array(part).max(MAX_PARTS).optional(),
+  parts: z.array(part).max(MAX_EXPENSE_PARTS).optional(),
   /** How many shares of the rest some of `shares` take; anyone else takes 1. */
   weights: weights.optional(),
   /** The day it was spent, when not today. */
@@ -72,7 +78,7 @@ const editExpense = z.object({
   amountAgorot: agorot.optional(),
   paidBy: z.uuid().optional(),
   shares: z.array(z.uuid()).min(1).max(100).optional(),
-  parts: z.array(part).max(MAX_PARTS).optional(),
+  parts: z.array(part).max(MAX_EXPENSE_PARTS).optional(),
   weights: weights.optional(),
   spentOn: spentOn.optional(),
 });

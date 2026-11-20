@@ -3,7 +3,7 @@ import { useRef, useState, type ComponentRef } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { FilterChip, SuggestionChip } from '@/components/Chips';
-import { SegmentedControl, Switch } from '@/components/Controls';
+import { SegmentedControl } from '@/components/Controls';
 import { DateField } from '@/components/DateField';
 import { Icon } from '@/components/Icon';
 import { AmountField, TextField, fieldStyles } from '@/components/Fields';
@@ -18,33 +18,27 @@ import { useTripAction } from '@/state/trips';
 import type { TripData } from '@/state/types';
 import { colors, fonts, space, type } from '@/theme';
 
+import { AmountList } from './AmountList';
+import { amountSplit, amountsOf } from './amountSplit';
 import { useCloseSheet } from './closeSheet';
 import { deriveTrip } from './derive';
 import { lastSplit } from './lastSplit';
 import { ReceiptField } from './ReceiptField';
 import { requestReveal } from './reveal';
-import { RunParts } from './RunParts';
 import { PersonPicker } from './PersonPicker';
-import { runSplit, type PartDraft } from './runSplit';
 import { SharePicker, useShares } from './SharePicker';
 import { perWeightText, WeightList } from './WeightList';
 
 type Expense = TripData['expenses'][number];
 
 const SPLIT_MODES = ['equal', 'weights', 'parts'] as const;
-/** How the rest of an expense is split: equally, by weight, or with parts for some only. */
+/** How an expense is split: equally, by weight, or each person's part typed (Splitwise's). */
 type SplitMode = (typeof SPLIT_MODES)[number];
-
-const toDraft = (p: NonNullable<Expense['parts']>[number]): PartDraft => ({
-  label: p.label,
-  amount: shekelInput(p.amountAgorot),
-  shares: [...p.shares],
-});
 
 /**
  * Adds an expense, or with `expense` fixes one in place: the same fields, prefilled. An edited
  * expense keeps its receipt and the items it covers, so neither is offered here; one split in
- * parts (a shopping run's) opens with its parts.
+ * parts (a shopping run's too) opens with what each person pays.
  */
 export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expense }) {
   const me = useMe().userId;
@@ -61,11 +55,10 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   const [shares, setShares] = useShares(view, expense?.shares ?? last);
   const [day, setDay] = useState(() => (expense ? spentDay(expense) : today()));
   const [otherDay, setOtherDay] = useState(() => day !== today() && day !== addDays(today(), -1));
-  const [parts, setParts] = useState<PartDraft[]>(() => expense?.parts?.map(toDraft) ?? []);
-  const [weights, setWeights] = useState<Record<string, number>>(expense?.weights ?? {});
-  const [partsByWeight, setPartsByWeight] = useState(
-    () => !!expense?.parts?.length && !!expense.weights,
+  const [amounts, setAmounts] = useState<Record<string, string>>(() =>
+    expense?.parts?.length ? amountsOf(expense) : {},
   );
+  const [weights, setWeights] = useState<Record<string, number>>(expense?.weights ?? {});
   const [mode, setMode] = useState<SplitMode>(
     expense?.parts?.length ? 'parts' : expense?.weights ? 'weights' : 'equal',
   );
@@ -77,26 +70,31 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
 
   const close = useCloseSheet(data.trip.id);
   const agorot = parseShekel(amount);
-  const usedParts = mode === 'parts' ? parts : [];
+  const byAmount = mode === 'parts';
+  // Who's offered an amount: anyone who had one keeps their row after leaving the trip.
+  const amountIds = [
+    ...view.activeIds,
+    ...Object.keys(amounts).filter((id) => !view.activeIds.includes(id)),
+  ];
+  const split = amountSplit(agorot, amounts, amountIds, view.nameOf);
   // Weights for who shares it only: someone unticked takes none.
-  // Weights count in weights mode, and in parts mode for an expense saved with both (the API
-  // takes both; the form edits one at a time but mustn't drop the other on save).
-  // In parts mode, what the parts leave can be split by weight too (a dinner with a child, and
-  // wine for two).
-  const keepsWeights = mode === 'weights' || (mode === 'parts' && partsByWeight);
-  const usedWeights = keepsWeights
-    ? Object.fromEntries(Object.entries(weights).filter(([id]) => shares.includes(id)))
-    : {};
-  const split = runSplit(agorot, shares, usedParts);
-  const owed = agorot
-    ? owedShares({ amountAgorot: agorot, shares, parts: split.parts, weights: usedWeights })
-    : new Map<string, number>();
+  const usedWeights =
+    mode === 'weights'
+      ? Object.fromEntries(Object.entries(weights).filter(([id]) => shares.includes(id)))
+      : {};
+  // By amount, who shares it is whoever has an amount; the chips are for the other modes.
+  const usedShares = byAmount ? split.shares : shares;
+  const usedParts = byAmount ? split.parts : [];
+  const owed = byAmount
+    ? split.owed
+    : agorot
+      ? owedShares({ amountAgorot: agorot, shares, weights: usedWeights })
+      : new Map<string, number>();
   const owedFor = (id: string) => owed.get(id) ?? 0;
   const unbought = expense
     ? []
     : view.items.filter((i) => i.list === 'buy' && !linkedExpense(i.id, data.expenses)).slice(0, 6);
-  const valid =
-    !!agorot && !!what.trim() && shares.length > 0 && (usedParts.length === 0 || !split.error);
+  const valid = !!agorot && !!what.trim() && (byAmount ? !split.error : shares.length > 0);
   // A payer who has since left the trip stays on the expense, so they stay on offer.
   const payers = view.activeIds.includes(payer) ? view.activeIds : [payer, ...view.activeIds];
 
@@ -113,7 +111,7 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         description: what.trim(),
         amountAgorot: agorot,
         paidBy: payer,
-        shares,
+        shares: usedShares,
         // Only a day other than the one it already has: today, for a new one.
         ...(day !== (expense ? spentDay(expense) : today()) && { spentOn: day }),
       };
@@ -122,13 +120,13 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         act({
           type: 'editExpense',
           expenseId: expense.id,
-          changes: { ...fields, parts: split.parts, weights: usedWeights },
+          changes: { ...fields, parts: usedParts, weights: usedWeights },
         });
         showToast(he.editExpense.saved(formatShekel(agorot)), 'success');
         return;
       }
       const uneven = {
-        ...(split.parts.length > 0 && { parts: split.parts }),
+        ...(usedParts.length > 0 && { parts: usedParts }),
         ...(Object.keys(usedWeights).length > 0 && { weights: usedWeights }),
       };
       act({ type: 'addExpense', expense: { ...fields, ...uneven, itemId }, receipt });
@@ -278,25 +276,24 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         />
       </View>
 
-      {last && last.length < view.activeIds.length && (
-        <Text style={styles.meta}>{he.addExpense.lastSplit}</Text>
-      )}
-      <SharePicker
-        view={view}
-        shares={shares}
-        onChange={setShares}
-        amount={mode === 'equal' ? agorot : undefined}
-        label={
-          mode === 'parts' && split.rest !== undefined && split.rest > 0
-            ? he.shop.finish.rest(formatShekel(split.rest))
-            : undefined
-        }
-        showHint={false}
-      />
-      {tried && shares.length === 0 && (
-        <Text style={styles.error} accessibilityLiveRegion="polite">
-          {he.addExpense.needShares}
-        </Text>
+      {!byAmount && (
+        <>
+          {last && last.length < view.activeIds.length && (
+            <Text style={styles.meta}>{he.addExpense.lastSplit}</Text>
+          )}
+          <SharePicker
+            view={view}
+            shares={shares}
+            onChange={setShares}
+            amount={mode === 'equal' ? agorot : undefined}
+            showHint={false}
+          />
+          {tried && shares.length === 0 && (
+            <Text style={styles.error} accessibilityLiveRegion="polite">
+              {he.addExpense.needShares}
+            </Text>
+          )}
+        </>
       )}
 
       {mode === 'weights' && (
@@ -315,47 +312,26 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         </View>
       )}
 
-      {mode === 'parts' && (
-        <>
-          <RunParts view={view} parts={parts} onChange={setParts} />
-          <View style={styles.switchRow}>
-            <Text style={styles.switchLabel}>{he.addExpense.restByWeight}</Text>
-            <Switch
-              value={partsByWeight}
-              onChange={setPartsByWeight}
-              label={he.addExpense.restByWeight}
-            />
-          </View>
-          {partsByWeight && (
-            <WeightList
-              view={view}
-              shares={shares}
-              weights={weights}
-              owed={owed}
-              onChange={setWeights}
-            />
+      {byAmount && (
+        <View style={styles.field}>
+          <Text style={styles.meta}>{he.addExpense.amountsHint}</Text>
+          <AmountList view={view} ids={amountIds} amounts={amounts} onChange={setAmounts} />
+          {/* What's still to assign, or that it adds up: live, as the amounts are typed. Red once
+              save was tried, or as soon as it's over the total. */}
+          {(!!agorot || tried) && (
+            <Text
+              style={[
+                styles.left,
+                !split.error && styles.done,
+                !!split.error && (tried || (split.left ?? 0) < 0) && styles.over,
+              ]}
+              accessibilityLiveRegion="polite"
+              {...testId('expense-amounts-left')}
+            >
+              {split.error ?? he.addExpense.amountsDone}
+            </Text>
           )}
-          {parts.length > 0 && (
-            <View style={styles.owed} {...testId('expense-owed')}>
-              <Text style={styles.owedTitle} accessibilityRole="header">
-                {agorot ? he.shop.finish.whoPaysOf(formatShekel(agorot)) : he.shop.finish.whoPays}
-              </Text>
-              {split.error && (
-                <Text style={styles.error} accessibilityLiveRegion="polite">
-                  {split.error}
-                </Text>
-              )}
-              {[...(split.error ? new Map<string, number>() : owed)]
-                .filter(([, amount]) => amount > 0)
-                .map(([id, amount]) => (
-                  <View key={id} style={styles.owedRow}>
-                    <Text style={styles.owedName}>{view.nameOf(id)}</Text>
-                    <Text style={styles.owedAmount}>{formatShekel(amount)}</Text>
-                  </View>
-                ))}
-            </View>
-          )}
-        </>
+        </View>
       )}
 
       {!expense && <ReceiptField uri={receipt} onChange={setReceipt} />}
@@ -364,24 +340,14 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
 }
 
 const styles = StyleSheet.create({
-  switchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: space[3],
-    minHeight: space.touch,
-  },
-  switchLabel: { ...type.itemTitle, color: colors.ink, flex: 1 },
+  left: { ...type.itemTitle, color: colors.inkMuted },
+  done: { color: colors.primaryStrong },
+  over: { color: colors.brandStrong },
+  error: { ...type.caption, color: colors.brandStrong },
   sumRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], marginTop: -space[2] },
   sumTotal: { ...type.itemTitle, color: colors.primaryStrong },
   whatInput: { minHeight: 56, borderRadius: 20, paddingHorizontal: 18 },
   field: { gap: 10 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
-  owed: { gap: space[1] },
-  owedTitle: { ...type.itemTitle, color: colors.ink },
-  owedRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3] },
-  owedName: { ...type.caption, color: colors.inkMuted },
-  owedAmount: { ...type.itemTitle, color: colors.ink },
-  error: { ...type.caption, color: colors.brandStrong },
 });
