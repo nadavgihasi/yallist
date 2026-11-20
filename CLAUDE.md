@@ -10,6 +10,7 @@ Start with [README.md](README.md) and [docs/](docs/README.md). This file holds t
 - Don't merge, and don't turn on auto-merge. `main` deploys to dev and then production on every push.
 - PR titles follow Conventional Commits: they decide the next version ([docs/releases.md](docs/releases.md)). `feat:` is a minor, `fix:` and `perf:` a patch, the rest no release.
 - Pushing a change under `.github/workflows/` needs the `workflow` scope on the GitHub token. If the push is refused, stop and say so. Don't push with another identity.
+- Agents working in parallel may share one scratch directory. Keep temporary files, such as a PR body, in a folder of your own there: a common name like `pr-body.md` gets overwritten.
 - Before you start, look at the open pull requests and say in yours which ones touch the same files.
 
 ## Checks
