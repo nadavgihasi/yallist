@@ -1,6 +1,7 @@
 import {
   CATEGORY_COLORS,
   COVER_IDS,
+  MAX_WEIGHT,
   type ItemKind,
   type ListKind,
   type MemberRole,
@@ -330,6 +331,8 @@ export const expenses = pgTable(
     createdBy: userRef('created_by').notNull(),
     receiptPath: text('receipt_path'),
     createdAt: createdAt(),
+    /** The day it was spent, when entered after the fact; null is the day it was added. */
+    spentOn: date('spent_on', { mode: 'string' }),
   },
   (t) => [
     index('expenses_trip_idx').on(t.tripId),
@@ -345,8 +348,16 @@ export const expenseShares = pgTable(
       .notNull()
       .references(() => expenses.id),
     userId: userRef('user_id').notNull(),
+    /** How many shares of the rest they take (an adult 2, a child 1); null is 1. */
+    weight: integer('weight'),
   },
-  (t) => [primaryKey({ columns: [t.expenseId, t.userId] })],
+  (t) => [
+    primaryKey({ columns: [t.expenseId, t.userId] }),
+    check(
+      'expense_shares_weight_check',
+      sql`${t.weight} between 1 and ${sql.raw(String(MAX_WEIGHT))}`,
+    ),
+  ],
 );
 
 /**
@@ -432,7 +443,10 @@ export const shoppingRuns = pgTable(
   ],
 );
 
-/** A recorded settle-up transfer. */
+/**
+ * A recorded settle-up transfer. Any member records one, for any two people, and it counts at
+ * once: `status` is always `confirmed` for new rows (`marked` is from before, and counts the same).
+ */
 export const payments = pgTable(
   'payments',
   {
@@ -447,6 +461,8 @@ export const payments = pgTable(
     markedAt: timestamp('marked_at', { withTimezone: true }).notNull().defaultNow(),
     confirmedAt: timestamp('confirmed_at', { withTimezone: true }),
     remindedAt: timestamp('reminded_at', { withTimezone: true }),
+    /** Who recorded it; null before anyone could record a payment but its payer. */
+    createdBy: userRef('created_by'),
   },
   (t) => [
     index('payments_trip_idx').on(t.tripId),

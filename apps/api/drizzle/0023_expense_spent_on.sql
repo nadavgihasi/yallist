@@ -1,0 +1,1 @@
+ALTER TABLE "expenses" ADD COLUMN "spent_on" date;

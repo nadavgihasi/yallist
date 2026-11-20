@@ -106,6 +106,9 @@ describe.skipIf(!DATABASE_URL)('deleting a trip', () => {
       )
     ).json();
     const expenseParam = { tripId, expenseId: expense.id };
+    // expenses.item_id is no longer written (#225), but expenses from before still carry it, so
+    // deleting a trip must still handle it: set it the way those rows have it.
+    await sql`update expenses set item_id = ${first!.id} where id = ${expense.id}`;
     const receipt = trip(tripId).expenses[':expenseId'].receipt;
     const form = await (
       await receipt['upload-url'].$post(

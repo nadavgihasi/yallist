@@ -1,3 +1,4 @@
+import { formatShekel } from '@yallist/domain';
 import { Link } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -19,6 +20,7 @@ import {
 } from '@/i18n/he';
 import { formatRange, monthName } from '@/lib/dates';
 import { testId } from '@/lib/testId';
+import { useMe } from '@/state/store';
 import type { TripSummary } from '@/state/types';
 import { colors, space, surface, type } from '@/theme';
 
@@ -40,6 +42,12 @@ export function TripCard({
 }) {
   const { trip, itemCount, doneCount } = data;
   const missing = itemCount - doneCount;
+  const me = useMe().userId;
+  // The transfers here are only mine: what I'm owed less what I owe.
+  const balance = data.transfers.reduce(
+    (sum, t) => sum + (t.to === me ? t.amountAgorot : t.from === me ? -t.amountAgorot : 0),
+    0,
+  );
   return (
     <Link href={{ pathname: '/trips/[tripId]', params: { tripId: trip.id } }} asChild>
       <Pressable
@@ -56,6 +64,17 @@ export function TripCard({
           <View style={styles.texts}>
             <Text style={styles.name}>{trip.name}</Text>
             <Text style={styles.caption}>{formatRange(trip.startsOn, trip.endsOn)}</Text>
+            {/* Where I stand, so it's known without opening the trip. */}
+            {balance !== 0 && (
+              <Text
+                style={[styles.balance, { color: balance > 0 ? colors.owed : colors.brandStrong }]}
+                {...testId('trip-card-balance')}
+              >
+                {balance > 0
+                  ? he.home.owedToMe(formatShekel(balance))
+                  : he.home.iOwe(formatShekel(-balance))}
+              </Text>
+            )}
           </View>
           {itemCount === 0 ? (
             <Text style={styles.caption}>{he.home.noItems}</Text>
@@ -127,6 +146,7 @@ const styles = StyleSheet.create({
   texts: { flex: 1, gap: space[1] },
   name: { ...type.sectionTitle, color: colors.ink },
   caption: { ...type.caption, color: colors.inkMuted },
+  balance: { ...type.caption, fontFamily: type.itemTitle.fontFamily },
   row: { flexDirection: 'row', alignItems: 'center', gap: space[4] },
   side: { flexShrink: 1, gap: space[2] },
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },

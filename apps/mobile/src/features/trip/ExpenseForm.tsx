@@ -1,14 +1,17 @@
-import { formatShekel, linkedExpense, parseShekel, shekelInput } from '@yallist/domain';
+import { formatShekel, linkedExpense, owedShares, parseShekel, shekelInput } from '@yallist/domain';
 import { useRef, useState, type ComponentRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Avatar } from '@/components/Avatar';
-import { SuggestionChip } from '@/components/Chips';
+import { FilterChip, SuggestionChip } from '@/components/Chips';
+import { SegmentedControl, Switch } from '@/components/Controls';
+import { DateField } from '@/components/DateField';
+import { Icon } from '@/components/Icon';
 import { AmountField, TextField, fieldStyles } from '@/components/Fields';
 import { PillButton } from '@/components/PillButton';
 import { Sheet } from '@/components/Sheet';
 import { showToast } from '@/components/Toast';
 import { he } from '@/i18n/he';
+import { addDays, spentDay, today } from '@/lib/dates';
 import { testId } from '@/lib/testId';
 import { useMe } from '@/state/store';
 import { useTripAction } from '@/state/trips';
@@ -17,13 +20,20 @@ import { colors, fonts, space, type } from '@/theme';
 
 import { useCloseSheet } from './closeSheet';
 import { deriveTrip } from './derive';
+import { lastSplit } from './lastSplit';
 import { ReceiptField } from './ReceiptField';
 import { requestReveal } from './reveal';
 import { RunParts } from './RunParts';
+import { PersonPicker } from './PersonPicker';
 import { runSplit, type PartDraft } from './runSplit';
 import { SharePicker, useShares } from './SharePicker';
+import { perWeightText, WeightList } from './WeightList';
 
 type Expense = TripData['expenses'][number];
+
+const SPLIT_MODES = ['equal', 'weights', 'parts'] as const;
+/** How the rest of an expense is split: equally, by weight, or with parts for some only. */
+type SplitMode = (typeof SPLIT_MODES)[number];
 
 const toDraft = (p: NonNullable<Expense['parts']>[number]): PartDraft => ({
   label: p.label,
@@ -44,8 +54,21 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
   const [what, setWhat] = useState(expense?.description ?? '');
   const [itemId, setItemId] = useState<string>();
   const [payer, setPayer] = useState(expense?.paidBy ?? me);
-  const [shares, setShares] = useShares(view, expense?.shares);
+  // A new expense starts from how I split the last one.
+  const [last] = useState(() =>
+    expense ? undefined : lastSplit(data.expenses, me, view.activeIds),
+  );
+  const [shares, setShares] = useShares(view, expense?.shares ?? last);
+  const [day, setDay] = useState(() => (expense ? spentDay(expense) : today()));
+  const [otherDay, setOtherDay] = useState(() => day !== today() && day !== addDays(today(), -1));
   const [parts, setParts] = useState<PartDraft[]>(() => expense?.parts?.map(toDraft) ?? []);
+  const [weights, setWeights] = useState<Record<string, number>>(expense?.weights ?? {});
+  const [partsByWeight, setPartsByWeight] = useState(
+    () => !!expense?.parts?.length && !!expense.weights,
+  );
+  const [mode, setMode] = useState<SplitMode>(
+    expense?.parts?.length ? 'parts' : expense?.weights ? 'weights' : 'equal',
+  );
   const [receipt, setReceipt] = useState<string>();
   // Save was tapped with something missing: each empty field says so.
   const [tried, setTried] = useState(false);
@@ -54,13 +77,26 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
 
   const close = useCloseSheet(data.trip.id);
   const agorot = parseShekel(amount);
-  const withParts = !!expense?.parts?.length;
-  const split = runSplit(agorot, shares, parts);
+  const usedParts = mode === 'parts' ? parts : [];
+  // Weights for who shares it only: someone unticked takes none.
+  // Weights count in weights mode, and in parts mode for an expense saved with both (the API
+  // takes both; the form edits one at a time but mustn't drop the other on save).
+  // In parts mode, what the parts leave can be split by weight too (a dinner with a child, and
+  // wine for two).
+  const keepsWeights = mode === 'weights' || (mode === 'parts' && partsByWeight);
+  const usedWeights = keepsWeights
+    ? Object.fromEntries(Object.entries(weights).filter(([id]) => shares.includes(id)))
+    : {};
+  const split = runSplit(agorot, shares, usedParts);
+  const owed = agorot
+    ? owedShares({ amountAgorot: agorot, shares, parts: split.parts, weights: usedWeights })
+    : new Map<string, number>();
+  const owedFor = (id: string) => owed.get(id) ?? 0;
   const unbought = expense
     ? []
     : view.items.filter((i) => i.list === 'buy' && !linkedExpense(i.id, data.expenses)).slice(0, 6);
   const valid =
-    !!agorot && !!what.trim() && shares.length > 0 && (parts.length === 0 || !split.error);
+    !!agorot && !!what.trim() && shares.length > 0 && (usedParts.length === 0 || !split.error);
   // A payer who has since left the trip stays on the expense, so they stay on offer.
   const payers = view.activeIds.includes(payer) ? view.activeIds : [payer, ...view.activeIds];
 
@@ -73,17 +109,29 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
       return;
     }
     close(() => {
-      const fields = { description: what.trim(), amountAgorot: agorot, paidBy: payer, shares };
+      const fields = {
+        description: what.trim(),
+        amountAgorot: agorot,
+        paidBy: payer,
+        shares,
+        // Only a day other than the one it already has: today, for a new one.
+        ...(day !== (expense ? spentDay(expense) : today()) && { spentOn: day }),
+      };
       if (expense) {
+        // Both, always: switching to an equal split drops the parts and the weights.
         act({
           type: 'editExpense',
           expenseId: expense.id,
-          changes: withParts ? { ...fields, parts: split.parts } : fields,
+          changes: { ...fields, parts: split.parts, weights: usedWeights },
         });
         showToast(he.editExpense.saved(formatShekel(agorot)), 'success');
         return;
       }
-      act({ type: 'addExpense', expense: { ...fields, itemId }, receipt });
+      const uneven = {
+        ...(split.parts.length > 0 && { parts: split.parts }),
+        ...(Object.keys(usedWeights).length > 0 && { weights: usedWeights }),
+      };
+      act({ type: 'addExpense', expense: { ...fields, ...uneven, itemId }, receipt });
       // Once the API answers, the money tab scrolls to it and marks it.
       requestReveal(data.trip.id, {
         kind: 'expense',
@@ -91,8 +139,14 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         amountAgorot: agorot,
         before: data.expenses.map((e) => e.id),
       });
-      // The list shows it only once the API answers, so say it went through.
-      showToast(he.addExpense.saved(formatShekel(agorot)), 'success');
+      // The list shows it only once the API answers, so say it went through, and what it costs me.
+      const mine = owedFor(me);
+      showToast(
+        mine
+          ? he.addExpense.savedMine(formatShekel(mine))
+          : he.addExpense.saved(formatShekel(agorot)),
+        'success',
+      );
     });
   };
 
@@ -126,6 +180,26 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
               : undefined
         }
       />
+      {/* A calculator at the till: add another amount, see the total. The amount keyboard has
+          no "+", so it's a button. */}
+      <View style={styles.sumRow}>
+        <PillButton
+          label={he.addExpense.addToSum}
+          variant="soft"
+          size="sm"
+          icon={<Icon name="plus" size={16} color={colors.primaryStrong} />}
+          onPress={() => {
+            setAmount((a) => (a.trim() && !a.trim().endsWith('+') ? `${a.trim()}+` : a));
+            amountRef.current?.focus();
+          }}
+          {...testId('expense-amount-plus')}
+        />
+        {amount.includes('+') && agorot !== undefined && (
+          <Text style={styles.sumTotal} accessibilityLiveRegion="polite">
+            {he.addExpense.sumTotal(formatShekel(agorot))}
+          </Text>
+        )}
+      </View>
 
       <View style={styles.field}>
         <TextField
@@ -162,45 +236,58 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         )}
       </View>
 
+      <PersonPicker
+        view={view}
+        ids={payers}
+        value={payer}
+        onChange={setPayer}
+        label={he.addExpense.paidBy}
+      />
+
       <View style={styles.field}>
-        <Text style={fieldStyles.label}>{he.addExpense.paidBy}</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.payers}
-          accessibilityRole="radiogroup"
-          accessibilityLabel={he.addExpense.paidBy}
-        >
-          {payers.map((id) => {
-            const selected = id === payer;
-            return (
-              <Pressable
-                key={id}
-                accessibilityRole="radio"
-                accessibilityState={{ checked: selected }}
-                accessibilityLabel={view.nameOf(id)}
-                onPress={() => setPayer(id)}
-                style={styles.payer}
-              >
-                <View style={[styles.payerRing, selected ? styles.payerOn : { opacity: 0.55 }]}>
-                  <Avatar person={view.avatarOf(id)} size={52} ring={false} />
-                </View>
-                <Text style={[styles.payerName, selected && styles.payerNameOn]}>
-                  {view.nameOf(id)}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <Text style={fieldStyles.label}>{he.addExpense.when}</Text>
+        <View style={styles.wrap}>
+          {[today(), addDays(today(), -1)].map((d, i) => (
+            <FilterChip
+              key={d}
+              label={i === 0 ? he.addExpense.today : he.addExpense.yesterday}
+              selected={!otherDay && day === d}
+              onPress={() => {
+                setOtherDay(false);
+                setDay(d);
+              }}
+            />
+          ))}
+          <FilterChip
+            label={he.addExpense.otherDay}
+            selected={otherDay}
+            onPress={() => setOtherDay(true)}
+          />
+        </View>
+        {/* The calendar only for another day: today and yesterday are one tap each. */}
+        {otherDay && <DateField label={he.addExpense.date} value={day} onChange={setDay} />}
       </View>
 
+      <View style={styles.field}>
+        <Text style={fieldStyles.label}>{he.addExpense.splitHow}</Text>
+        <SegmentedControl
+          options={SPLIT_MODES.map((value) => ({ value, label: he.addExpense.split[value] }))}
+          value={mode}
+          onChange={setMode}
+          testID="expense-split"
+        />
+      </View>
+
+      {last && last.length < view.activeIds.length && (
+        <Text style={styles.meta}>{he.addExpense.lastSplit}</Text>
+      )}
       <SharePicker
         view={view}
         shares={shares}
         onChange={setShares}
-        amount={parts.length > 0 ? split.rest : agorot}
+        amount={mode === 'equal' ? agorot : undefined}
         label={
-          parts.length > 0 && split.rest !== undefined && split.rest > 0
+          mode === 'parts' && split.rest !== undefined && split.rest > 0
             ? he.shop.finish.rest(formatShekel(split.rest))
             : undefined
         }
@@ -212,9 +299,42 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
         </Text>
       )}
 
-      {withParts && (
+      {mode === 'weights' && (
+        <View style={styles.field}>
+          <Text style={styles.meta}>{he.addExpense.weightsHint}</Text>
+          <WeightList
+            view={view}
+            shares={shares}
+            weights={weights}
+            owed={owed}
+            onChange={setWeights}
+          />
+          {perWeightText(agorot, shares, usedWeights) && (
+            <Text style={styles.meta}>{perWeightText(agorot, shares, usedWeights)}</Text>
+          )}
+        </View>
+      )}
+
+      {mode === 'parts' && (
         <>
           <RunParts view={view} parts={parts} onChange={setParts} />
+          <View style={styles.switchRow}>
+            <Text style={styles.switchLabel}>{he.addExpense.restByWeight}</Text>
+            <Switch
+              value={partsByWeight}
+              onChange={setPartsByWeight}
+              label={he.addExpense.restByWeight}
+            />
+          </View>
+          {partsByWeight && (
+            <WeightList
+              view={view}
+              shares={shares}
+              weights={weights}
+              owed={owed}
+              onChange={setWeights}
+            />
+          )}
           {parts.length > 0 && (
             <View style={styles.owed} {...testId('expense-owed')}>
               <Text style={styles.owedTitle} accessibilityRole="header">
@@ -225,12 +345,12 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
                   {split.error}
                 </Text>
               )}
-              {[...split.owed]
-                .filter(([, owed]) => owed > 0)
-                .map(([id, owed]) => (
+              {[...(split.error ? new Map<string, number>() : owed)]
+                .filter(([, amount]) => amount > 0)
+                .map(([id, amount]) => (
                   <View key={id} style={styles.owedRow}>
-                    <Text style={styles.owedName}>{view.displayNameOf(id)}</Text>
-                    <Text style={styles.owedAmount}>{formatShekel(owed)}</Text>
+                    <Text style={styles.owedName}>{view.nameOf(id)}</Text>
+                    <Text style={styles.owedAmount}>{formatShekel(amount)}</Text>
                   </View>
                 ))}
             </View>
@@ -244,16 +364,20 @@ export function ExpenseForm({ data, expense }: { data: TripData; expense?: Expen
 }
 
 const styles = StyleSheet.create({
+  switchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: space[3],
+    minHeight: space.touch,
+  },
+  switchLabel: { ...type.itemTitle, color: colors.ink, flex: 1 },
+  sumRow: { flexDirection: 'row', alignItems: 'center', gap: space[3], marginTop: -space[2] },
+  sumTotal: { ...type.itemTitle, color: colors.primaryStrong },
   whatInput: { minHeight: 56, borderRadius: 20, paddingHorizontal: 18 },
   field: { gap: 10 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 },
   meta: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
-  payers: { gap: 10, paddingVertical: 4, paddingHorizontal: 2 },
-  payer: { minWidth: 56, alignItems: 'center', gap: 6 },
-  payerRing: { borderRadius: 30, padding: 3, borderWidth: 2, borderColor: 'transparent' },
-  payerOn: { borderColor: colors.primary },
-  payerName: { fontFamily: fonts.regular, fontSize: 13, color: colors.inkMuted },
-  payerNameOn: { fontFamily: fonts.bold, color: colors.ink },
   owed: { gap: space[1] },
   owedTitle: { ...type.itemTitle, color: colors.ink },
   owedRow: { flexDirection: 'row', justifyContent: 'space-between', gap: space[3] },

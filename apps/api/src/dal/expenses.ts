@@ -24,9 +24,10 @@ export async function insertExpense(
   shares: string[],
   itemIds: string[] = [],
   parts: ExpensePart[] = [],
+  weights: Weights = {},
 ) {
   const [expense] = await tx.insert(expenses).values(values).returning();
-  await insertShares(tx, expense!.id, shares);
+  await insertShares(tx, expense!.id, shares, weights);
   if (itemIds.length > 0) {
     await tx
       .insert(expenseItems)
@@ -36,8 +37,24 @@ export async function insertExpense(
   return expense!;
 }
 
-const insertShares = (tx: Executor, expenseId: string, shares: string[]) =>
-  tx.insert(expenseShares).values(shares.map((userId) => ({ expenseId, userId })));
+/** How many shares each person takes, by user id; anyone missing takes 1 (`Expense.weights`). */
+export type Weights = Record<string, number>;
+
+const insertShares = (tx: Executor, expenseId: string, shares: string[], weights: Weights) =>
+  tx.insert(expenseShares).values(
+    // 1 is stored as null, as before weights existed.
+    shares.map((userId) => ({
+      expenseId,
+      userId,
+      weight: (weights[userId] ?? 1) === 1 ? null : weights[userId],
+    })),
+  );
+
+/** The rows' weights other than 1, by user id. */
+export const toWeights = (rows: { userId: string; weight: number | null }[]): Weights =>
+  Object.fromEntries(
+    rows.filter((r) => r.weight !== null && r.weight !== 1).map((r) => [r.userId, r.weight!]),
+  );
 
 async function insertParts(tx: Executor, expenseId: string, parts: ExpensePart[]) {
   for (const [position, part] of parts.entries()) {
@@ -52,14 +69,17 @@ async function insertParts(tx: Executor, expenseId: string, parts: ExpensePart[]
 }
 
 /**
- * Changes the expense in place: its fields, and who shares it and its parts when given (they
- * replace what it had). Its receipt and the items it covers stay.
+ * Changes the expense in place: its fields, and who shares it (with their weights) and its parts
+ * when given (they replace what it had). Its receipt and the items it covers stay.
  */
 export async function updateExpense(
   tx: Executor,
   expenseId: string,
-  values: Pick<Partial<typeof expenses.$inferInsert>, 'description' | 'amountAgorot' | 'paidBy'>,
-  { shares, parts }: { shares?: string[]; parts?: ExpensePart[] } = {},
+  values: Pick<
+    Partial<typeof expenses.$inferInsert>,
+    'description' | 'amountAgorot' | 'paidBy' | 'spentOn'
+  >,
+  { shares, weights, parts }: { shares?: string[]; weights?: Weights; parts?: ExpensePart[] } = {},
 ) {
   // Only shares or parts changing: the row stays as it is.
   const changed = Object.values(values).some((v) => v !== undefined);
@@ -68,7 +88,7 @@ export async function updateExpense(
     : await tx.select().from(expenses).where(eq(expenses.id, expenseId));
   if (shares) {
     await tx.delete(expenseShares).where(eq(expenseShares.expenseId, expenseId));
-    await insertShares(tx, expenseId, shares);
+    await insertShares(tx, expenseId, shares, weights ?? {});
   }
   if (parts) {
     await deleteParts(tx, [expenseId]);
@@ -84,7 +104,7 @@ export async function updateExpense(
 export async function expenseSplit(tx: Executor, expenseId: string) {
   const [shareRows, itemRows, partRows] = await Promise.all([
     tx
-      .select({ userId: expenseShares.userId })
+      .select({ userId: expenseShares.userId, weight: expenseShares.weight })
       .from(expenseShares)
       .where(eq(expenseShares.expenseId, expenseId)),
     tx
@@ -112,6 +132,7 @@ export async function expenseSplit(tx: Executor, expenseId: string) {
           );
   return {
     shares: shareRows.map((s) => s.userId),
+    weights: toWeights(shareRows),
     itemIds: itemRows.filter((i) => i.deletedAt === null).map((i) => i.itemId),
     itemCount: itemRows.length,
     parts: partRows.map((p): ExpensePart => ({
