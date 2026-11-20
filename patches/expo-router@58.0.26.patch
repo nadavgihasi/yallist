@@ -1,3 +1,34 @@
+diff --git a/build/global-state/routingQueueContext.js b/build/global-state/routingQueueContext.js
+index 54629aaf6eb7a8fd169c94405ff167884217106f..9245aa01632c1e88b5e0f7b39958c61bb7670ed4 100644
+--- a/build/global-state/routingQueueContext.js
++++ b/build/global-state/routingQueueContext.js
+@@ -60,6 +60,10 @@ const _router = require("./router");
+ const _routingQueue = require("./routingQueue");
+ const EMPTY = [];
+ let boundBridges = 0;
++// Patched (yallist): the routers the mounted bridges bound, newest last. On Android a recreated
++// activity mounts a new root before the old one's effects clean up, so an unconditional unbind
++// left the global `router` throwing until the app restarted.
++const boundRouters = [];
+ const throwMissingRoutingQueue = ()=>{
+     throw new Error('Attempted to navigate from a component rendered outside the Expo Router root. Render the component inside `ExpoRoot`. If this happened inside `ExpoRoot`, please report a bug at https://github.com/expo/expo/issues.');
+ };
+@@ -131,10 +135,13 @@ function ImperativeRoutingQueueBridge({ enqueue, setTransitionMode }) {
+         }
+         boundBridges++;
+         // The exported router identity must stay stable, so the bridge mutates it in place.
+-        Object.assign(_router.router, (0, _router.createImperativeRouter)(enqueue, setTransitionMode));
++        const bound = (0, _router.createImperativeRouter)(enqueue, setTransitionMode);
++        boundRouters.push(bound);
++        Object.assign(_router.router, bound);
+         return ()=>{
+             boundBridges--;
+-            Object.assign(_router.router, _router.unboundRouter);
++            boundRouters.splice(boundRouters.indexOf(bound), 1);
++            Object.assign(_router.router, boundRouters[boundRouters.length - 1] ?? _router.unboundRouter);
+         };
+     }, [
+         enqueue,
 diff --git a/build/views/Try.js b/build/views/Try.js
 index 3304a35ccbd2bce4a9d20bb06a657627f4fce925..402f23968fc2000b5f28a9ae50b01dae89ec2ad4 100644
 --- a/build/views/Try.js
