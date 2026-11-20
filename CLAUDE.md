@@ -25,7 +25,7 @@ Start with [README.md](README.md) and [docs/](docs/README.md). This file holds t
 
 Production is Aurora DSQL; tests and local dev are plain Postgres. Only a PR's preview runs on real DSQL, so its checks matter. The schema's header comment (`apps/api/src/db/schema.ts`) has the full list of limits. The ones that bite:
 
-- **No cascades.** A new table under a trip must be deleted in `deleteTrip` (`apps/api/src/dal/trips.ts`). A new column that references a profile must be added to `USER_COLUMNS`, and a new (key, user) table to `USER_KEYED` (`apps/api/src/dal/profiles.ts`), or deleting and merging users breaks.
+- **No cascades.** A new table under a trip must be deleted in `deleteTrip` (`apps/api/src/dal/trips.ts`). A new column that references a profile must be added to `USER_COLUMNS`, and a new (key, user) table to `USER_KEYED` (`apps/api/src/dal/profiles.ts`), or deleting and merging users breaks. Tests compare these lists with the database's foreign keys (`dal/profiles.test.ts`, `routes/trip-delete.test.ts`) and tell you what to add; fix the list, not the test.
 - **Never put a user id inside JSON.** `mergeUser` moves user columns, not ids inside a `jsonb` payload. Use a column with a foreign key.
 - **A new column is nullable with no default.** DSQL can't add a default or `NOT NULL` to a table that exists; the API treats null as the default.
 - **No partial or expression indexes.** Uniqueness that needs one is checked in code under a lock (see `trip_categories`, `shopping_runs.active`).
@@ -50,6 +50,7 @@ Production is Aurora DSQL; tests and local dev are plain Postgres. Only a PR's p
 ## App
 
 - Everything about one trip is one query (`tripKey`). The home list (`tripsKey`, `GET /trips`) is a heavy request: mark it stale; don't refetch it on every change.
+- The app saves its query cache on the device, keyed on the shape of the cached data (`apps/mobile/src/state/cacheBuster.ts`). When a change alters that shape, a test fails and prints the new `CACHE_SHAPE`: set it, in the same pull request. When a field keeps its type but changes its meaning (an amount's units, what a status counts), no test can tell: bump `CACHE_EPOCH` by hand. Two open pull requests that both change the shape conflict on that line; recompute after rebasing.
 - A change to a trip goes through `useTripAction` (`apps/mobile/src/state/trips.ts`): shown at once, sent in order, rolled back if refused.
 - Text is Hebrew and right to left. Strings live in `apps/mobile/src/i18n/he.ts`.
 
