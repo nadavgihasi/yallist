@@ -385,7 +385,6 @@ export const he = {
   item: {
     inBring: 'ברשימת ההבאה',
     inBuy: 'ברשימת הקניות',
-    releaseMine: 'לא אני, לשחרר',
     whoBrings: 'מי מביא?',
     whoBuys: 'מי קונה?',
     assignHint: 'בוחרים מי לוקח את זה. לחיצה נוספת מבטלת',
@@ -436,6 +435,10 @@ export const he = {
     what: 'מה צריך?',
     placeholder: { bring: 'למשל: מחצלת', buy: 'למשל: אבטיח' },
     howMany: 'כמה צריך?',
+    list: 'רשימה',
+    /** The amount row's value for a counted item: `8, מתחלקים`. */
+    qtySummary: (n: number) => `${n}, מתחלקים`,
+    noAmountSet: 'בלי כמות',
     kinds: {
       single: ['אחד', 'פריט אחד לכולם'],
       qty: ['כמות', 'מתחלקים בכמות'],

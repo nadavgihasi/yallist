@@ -20,7 +20,7 @@ import { ClaimStepper } from '@/features/trip/ClaimStepper';
 import { useCloseSheet } from '@/features/trip/closeSheet';
 import { ItemForm } from '@/features/trip/ItemForm';
 import { deriveTrip } from '@/features/trip/derive';
-import { quantityText, statusLine, TONE_COLOR } from '@/features/trip/labels';
+import { quantityText, statusLine } from '@/features/trip/labels';
 import { SharePicker, useShares } from '@/features/trip/SharePicker';
 import { he } from '@/i18n/he';
 import { testId } from '@/lib/testId';
@@ -175,7 +175,17 @@ function ItemSheetBody({
   return (
     <Sheet
       title={item.name}
-      subtitle={[qty, isBuy ? he.item.inBuy : he.item.inBring].filter(Boolean).join(', ')}
+      // Where it is and its status on one line: the status is text, not a control. Claiming is
+      // "מי מביא?" below, or the stepper (how many) and "יש לי" (per person) it doesn't cover.
+      subtitle={
+        <>
+          {[qty, isBuy ? he.item.inBuy : he.item.inBring].filter(Boolean).join(', ')}
+          {' · '}
+          <Text style={line.tone === 'mine' && styles.statusMine} {...testId('item-status')}>
+            {line.label}
+          </Text>
+        </>
+      }
       onClose={onClose}
       top={92}
       titleSize={34}
@@ -200,53 +210,46 @@ function ItemSheetBody({
               onPress={() => act({ type: 'deleteExpense', expenseId: expense.id })}
             />
           )}
-          <PillButton
-            label={he.item.edit}
-            {...testId('item-edit')}
-            variant="quiet"
-            icon={<Icon name="pencil" size={18} color={colors.inkMuted} />}
-            onPress={onEdit}
-          />
-          <PillButton
-            label={confirmingDelete ? he.item.confirmDelete : he.item.delete}
-            {...testId('item-delete')}
-            variant="danger"
-            icon={<Icon name="trash" size={18} color={colors.brandStrong} />}
-            onPress={remove}
-          />
+          <View style={styles.manage}>
+            <PillButton
+              label={he.item.edit}
+              {...testId('item-edit')}
+              variant="quiet"
+              icon={<Icon name="pencil" size={18} color={colors.inkMuted} />}
+              onPress={onEdit}
+              style={styles.manageButton}
+            />
+            <PillButton
+              label={confirmingDelete ? he.item.confirmDelete : he.item.delete}
+              {...testId('item-delete')}
+              variant="danger"
+              icon={<Icon name="trash" size={18} color={colors.brandStrong} />}
+              onPress={remove}
+              style={styles.manageButton}
+            />
+          </View>
         </>
       }
     >
-      <View style={styles.statusRow}>
-        <View style={[styles.chip, { backgroundColor: chipBg(line.tone) }]}>
-          {status.kind === 'bought' && <Icon name="check" size={16} color={colors.inkMuted} />}
-          <Text style={[styles.chipText, { color: chipFg(line.tone) }]}>{line.label}</Text>
+      {(!!line.detail || (item.kind === 'qty' && !bought) || item.kind === 'each') && (
+        <View style={styles.statusRow}>
+          <Text style={styles.detail}>{line.detail}</Text>
+          {item.kind === 'qty' && !bought && (
+            <ClaimStepper
+              mine={mine}
+              canAdd={claimCap(item, data.claims, me) > mine}
+              onChange={claim}
+            />
+          )}
+          {item.kind === 'each' && (
+            <PillButton
+              label={he.trip.have}
+              variant={mine ? 'solid' : 'soft'}
+              onPress={() => claim(mine ? 0 : 1)}
+            />
+          )}
         </View>
-        {item.kind === 'single' && status.kind === 'mine' && (
-          <PillButton label={he.item.releaseMine} variant="quiet" onPress={() => claim(0)} />
-        )}
-        {item.kind === 'single' && status.kind === 'missing' && (
-          <PillButton
-            label={isBuy ? he.trip.claimBuy : he.trip.claimBring}
-            onPress={() => claim(item.quantityNeeded)}
-          />
-        )}
-        {item.kind === 'qty' && !bought && (
-          <ClaimStepper
-            mine={mine}
-            canAdd={claimCap(item, data.claims, me) > mine}
-            onChange={claim}
-          />
-        )}
-        {item.kind === 'each' && (
-          <PillButton
-            label={he.trip.have}
-            variant={mine ? 'solid' : 'soft'}
-            onPress={() => claim(mine ? 0 : 1)}
-          />
-        )}
-      </View>
-      {!!line.detail && <Text style={styles.detail}>{line.detail}</Text>}
+      )}
 
       {canAssign(item) && !bought && (
         <AssignPicker
@@ -285,18 +288,6 @@ function ItemSheetBody({
   );
 }
 
-function chipBg(tone: keyof typeof TONE_COLOR) {
-  return {
-    missing: colors.ground,
-    mine: colors.primary,
-    ok: colors.ground,
-    success: colors.ground,
-  }[tone];
-}
-function chipFg(tone: keyof typeof TONE_COLOR) {
-  return tone === 'mine' ? colors.onPrimary : TONE_COLOR[tone];
-}
-
 const styles = StyleSheet.create({
   statusRow: {
     flexDirection: 'row',
@@ -304,16 +295,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12,
   },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    height: 36,
-    paddingHorizontal: 14,
-    borderRadius: 18,
-  },
-  chipText: { fontFamily: fonts.bold, fontSize: 15 },
-  detail: { fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted, marginTop: -8 },
+  statusMine: { fontFamily: fonts.bold, color: colors.brandStrong },
+  detail: { flex: 1, fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
+  manage: { flexDirection: 'row', gap: 8 },
+  manageButton: { flex: 1 },
   field: { gap: 8 },
   note: {
     minHeight: 72,

@@ -1,0 +1,27 @@
+# A category the trip doesn't have yet, from the catalog's list in the add-item sheet's category
+# row: picking it creates it, and the item lands in it.
+appId: app.yallist
+url: ${WEB_URL}
+# A video per flow, kept even when it fails (onFlowComplete always runs).
+onFlowStart:
+  - startRecording: ${MAESTRO_FILENAME}
+onFlowComplete:
+  - stopRecording
+tags: [items]
+---
+- runFlow: ../common/sign-in.yaml
+- runFlow: ../common/new-trip.yaml
+- tapOn:
+    id: trip-add
+- tapOn:
+    id: item-form-name
+- inputText: Big mat
+- tapOn:
+    id: item-form-category-row
+- tapOn:
+    id: item-form-more-categories
+- tapOn: כלים וסכו״ם
+- tapOn:
+    id: item-form-save
+- assertVisible: Big mat
+- assertVisible: כלים וסכו״ם
