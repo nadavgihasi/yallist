@@ -5,7 +5,7 @@ import {
   type ItemKind,
   type ListKind,
 } from '@yallist/domain';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CatalogPicker } from '@/components/CatalogPicker';
@@ -43,6 +43,50 @@ import { BuyAmountField } from './BuyAmountField';
 
 const KINDS: ItemKind[] = ['single', 'qty', 'each'];
 
+type Detail = 'list' | 'amount' | 'category';
+
+/** One detail of the item: its label and value on a line, opening to the control that sets it. */
+function DetailRow({
+  label,
+  value,
+  open,
+  onPress,
+  id,
+  children,
+}: {
+  label: string;
+  value: string;
+  open: boolean;
+  onPress: () => void;
+  id: string;
+  children: ReactNode;
+}) {
+  return (
+    <View style={styles.detail}>
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label}: ${value}`}
+        accessibilityState={{ expanded: open }}
+        onPress={onPress}
+        style={({ pressed }) => [styles.detailRow, pressed && { opacity: 0.75 }]}
+        {...testId(id)}
+      >
+        <Text style={styles.detailLabel}>{label}</Text>
+        <Text style={styles.detailValue} numberOfLines={1}>
+          {value}
+        </Text>
+        <Icon
+          name={open ? 'chevronUp' : 'chevronDown'}
+          size={18}
+          color={colors.inkMuted}
+          strokeWidth={2.5}
+        />
+      </Pressable>
+      {open && <View style={styles.detailBody}>{children}</View>}
+    </View>
+  );
+}
+
 /**
  * The add-item sheet, also used to edit an item: `item` prefills it. Claiming is only offered
  * for a new item; an existing one is claimed from its sheet. A category can be created on the
@@ -79,6 +123,8 @@ export function ItemForm({
   const [category, setCategory] = useState(item ? item.categoryId : initialCategory);
   const [newName, setNewName] = useState('');
   const [claim, setClaim] = useState(false);
+  // Which detail row is open: they show what the catalog filled in and open to change it.
+  const [open, setOpen] = useState<Detail | undefined>();
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   // The list, how many or the category set by hand: a catalog name typed in full then doesn't
@@ -166,6 +212,21 @@ export function ItemForm({
     });
   };
 
+  const toggle = (detail: Detail) => setOpen(open === detail ? undefined : detail);
+  // An amount that doesn't parse, or a new category without a name, keeps its row open: the save
+  // button waits on it.
+  const amountOpen = open === 'amount' || (byAmount && displayQty === undefined);
+  const categoryOpen = open === 'category' || (picked === NEW && !shown.newName.trim());
+  const amountValue = byAmount
+    ? (displayQty ?? he.addItem.noAmountSet)
+    : shown.kind === 'qty'
+      ? he.addItem.qtySummary(shown.qty)
+      : he.addItem.kinds[shown.kind][1];
+  const categoryValue =
+    picked === NEW
+      ? shown.newName.trim() || he.addItem.newCategory
+      : (categories.find((c) => c.id === picked)?.name ?? he.trip.uncategorized);
+
   const claimLabel =
     shown.kind === 'each' && list === 'bring'
       ? he.addItem.claimEach
@@ -188,16 +249,6 @@ export function ItemForm({
         />
       }
     >
-      <SegmentedControl
-        options={[
-          { value: 'bring', label: he.trip.tabs.bring },
-          { value: 'buy', label: he.trip.tabs.buy },
-        ]}
-        value={list}
-        onChange={choose(setList)}
-        style={{ backgroundColor: colors.ground }}
-      />
-
       <View style={styles.field}>
         <View style={styles.labelRow}>
           <Text style={fieldStyles.label}>{he.addItem.what}</Text>
@@ -267,104 +318,142 @@ export function ItemForm({
             </Text>
           </View>
         )}
-        {!item && <AddManyLinks tripId={tripId} list={list} text={name} />}
+        {!item && (
+          <View style={styles.links}>
+            <AddManyLinks tripId={tripId} list={list} text={name} />
+          </View>
+        )}
         {!item && <CatalogPicker query={name} list={list} exclude={taken} onPick={pick} />}
       </View>
 
-      {byAmount ? (
-        <BuyAmountField
-          value={buyAmount}
-          error={displayQty === undefined ? buyAmountError(buyAmount) : undefined}
-          onChange={setBuyAmount}
-          onSubmitEditing={() => submit()}
-        />
-      ) : (
-        <View style={styles.field}>
-          <Text style={fieldStyles.label}>{he.addItem.howMany}</Text>
-          <View
-            style={styles.kinds}
-            accessibilityRole="radiogroup"
-            accessibilityLabel={he.addItem.howMany}
-          >
-            {KINDS.map((k) => {
-              const selected = k === shown.kind;
-              const [label, hint] = he.addItem.kinds[k];
-              return (
-                <Pressable
-                  key={k}
-                  accessibilityRole="radio"
-                  accessibilityState={{ checked: selected }}
-                  onPress={() => choose(setKind)(k)}
-                  style={[styles.kind, selected && styles.kindOn]}
-                >
-                  <Text style={styles.kindLabel}>{label}</Text>
-                  <Text style={styles.kindHint}>{hint}</Text>
-                </Pressable>
-              );
-            })}
-          </View>
-          {shown.kind === 'qty' && (
-            <View style={styles.qtyRow}>
-              <Text style={styles.qtyLabel}>{he.addItem.total}</Text>
-              <View style={styles.qtyControls}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={he.addItem.more}
-                  onPress={() => choose(setQty)(shown.qty + 1)}
-                  style={styles.qtyButton}
-                >
-                  <Icon name="plus" size={20} />
-                </Pressable>
-                <Text style={styles.qtyValue}>{shown.qty}</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={he.addItem.less}
-                  disabled={shown.qty <= 2}
-                  onPress={() => choose(setQty)(shown.qty - 1)}
-                  style={[styles.qtyButton, shown.qty <= 2 && { opacity: 0.35 }]}
-                >
-                  <Icon name="minus" size={20} />
-                </Pressable>
+      {/* List, amount and category: filled in from the catalog as the name is typed, so they
+          show as one line each and open to be changed. */}
+      <View style={styles.details}>
+        <DetailRow
+          label={he.addItem.list}
+          value={he.trip.tabs[list]}
+          open={open === 'list'}
+          onPress={() => toggle('list')}
+          id="item-form-list-row"
+        >
+          <SegmentedControl
+            options={[
+              { value: 'bring', label: he.trip.tabs.bring },
+              { value: 'buy', label: he.trip.tabs.buy },
+            ]}
+            value={list}
+            onChange={choose(setList)}
+            style={{ backgroundColor: colors.ground }}
+          />
+        </DetailRow>
+        <DetailRow
+          label={he.addItem.howMany}
+          value={amountValue}
+          open={amountOpen}
+          onPress={() => toggle('amount')}
+          id="item-form-amount-row"
+        >
+          {byAmount ? (
+            <BuyAmountField
+              value={buyAmount}
+              error={displayQty === undefined ? buyAmountError(buyAmount) : undefined}
+              onChange={setBuyAmount}
+              onSubmitEditing={() => submit()}
+            />
+          ) : (
+            <View style={styles.field}>
+              <View
+                style={styles.kinds}
+                accessibilityRole="radiogroup"
+                accessibilityLabel={he.addItem.howMany}
+              >
+                {KINDS.map((k) => {
+                  const selected = k === shown.kind;
+                  const [label, hint] = he.addItem.kinds[k];
+                  return (
+                    <Pressable
+                      key={k}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: selected }}
+                      onPress={() => choose(setKind)(k)}
+                      style={[styles.kind, selected && styles.kindOn]}
+                    >
+                      <Text style={styles.kindLabel}>{label}</Text>
+                      <Text style={styles.kindHint}>{hint}</Text>
+                    </Pressable>
+                  );
+                })}
               </View>
+              {shown.kind === 'qty' && (
+                <View style={styles.qtyRow}>
+                  <Text style={styles.qtyLabel}>{he.addItem.total}</Text>
+                  <View style={styles.qtyControls}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={he.addItem.more}
+                      onPress={() => choose(setQty)(shown.qty + 1)}
+                      style={styles.qtyButton}
+                    >
+                      <Icon name="plus" size={20} />
+                    </Pressable>
+                    <Text style={styles.qtyValue}>{shown.qty}</Text>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={he.addItem.less}
+                      disabled={shown.qty <= 2}
+                      onPress={() => choose(setQty)(shown.qty - 1)}
+                      style={[styles.qtyButton, shown.qty <= 2 && { opacity: 0.35 }]}
+                    >
+                      <Icon name="minus" size={20} />
+                    </Pressable>
+                  </View>
+                </View>
+              )}
             </View>
           )}
-        </View>
-      )}
-
-      <View style={styles.field}>
-        <Text style={fieldStyles.label}>{he.addItem.category}</Text>
-        <ChipGroup label={he.addItem.category}>
-          {categories.map((c) => (
-            <FilterChip
-              key={c.id}
-              label={c.name}
-              selected={c.id === picked}
-              onPress={() => choose(setCategory)(c.id)}
-            />
-          ))}
-          <FilterChip
-            label={he.trip.uncategorized}
-            selected={picked === undefined}
-            onPress={() => choose(setCategory)(undefined)}
-          />
-          <FilterChip
-            label={`+ ${he.addItem.newCategory}`}
-            selected={picked === NEW}
-            onPress={() => choose(setCategory)(NEW)}
-          />
-        </ChipGroup>
-        {picked === NEW && (
-          <Input
-            value={shown.newName}
-            onChangeText={choose(setNewName)}
-            placeholder={he.category.placeholder}
-            accessibilityLabel={he.category.name}
-            maxLength={40}
-            // Picked by hand, not filled in by a typed catalog name: typing goes on in the name.
-            autoFocus={category === NEW}
-            style={styles.input}
-          />
-        )}
+        </DetailRow>
+        <DetailRow
+          label={he.addItem.category}
+          value={categoryValue}
+          open={categoryOpen}
+          onPress={() => toggle('category')}
+          id="item-form-category-row"
+        >
+          <View style={styles.field}>
+            <ChipGroup label={he.addItem.category}>
+              {categories.map((c) => (
+                <FilterChip
+                  key={c.id}
+                  label={c.name}
+                  selected={c.id === picked}
+                  onPress={() => choose(setCategory)(c.id)}
+                />
+              ))}
+              <FilterChip
+                label={he.trip.uncategorized}
+                selected={picked === undefined}
+                onPress={() => choose(setCategory)(undefined)}
+              />
+              <FilterChip
+                label={`+ ${he.addItem.newCategory}`}
+                selected={picked === NEW}
+                onPress={() => choose(setCategory)(NEW)}
+              />
+            </ChipGroup>
+            {picked === NEW && (
+              <Input
+                value={shown.newName}
+                onChangeText={choose(setNewName)}
+                placeholder={he.category.placeholder}
+                accessibilityLabel={he.category.name}
+                maxLength={40}
+                // Picked by hand, not filled in by a typed catalog name: typing goes on in the name.
+                autoFocus={category === NEW}
+                style={styles.input}
+              />
+            )}
+          </View>
+        </DetailRow>
       </View>
 
       {!item && (
@@ -387,6 +476,19 @@ export function ItemForm({
 
 const styles = StyleSheet.create({
   field: { gap: 10 },
+  links: { flexDirection: 'row', flexWrap: 'wrap', columnGap: 16 },
+  details: { borderRadius: 20, borderWidth: 1, borderColor: colors.hairline, overflow: 'hidden' },
+  detail: { borderTopWidth: 1, borderTopColor: colors.hairline, marginTop: -1 },
+  detailRow: {
+    minHeight: 56,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  detailLabel: { width: 84, fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
+  detailValue: { flex: 1, fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
+  detailBody: { paddingHorizontal: 16, paddingBottom: 16, gap: 10 },
   duplicate: { gap: 6 },
   duplicateActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   match: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 6 },

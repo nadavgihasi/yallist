@@ -16,6 +16,9 @@ tags: [items]
 - tapOn:
     id: item-form-name
 - inputText: Sleeping bag
+# How many is a closed row until opened.
+- tapOn:
+    id: item-form-amount-row
 - tapOn: לכל אחד.*
 - tapOn:
     id: item-form-save
