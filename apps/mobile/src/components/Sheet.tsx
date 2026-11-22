@@ -33,7 +33,8 @@ export function Sheet({
   gap = 20,
 }: {
   title: string;
-  subtitle?: string;
+  /** A line under the title: text, or nested `<Text>` for a part in another style. */
+  subtitle?: ReactNode;
   /** Called with no arguments (not the press event). */
   onClose: () => void;
   children: ReactNode;

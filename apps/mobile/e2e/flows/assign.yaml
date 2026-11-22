@@ -16,7 +16,12 @@ tags: [items]
       ITEM: Tent
 - tapOn: Tent
 - assertVisible: מי מביא\?
+# The sheet says whose it is as text; the picker is the only control for a single item.
 - tapOn: אני
-- assertVisible: לא אני, לשחרר
+- assertVisible:
+    id: item-status
+    text: אצלך
 - tapOn: אני
-- assertNotVisible: לא אני, לשחרר
+- assertVisible:
+    id: item-status
+    text: חסר

@@ -385,7 +385,6 @@ export const he = {
   item: {
     inBring: 'ברשימת ההבאה',
     inBuy: 'ברשימת הקניות',
-    releaseMine: 'לא אני, לשחרר',
     whoBrings: 'מי מביא?',
     whoBuys: 'מי קונה?',
     assignHint: 'בוחרים מי לוקח את זה. לחיצה נוספת מבטלת',
