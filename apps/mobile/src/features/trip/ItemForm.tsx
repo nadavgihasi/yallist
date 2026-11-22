@@ -1,4 +1,5 @@
 import {
+  CATALOG_CATEGORIES,
   heldCatalogNames,
   type CatalogItem,
   type Item,
@@ -125,6 +126,8 @@ export function ItemForm({
   const [claim, setClaim] = useState(false);
   // Which detail row is open: they show what the catalog filled in and open to change it.
   const [open, setOpen] = useState<Detail | undefined>();
+  // The catalog's categories the trip doesn't have yet, under "more" in the category row.
+  const [allCategories, setAllCategories] = useState(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
   // The list, how many or the category set by hand: a catalog name typed in full then doesn't
@@ -155,6 +158,17 @@ export function ItemForm({
     shown.category === NEW || categories.some((c) => c.id === shown.category)
       ? shown.category
       : undefined;
+  // The catalog's categories for this list that the trip doesn't have: picking one creates it, as
+  // a typed catalog name does.
+  const suggested = CATALOG_CATEGORIES.filter(
+    (c) => c.list === list && !categories.some((own) => own.name === c.name),
+  ).map((c) => c.name);
+  const newTyped = picked === NEW ? shown.newName.trim() : '';
+  const fromCatalog = picked === NEW && suggested.includes(newTyped);
+  // An open category stays in sight with the list folded.
+  const shownSuggested = allCategories
+    ? suggested
+    : suggested.filter((n) => fromCatalog && n === newTyped);
   const trimmed = name.trim();
   // Only suggest what this list doesn't have yet.
   const taken = heldCatalogNames(data.items.filter((i) => i.list === list).map((i) => i.name));
@@ -433,6 +447,17 @@ export function ItemForm({
                   onPress={() => choose(setCategory)(c.id)}
                 />
               ))}
+              {shownSuggested.map((n) => (
+                <FilterChip
+                  key={n}
+                  label={n}
+                  selected={fromCatalog && n === newTyped}
+                  onPress={() => {
+                    choose(setCategory)(NEW);
+                    setNewName(n);
+                  }}
+                />
+              ))}
               <FilterChip
                 label={he.trip.uncategorized}
                 selected={picked === undefined}
@@ -440,11 +465,28 @@ export function ItemForm({
               />
               <FilterChip
                 label={`+ ${he.addItem.newCategory}`}
-                selected={picked === NEW}
-                onPress={() => choose(setCategory)(NEW)}
+                selected={picked === NEW && !fromCatalog}
+                onPress={() => {
+                  choose(setCategory)(NEW);
+                  setNewName('');
+                }}
               />
             </ChipGroup>
-            {picked === NEW && (
+            {suggested.length > 0 && (
+              <PillButton
+                label={
+                  allCategories
+                    ? he.catalog.fewerCategories
+                    : he.catalog.moreCategories(suggested.length - shownSuggested.length)
+                }
+                variant="quiet"
+                size="sm"
+                onPress={() => setAllCategories(!allCategories)}
+                style={styles.moreCategories}
+                {...testId('item-form-more-categories')}
+              />
+            )}
+            {picked === NEW && !fromCatalog && (
               <Input
                 value={shown.newName}
                 onChangeText={choose(setNewName)}
@@ -492,6 +534,7 @@ const styles = StyleSheet.create({
   },
   detailLabel: { width: 84, fontFamily: fonts.regular, fontSize: 14, color: colors.inkMuted },
   detailValue: { flex: 1, fontFamily: fonts.bold, fontSize: 16, color: colors.ink },
+  moreCategories: { alignSelf: 'flex-start' },
   detailBody: { paddingHorizontal: 16, paddingBottom: 16, gap: 10 },
   duplicate: { gap: 6 },
   duplicateActions: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
