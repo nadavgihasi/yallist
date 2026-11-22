@@ -323,7 +323,11 @@ export function ItemForm({
             <AddManyLinks tripId={tripId} list={list} text={name} />
           </View>
         )}
-        {!item && <CatalogPicker query={name} list={list} exclude={taken} onPick={pick} />}
+        {/* Matches while typing only: the catalog's own sections as chips here read as a second
+            category picker next to the category row. Browsing them is in adding many. */}
+        {!item && (
+          <CatalogPicker query={name} list={list} exclude={taken} onPick={pick} browse={false} />
+        )}
       </View>
 
       {/* List, amount and category: filled in from the catalog as the name is typed, so they
